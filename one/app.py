@@ -1771,6 +1771,9 @@ def diagnostics():
         z.writestr("system.txt", sh("uptime") + sh("free -m") + sh("df -h /") +
                    sh("vcgencmd measure_temp 2>/dev/null") +
                    sh("cat /proc/device-tree/model 2>/dev/null; echo"))
+        z.writestr("storage.txt",
+                   sh("lsblk -o NAME,SIZE,TYPE,MOUNTPOINT") + "\n=== boot device errors ===\n" +
+                   sh("dmesg 2>/dev/null | grep -iE 'mmc.*error|nvme.*(err|timeout)' | tail -5 || echo none"))
         z.writestr("rtc.txt",
                    "battery_uV: " + sh("cat /sys/class/rtc/rtc0/battery_voltage 2>/dev/null") +
                    "charging_uV: " + sh("cat /sys/class/rtc/rtc0/charging_voltage 2>/dev/null"))

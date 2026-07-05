@@ -1,5 +1,21 @@
 # Building sellable Downstage units
 
+## Storage per product (affects capture + flash)
+
+| Product | Boot storage | Capture/flash path |
+|---|---|---|
+| Downstage One | NVMe SSD (M.2 HAT) | M.2-to-USB adapter on the Mac; Raspberry Pi Imager writes NVMe drives fine |
+| Downstage View | microSD | normal SD card workflow |
+
+NVMe notes (One): fresh Pi 5 boards may need the bootloader set to try NVMe
+first — `sudo rpi-eeprom-config --edit` and set `BOOT_ORDER=0xf416` before
+first NVMe boot. NVMe is also far more resilient to power cuts than SD
+(controller-level wear leveling and power-loss handling) — the SD-corruption
+concern applies mainly to the View.
+
+View notes: golden card is small (8GB class) — keep the image lean so it
+shrinks/restores fast; PiShrink makes it auto-expand onto larger cards.
+
 ## One-time: capture the golden image (per product)
 
 1. Get a bench unit (One or View) to the software state you want to ship.
