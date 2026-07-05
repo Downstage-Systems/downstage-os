@@ -987,6 +987,27 @@ def set_timezone():
         return jsonify({"ok": False, "message": str(e)})
 
 
+@app.route("/system/set-time", methods=["POST"])
+def system_set_time():
+    """Set system time from the browser's clock — covers venues with no
+    internet (the Pi has no reliable time source there). Also writes the
+    hardware RTC when one is present."""
+    ms = (request.get_json() or {}).get("epoch_ms")
+    if not isinstance(ms, (int, float)) or ms < 1e12:
+        return jsonify({"ok": False, "message": "Invalid timestamp"})
+    try:
+        subprocess.run(["sudo", "date", "-s", f"@{ms/1000:.3f}"],
+                       check=True, timeout=5,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        # persist to RTC if fitted; harmless no-op otherwise
+        subprocess.run(["sudo", "hwclock", "-w"], timeout=5,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        now = subprocess.check_output(["date", "+%H:%M:%S %Z"], text=True, timeout=5).strip()
+        return jsonify({"ok": True, "now": now})
+    except Exception as e:
+        return jsonify({"ok": False, "message": str(e)})
+
+
 @app.route("/system/timezone/detect", methods=["POST"])
 def detect_timezone():
     try:
