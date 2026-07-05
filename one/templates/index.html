@@ -964,6 +964,7 @@
         <div class="local-panel">
           <div class="version-row" id="os-version-row" style="display:flex">
             <span class="version-tag" id="os-ver-installed">—</span>
+            <span class="version-tag" id="os-serial" style="color:var(--muted)"></span>
             <span class="version-badge checking" id="os-ver-badge">Checking…</span>
             <button class="btn-sm" id="os-update-btn" onclick="osUpdate()" style="display:none">Update</button>
           </div>
@@ -1355,6 +1356,8 @@
       companionRunning   = d.companion_running;
       updateLocalPanel();
       updateCompanionPanel();
+
+      if (d.serial) document.getElementById('os-serial').textContent = d.serial;
 
       // Blackout / watchdog banners
       document.getElementById('blackout-bar').style.display  = d.blackout          ? 'flex' : 'none';

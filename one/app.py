@@ -1143,6 +1143,7 @@ def status():
         "hdmi2_external_url":   config.get("hdmi2_external_url", ""),
         "connected":            connected,
         "os_version":           OS_VERSION,
+        "serial":               config.get("serial", ""),
         "local_ip":             net["ip"],
         "net_iface":            net["iface"],
         "ontime_installed":     ontime_installed(),

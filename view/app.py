@@ -773,6 +773,7 @@ def status():
         "connected": connected,
         "local_ip":  get_local_ip(),
         "os_version": OS_VERSION,
+        "serial": config.get("serial", ""),
         "os_latest": _os_update["latest"],
         "os_update_available": _os_update["update_available"],
         "os_checked": _os_update.get("checked", False),
