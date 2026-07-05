@@ -10,7 +10,7 @@ from pathlib import Path
 import requests
 from flask import Flask, jsonify, render_template, request
 
-OS_VERSION = "1.1.0"   # Downstage OS release — bump on tagged releases
+OS_VERSION = "1.1.1"   # Downstage OS release — bump on tagged releases
 OS_PRODUCT = "Downstage View"
 
 app = Flask(__name__)
@@ -515,6 +515,15 @@ def os_update():
         py_compile.compile(str(src_dir / "app.py"), doraise=True)
         if not (src_dir / "templates" / "index.html").exists():
             return jsonify({"ok": False, "message": "Release is missing templates/index.html"})
+
+        # Guard against stale GitHub archive caches: the code inside the
+        # tarball must actually be the version the tag claims (this bit us —
+        # a v1.1.0 archive once served v1.0.0 code).
+        m = re.search(r'OS_VERSION = "([^"]+)"', (src_dir / "app.py").read_text())
+        staged_ver = m.group(1) if m else None
+        if staged_ver != ver:
+            return jsonify({"ok": False,
+                            "message": f"Release archive is stale: tag says v{ver} but code inside is v{staged_ver}. Try again later."})
 
         script = work / "swap.sh"
         script.write_text(_SWAP_SCRIPT.format(
