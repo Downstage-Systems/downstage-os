@@ -962,7 +962,9 @@
           <div class="version-row" id="os-version-row" style="display:flex">
             <span class="version-tag" id="os-ver-installed">—</span>
             <span class="version-badge checking" id="os-ver-badge">Checking…</span>
+            <button class="btn-sm" id="os-update-btn" onclick="osUpdate()" style="display:none">Update</button>
           </div>
+          <div class="external-url-hint" id="os-update-note" style="display:none"></div>
         </div>
       </div>
 
@@ -1978,6 +1980,27 @@
   }
 
   // ── Update check ─────────────────────────────────────────────────────────────
+  async function osUpdate() {
+    if (!confirm('Update Downstage OS?\n\nThe setup service restarts during the update (displays are not interrupted). If the new version fails to start, the previous one is restored automatically.')) return;
+    const btn = document.getElementById('os-update-btn');
+    btn.disabled = true; btn.textContent = 'Updating…';
+    try {
+      const r = await fetch('/os/update', { method: 'POST', headers: {'Content-Type':'application/json'}, body: '{}' });
+      const d = await r.json();
+      if (!d.ok) { showToast(d.message, 'error'); btn.disabled = false; btn.textContent = 'Update'; return; }
+      showToast('Updating — this page will reload when the new version is up.', 'info');
+      // wait for the service to go down (restart) and come back, then reload
+      let sawDown = false;
+      const poll = setInterval(async () => {
+        try {
+          const s = await (await fetch('/status', { cache: 'no-store' })).json();
+          if (sawDown && s.os_version) { clearInterval(poll); location.reload(); }
+        } catch { sawDown = true; }
+      }, 3000);
+      setTimeout(() => location.reload(), 120000);   // give up waiting after 2 min
+    } catch { showToast('Network error.', 'error'); btn.disabled = false; btn.textContent = 'Update'; }
+  }
+
   async function loadUpdateStatus() {
     try {
       const r = await fetch('/update-status');
@@ -1985,6 +2008,14 @@
       renderVersionRow('ontime',    d.ontime);
       renderVersionRow('companion', d.companion);
       renderVersionRow('os',        d.os);
+      // OS update button + last-result note
+      const osBtn = document.getElementById('os-update-btn');
+      if (osBtn) osBtn.style.display = d.os?.update_available ? '' : 'none';
+      const note = document.getElementById('os-update-note');
+      if (note && d.os?.last_result?.startsWith('rolled-back')) {
+        note.textContent = 'Last update failed and was rolled back automatically.';
+        note.style.display = '';
+      }
       if (d.companion?.channel && d.companion.channel !== companionChannel) {
         companionChannel = d.companion.channel;
         updateChannelToggle();

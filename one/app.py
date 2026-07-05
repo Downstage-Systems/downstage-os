@@ -10,7 +10,7 @@ from pathlib import Path
 import requests
 from flask import Flask, jsonify, render_template, request, send_file, Response
 
-OS_VERSION = "1.0.0"   # Downstage OS release — bump on tagged releases
+OS_VERSION = "1.1.0"   # Downstage OS release — bump on tagged releases
 OS_PRODUCT = "Downstage One"
 
 app = Flask(__name__)
@@ -1350,13 +1350,114 @@ def system_shutdown():
 
 @app.route("/update-status")
 def update_status_route():
-    return jsonify(_update_status)
+    d = dict(_update_status)
+    d["os"] = dict(d["os"], last_result=_os_update_result())
+    return jsonify(d)
 
 
 @app.route("/updates/recheck", methods=["POST"])
 def updates_recheck():
     threading.Thread(target=_check_updates_background, daemon=True).start()
     return jsonify({"ok": True})
+
+
+# ── Downstage OS self-update ──────────────────────────────────────────────────
+# Downloads a release tarball, syntax-checks it, then hands off to a detached
+# swap script (via systemd-run, so restarting our own service can't kill it).
+# The script swaps files, restarts, health-checks /status for 60s, and rolls
+# back to the automatic backup if the new version doesn't come up.
+
+_OS_VARIANT = "one"
+_OS_APPDIR  = str(BASE_DIR)
+
+_SWAP_SCRIPT = """#!/bin/bash
+SRC="{src}"
+APP="{app}"
+BK="$APP/.backup"
+LOG="$APP/.update-result"
+sleep 2
+rm -rf "$BK"; mkdir -p "$BK"
+cp    "$APP/app.py"    "$BK/" 2>/dev/null
+cp -r "$APP/templates" "$BK/" 2>/dev/null
+cp -r "$APP/static"    "$BK/" 2>/dev/null
+cp    "$SRC/app.py"    "$APP/app.py"
+[ -d "$SRC/templates" ] && cp -r "$SRC/templates/." "$APP/templates/"
+[ -d "$SRC/static" ]    && cp -r "$SRC/static/."    "$APP/static/"
+{restart}
+for i in $(seq 1 12); do
+  sleep 5
+  curl -s -m 3 http://127.0.0.1:8080/status > /dev/null && {{ echo "ok {tag} $(date -Is)" > "$LOG"; exit 0; }}
+done
+cp    "$BK/app.py"    "$APP/app.py"
+cp -r "$BK/templates/." "$APP/templates/" 2>/dev/null
+cp -r "$BK/static/."    "$APP/static/"    2>/dev/null
+{restart}
+echo "rolled-back {tag} $(date -Is)" > "$LOG"
+"""
+
+_OS_RESTART_CMD = "systemctl --user restart ontime-kiosk"
+
+
+def _os_update_result():
+    try:
+        return (Path(_OS_APPDIR) / ".update-result").read_text().strip()
+    except Exception:
+        return None
+
+
+@app.route("/os/update", methods=["POST"])
+def os_update():
+    import tarfile, py_compile
+    data  = request.get_json(silent=True) or {}
+    force = bool(data.get("force"))
+    repo  = load_config().get("os_update_repo", "")
+    if not repo:
+        return jsonify({"ok": False, "message": "No update repo configured"})
+    try:
+        r   = requests.get(f"https://api.github.com/repos/{repo}/releases/latest", timeout=10)
+        tag = r.json().get("tag_name", "")
+        ver = tag.lstrip("v")
+        if not ver:
+            return jsonify({"ok": False, "message": "No published release found"})
+        if not force and _version_tuple(ver) <= _version_tuple(OS_VERSION):
+            return jsonify({"ok": False, "message": f"Already on v{OS_VERSION}"})
+
+        work = Path("/tmp/ds-os-update")
+        subprocess.run(["rm", "-rf", str(work)])
+        work.mkdir(parents=True)
+        tarball = work / "src.tar.gz"
+        with requests.get(f"https://github.com/{repo}/archive/refs/tags/{tag}.tar.gz",
+                          stream=True, timeout=120) as resp:
+            resp.raise_for_status()
+            with open(tarball, "wb") as f:
+                for chunk in resp.iter_content(65536):
+                    f.write(chunk)
+        with tarfile.open(tarball) as tf:
+            tf.extractall(work)
+        roots = [p for p in work.iterdir() if p.is_dir()]
+        src_dir = next((p / _OS_VARIANT for p in roots if (p / _OS_VARIANT / "app.py").exists()), None)
+        if not src_dir:
+            return jsonify({"ok": False, "message": f"Release has no {_OS_VARIANT}/app.py"})
+
+        # refuse to install code that won't even parse
+        py_compile.compile(str(src_dir / "app.py"), doraise=True)
+        if not (src_dir / "templates" / "index.html").exists():
+            return jsonify({"ok": False, "message": "Release is missing templates/index.html"})
+
+        script = work / "swap.sh"
+        script.write_text(_SWAP_SCRIPT.format(
+            src=src_dir, app=_OS_APPDIR, tag=tag, restart=_OS_RESTART_CMD))
+        script.chmod(0o755)
+        subprocess.Popen(
+            ["systemd-run", "--user", "--collect", f"--unit=ds-os-update-{int(time.time())}",
+             "bash", str(script)],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+        return jsonify({"ok": True, "message": f"Updating to {tag} — service will restart"})
+    except py_compile.PyCompileError as e:
+        return jsonify({"ok": False, "message": f"Release failed validation: {e}"})
+    except Exception as e:
+        return jsonify({"ok": False, "message": str(e)})
 
 
 # ── Local OnTime routes ───────────────────────────────────────────────────────
