@@ -638,6 +638,7 @@
             <span class="version-badge checking" id="os-ver-badge">Checking…</span>
             <button class="btn-sm" id="os-update-btn" onclick="osUpdate()" style="display:none">Update</button>
             <button class="btn-sm" id="os-check-btn" onclick="osRecheck()">Check</button>
+            <button class="btn-sm" onclick="window.location='/diagnostics'" title="Download a support diagnostics bundle">Diagnostics</button>
           </div>
           <div class="external-url-hint" id="os-update-note" style="display:none"></div>
         </div>
@@ -668,6 +669,7 @@
           Shutdown
         </button>
         <button class="footer-btn danger" onclick="resetKiosk()">Reset</button>
+        <button class="footer-btn danger" onclick="factoryReset()" title="Erase all user data — out-of-box state">Factory Reset</button>
       </div>
     </div>
   </div>
@@ -1136,6 +1138,18 @@
     } catch { showToast('Network error.', 'error'); }
     btn.disabled = false;
     btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>Auto-detect`;
+  }
+
+
+  function factoryReset() {
+    const typed = prompt('FACTORY RESET\n\nThis erases WiFi credentials, OnTime projects, and logs. The unit keeps its serial and hotspot identity, then reboots — it will come back on ethernet or its fallback hotspot.\n\nType RESET to confirm:');
+    if (typed !== 'RESET') { if (typed !== null) showToast('Not confirmed — type RESET exactly.', 'warning'); return; }
+    fetch('/system/factory-reset', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ confirm: 'RESET' }),
+    }).then(r => r.json()).then(d =>
+      showToast(d.ok ? 'Factory reset started — unit is rebooting.' : `Failed: ${d.message}`, d.ok ? 'info' : 'error')
+    ).catch(() => showToast('Reset started (connection dropped).', 'info'));
   }
 
   // ── Footer ────────────────────────────────────────────────────────────────────

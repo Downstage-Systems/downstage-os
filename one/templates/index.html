@@ -967,6 +967,7 @@
             <span class="version-tag" id="os-serial" style="color:var(--muted)"></span>
             <span class="version-badge checking" id="os-ver-badge">Checking…</span>
             <button class="btn-sm" id="os-update-btn" onclick="osUpdate()" style="display:none">Update</button>
+            <button class="btn-sm" onclick="window.location='/diagnostics'" title="Download a support diagnostics bundle">Diagnostics</button>
           </div>
           <div class="external-url-hint" id="os-update-note" style="display:none"></div>
         </div>
@@ -1080,6 +1081,10 @@
           <button class="footer-btn danger" onclick="resetKiosk()" title="Reset kiosk config to defaults">
             <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
             Reset
+          </button>
+          <button class="footer-btn danger" onclick="factoryReset()" title="Erase all user data — out-of-box state">
+            <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+            Factory Reset
           </button>
         </div>
       </div>
@@ -1644,6 +1649,18 @@
   // ── OnTime Editor ─────────────────────────────────────────────────────────────
   function openEditor() {
     window.open(`http://${window.location.hostname}:4001/editor/`, '_blank');
+  }
+
+
+  function factoryReset() {
+    const typed = prompt('FACTORY RESET\n\nThis erases WiFi credentials, OnTime projects, and logs. The unit keeps its serial and hotspot identity, then reboots — it will come back on ethernet or its fallback hotspot.\n\nType RESET to confirm:');
+    if (typed !== 'RESET') { if (typed !== null) showToast('Not confirmed — type RESET exactly.', 'warning'); return; }
+    fetch('/system/factory-reset', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ confirm: 'RESET' }),
+    }).then(r => r.json()).then(d =>
+      showToast(d.ok ? 'Factory reset started — unit is rebooting.' : `Failed: ${d.message}`, d.ok ? 'info' : 'error')
+    ).catch(() => showToast('Reset started (connection dropped).', 'info'));
   }
 
   // ── Pi system controls ────────────────────────────────────────────────────────

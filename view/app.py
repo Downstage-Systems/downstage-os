@@ -8,7 +8,7 @@ import socket
 from pathlib import Path
 
 import requests
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, send_file
 
 OS_VERSION = "1.1.1"   # Downstage OS release — bump on tagged releases
 OS_PRODUCT = "Downstage View"
@@ -441,6 +441,79 @@ def hotspot_start_route():
 def hotspot_stop_route():
     ok, msg = stop_hotspot()
     return jsonify({"ok": ok, "message": msg, "active": hotspot_is_active()})
+
+
+_FACTORY_RESET_SCRIPT = """#!/bin/bash
+sleep 2
+# wipe all WiFi profiles (unit reverts to hotspot-on-boot provisioning state)
+nmcli -t -f NAME,TYPE connection show | grep ':802-11-wireless$' | cut -d: -f1 | \\
+  while read -r c; do sudo nmcli connection delete "$c" || true; done
+# wipe user data + logs
+rm -rf /home/pi/.config/ontime-electron
+rm -rf {app}/.backup
+rm -f  {app}/ontime.log {app}/kiosk.log {app}/.update-result
+# factory config — keep unit identity + update repo only
+python3 - << 'PY'
+import json
+cfg = json.load(open("{app}/config.json"))
+keep = {{k: cfg[k] for k in ("serial", "hotspot_ssid", "hotspot_pass", "os_update_repo") if k in cfg}}
+json.dump(keep, open("{app}/config.json", "w"))
+PY
+sudo reboot
+"""
+
+
+@app.route("/system/factory-reset", methods=["POST"])
+def system_factory_reset():
+    """Wipe user data back to out-of-box state. Keeps unit identity (serial,
+    hostname, hotspot credentials). WiFi credentials are erased, so the unit
+    comes back up on ethernet or its fallback hotspot."""
+    if (request.get_json(silent=True) or {}).get("confirm") != "RESET":
+        return jsonify({"ok": False, "message": "Confirmation missing"})
+    try:
+        script = Path("/tmp/ds-factory-reset.sh")
+        script.write_text(_FACTORY_RESET_SCRIPT.format(app=_OS_APPDIR))
+        script.chmod(0o755)
+        subprocess.Popen(["setsid", "bash", str(script)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return jsonify({"ok": True, "message": "Factory reset started — the unit will reboot"})
+    except Exception as e:
+        return jsonify({"ok": False, "message": str(e)})
+
+
+@app.route("/diagnostics")
+def diagnostics():
+    """Support bundle: versions, config (secrets stripped), network, system
+    state, logs. 'Email me the diagnostics file' beats guided SSH surgery."""
+    import io, zipfile
+    def sh(cmd):
+        try:
+            return subprocess.check_output(cmd, shell=True, text=True,
+                                           stderr=subprocess.STDOUT, timeout=10)
+        except Exception as e:
+            return f"error: {e}"
+    cfg = load_config()
+    cfg.pop("hotspot_pass", None)
+    serial = cfg.get("serial", "unknown")
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("info.txt",
+                   f"product: {OS_PRODUCT}\nos_version: {OS_VERSION}\n"
+                   f"serial: {serial}\nhostname: {socket.gethostname()}\n"
+                   f"generated: {sh('date -Is')}")
+        z.writestr("config.json", json.dumps(cfg, indent=2))
+        z.writestr("network.txt", sh("ip addr") + "\n=== connections ===\n" +
+                   sh("nmcli connection show") + "\n=== wifi ===\n" +
+                   sh("nmcli -t -f active,ssid,signal dev wifi 2>/dev/null | head -20"))
+        z.writestr("system.txt", sh("uptime") + sh("free -m") + sh("df -h /") +
+                   sh("vcgencmd measure_temp 2>/dev/null") +
+                   sh("cat /proc/device-tree/model 2>/dev/null; echo"))
+        z.writestr("rtc.txt",
+                   "battery_uV: " + sh("cat /sys/class/rtc/rtc0/battery_voltage 2>/dev/null") +
+                   "charging_uV: " + sh("cat /sys/class/rtc/rtc0/charging_voltage 2>/dev/null"))
+        z.writestr("app.log", sh(f"tail -n 400 {_OS_APPDIR}/kiosk.log 2>/dev/null"))
+    buf.seek(0)
+    return send_file(buf, as_attachment=True, mimetype="application/zip",
+                     download_name=f"downstage-diag-{serial}.zip")
 
 
 # ── Downstage OS self-update ──────────────────────────────────────────────────
