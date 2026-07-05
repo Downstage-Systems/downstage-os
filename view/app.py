@@ -193,10 +193,15 @@ def _is_ontime_source(source):
 
 
 def _open_window(source):
-    if source == "off":
-        return None
-
     profile = "--user-data-dir=/tmp/kiosk-lite"
+
+    if source == "off":
+        # render true black — no window would show the desktop
+        return subprocess.Popen([
+            "chromium", *_COMMON_FLAGS, profile,
+            "--start-fullscreen", "--window-size=1280,720", "--window-position=0,0",
+            "http://localhost:8080/blackout-page",
+        ], env=_chromium_env())
 
     if source == "config":
         return subprocess.Popen([
@@ -330,6 +335,11 @@ def _ontime_watchdog():
             _watchdog_override = False
             threading.Thread(target=launch_window, daemon=True).start()
             was_connected = True
+
+
+@app.route("/blackout-page")
+def blackout_page_view():
+    return '<html><body style="margin:0;background:#000"></body></html>', 200, {"Content-Type": "text/html"}
 
 
 @app.route("/holding")

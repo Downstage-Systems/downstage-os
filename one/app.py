@@ -554,15 +554,13 @@ def _open_window(source, display, hdmi_index):
     hdmi_index: 1 or 2 — used to give each instance its own profile dir.
     Returns the Popen handle, or None if source is "off".
     """
-    if source == "off":
-        return None
-
     pos      = f"--window-position={display['x']},{display['y']}"
 
     size     = f"--window-size={display['w']},{display['h']}"
     profile  = f"--user-data-dir=/tmp/kiosk-hdmi{hdmi_index}"
 
-    if source == "blackout":
+    if source in ("off", "blackout"):
+        # "off" renders true black — leaving no window would show the desktop
         return subprocess.Popen([
             "chromium", *_COMMON_FLAGS,
             profile, pos, size, "--kiosk",
