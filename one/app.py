@@ -1532,11 +1532,50 @@ def ontime_update():
 
 # ── Companion routes ──────────────────────────────────────────────────────────
 
+_companion_install = {"state": "idle", "message": ""}   # idle|installing|done|failed
+
+
+def _companion_install_worker():
+    """Customer-initiated install using Bitfocus's official companion-pi
+    script — the unit ships without Companion; the end user's click fetches
+    it from the official source onto their device."""
+    _companion_install["state"] = "installing"
+    _companion_install["message"] = ""
+    try:
+        r = subprocess.run(
+            ["sudo", "bash", "-c",
+             "curl -sL https://raw.githubusercontent.com/bitfocus/companion-pi/main/install.sh | bash"],
+            capture_output=True, text=True, timeout=1800,
+        )
+        if r.returncode == 0 and companion_is_installed(fresh=True):
+            subprocess.run(["sudo", "systemctl", "enable", "--now", "companion"],
+                           timeout=30, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            _companion_install["state"] = "done"
+            threading.Thread(target=_check_updates_background, daemon=True).start()
+        else:
+            _companion_install["state"] = "failed"
+            _companion_install["message"] = (r.stderr or r.stdout or "install script failed")[-300:]
+    except Exception as e:
+        _companion_install["state"] = "failed"
+        _companion_install["message"] = str(e)
+    print(f"[companion] install: {_companion_install['state']} {_companion_install['message'][:120]}")
+
+
+@app.route("/companion/install", methods=["POST"])
+def companion_install_route():
+    if _companion_install["state"] == "installing":
+        return jsonify({"ok": True, "state": "installing"})
+    threading.Thread(target=_companion_install_worker, daemon=True).start()
+    return jsonify({"ok": True, "state": "installing"})
+
+
 @app.route("/companion/status")
 def companion_status_route():
     return jsonify({
         "installed": companion_is_installed(),
         "running":   companion_is_running(),
+        "install_state":   _companion_install["state"],
+        "install_message": _companion_install["message"],
     })
 
 

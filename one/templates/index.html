@@ -1526,7 +1526,11 @@
     if (!companionInstalled) {
       badge.className   = 'status-badge missing';
       badge.textContent = 'Not installed';
-      actions.innerHTML = `<span style="font-size:12px;color:var(--muted)">Install via SSH: <code>curl -sL https://raw.githubusercontent.com/bitfocus/companion-pi/main/install.sh | sudo bash</code></span>`;
+      actions.innerHTML = `
+        <button class="btn-sm success" id="companion-install-btn" onclick="installCompanion()">
+          <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zm-8 2V5h2v6h1.17L12 13.17 9.83 11H11zm-6 7h14v2H5z"/></svg>
+          Install Companion</button>
+        <span style="font-size:11px;color:var(--muted)">Downloads from Bitfocus — needs internet, takes 5–10 min</span>`;
     } else if (!companionRunning) {
       badge.className   = 'status-badge stopped';
       badge.textContent = 'Stopped';
@@ -1584,6 +1588,31 @@
         showToast(`Companion channel set to ${channel}. Update check running…`, 'info');
       }
     } catch { showToast('Failed to set channel.', 'error'); }
+  }
+
+  async function installCompanion() {
+    if (!confirm('Install Bitfocus Companion?\n\nThis downloads Companion from Bitfocus onto this unit (internet required, 5–10 minutes). Stream Deck support activates when it finishes.')) return;
+    const btn = document.getElementById('companion-install-btn');
+    if (btn) { btn.disabled = true; btn.innerHTML = spinnerHTML('Installing… (5–10 min)'); }
+    try {
+      await fetch('/companion/install', { method: 'POST' });
+      showToast('Installing Companion — this panel updates when it finishes.', 'info');
+      const poll = setInterval(async () => {
+        try {
+          const d = await (await fetch('/companion/status')).json();
+          if (d.install_state === 'done' || d.installed) {
+            clearInterval(poll);
+            companionInstalled = true; companionRunning = d.running;
+            updateCompanionPanel(); loadUpdateStatus();
+            showToast('Companion installed.', 'success');
+          } else if (d.install_state === 'failed') {
+            clearInterval(poll);
+            updateCompanionPanel();
+            showToast(`Companion install failed: ${d.install_message}`, 'error');
+          }
+        } catch {}
+      }, 10000);
+    } catch { showToast('Network error.', 'error'); if (btn) btn.disabled = false; }
   }
 
   async function toggleCompanion(action) {

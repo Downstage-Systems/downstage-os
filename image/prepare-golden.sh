@@ -26,6 +26,19 @@ rm -rf /home/pi/.config/ontime-electron ~/.local/share/ontime 2>/dev/null || tru
 rm -rf $APP_DIR/.backup $APP_DIR/.update-result $APP_DIR/*.log 2>/dev/null || true
 sudo journalctl --rotate --vacuum-time=1s 2>/dev/null || true
 
+# 3c. Strip preinstalled third-party software — customers install on first
+# run via the setup UI (their download from the official source, not our
+# distribution; keeps licensing obligations off the shipped image)
+read -p "Remove preinstalled OnTime + Companion from this image? [y/N] " strip
+if [ "$strip" = "y" ]; then
+  sudo systemctl disable --now companion 2>/dev/null || true
+  sudo rm -rf /opt/companion /usr/local/bin/companion* /usr/local/sbin/companion*
+  sudo rm -f /etc/udev/rules.d/50-companion.rules /etc/systemd/system/companion.service
+  sudo userdel -r companion 2>/dev/null || true
+  rm -rf $APP_DIR/ontime-server
+  echo "third-party software stripped — first-run UI offers installs"
+fi
+
 # 4. Owner remote access (rpi-connect) — must never ship
 rm -rf /home/pi/.config/com.raspberrypi.connect 2>/dev/null || true
 sudo sed -i '/com.raspberrypi.connect/,+1d;/rpuak_/d' /boot/firmware/user-data 2>/dev/null || true
