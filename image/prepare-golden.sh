@@ -37,7 +37,18 @@ sudo rm -f /etc/ssh/ssh_host_*
 sudo systemctl enable regenerate_ssh_host_keys 2>/dev/null || \
   echo "NOTE: ensure ssh host keys regenerate on boot (rpi image does this when keys are absent)"
 
-# 6. Neutral hostname until provisioning
+# 6. Storage-write hardening (ships in every unit)
+sudo mkdir -p /etc/systemd/journald.conf.d
+sudo tee /etc/systemd/journald.conf.d/99-downstage-volatile.conf > /dev/null << 'JEOF'
+[Journal]
+Storage=volatile
+RuntimeMaxUse=32M
+JEOF
+grep -q "fsck.repair=yes" /boot/firmware/cmdline.txt || \
+  sudo sed -i 's/$/ fsck.repair=yes/' /boot/firmware/cmdline.txt
+# (swap is zram on this OS — RAM-backed, no SD writes; leave it)
+
+# 7. Neutral hostname until provisioning
 sudo hostnamectl set-hostname downstage-unprovisioned
 sudo sed -i "s/127.0.1.1 .*/127.0.1.1 downstage-unprovisioned/" /etc/hosts
 

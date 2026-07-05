@@ -40,3 +40,11 @@ It is inert unless a provisioning file exists, so it is safe on bench units.
 - Hotspot fallback with per-unit SSID (auto-starts when no network)
 - Self-updating Downstage OS pointed at downstage-systems/downstage-os
 - Ontime GPL v3 credit (legal requirement — do not remove)
+
+## Power-cut test (manual, part of burn-in)
+
+SD corruption from power cuts is the classic Pi failure. Every unit ships
+with volatile system journal, zram-only swap, and fsck.repair — but verify
+per unit: pull the power cord 5 times (twice mid-boot, three times while
+running with displays up). The unit must boot clean each time. Record with
+burn_in_pass in the build log.
