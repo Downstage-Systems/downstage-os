@@ -1,0 +1,2079 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Downstage One — Setup</title>
+  <link rel="icon" type="image/svg+xml" href="/static/downstage-one-mark.svg">
+  <style>
+    /* ── Brand fonts (served locally — no internet required) ── */
+    @font-face {
+      font-family: 'Rajdhani'; font-weight: 600; font-style: normal; font-display: swap;
+      src: url('/static/fonts/rajdhani-600.woff2') format('woff2');
+    }
+    @font-face {
+      font-family: 'Rajdhani'; font-weight: 700; font-style: normal; font-display: swap;
+      src: url('/static/fonts/rajdhani-700.woff2') format('woff2');
+    }
+    @font-face {
+      font-family: 'Share Tech Mono'; font-weight: 400; font-style: normal; font-display: swap;
+      src: url('/static/fonts/share-tech-mono-400.woff2') format('woff2');
+    }
+    @font-face {
+      font-family: 'Inter'; font-weight: 400; font-style: normal; font-display: swap;
+      src: url('/static/fonts/inter-400.woff2') format('woff2');
+    }
+    @font-face {
+      font-family: 'Inter'; font-weight: 600; font-style: normal; font-display: swap;
+      src: url('/static/fonts/inter-600.woff2') format('woff2');
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Downstage Systems palette — "House Lights Down" ── */
+    :root {
+      --bg:        #0B0D10;   /* House Black */
+      --surface:   #14181D;   /* Panel */
+      --surface2:  #1a2027;
+      --border:    #1d232a;
+      --border2:   #242B33;   /* Edge */
+      --accent:    #2FD97B;   /* Run Green */
+      --accent-lo: rgba(47,217,123,0.12);
+      --text:      #E8ECEF;   /* Text */
+      --muted:     #9AA4AD;   /* Dim */
+      --muted2:    #4a545e;
+      --green:     #2FD97B;   /* Run Green — running / healthy */
+      --green-bg:  rgba(47,217,123,0.08);
+      --green-bd:  rgba(47,217,123,0.2);
+      --red:       #E5484D;   /* Over Red — overtime / errors only */
+      --red-bg:    rgba(229,72,77,0.08);
+      --red-bd:    rgba(229,72,77,0.2);
+      --blue:      #F5A524;   /* Standby Amber — checking / attention */
+      --blue-bg:   rgba(245,165,36,0.08);
+      --blue-bd:   rgba(245,165,36,0.2);
+      --amber:     #F5A524;   /* Standby Amber */
+      --amber-bg:  rgba(245,165,36,0.08);
+      --amber-bd:  rgba(245,165,36,0.2);
+      --font-display: 'Rajdhani', 'Segoe UI', sans-serif;
+      --font-mono:    'Share Tech Mono', 'SF Mono', Menlo, monospace;
+      --font-body:    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      padding: 24px 16px;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 40px 40px;
+      opacity: 0.3; pointer-events: none;
+    }
+
+    .wrap { width: 100%; max-width: 560px; position: relative; z-index: 1; }
+
+    /* ── Logo ── */
+    .logo-row { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
+
+    .logo-icon { width: 46px; height: 46px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .logo-icon svg { width: 46px; height: 46px; }
+    .logo-text h1 {
+      font-family: var(--font-display);
+      font-size: 22px; font-weight: 700; color: var(--text);
+      text-transform: uppercase; letter-spacing: 0.05em; line-height: 1;
+    }
+    .logo-text h1 .product { color: var(--accent); }
+    .logo-text p {
+      font-family: var(--font-mono);
+      font-size: 10px; color: var(--muted); margin-top: 4px;
+      text-transform: uppercase; letter-spacing: 0.2em;
+    }
+
+    /* ── Card ── */
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+    .card-body { padding: 28px; }
+
+    /* ── Status bar ── */
+    .status-bar {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 16px; border-radius: 10px; margin-bottom: 22px;
+      font-size: 13px; font-weight: 500; transition: all 0.25s ease;
+      border: 1px solid transparent;
+    }
+    .status-bar.connected    { background: var(--green-bg); border-color: var(--green-bd); color: var(--green); }
+    .status-bar.disconnected { background: var(--red-bg);   border-color: var(--red-bd);   color: var(--red); }
+    .status-bar.checking     { background: var(--blue-bg);  border-color: var(--blue-bd);  color: var(--blue); }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+    .status-bar.connected .status-dot { animation: pulse 2s infinite; }
+    @keyframes pulse {
+      0%   { box-shadow: 0 0 0 0 rgba(47,217,123,0.6); }
+      70%  { box-shadow: 0 0 0 6px rgba(47,217,123,0); }
+      100% { box-shadow: 0 0 0 0 rgba(47,217,123,0); }
+    }
+
+    /* ── Section label — mono eyebrow, Standby Amber ── */
+    .section-label {
+      font-family: var(--font-mono);
+      font-size: 12px; font-weight: 700; color: var(--amber);
+      text-transform: uppercase; letter-spacing: 0.18em; margin-bottom: 8px;
+    }
+
+    /* ── Mode toggle ── */
+    .mode-toggle {
+      display: grid; grid-template-columns: 1fr 1fr;
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 10px; padding: 4px; margin-bottom: 24px; gap: 4px;
+    }
+    .mode-btn {
+      padding: 10px 12px; border: none; border-radius: 7px;
+      background: transparent; color: var(--muted);
+      font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+      display: flex; align-items: center; justify-content: center; gap: 7px; transition: all 0.18s;
+    }
+    .mode-btn svg { width: 15px; height: 15px; fill: currentColor; }
+    .mode-btn.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 6px rgba(0,0,0,0.4); }
+
+    /* ── Fields ── */
+    .field { margin-bottom: 22px; }
+    .ip-row { display: flex; gap: 8px; }
+    .ip-row button { flex-shrink: 0; }
+    .ip-input-wrap { position: relative; flex: 1; min-width: 0; }
+    .ip-input-wrap input { width: 100%; padding-right: 36px; }
+    .ip-history-btn {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; padding: 4px; cursor: pointer;
+      color: var(--muted2); display: flex; align-items: center;
+      transition: color 0.15s;
+    }
+    .ip-history-btn:hover { color: var(--muted); }
+    .ip-history-btn svg { width: 14px; height: 14px; fill: currentColor; }
+    .ip-history-dropdown {
+      position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 9px; overflow: hidden; z-index: 100;
+      display: none; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .ip-history-dropdown.open { display: block; }
+    .ip-history-item {
+      padding: 10px 14px; cursor: pointer; font-size: 13px; font-family: monospace;
+      color: var(--text); display: flex; align-items: center; gap: 10px;
+      transition: background 0.1s;
+    }
+    .ip-history-item svg { width: 12px; height: 12px; fill: var(--muted); flex-shrink: 0; }
+    .ip-history-item:hover { background: var(--border2); }
+    .ip-history-item + .ip-history-item { border-top: 1px solid var(--border); }
+    input {
+      width: 100%; padding: 11px 14px;
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 9px; color: var(--text); font-size: 15px; font-family: inherit;
+      outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-lo); }
+    input::placeholder { color: var(--muted2); }
+    input[inputmode="numeric"] { font-family: var(--font-mono); }  /* IP addresses are machine data */
+
+    /* ── Local OnTime panel ── */
+    .local-panel {
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 10px; padding: 16px; margin-bottom: 22px;
+    }
+    .local-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; overflow: hidden; }
+    .local-panel-title { font-size: 13px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
+    .local-panel-title svg { width: 14px; height: 14px; fill: var(--muted); flex-shrink: 0; }
+    .status-badge { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px; border: 1px solid transparent; flex-shrink: 0; white-space: nowrap; }
+    .status-badge.running { background: var(--green-bg); border-color: var(--green-bd); color: var(--green); }
+    .status-badge.stopped { background: var(--red-bg);   border-color: var(--red-bd);   color: var(--red); }
+    .status-badge.missing { background: var(--amber-bg); border-color: var(--amber-bd); color: var(--amber); }
+    .local-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .btn-sm {
+      padding: 8px 14px; border: 1px solid var(--border2); border-radius: 7px;
+      background: var(--surface); color: var(--muted);
+      font-family: var(--font-display); font-size: 13px; font-weight: 600;
+      letter-spacing: 0.04em; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s;
+      white-space: nowrap; flex-shrink: 0; text-decoration: none;
+    }
+    .btn-sm svg { width: 13px; height: 13px; fill: currentColor; flex-shrink: 0; }
+    .btn-sm:hover:not(:disabled) { background: var(--border2); color: var(--text); }
+    .btn-sm:disabled { opacity: 0.35; cursor: not-allowed; }
+    .btn-sm.success:hover:not(:disabled) { border-color: var(--green-bd); color: var(--green); background: var(--green-bg); }
+    .btn-sm.danger:hover:not(:disabled)  { border-color: var(--red-bd);   color: var(--red);   background: var(--red-bg); }
+
+    /* ── Preview panels ── */
+    .preview-row {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 10px; margin-bottom: 14px;
+    }
+
+    .preview-box {
+      border-radius: 10px; overflow: hidden;
+      background: #000; border: 1px solid var(--border2);
+      aspect-ratio: 16/9; position: relative; cursor: pointer;
+      transition: border-color 0.15s;
+    }
+
+    .preview-box:hover { border-color: var(--muted2); }
+    .preview-box.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-lo); }
+
+    .preview-box img {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+    }
+
+    .preview-badge {
+      position: absolute; top: 7px; left: 8px;
+      font-size: 10px; font-weight: 700;
+      color: #fff; background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(4px);
+      padding: 2px 7px; border-radius: 4px;
+      letter-spacing: 0.06em;
+      pointer-events: none;
+    }
+
+    .preview-offline {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--muted2); font-size: 12px; font-weight: 500;
+    }
+
+    /* ── Display controls (under previews) ── */
+    .display-ctl-row { display: flex; gap: 6px; margin: 8px 0 12px; }
+    .btn-sm.blackout { border-color: var(--red-bd); color: var(--red); }
+    .btn-sm.blackout:hover:not(:disabled) { background: var(--red-bg); color: var(--red); }
+
+    /* ── HDMI source tabs ── */
+    .hdmi-tabs {
+      display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 10px; padding: 4px; margin-bottom: 14px; gap: 4px;
+    }
+    .hdmi-tab {
+      padding: 9px 8px; border: none; border-radius: 7px;
+      background: transparent; color: var(--muted);
+      font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+      display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.18s;
+      min-width: 0; overflow: hidden;
+    }
+    .hdmi-tab svg { width: 15px; height: 15px; fill: currentColor; flex-shrink: 0; }
+    .hdmi-tab.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 6px rgba(0,0,0,0.4); }
+    .hdmi-tab .source-name {
+      font-family: var(--font-mono);
+      font-size: 10px; font-weight: 400; color: var(--accent);
+      background: var(--accent-lo); border: 1px solid rgba(47,217,123,0.25);
+      padding: 2px 6px; border-radius: 4px; margin-left: 2px;
+      min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+
+    /* ── Source grid ── */
+    .source-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 7px; margin-bottom: 22px;
+    }
+    .source-group-label {
+      grid-column: 1 / -1;
+      font-size: 10px; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.1em;
+      margin-top: 4px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .source-group-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    .source-chip {
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 12px;
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 9px; cursor: pointer; transition: all 0.15s; user-select: none;
+    }
+    .source-chip:hover { border-color: var(--muted2); background: var(--surface2); }
+    .source-chip.selected { background: var(--accent-lo); border-color: var(--accent); }
+    .source-chip.selected-off { background: rgba(229,72,77,0.06); border-color: var(--red-bd); }
+
+    .source-chip-icon {
+      width: 26px; height: 26px; border-radius: 6px;
+      background: var(--border2);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .source-chip.selected .source-chip-icon      { background: rgba(47,217,123,0.22); }
+    .source-chip.selected-off .source-chip-icon  { background: rgba(229,72,77,0.15); }
+    .source-chip-icon svg { width: 13px; height: 13px; fill: var(--muted); }
+    .source-chip.selected .source-chip-icon svg      { fill: var(--accent); }
+    .source-chip.selected-off .source-chip-icon svg  { fill: var(--red); }
+
+    .source-chip-label { font-size: 12px; font-weight: 500; color: var(--text); line-height: 1.2; }
+    .source-chip.selected .source-chip-label     { color: var(--accent); }
+    .source-chip.selected-off .source-chip-label { color: var(--red); }
+
+    /* ── Floating save bar — appears when there are unsaved changes ── */
+    .save-bar {
+      position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%) translateY(90px);
+      width: calc(100% - 32px); max-width: 560px;
+      display: flex; align-items: center; gap: 14px;
+      padding: 12px 16px;
+      background: var(--surface); border: 1px solid var(--accent);
+      border-radius: 12px; z-index: 90;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(47,217,123,0.1);
+      transition: transform 0.25s ease;
+    }
+    .save-bar.visible { transform: translateX(-50%) translateY(0); }
+    .save-bar-text {
+      flex: 1; min-width: 0;
+      font-family: var(--font-mono); font-size: 11px; color: var(--amber);
+      text-transform: uppercase; letter-spacing: 0.12em;
+    }
+    .save-bar .btn-primary { flex: 0 0 auto; padding: 10px 22px; font-size: 14px; }
+
+    /* ── External viewer URL ── */
+    .external-url-row { margin-top: 10px; }
+    .external-url-row input { font-family: var(--font-mono); font-size: 13px; }
+    .external-url-hint {
+      font-size: 11px; color: var(--muted); margin-top: 6px; line-height: 1.5;
+    }
+
+    /* ── Buttons — Rajdhani, uppercase, like panel labels ── */
+    .actions { display: flex; gap: 10px; }
+    button {
+      padding: 12px 20px; border: none; border-radius: 9px;
+      font-family: var(--font-display);
+      font-size: 15px; font-weight: 600; cursor: pointer;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      transition: all 0.15s; white-space: nowrap;
+      display: flex; align-items: center; gap: 7px;
+    }
+    button:active { transform: scale(0.97); }
+    button:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+    button svg { width: 15px; height: 15px; fill: currentColor; flex-shrink: 0; }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #0B0D10; flex: 1; justify-content: center;
+      box-shadow: 0 4px 16px rgba(47,217,123,0.25);
+    }
+    .btn-primary:hover:not(:disabled) { box-shadow: 0 6px 24px rgba(47,217,123,0.4); filter: brightness(1.08); }
+    .btn-ghost { background: var(--surface2); color: var(--muted); border: 1px solid var(--border2); }
+    .btn-ghost:hover:not(:disabled) { background: var(--border2); color: var(--text); }
+
+    /* ── Toast ── */
+    .toast {
+      margin-top: 14px; padding: 11px 14px; border-radius: 9px;
+      font-size: 13px; display: none; align-items: flex-start; gap: 9px;
+      border: 1px solid transparent;
+    }
+    .toast svg { width: 15px; height: 15px; fill: currentColor; flex-shrink: 0; margin-top: 1px; }
+    .toast.error   { background: var(--red-bg);   border-color: var(--red-bd);   color: var(--red);   display: flex; }
+    .toast.success { background: var(--green-bg); border-color: var(--green-bd); color: var(--green); display: flex; }
+    .toast.info    { background: var(--blue-bg);  border-color: var(--blue-bd);  color: var(--blue);  display: flex; }
+    .toast.warning { background: var(--amber-bg); border-color: var(--amber-bd); color: var(--amber); display: flex; }
+
+    /* ── Footer ── */
+    .card-footer {
+      padding: 16px 28px; border-top: 1px solid var(--border);
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .footer-info { font-size: 12px; color: var(--muted); line-height: 1.6; }
+    code {
+      font-family: var(--font-mono);
+      background: var(--surface2); border: 1px solid var(--border2);
+      padding: 1px 6px; border-radius: 5px; color: var(--accent); font-size: 11px;
+      word-break: break-all; overflow-wrap: break-word;
+    }
+    .oss-credit {
+      font-size: 11px; color: var(--muted); line-height: 1.5;
+    }
+    .oss-credit a { color: var(--muted); text-decoration: underline; text-underline-offset: 2px; }
+    .oss-credit a:hover { color: var(--text); }
+    .brand-footer {
+      font-family: var(--font-mono);
+      font-size: 9px; color: var(--muted2);
+      text-transform: uppercase; letter-spacing: 0.2em;
+      text-align: center; margin-top: 18px;
+    }
+    .footer-btns { display: flex; flex-direction: column; gap: 8px; }
+    .footer-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .footer-sep { width: 1px; height: 20px; background: var(--border2); flex-shrink: 0; margin: 0 2px; }
+    .footer-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; flex-shrink: 0; }
+    .footer-btn {
+      padding: 7px 11px; background: transparent; border: 1px solid var(--border2);
+      border-radius: 7px; color: var(--muted);
+      font-family: var(--font-display); font-size: 12px; font-weight: 600;
+      letter-spacing: 0.04em; cursor: pointer; white-space: nowrap; transition: all 0.15s;
+      display: flex; align-items: center; gap: 5px; flex-shrink: 0;
+    }
+    .footer-btn svg { width: 12px; height: 12px; fill: currentColor; }
+    .footer-btn:hover { background: var(--surface2); color: var(--text); border-color: var(--muted2); }
+    .footer-btn:active { transform: scale(0.97); }
+    .footer-btn.blackout { border-color: var(--red-bd); color: var(--red); }
+    .footer-btn.blackout:hover { background: var(--red-bg); }
+    .footer-btn.danger { color: var(--muted); }
+    .footer-btn.danger:hover { border-color: var(--red-bd); color: var(--red); background: var(--red-bg); }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spin { animation: spin 1s linear infinite; }
+
+    /* ── WiFi ── */
+    .wifi-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; overflow: hidden; }
+    .wifi-current { font-size: 13px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; overflow: hidden; }
+    .wifi-current svg { flex-shrink: 0; }
+    .wifi-ssid { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .wifi-current svg { width: 14px; height: 14px; fill: var(--muted); }
+    .wifi-ssid { color: var(--green); }
+    .wifi-network-list { display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow-y: auto; }
+    .wifi-network {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px; border-radius: 8px; cursor: pointer;
+      background: var(--surface); border: 1px solid var(--border2);
+      transition: all 0.15s;
+    }
+    .wifi-network:hover { border-color: var(--muted2); background: var(--surface2); }
+    .wifi-network.active { border-color: var(--green-bd); background: var(--green-bg); }
+    .wifi-signal { display: flex; align-items: flex-end; gap: 2px; flex-shrink: 0; }
+    .wifi-signal span { width: 3px; background: var(--muted2); border-radius: 1px; display: block; }
+    .wifi-signal span:nth-child(1) { height: 4px;  }
+    .wifi-signal span:nth-child(2) { height: 7px;  }
+    .wifi-signal span:nth-child(3) { height: 10px; }
+    .wifi-signal span:nth-child(4) { height: 13px; }
+    .wifi-signal.sig-4 span                 { background: var(--green); }
+    .wifi-signal.sig-3 span:nth-child(-n+3) { background: var(--green); }
+    .wifi-signal.sig-2 span:nth-child(-n+2) { background: var(--amber); }
+    .wifi-signal.sig-1 span:nth-child(1)    { background: var(--red); }
+    .wifi-name { flex: 1; font-size: 13px; font-weight: 500; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .wifi-network.active .wifi-name { color: var(--green); }
+    .wifi-lock { width: 12px; height: 12px; fill: var(--muted2); flex-shrink: 0; }
+    .wifi-empty { padding: 16px; text-align: center; color: var(--muted); font-size: 13px; }
+
+    /* ── Hotspot ── */
+    .hotspot-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);
+    }
+    .hotspot-info { display: flex; align-items: center; gap: 8px; font-size: 13px; min-width: 0; }
+    .hotspot-info svg { width: 14px; height: 14px; fill: var(--muted); flex-shrink: 0; }
+    .hotspot-ssid {
+      font-family: var(--font-mono); font-size: 12px; color: var(--text);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .hotspot-state {
+      font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em;
+      padding: 2px 7px; border-radius: 20px; border: 1px solid var(--border2); color: var(--muted);
+    }
+    .hotspot-state.on { border-color: var(--green-bd); background: var(--green-bg); color: var(--green); }
+    .hotspot-hint {
+      margin-top: 8px; font-size: 11px; color: var(--muted); line-height: 1.6;
+    }
+    .hotspot-hint code { font-size: 11px; }
+
+    /* ── WiFi password modal ── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+      z-index: 200; align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--surface); border: 1px solid var(--border2);
+      border-radius: 16px; padding: 24px; width: 320px; max-width: 90vw;
+    }
+    .modal h3 { font-family: var(--font-display); font-size: 17px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+    .modal p  { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+    .modal input { margin-bottom: 14px; }
+    .modal-btns { display: flex; gap: 8px; }
+
+    /* ── Timezone / selects ── */
+    .tz-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .tz-row select, select.setting-select {
+      flex: 1; min-width: 0; width: 100%; padding: 9px 12px;
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 9px; color: var(--text); font-size: 13px; font-family: inherit;
+      outline: none; cursor: pointer; transition: border-color 0.15s;
+    }
+    .tz-row select:focus, select.setting-select:focus { border-color: var(--accent); }
+    .tz-current {
+      font-size: 12px; color: var(--muted); margin-bottom: 10px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .tz-current span { color: var(--text); font-weight: 500; }
+
+    /* ── Blackout / watchdog banners ── */
+    .alert-bar {
+      display: flex; align-items: center; gap: 10px; padding: 10px 16px;
+      border-radius: 10px; margin-bottom: 16px;
+      font-size: 13px; font-weight: 600; border: 1px solid transparent;
+    }
+    .alert-bar.blackout  { background: rgba(0,0,0,0.7); border-color: #333; color: #666; }
+    .alert-bar.watchdog  { background: var(--amber-bg); border-color: var(--amber-bd); color: var(--amber); }
+    .alert-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+    .alert-bar .alert-action {
+      margin-left: auto; padding: 5px 12px; border-radius: 6px; border: 1px solid currentColor;
+      background: transparent; color: inherit; font-size: 12px; font-weight: 700;
+      cursor: pointer; font-family: inherit; transition: all 0.15s;
+    }
+    .alert-bar .alert-action:hover { opacity: 0.7; }
+
+    /* ── Preset strip ── */
+    .preset-strip {
+      display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 10px; min-height: 34px;
+      align-items: center;
+    }
+    .preset-chip {
+      display: flex; align-items: center; gap: 5px;
+      padding: 5px 10px 5px 12px;
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 20px; cursor: pointer; transition: all 0.15s; font-size: 12px;
+      color: var(--text); font-weight: 500; user-select: none;
+    }
+    .preset-chip:hover { border-color: var(--accent); color: var(--accent); }
+    .preset-chip .del {
+      width: 14px; height: 14px; border-radius: 50%; background: var(--border2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; line-height: 1; color: var(--muted); flex-shrink: 0;
+      transition: background 0.15s;
+    }
+    .preset-chip .del:hover { background: var(--red); color: #fff; }
+    .preset-empty { font-size: 12px; color: var(--muted2); padding: 2px 0; }
+
+    /* ── Display settings (resolution/rotation) ── */
+    .display-settings-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    }
+    .display-setting-row {
+      display: flex; flex-direction: column; gap: 5px;
+    }
+    .display-setting-row label {
+      font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    /* ── System health ── */
+    .health-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(88px, 1fr)); gap: 10px;
+    }
+    .health-tile {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 12px 8px; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 9px; text-align: center;
+    }
+    .health-tile .val { font-family: var(--font-mono); font-size: 14px; color: var(--text); word-break: break-all; line-height: 1.2; }
+    .health-tile .lbl { font-size: 10px; color: var(--muted); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.08em; }
+
+    /* ── Watchdog toggle row ── */
+    .toggle-row {
+      display: flex; align-items: center; gap: 12px;
+      margin-top: 10px;
+    }
+    .toggle-label { font-size: 12px; color: var(--muted); flex: 1; min-width: 0; line-height: 1.4; }
+    .toggle {
+      width: 36px; height: 20px; border-radius: 10px; border: none; cursor: pointer;
+      background: var(--border2); position: relative; transition: background 0.2s;
+      flex-shrink: 0;
+    }
+    .toggle::after {
+      content: ''; position: absolute; top: 3px; left: 3px;
+      width: 14px; height: 14px; border-radius: 50%; background: #fff;
+      transition: left 0.2s;
+    }
+    .toggle.on { background: var(--accent); }
+    .toggle.on::after { left: 19px; }
+
+    /* ── Version row ── */
+    .version-row {
+      display: none; align-items: center; gap: 8px; flex-wrap: wrap;
+      margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border);
+      font-size: 12px; color: var(--muted);
+    }
+    .version-tag { font-family: var(--font-mono); font-size: 12px; color: var(--text); }
+    .version-badge {
+      font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px;
+      border: 1px solid transparent;
+    }
+    .version-badge.uptodate { background: var(--green-bg); border-color: var(--green-bd); color: var(--green); }
+    .version-badge.available { background: var(--amber-bg); border-color: var(--amber-bd); color: var(--amber); }
+    .version-badge.checking  { background: var(--blue-bg);  border-color: var(--blue-bd);  color: var(--blue); }
+    .channel-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+    .channel-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; flex-shrink: 0; }
+    .channel-toggle { display: flex; border: 1px solid var(--border2); border-radius: 7px; overflow: hidden; }
+    .channel-btn {
+      padding: 4px 12px; background: transparent; border: none; border-radius: 0;
+      color: var(--muted); font-size: 11px; font-weight: 500; cursor: pointer;
+      font-family: inherit; transition: all 0.15s;
+    }
+    .channel-btn:first-child { border-right: 1px solid var(--border2); }
+    .channel-btn:hover { background: var(--surface2); color: var(--text); }
+    .channel-btn.active { background: var(--surface2); color: var(--text); font-weight: 700; }
+    .channel-btn.active.beta { color: var(--amber); }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="logo-row">
+    <div class="logo-icon">
+      <svg viewBox="0 0 96 96" role="img" aria-label="Downstage One mark"><rect x="6" y="10" width="84" height="66" rx="10" fill="none" stroke="#e8ecef" stroke-width="7"/><rect x="20" y="54" width="40" height="9" rx="4.5" fill="#2fd97b"/><rect x="64" y="54" width="12" height="9" rx="4.5" fill="#e8ecef" opacity="0.28"/><rect x="20" y="83" width="26" height="7" rx="3.5" fill="#2fd97b"/><rect x="50" y="83" width="26" height="7" rx="3.5" fill="#2fd97b"/></svg>
+    </div>
+    <div class="logo-text">
+      <h1>Downstage <span class="product">One</span></h1>
+      <p>Setup &amp; Control</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+
+      <!-- Blackout banner -->
+      <div class="alert-bar blackout" id="blackout-bar" style="display:none">
+        <div class="alert-dot"></div>
+        <span>Displays are blacked out</span>
+        <button class="alert-action" onclick="blackoutResume()">Resume</button>
+      </div>
+
+      <!-- Watchdog offline banner -->
+      <div class="alert-bar watchdog" id="watchdog-bar" style="display:none">
+        <div class="alert-dot"></div>
+        <span>OnTime offline — holding page active</span>
+      </div>
+
+      <!-- Status -->
+      <div class="status-bar disconnected" id="status-bar">
+        <div class="status-dot"></div>
+        <span id="status-text">Checking connection…</span>
+      </div>
+
+      <!-- Mode toggle -->
+      <div class="section-label">Server Mode</div>
+      <div class="mode-toggle">
+        <button class="mode-btn" id="btn-remote" onclick="setMode('remote')">
+          <svg viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3a4.237 4.237 0 00-6 0zm-4-4l2 2a7.074 7.074 0 0110 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+          Remote Server
+        </button>
+        <button class="mode-btn" id="btn-local" onclick="setMode('local')">
+          <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-5 12H4v-2h11v2zm5-4H4v-2h16v2zm0-4H4V6h16v2z"/></svg>
+          Local (this Pi)
+        </button>
+      </div>
+
+      <!-- Remote: IP -->
+      <div id="remote-section" class="field">
+        <div class="section-label">OnTime Server Address</div>
+        <div class="ip-row">
+          <div class="ip-input-wrap">
+            <input type="text" id="ip" placeholder="192.168.1.100"
+                   value="{{ config.ip }}" autocomplete="off" spellcheck="false" inputmode="numeric"
+                   oninput="markDirty()">
+            <button class="ip-history-btn" id="ip-history-btn" onclick="toggleIpHistory(event)" title="Recent addresses" style="display:none">
+              <svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 00-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0013 21a9 9 0 000-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+            </button>
+            <div class="ip-history-dropdown" id="ip-history-dropdown"></div>
+          </div>
+          <button class="btn-ghost" onclick="testConnection()">
+            <svg viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3a4.237 4.237 0 00-6 0zm-4-4l2 2a7.074 7.074 0 0110 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+            Test
+          </button>
+        </div>
+      </div>
+
+      <!-- Local: OnTime panel -->
+      <div id="local-section" class="field" style="display:none">
+        <div class="section-label">OnTime Server (Local)</div>
+        <div class="local-panel">
+          <div class="local-panel-header">
+            <div class="local-panel-title">
+              <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-5 12H4v-2h11v2zm5-4H4v-2h16v2zm0-4H4V6h16v2z"/></svg>
+              OnTime Server
+            </div>
+            <span class="status-badge" id="local-status-badge">—</span>
+          </div>
+          <div class="local-actions" id="local-actions"></div>
+          <div class="version-row" id="ontime-version-row">
+            <span class="version-tag" id="ontime-ver-installed">—</span>
+            <span class="version-badge checking" id="ontime-ver-badge">Checking…</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Presets -->
+      <div class="field">
+        <div class="section-label">Quick Presets</div>
+        <div class="preset-strip" id="preset-strip">
+          <span class="preset-empty">No presets saved yet</span>
+        </div>
+        <button class="btn-sm" onclick="savePreset()">
+          <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+          Save Current as Preset
+        </button>
+      </div>
+
+      <!-- HDMI source selector -->
+      <div class="field">
+        <div class="section-label">Display Sources</div>
+
+        <!-- Live previews -->
+        <div class="preview-row" id="preview-row">
+          <div class="preview-box active" id="preview-box-1" onclick="selectHdmiTab(1)">
+            <img id="preview-img-1" src="/stream/hdmi1"
+                 onerror="this.style.display='none';document.getElementById('preview-off-1').style.display='flex'">
+            <div class="preview-offline" id="preview-off-1" style="display:none">No signal</div>
+            <div class="preview-badge">HDMI 1</div>
+          </div>
+          <div class="preview-box" id="preview-box-2" onclick="selectHdmiTab(2)">
+            <img id="preview-img-2" src="/stream/hdmi2"
+                 onerror="this.style.display='none';document.getElementById('preview-off-2').style.display='flex'">
+            <div class="preview-offline" id="preview-off-2" style="display:none">No signal</div>
+            <div class="preview-badge">HDMI 2</div>
+          </div>
+        </div>
+
+        <!-- Display controls — act on the outputs previewed above -->
+        <div class="display-ctl-row">
+          <button class="btn-sm" onclick="refreshDisplays()" title="Reload all display windows">
+            <svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+            Refresh
+          </button>
+          <button class="btn-sm blackout" id="blackout-btn" onclick="blackout()" title="Black out all displays">
+            <svg viewBox="0 0 24 24"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg>
+            Blackout
+          </button>
+        </div>
+
+        <!-- HDMI tabs -->
+        <div class="hdmi-tabs">
+          <button class="hdmi-tab active" id="tab-hdmi1" onclick="selectHdmiTab(1)">
+            <svg viewBox="0 0 24 24"><path d="M21 2H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h7l-2 3v1h8v-1l-2-3h7c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 12H3V4h18v10z"/></svg>
+            HDMI 1
+            <span class="source-name" id="hdmi1-label">Config UI</span>
+          </button>
+          <button class="hdmi-tab" id="tab-hdmi2" onclick="selectHdmiTab(2)">
+            <svg viewBox="0 0 24 24"><path d="M21 2H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h7l-2 3v1h8v-1l-2-3h7c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 12H3V4h18v10z"/></svg>
+            HDMI 2
+            <span class="source-name" id="hdmi2-label">Timer</span>
+          </button>
+        </div>
+
+        <!-- Source chips -->
+        <div class="source-grid" id="source-grid">
+
+          <div class="source-group-label">System</div>
+
+          <div class="source-chip" data-source="config" onclick="selectSource(this)">
+            <div class="source-chip-icon"><svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg></div>
+            <span class="source-chip-label">Config UI</span>
+          </div>
+
+          <div class="source-chip" data-source="companion" onclick="selectSource(this)">
+            <div class="source-chip-icon"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 14.93V15h-2v1.93A8.001 8.001 0 014.07 9H6V7H4.07A8.001 8.001 0 0111 4.07V6h2V4.07A8.001 8.001 0 0119.93 11H18v2h1.93A8.001 8.001 0 0113 16.93z"/></svg></div>
+            <span class="source-chip-label">Companion</span>
+          </div>
+
+          <div class="source-chip" data-source="external" onclick="selectSource(this)">
+            <div class="source-chip-icon"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg></div>
+            <span class="source-chip-label">External Viewer</span>
+          </div>
+
+          <div class="source-chip" data-source="off" onclick="selectSource(this)">
+            <div class="source-chip-icon"><svg viewBox="0 0 24 24"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg></div>
+            <span class="source-chip-label">Off</span>
+          </div>
+
+          <div class="source-group-label">OnTime · Views</div>
+
+          <div class="source-chip" data-source="/timer" onclick="selectSource(this)">
+            <div class="source-chip-icon"><svg viewBox="0 0 24 24"><path d="M15 1H9v2h6V1zm-4 13h2V8h-2v6zm8.03-6.61l1.42-1.42c-.43-.51-.9-.99-1.41-1.41l-1.42 1.42A8.962 8.962 0 0012 4c-4.97 0-9 4.03-9 9s4.02 9 9 9a8.994 8.994 0 007.03-14.61zM12 20c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg></div>
+            <span class="source-chip-label">Stage Timer</span>
+          </div>
+
+          <div class="source-chip" data-source="cleantimer" onclick="selectSource(this)">
+            <div class="source-chip-icon"><svg viewBox="0 0 24 24"><path d="M15 1H9v2h6V1zm-4 13h2V8h-2v6zm8.03-6.61l1.42-1.42c-.43-.51-.9-.99-1.41-1.41l-1.42 1.42A8.962 8.962 0 0012 4c-4.97 0-9 4.03-9 9s4.02 9 9 9a8.994 8.994 0 007.03-14.61zM12 20c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg></div>
+            <span class="source-chip-label">Clean Timer</span>
+          </div>
+
+          <div class="source-chip" data-source="/countdown" onclick="selectSource(this)">
+            <div class="source-chip-icon"><svg viewBox="0 0 24 24"><path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/></svg></div>
+            <span class="source-chip-label">Countdown</span>
+          </div>
+
+          <div class="source-chip" data-source="/backstage" onclick="selectSource(this)">
+            <div class="source-chip-icon"><svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></div>
+            <span class="source-chip-label">Backstage / Crew</span>
+          </div>
+
+          <div class="source-chip" data-source="/studio" onclick="selectSource(this)">
+            <div class="source-chip-icon"><svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg></div>
+            <span class="source-chip-label">Studio Clock</span>
+          </div>
+
+          <div class="source-chip" data-source="/timeline" onclick="selectSource(this)">
+            <div class="source-chip-icon"><svg viewBox="0 0 24 24"><path d="M3 14h4v-4H3v4zm0 5h4v-4H3v4zM3 9h4V5H3v4zm5 5h13v-4H8v4zm0 5h13v-4H8v4zM8 5v4h13V5H8z"/></svg></div>
+            <span class="source-chip-label">Timeline</span>
+          </div>
+
+          <div class="source-chip" data-source="/info" onclick="selectSource(this)">
+            <div class="source-chip-icon"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg></div>
+            <span class="source-chip-label">Public Info</span>
+          </div>
+
+          <div class="source-group-label">OnTime · Control</div>
+
+          <div class="source-chip" data-source="/op" onclick="selectSource(this)">
+            <div class="source-chip-icon"><svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg></div>
+            <span class="source-chip-label">Operator</span>
+          </div>
+
+          <div class="source-chip" data-source="/cuesheet" onclick="selectSource(this)">
+            <div class="source-chip-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg></div>
+            <span class="source-chip-label">Cue Sheet</span>
+          </div>
+
+          <div class="source-chip" data-source="/editor" onclick="selectSource(this)">
+            <div class="source-chip-icon"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></div>
+            <span class="source-chip-label">Editor</span>
+          </div>
+
+          <div class="source-chip" data-source="/timercontrol" onclick="selectSource(this)">
+            <div class="source-chip-icon"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+            <span class="source-chip-label">Timer Control</span>
+          </div>
+
+          <div class="source-chip" data-source="/messagecontrol" onclick="selectSource(this)">
+            <div class="source-chip-icon"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg></div>
+            <span class="source-chip-label">Message Control</span>
+          </div>
+
+          <div class="source-chip" data-source="/rundown" onclick="selectSource(this)">
+            <div class="source-chip-icon"><svg viewBox="0 0 24 24"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z"/></svg></div>
+            <span class="source-chip-label">Rundown</span>
+          </div>
+
+        </div>
+
+        <!-- External viewer URL (shown when External Viewer is selected) -->
+        <div class="external-url-row" id="external-url-row" style="display:none">
+          <input type="url" id="external-url" placeholder="https://stagetimer.io/r/ABC123/viewer"
+                 autocomplete="off" spellcheck="false"
+                 oninput="setExternalUrl(this.value)">
+          <div class="external-url-hint">Full URL of the page to display — a stagetimer.io viewer, a Google Slides present link, any web page.</div>
+        </div>
+      </div>
+
+      <!-- Display settings: resolution + rotation -->
+      <div class="field">
+        <div class="section-label">Display Settings</div>
+        <div class="local-panel">
+          <div class="display-settings-grid">
+            <div class="display-setting-row">
+              <label>HDMI 1 Resolution</label>
+              <select class="setting-select" id="hdmi1-res" onchange="hdmi1Res=this.value; markDirty()">
+                <option value="3840x2160">4K (3840×2160)</option>
+                <option value="1920x1080" selected>1080p (1920×1080)</option>
+                <option value="1280x720">720p (1280×720)</option>
+              </select>
+            </div>
+            <div class="display-setting-row">
+              <label>HDMI 1 Rotation</label>
+              <select class="setting-select" id="hdmi1-rotate" onchange="hdmi1Rotate=this.value; markDirty()">
+                <option value="normal" selected>Normal</option>
+                <option value="left">90° Left</option>
+                <option value="inverted">180°</option>
+                <option value="right">90° Right</option>
+              </select>
+            </div>
+            <div class="display-setting-row">
+              <label>HDMI 2 Resolution</label>
+              <select class="setting-select" id="hdmi2-res" onchange="hdmi2Res=this.value; markDirty()">
+                <option value="3840x2160">4K (3840×2160)</option>
+                <option value="1920x1080" selected>1080p (1920×1080)</option>
+                <option value="1280x720">720p (1280×720)</option>
+              </select>
+            </div>
+            <div class="display-setting-row">
+              <label>HDMI 2 Rotation</label>
+              <select class="setting-select" id="hdmi2-rotate" onchange="hdmi2Rotate=this.value; markDirty()">
+                <option value="normal" selected>Normal</option>
+                <option value="left">90° Left</option>
+                <option value="inverted">180°</option>
+                <option value="right">90° Right</option>
+              </select>
+            </div>
+          </div>
+          <div class="toggle-row">
+            <span class="toggle-label">OnTime watchdog (auto-switch to holding page when offline)</span>
+            <button class="toggle on" id="watchdog-toggle" onclick="toggleWatchdog()"></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- WiFi -->
+      <div class="field">
+        <div class="section-label">WiFi</div>
+        <div class="local-panel">
+          <div class="wifi-header">
+            <div class="wifi-current">
+              <svg viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3a4.237 4.237 0 00-6 0zm-4-4l2 2a7.074 7.074 0 0110 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+              <span id="wifi-current-ssid">Scanning…</span>
+            </div>
+            <button class="btn-sm" id="wifi-scan-btn" onclick="wifiScan()">
+              <svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+              Scan
+            </button>
+          </div>
+          <div class="wifi-network-list" id="wifi-network-list">
+            <div class="wifi-empty">Press Scan to find networks</div>
+          </div>
+
+          <!-- Hotspot -->
+          <div class="hotspot-row">
+            <div class="hotspot-info">
+              <svg viewBox="0 0 24 24"><path d="M12 11c1.33 0 2.71.18 4 .5V9.72C14.72 9.25 13.36 9 12 9s-2.72.25-4 .72v1.78c1.29-.32 2.67-.5 4-.5zM12 5c2.62 0 5.13.62 7.35 1.73l1.32-2.37A19.02 19.02 0 0012 2C8.87 2 5.9 2.86 3.33 4.36l1.32 2.37A16.75 16.75 0 0112 5zm0 10c-.83 0-1.5.67-1.5 1.5v4c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5v-4c0-.83-.67-1.5-1.5-1.5z"/></svg>
+              <span>Hotspot</span>
+              <span class="hotspot-ssid" id="hotspot-ssid-label">—</span>
+              <span class="hotspot-state" id="hotspot-state">Off</span>
+            </div>
+            <button class="btn-sm" id="hotspot-btn" onclick="toggleHotspot()">Start</button>
+          </div>
+          <div class="hotspot-hint" id="hotspot-hint" style="display:none"></div>
+        </div>
+      </div>
+
+      <!-- Timezone -->
+      <div class="field">
+        <div class="section-label">Pi Timezone</div>
+        <div class="local-panel">
+          <div class="tz-current">Current: <span id="tz-current">Loading…</span></div>
+          <div class="tz-row">
+            <select id="tz-select"><option value="">Loading timezones…</option></select>
+            <button class="btn-sm success" onclick="setTimezone()">
+              <svg viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+              Set</button>
+            <button class="btn-sm" id="tz-detect-btn" onclick="detectTimezone()">
+              <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+              Auto-detect</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Downstage OS version -->
+      <div class="field">
+        <div class="section-label">Downstage OS</div>
+        <div class="local-panel">
+          <div class="version-row" id="os-version-row" style="display:flex">
+            <span class="version-tag" id="os-ver-installed">—</span>
+            <span class="version-badge checking" id="os-ver-badge">Checking…</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- System Health -->
+      <div class="field">
+        <div class="section-label">System Health</div>
+        <div class="local-panel">
+          <div class="health-grid" id="health-grid">
+            <div class="health-tile"><div class="val" id="h-temp">—</div><div class="lbl">CPU Temp</div></div>
+            <div class="health-tile"><div class="val" id="h-cpu">—</div><div class="lbl">CPU Load</div></div>
+            <div class="health-tile"><div class="val" id="h-gpu">—</div><div class="lbl">GPU Clock</div></div>
+            <div class="health-tile"><div class="val" id="h-ram">—</div><div class="lbl">RAM Used</div></div>
+            <div class="health-tile"><div class="val" id="h-uptime">—</div><div class="lbl">Uptime</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Config Backup -->
+      <div class="field">
+        <div class="section-label">Config Backup / Restore</div>
+        <div class="local-panel">
+          <div class="local-actions">
+            <button class="btn-sm" onclick="downloadConfig()">
+              <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zm-8 2V5h2v6h1.17L12 13.17 9.83 11H11zm-6 7h14v2H5z"/></svg>
+              Download Config
+            </button>
+            <label class="btn-sm" style="cursor:pointer">
+              <svg viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5z"/></svg>
+              Upload Config
+              <input type="file" id="config-upload-input" accept=".json" style="display:none" onchange="uploadConfig(this)">
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Companion -->
+      <div class="field">
+        <div class="section-label">Bitfocus Companion</div>
+        <div class="local-panel">
+          <div class="local-panel-header">
+            <div class="local-panel-title">
+              <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 14.93V15h-2v1.93A8.001 8.001 0 014.07 9H6V7H4.07A8.001 8.001 0 0111 4.07V6h2V4.07A8.001 8.001 0 0119.93 11H18v2h1.93A8.001 8.001 0 0113 16.93z"/></svg>
+              Companion
+            </div>
+            <span class="status-badge" id="companion-status-badge">—</span>
+          </div>
+          <div class="local-actions" id="companion-actions"></div>
+          <div class="version-row" id="companion-version-row">
+            <span class="version-tag" id="companion-ver-installed">—</span>
+            <span class="version-badge checking" id="companion-ver-badge">Checking…</span>
+          </div>
+          <div class="channel-row">
+            <span class="channel-label">Channel</span>
+            <div class="channel-toggle" id="companion-channel-toggle">
+              <button class="channel-btn" id="ch-stable" onclick="setCompanionChannel('stable')">Stable</button>
+              <button class="channel-btn" id="ch-beta"   onclick="setCompanionChannel('beta')">Beta</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Save -->
+      <div class="actions">
+        <button class="btn-primary" id="save-btn" onclick="saveAndConnect()">
+          <svg viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+          Save &amp; Apply
+        </button>
+      </div>
+
+      <div class="toast" id="toast"></div>
+    </div>
+
+    <div class="card-footer">
+      <div class="footer-info">
+        <code>http://{{ hostname }}.local:8080</code>
+        <span style="margin-left:8px;opacity:0.6">
+          {% if net_iface == 'eth0' %}
+            🔌 {{ local_ip }}
+          {% elif net_iface == 'wlan0' %}
+            📶 {{ local_ip }}
+          {% else %}
+            {{ local_ip }}
+          {% endif %}
+        </span>
+      </div>
+      <div class="footer-btns">
+        <!-- Row 1: navigation -->
+        <div class="footer-row">
+          <button class="footer-btn" id="editor-btn" onclick="openEditor()" title="Open OnTime Editor in a new tab">
+            <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+            OnTime Editor
+          </button>
+        </div>
+        <!-- Row 2: System actions -->
+        <div class="footer-row">
+          <span class="footer-label">System</span>
+          <button class="footer-btn" onclick="goToDesktop()" title="Close kiosk windows, return to desktop">
+            <svg viewBox="0 0 24 24"><path d="M20 3H4v10c0 1.1.9 2 2 2h6v2H8v2h8v-2h-4v-2h6c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 12H4V5h16v10z"/></svg>
+            Desktop
+          </button>
+          <button class="footer-btn" onclick="restartPi()" title="Restart the Pi">
+            <svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
+            Restart
+          </button>
+          <button class="footer-btn danger" onclick="shutdownPi()" title="Shut down the Pi">
+            <svg viewBox="0 0 24 24"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg>
+            Shutdown
+          </button>
+          <button class="footer-btn danger" onclick="resetKiosk()" title="Reset kiosk config to defaults">
+            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+            Reset
+          </button>
+        </div>
+      </div>
+      <div class="oss-credit">
+        Built on <a href="https://www.getontime.no" target="_blank" rel="noopener">Ontime</a>, free open-source software (GPL v3) ·
+        <a href="https://github.com/cpvalente/ontime" target="_blank" rel="noopener">source</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="brand-footer">
+    DOWNSTAGE.SYSTEMS · © 2026 DOWNSTAGE SYSTEMS LLC
+  </div>
+
+</div>
+
+<!-- Floating save bar -->
+<div class="save-bar" id="save-bar">
+  <span class="save-bar-text">Unsaved changes</span>
+  <button class="btn-primary" id="save-bar-btn" onclick="saveAndConnect()">
+    <svg viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+    Save &amp; Apply
+  </button>
+</div>
+
+<!-- WiFi password modal -->
+<div class="modal-overlay" id="wifi-modal">
+  <div class="modal">
+    <h3>Connect to Network</h3>
+    <p id="wifi-modal-ssid"></p>
+    <input type="password" id="wifi-password" placeholder="Password (leave blank if open)" autocomplete="off">
+    <div class="modal-btns">
+      <button class="btn-primary" onclick="wifiConnectConfirm()" style="font-size:13px;padding:10px 16px">
+        <svg viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3a4.237 4.237 0 00-6 0zm-4-4l2 2a7.074 7.074 0 0110 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+        Connect
+      </button>
+      <button class="btn-ghost" onclick="closeWifiModal()" style="font-size:13px;padding:10px 16px">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── IP History ───────────────────────────────────────────────────────────────
+  const IP_HISTORY = {{ ip_history | tojson }};
+
+  function initIpHistory() {
+    if (!IP_HISTORY.length) return;
+    const btn      = document.getElementById('ip-history-btn');
+    const dropdown = document.getElementById('ip-history-dropdown');
+    btn.style.display = 'flex';
+    dropdown.innerHTML = IP_HISTORY.map(ip => `
+      <div class="ip-history-item" onclick="selectIpHistory('${ip}')">
+        <svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 00-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0013 21a9 9 0 000-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+        ${ip}
+      </div>`).join('');
+    document.addEventListener('click', e => {
+      if (!document.getElementById('ip-input-wrap')?.contains(e.target) &&
+          !dropdown.contains(e.target) && !btn.contains(e.target)) {
+        dropdown.classList.remove('open');
+      }
+    });
+  }
+
+  function toggleIpHistory(e) {
+    e.stopPropagation();
+    document.getElementById('ip-history-dropdown').classList.toggle('open');
+  }
+
+  function selectIpHistory(ip) {
+    document.getElementById('ip').value = ip;
+    document.getElementById('ip-history-dropdown').classList.remove('open');
+    markDirty();
+  }
+
+  // ── State ────────────────────────────────────────────────────────────────────
+  let currentMode      = "{{ config.mode }}";
+  let hdmi1Source      = "{{ config.hdmi1_source }}";
+  let hdmi2Source      = "{{ config.hdmi2_source }}";
+  let hdmi1ExternalUrl = {{ (config.hdmi1_external_url or '') | tojson }};
+  let hdmi2ExternalUrl = {{ (config.hdmi2_external_url or '') | tojson }};
+  let activeHdmiTab    = 1;
+  let ontimeInstalled     = {{ 'true' if ontime_installed     else 'false' }};
+  let ontimeRunning       = {{ 'true' if ontime_running       else 'false' }};
+  let companionInstalled  = {{ 'true' if companion_installed  else 'false' }};
+  let companionRunning    = {{ 'true' if companion_running     else 'false' }};
+  let companionChannel    = {{ (config.companion_channel or 'stable') | tojson }};
+
+  const SOURCE_LABELS = {
+    "config":         "Config UI",
+    "cleantimer":     "Clean Timer",
+    "companion":      "Companion",
+    "off":            "Off",
+    "/timer":         "Stage Timer",
+    "/countdown":     "Countdown",
+    "/backstage":     "Backstage",
+    "/studio":        "Studio Clock",
+    "/timeline":      "Timeline",
+    "/info":          "Public Info",
+    "/op":            "Operator",
+    "/cuesheet":      "Cue Sheet",
+    "/editor":        "Editor",
+    "/timercontrol":  "Timer Ctrl",
+    "/messagecontrol":"Msg Control",
+    "/rundown":       "Rundown",
+    "external":       "External Viewer",
+  };
+
+  // ── Init ─────────────────────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', () => {
+    initIpHistory();
+    applyMode(currentMode);
+    refreshSourceGrid();
+    updateHdmiLabels();
+    updateLocalPanel();
+    updateCompanionPanel();
+    updateChannelToggle();
+    loadTimezone();
+    fetchStatus();
+    loadWifiStatus();
+    initDisplaySettings();
+    loadPresets();
+    loadUpdateStatus();
+    loadHotspotStatus();
+    // Quiet background refresh — keeps status + health tiles live without
+    // flashing the "Checking…" state. Paused while the tab is hidden.
+    setInterval(() => { if (!document.hidden) fetchStatus(true); }, 10000);
+  });
+
+  // ── Unsaved-changes bar ──────────────────────────────────────────────────────
+  let isDirty = false;
+
+  function markDirty() {
+    isDirty = true;
+    document.getElementById('save-bar').classList.add('visible');
+    document.body.style.paddingBottom = '96px';   // keep footer reachable under the bar
+  }
+
+  function clearDirty() {
+    isDirty = false;
+    document.getElementById('save-bar').classList.remove('visible');
+    document.body.style.paddingBottom = '';
+  }
+
+  // ── Mode ─────────────────────────────────────────────────────────────────────
+  function setMode(mode) {
+    currentMode = mode;
+    applyMode(mode);
+    markDirty();
+  }
+
+  function applyMode(mode) {
+    document.getElementById('btn-remote').classList.toggle('active', mode === 'remote');
+    document.getElementById('btn-local').classList.toggle('active', mode === 'local');
+    document.getElementById('remote-section').style.display = mode === 'remote' ? '' : 'none';
+    document.getElementById('local-section').style.display  = mode === 'local'  ? '' : 'none';
+  }
+
+  // ── HDMI tabs ────────────────────────────────────────────────────────────────
+  function selectHdmiTab(n) {
+    activeHdmiTab = n;
+    document.getElementById('tab-hdmi1').classList.toggle('active', n === 1);
+    document.getElementById('tab-hdmi2').classList.toggle('active', n === 2);
+    document.getElementById('preview-box-1').classList.toggle('active', n === 1);
+    document.getElementById('preview-box-2').classList.toggle('active', n === 2);
+    refreshSourceGrid();
+  }
+
+  function currentSource() { return activeHdmiTab === 1 ? hdmi1Source : hdmi2Source; }
+
+  function setCurrentSource(src) {
+    if (activeHdmiTab === 1) hdmi1Source = src;
+    else                     hdmi2Source = src;
+    updateHdmiLabels();
+  }
+
+  function updateHdmiLabels() {
+    document.getElementById('hdmi1-label').textContent = SOURCE_LABELS[hdmi1Source] || hdmi1Source;
+    document.getElementById('hdmi2-label').textContent = SOURCE_LABELS[hdmi2Source] || hdmi2Source;
+  }
+
+  // ── Source grid ───────────────────────────────────────────────────────────────
+  function refreshSourceGrid() {
+    const active = currentSource();
+    document.querySelectorAll('.source-chip').forEach(chip => {
+      const isSelected = chip.dataset.source === active;
+      const isOff      = chip.dataset.source === 'off' && isSelected;
+      chip.classList.toggle('selected',     isSelected && !isOff);
+      chip.classList.toggle('selected-off', isOff);
+    });
+    // External viewer URL input — shown only when External is the active source
+    const row   = document.getElementById('external-url-row');
+    const input = document.getElementById('external-url');
+    row.style.display = active === 'external' ? '' : 'none';
+    if (active === 'external') {
+      input.value = activeHdmiTab === 1 ? hdmi1ExternalUrl : hdmi2ExternalUrl;
+    }
+  }
+
+  function selectSource(chip) {
+    setCurrentSource(chip.dataset.source);
+    refreshSourceGrid();
+    markDirty();
+    if (chip.dataset.source === 'external') {
+      document.getElementById('external-url').focus();
+    }
+  }
+
+  function setExternalUrl(value) {
+    if (activeHdmiTab === 1) hdmi1ExternalUrl = value.trim();
+    else                     hdmi2ExternalUrl = value.trim();
+    markDirty();
+  }
+
+  // ── Local OnTime panel ────────────────────────────────────────────────────────
+  function updateLocalPanel() {
+    const badge   = document.getElementById('local-status-badge');
+    const actions = document.getElementById('local-actions');
+    if (!ontimeInstalled) {
+      badge.className = 'status-badge missing';
+      badge.textContent = 'Not installed';
+      actions.innerHTML = `<button class="btn-sm success" id="install-btn" onclick="installOntime()">
+        <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zm-8 2V5h2v6h1.17L12 13.17 9.83 11H11zm-6 7h14v2H5z"/></svg>
+        Download &amp; Install OnTime</button>`;
+    } else if (!ontimeRunning) {
+      badge.className = 'status-badge stopped';
+      badge.textContent = 'Stopped';
+      actions.innerHTML = `<button class="btn-sm success" onclick="toggleOntime('start')">
+        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>Start Server</button>`;
+    } else {
+      badge.className = 'status-badge running';
+      badge.textContent = 'Running';
+      actions.innerHTML = `<button class="btn-sm danger" onclick="toggleOntime('stop')">
+        <svg viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>Stop Server</button>`;
+    }
+  }
+
+  async function installOntime() {
+    const btn = document.getElementById('install-btn');
+    if (btn) { btn.disabled = true; btn.innerHTML = spinnerHTML('Downloading… (1–2 min)'); }
+    showToast('Downloading OnTime — this may take 1–2 minutes…', 'info');
+    try {
+      const r = await fetch('/ontime/install', { method: 'POST' });
+      const d = await r.json();
+      ontimeInstalled = d.ok;
+      showToast(d.ok ? `OnTime ${d.message} installed.` : `Install failed: ${d.message}`, d.ok ? 'success' : 'error');
+    } catch { showToast('Network error during install.', 'error'); }
+    updateLocalPanel();
+  }
+
+  async function toggleOntime(action) {
+    try {
+      const r = await fetch(`/ontime/${action}`, { method: 'POST' });
+      const d = await r.json();
+      ontimeRunning = d.running;
+      updateLocalPanel();
+      if (action === 'start') fetchStatus();
+    } catch { showToast('Failed to communicate with server.', 'error'); }
+  }
+
+  // ── Status poll ───────────────────────────────────────────────────────────────
+  async function fetchStatus(quiet = false) {
+    const bar = document.getElementById('status-bar');
+    const txt = document.getElementById('status-text');
+    if (!quiet) {
+      bar.className = 'status-bar checking';
+      txt.textContent = 'Checking…';
+    }
+    try {
+      const r = await fetch('/status');
+      const d = await r.json();
+      ontimeInstalled    = d.ontime_installed;
+      ontimeRunning      = d.ontime_running;
+      companionInstalled = d.companion_installed;
+      companionRunning   = d.companion_running;
+      updateLocalPanel();
+      updateCompanionPanel();
+
+      // Blackout / watchdog banners
+      document.getElementById('blackout-bar').style.display  = d.blackout          ? 'flex' : 'none';
+      document.getElementById('watchdog-bar').style.display  = d.watchdog_override  ? 'flex' : 'none';
+      const bbtn = document.getElementById('blackout-btn');
+      if (bbtn) bbtn.style.display = d.blackout ? 'none' : '';
+
+      // Watchdog toggle
+      watchdogOn = d.watchdog ?? true;
+      document.getElementById('watchdog-toggle').className = 'toggle ' + (watchdogOn ? 'on' : '');
+
+      // Hotspot — if state changed (e.g. auto-fallback fired, or another
+      // browser toggled it), update the chip and refresh the WiFi list too
+      if (d.hotspot_active !== undefined && d.hotspot_active !== hotspotActive) {
+        hotspotActive = d.hotspot_active;
+        updateHotspotUI();
+        setTimeout(loadWifiStatus, 2000);
+      }
+
+      // System health
+      updateHealthDisplay(d);
+
+      if (d.connected) {
+        bar.className = 'status-bar connected';
+        txt.textContent = d.mode === 'local' ? 'Local OnTime — running' : `Connected — ${d.ip}:4001`;
+      } else if (d.ip || d.mode === 'local') {
+        bar.className = 'status-bar disconnected';
+        txt.textContent = d.mode === 'local' ? 'Local OnTime — not reachable' : `Cannot reach ${d.ip}:4001`;
+      } else {
+        bar.className = 'status-bar disconnected';
+        txt.textContent = 'Not configured';
+      }
+    } catch {
+      bar.className = 'status-bar disconnected';
+      document.getElementById('status-text').textContent = 'Error checking status';
+    }
+  }
+
+  // ── Test ─────────────────────────────────────────────────────────────────────
+  async function testConnection() {
+    const ip = document.getElementById('ip').value.trim();
+    if (!ip) { showToast('Enter an IP address first.', 'error'); return; }
+    showToast('Testing…', 'info');
+    try {
+      const r = await fetch('/check', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ip}) });
+      const d = await r.json();
+      showToast(d.ok ? `OnTime reachable at ${ip}:4001` : `Cannot reach ${ip}:4001`, d.ok ? 'success' : 'error');
+    } catch { showToast('Network error.', 'error'); }
+  }
+
+  // ── Save ──────────────────────────────────────────────────────────────────────
+  async function saveAndConnect() {
+    const ip = currentMode === 'remote' ? document.getElementById('ip').value.trim() : '127.0.0.1';
+    if (currentMode === 'remote' && !ip) { showToast('Enter an IP address first.', 'error'); return; }
+    if (currentMode === 'local' && !ontimeInstalled) { showToast('Install OnTime first.', 'warning'); return; }
+    if (hdmi1Source === 'external' && !hdmi1ExternalUrl) { showToast('Enter a URL for HDMI 1\'s external viewer.', 'error'); return; }
+    if (hdmi2Source === 'external' && !hdmi2ExternalUrl) { showToast('Enter a URL for HDMI 2\'s external viewer.', 'error'); return; }
+
+    const btns = [document.getElementById('save-btn'), document.getElementById('save-bar-btn')];
+    btns.forEach(b => { b.disabled = true; b.innerHTML = spinnerHTML('Applying…'); });
+    clearToast();
+    try {
+      const r = await fetch('/save', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          ip, mode: currentMode,
+          hdmi1_source: hdmi1Source, hdmi2_source: hdmi2Source,
+          hdmi1_res: hdmi1Res, hdmi2_res: hdmi2Res,
+          hdmi1_rotate: hdmi1Rotate, hdmi2_rotate: hdmi2Rotate,
+          hdmi1_external_url: hdmi1ExternalUrl, hdmi2_external_url: hdmi2ExternalUrl,
+          watchdog: watchdogOn,
+        }),
+      });
+      const d = await r.json();
+      d.ok ? showToast('Settings saved — displays updating.', 'success') : showToast(d.error, 'error');
+      if (d.ok) { clearDirty(); setTimeout(fetchStatus, 3000); }
+    } catch { showToast('Network error.', 'error'); }
+    finally {
+      const label = `<svg viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>Save &amp; Apply`;
+      btns.forEach(b => { b.disabled = false; b.innerHTML = label; });
+    }
+  }
+
+  // ── Timezone ──────────────────────────────────────────────────────────────────
+  async function loadTimezone() {
+    try {
+      const [tzRes, listRes] = await Promise.all([
+        fetch('/system/timezone'),
+        fetch('/system/timezones'),
+      ]);
+      const { timezone } = await tzRes.json();
+      const { timezones } = await listRes.json();
+      document.getElementById('tz-current').textContent = timezone;
+      const sel = document.getElementById('tz-select');
+      sel.innerHTML = timezones.map(z =>
+        `<option value="${z}" ${z === timezone ? 'selected' : ''}>${z}</option>`
+      ).join('');
+    } catch { document.getElementById('tz-current').textContent = 'Unavailable'; }
+  }
+
+  async function setTimezone() {
+    const tz = document.getElementById('tz-select').value;
+    if (!tz) return;
+    showToast('Setting timezone…', 'info');
+    try {
+      const r = await fetch('/system/timezone', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ timezone: tz }),
+      });
+      const d = await r.json();
+      if (d.ok) {
+        document.getElementById('tz-current').textContent = d.timezone;
+        showToast(`Timezone set to ${d.timezone}`, 'success');
+      } else {
+        showToast(`Failed: ${d.message}`, 'error');
+      }
+    } catch { showToast('Network error.', 'error'); }
+  }
+
+  async function detectTimezone() {
+    const btn = document.getElementById('tz-detect-btn');
+    btn.disabled = true;
+    btn.innerHTML = spinnerHTML('Detecting…');
+    try {
+      const r = await fetch('/system/timezone/detect', { method: 'POST' });
+      const d = await r.json();
+      if (d.ok) {
+        document.getElementById('tz-current').textContent = d.timezone;
+        const sel = document.getElementById('tz-select');
+        for (const opt of sel.options) {
+          if (opt.value === d.timezone) { opt.selected = true; break; }
+        }
+        showToast(`Timezone auto-set to ${d.timezone}`, 'success');
+      } else {
+        showToast(`Detection failed: ${d.message}`, 'error');
+      }
+    } catch { showToast('Network error.', 'error'); }
+    btn.disabled = false;
+    btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>Auto-detect`;
+  }
+
+  // ── Companion ─────────────────────────────────────────────────────────────────
+  function updateCompanionPanel() {
+    const badge   = document.getElementById('companion-status-badge');
+    const actions = document.getElementById('companion-actions');
+    if (!companionInstalled) {
+      badge.className   = 'status-badge missing';
+      badge.textContent = 'Not installed';
+      actions.innerHTML = `<span style="font-size:12px;color:var(--muted)">Install via SSH: <code>curl -sL https://raw.githubusercontent.com/bitfocus/companion-pi/main/install.sh | sudo bash</code></span>`;
+    } else if (!companionRunning) {
+      badge.className   = 'status-badge stopped';
+      badge.textContent = 'Stopped';
+      actions.innerHTML = `
+        <button class="btn-sm success" onclick="toggleCompanion('start')">
+          <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>Start</button>
+        <button class="btn-sm" onclick="openCompanion()">
+          <svg viewBox="0 0 24 24"><path d="M19 19H5V5h7V3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>Open</button>
+        <button class="btn-sm" id="companion-update-btn" onclick="updateCompanion()">
+          <svg viewBox="0 0 24 24"><path d="M21 10.12h-6.78l2.74-2.82c-2.73-2.7-7.15-2.8-9.88-.1-2.73 2.71-2.73 7.08 0 9.79s7.15 2.71 9.88 0C18.32 15.65 19 14.08 19 12.1h2c0 1.98-.88 4.55-2.64 6.29-3.51 3.48-9.21 3.48-12.72 0-3.5-3.47-3.53-9.11-.02-12.58s9.14-3.47 12.65 0L21 3v7.12z"/></svg>
+          Update</button>
+        <button class="btn-sm" id="companion-rescan-btn" onclick="rescanUSB()">
+          <svg viewBox="0 0 24 24"><path d="M15 7h1a2 2 0 012 2v1h2V9a4 4 0 00-4-4h-1V3l-4 4 4 4V7zM9 17H8a2 2 0 01-2-2v-1H4v1a4 4 0 004 4h1v2l4-4-4-4v3z"/></svg>
+          Rescan USB</button>`;
+    } else {
+      badge.className   = 'status-badge running';
+      badge.textContent = 'Running';
+      actions.innerHTML = `
+        <button class="btn-sm success" onclick="openCompanion()">
+          <svg viewBox="0 0 24 24"><path d="M19 19H5V5h7V3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>Open</button>
+        <button class="btn-sm" onclick="restartCompanion()">
+          <svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>Restart</button>
+        <button class="btn-sm" id="companion-update-btn" onclick="updateCompanion()">
+          <svg viewBox="0 0 24 24"><path d="M21 10.12h-6.78l2.74-2.82c-2.73-2.7-7.15-2.8-9.88-.1-2.73 2.71-2.73 7.08 0 9.79s7.15 2.71 9.88 0C18.32 15.65 19 14.08 19 12.1h2c0 1.98-.88 4.55-2.64 6.29-3.51 3.48-9.21 3.48-12.72 0-3.5-3.47-3.53-9.11-.02-12.58s9.14-3.47 12.65 0L21 3v7.12z"/></svg>
+          Update</button>
+        <button class="btn-sm" id="companion-rescan-btn" onclick="rescanUSB()">
+          <svg viewBox="0 0 24 24"><path d="M15 7h1a2 2 0 012 2v1h2V9a4 4 0 00-4-4h-1V3l-4 4 4 4V7zM9 17H8a2 2 0 01-2-2v-1H4v1a4 4 0 004 4h1v2l4-4-4-4v3z"/></svg>
+          Rescan USB</button>
+        <button class="btn-sm danger" onclick="toggleCompanion('stop')">
+          <svg viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>Stop</button>`;
+    }
+  }
+
+  function updateChannelToggle() {
+    const stable = document.getElementById('ch-stable');
+    const beta   = document.getElementById('ch-beta');
+    if (!stable || !beta) return;
+    stable.classList.toggle('active', companionChannel === 'stable');
+    beta.classList.toggle('active',   companionChannel === 'beta');
+    beta.classList.toggle('beta',     companionChannel === 'beta');
+  }
+
+  async function setCompanionChannel(channel) {
+    if (channel === companionChannel) return;
+    try {
+      const r = await fetch('/companion/set-channel', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({channel}),
+      });
+      const d = await r.json();
+      if (d.ok) {
+        companionChannel = channel;
+        updateChannelToggle();
+        showToast(`Companion channel set to ${channel}. Update check running…`, 'info');
+      }
+    } catch { showToast('Failed to set channel.', 'error'); }
+  }
+
+  async function toggleCompanion(action) {
+    try {
+      const r = await fetch(`/companion/${action}`, { method: 'POST' });
+      const d = await r.json();
+      companionRunning = d.running;
+      updateCompanionPanel();
+    } catch { showToast('Failed to communicate with Companion service.', 'error'); }
+  }
+
+  async function updateCompanion() {
+    const ch = companionChannel === 'beta' ? 'beta' : 'stable';
+    if (!confirm(`Update Companion to the latest ${ch} version? This may take 2–3 minutes and will restart the service.`)) return;
+    const btn = document.getElementById('companion-update-btn');
+    if (btn) { btn.disabled = true; btn.innerHTML = spinnerHTML('Updating…'); }
+    showToast('Updating Companion — this may take a few minutes…', 'info');
+    try {
+      const r = await fetch('/companion/update', { method: 'POST' });
+      const d = await r.json();
+      companionRunning = d.running ?? companionRunning;
+      updateCompanionPanel();
+      showToast(d.ok ? 'Companion updated successfully.' : `Update failed: ${d.message}`, d.ok ? 'success' : 'error');
+    } catch { showToast('Network error during update.', 'error'); }
+  }
+
+  async function restartCompanion() {
+    showToast('Restarting Companion…', 'info');
+    try {
+      const r = await fetch('/companion/restart', { method: 'POST' });
+      const d = await r.json();
+      companionRunning = d.running;
+      updateCompanionPanel();
+      showToast(d.running ? 'Companion restarted.' : 'Companion restart failed.', d.running ? 'success' : 'error');
+    } catch { showToast('Failed to communicate with Companion service.', 'error'); }
+  }
+
+  async function rescanUSB() {
+    // Step 1: re-trigger udev so OS picks up the device with correct permissions
+    // Step 2: restart Companion so it re-scans surfaces
+    // Step 3: open Companion's Surfaces page so user can verify detection
+    const btn = document.getElementById('companion-rescan-btn');
+    if (btn) { btn.disabled = true; btn.innerHTML = spinnerHTML('Rescanning…'); }
+    showToast('Rescanning USB — Companion will restart…', 'info');
+    try {
+      const r = await fetch('/companion/rescan-usb', { method: 'POST' });
+      const d = await r.json();
+      companionRunning = d.running;
+      updateCompanionPanel();
+      if (d.ok) {
+        showToast('USB rescanned. Opening Companion Surfaces…', 'success');
+        setTimeout(() => window.open(`http://${window.location.hostname}:8000/#/surfaces`, '_blank'), 1000);
+      } else {
+        showToast(`Rescan failed: ${d.message}`, 'error');
+      }
+    } catch { showToast('Failed to rescan USB.', 'error'); }
+  }
+
+  function openCompanion() {
+    window.open(`http://${window.location.hostname}:8000`, '_blank');
+  }
+
+  // ── OnTime Editor ─────────────────────────────────────────────────────────────
+  function openEditor() {
+    window.open(`http://${window.location.hostname}:4001/editor/`, '_blank');
+  }
+
+  // ── Pi system controls ────────────────────────────────────────────────────────
+  async function restartPi() {
+    if (!confirm('Restart the Pi? The kiosk will be offline for about 30 seconds.')) return;
+    showToast('Restarting Pi…', 'info');
+    await fetch('/system/restart', { method: 'POST' });
+  }
+
+  async function shutdownPi() {
+    if (!confirm('Shut down the Pi? You will need to physically power it back on.')) return;
+    showToast('Shutting down…', 'warning');
+    await fetch('/system/shutdown', { method: 'POST' });
+  }
+
+  // ── Desktop / Reset ───────────────────────────────────────────────────────────
+  async function refreshDisplays() {
+    showToast('Refreshing displays…', 'info');
+    await fetch('/refresh', { method: 'POST' });
+    showToast('Displays refreshed.', 'success');
+  }
+
+  async function goToDesktop() {
+    if (!confirm('Close all kiosk windows and return to the Pi desktop?')) return;
+    await fetch('/desktop', { method: 'POST' });
+    showToast('Kiosk windows closed.', 'success');
+  }
+
+  async function resetKiosk() {
+    if (!confirm('Clear all settings and close windows?')) return;
+    await fetch('/reset', { method: 'POST' });
+    hdmi1Source = 'config'; hdmi2Source = '/timer';
+    refreshSourceGrid(); updateHdmiLabels();
+    showToast('Reset complete.', 'info');
+    setTimeout(fetchStatus, 1000);
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────────
+  const ICONS = {
+    error:   `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>`,
+    success: `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14l-4-4 1.41-1.41L10 13.17l6.59-6.59L18 8l-8 8z"/></svg>`,
+    info:    `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>`,
+    warning: `<svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>`,
+  };
+
+  function showToast(msg, type) {
+    const el = document.getElementById('toast');
+    el.innerHTML = (ICONS[type]||'') + `<span>${msg}</span>`;
+    el.className = `toast ${type}`;
+  }
+  function clearToast() { const el=document.getElementById('toast'); el.className='toast'; el.textContent=''; }
+  function spinnerHTML(label) {
+    return `<svg class="spin" viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 14.96 20 13.54 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 9.04 4 10.46 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>${label}`;
+  }
+
+  // ── Hotspot ───────────────────────────────────────────────────────────────────
+  let hotspotActive = false;
+  let hotspotSsid   = '';
+  let hotspotPass   = '';
+
+  function updateHotspotUI() {
+    document.getElementById('hotspot-ssid-label').textContent = hotspotSsid || '—';
+    const state = document.getElementById('hotspot-state');
+    state.textContent = hotspotActive ? 'On' : 'Off';
+    state.classList.toggle('on', hotspotActive);
+    document.getElementById('hotspot-btn').textContent = hotspotActive ? 'Stop' : 'Start';
+    // reflect immediately in the WiFi header too — don't wait for the next
+    // wifi/status fetch, which can race the radio's mode switch
+    if (hotspotActive) {
+      document.getElementById('wifi-current-ssid').innerHTML =
+        `<span style="color:var(--amber)">Hotspot mode active — ${hotspotSsid}</span>`;
+    }
+    const hint = document.getElementById('hotspot-hint');
+    if (hotspotActive) {
+      hint.innerHTML = `Broadcasting <code>${hotspotSsid}</code> · password <code>${hotspotPass}</code> · setup UI at <code>http://10.42.0.1:8080</code>. WiFi client is unavailable while the hotspot runs.`;
+      hint.style.display = '';
+    } else {
+      hint.style.display = 'none';
+    }
+  }
+
+  async function loadHotspotStatus() {
+    try {
+      const d = await (await fetch('/hotspot/status')).json();
+      hotspotActive = d.active; hotspotSsid = d.ssid; hotspotPass = d.pass;
+      updateHotspotUI();
+    } catch {}
+  }
+
+  async function toggleHotspot() {
+    const btn = document.getElementById('hotspot-btn');
+    if (!hotspotActive) {
+      const onWifi = true; // conservative: always warn
+      if (!confirm(`Start hotspot ${hotspotSsid}?\n\nThe device will leave any WiFi network it is on. If you are connected over WiFi right now, you will need to rejoin via the hotspot (password: ${hotspotPass}) at http://10.42.0.1:8080 — or use ethernet.`)) return;
+    }
+    btn.disabled = true;
+    try {
+      const r = await fetch(hotspotActive ? '/hotspot/stop' : '/hotspot/start', { method: 'POST' });
+      const d = await r.json();
+      hotspotActive = d.active;
+      if (!d.ok && d.message) showToast(`Hotspot: ${d.message}`, 'error');
+      updateHotspotUI();
+      // refresh the WiFi section now, then again as NetworkManager settles
+      // (rejoining WiFi after a hotspot stop takes 5-15s)
+      loadWifiStatus();
+      [3000, 9000, 16000].forEach(t => setTimeout(loadWifiStatus, t));
+    } catch {
+      // expected if we were connected via the WiFi that just went away
+      showToast('Connection changed — rejoin via hotspot or ethernet.', 'warning');
+    }
+    btn.disabled = false;
+  }
+
+  // ── WiFi ──────────────────────────────────────────────────────────────────────
+  async function loadWifiStatus() {
+    try {
+      const r = await fetch('/wifi/status');
+      const d = await r.json();
+      if (d.ok) renderWifiList(d.current, d.networks, d.hotspot);
+    } catch {}
+  }
+
+  let _wifiPendingSsid    = '';
+  let _wifiPendingSecured = false;
+
+  function sigClass(pct) {
+    if (pct >= 75) return 'sig-4';
+    if (pct >= 50) return 'sig-3';
+    if (pct >= 25) return 'sig-2';
+    return 'sig-1';
+  }
+
+  function renderWifiList(current, networks, hotspot = false) {
+    const el     = document.getElementById('wifi-network-list');
+    const ssidEl = document.getElementById('wifi-current-ssid');
+    if (hotspot) {
+      ssidEl.innerHTML = `<span style="color:var(--amber)">Hotspot mode active — ${hotspotSsid}</span>`;
+    } else {
+      ssidEl.innerHTML = current
+        ? `<span class="wifi-ssid">${current}</span>`
+        : '<span style="color:var(--muted)">Not connected</span>';
+    }
+    if (!networks.length) {
+      el.innerHTML = hotspot
+        ? '<div class="wifi-empty">Hotspot running — press Scan to find networks to join</div>'
+        : '<div class="wifi-empty">No networks found</div>';
+      return;
+    }
+    el.innerHTML = networks.map(n => `
+      <div class="wifi-network ${n.active ? 'active' : ''}" onclick="wifiSelect('${n.ssid.replace(/'/g,"\\'")}', ${n.secured})">
+        <div class="wifi-signal ${sigClass(n.signal)}">
+          <span></span><span></span><span></span><span></span>
+        </div>
+        <span class="wifi-name">${n.ssid}</span>
+        ${n.secured ? `<svg class="wifi-lock" viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>` : ''}
+      </div>`).join('');
+  }
+
+  async function wifiScan() {
+    const btn = document.getElementById('wifi-scan-btn');
+    btn.disabled = true;
+    btn.innerHTML = spinnerHTML('Scanning…');
+    document.getElementById('wifi-network-list').innerHTML = '<div class="wifi-empty">Scanning…</div>';
+    try {
+      const r = await fetch('/wifi/scan', { method: 'POST' });
+      const d = await r.json();
+      if (d.ok) renderWifiList(d.current, d.networks, d.hotspot);
+      else document.getElementById('wifi-network-list').innerHTML = `<div class="wifi-empty">Error: ${d.error || 'scan failed'}</div>`;
+    } catch {
+      document.getElementById('wifi-network-list').innerHTML = '<div class="wifi-empty">Network error</div>';
+    }
+    btn.disabled = false;
+    btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>Scan`;
+  }
+
+  function wifiSelect(ssid, secured) {
+    _wifiPendingSsid    = ssid;
+    _wifiPendingSecured = secured;
+    if (secured) {
+      document.getElementById('wifi-modal-ssid').textContent = ssid;
+      document.getElementById('wifi-password').value = '';
+      document.getElementById('wifi-modal').classList.add('open');
+      setTimeout(() => document.getElementById('wifi-password').focus(), 100);
+    } else {
+      wifiDoConnect(ssid, '');
+    }
+  }
+
+  function closeWifiModal() {
+    document.getElementById('wifi-modal').classList.remove('open');
+  }
+
+  function wifiConnectConfirm() {
+    const pw = document.getElementById('wifi-password').value;
+    closeWifiModal();
+    wifiDoConnect(_wifiPendingSsid, pw);
+  }
+
+  async function wifiDoConnect(ssid, password) {
+    if (hotspotActive) {
+      if (!confirm(`Joining "${ssid}" will stop the hotspot (one radio — it can't do both).\n\nIf you're connected through the hotspot right now, you'll lose this page and can rejoin the device on "${ssid}"'s network. If the join fails, the hotspot restarts automatically.`)) return;
+    }
+    showToast(`Connecting to ${ssid}…${hotspotActive ? ' (stopping hotspot first)' : ''}`, 'info');
+    try {
+      const r = await fetch('/wifi/connect', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ssid, password }),
+      });
+      const d = await r.json();
+      if (d.ok) {
+        showToast(`Connected to ${ssid}`, 'success');
+        if (d.hotspot_stopped) { hotspotActive = false; updateHotspotUI(); }
+        wifiScan();
+      } else {
+        showToast(`Failed: ${d.message}`, 'error');
+        loadHotspotStatus();   // hotspot may have auto-restarted
+      }
+    } catch { showToast('Network error.', 'error'); }
+  }
+
+  document.getElementById('wifi-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeWifiModal();
+  });
+  document.getElementById('wifi-password').addEventListener('keydown', e => {
+    if (e.key === 'Enter') wifiConnectConfirm();
+  });
+
+  // ── Display settings state ────────────────────────────────────────────────────
+  let hdmi1Res    = "{{ config.get('hdmi1_res', '1920x1080') }}";
+  let hdmi2Res    = "{{ config.get('hdmi2_res', '1920x1080') }}";
+  let hdmi1Rotate = "{{ config.get('hdmi1_rotate', 'normal') }}";
+  let hdmi2Rotate = "{{ config.get('hdmi2_rotate', 'normal') }}";
+  let watchdogOn  = {{ 'true' if config.get('watchdog', True) else 'false' }};
+
+  function initDisplaySettings() {
+    document.getElementById('hdmi1-res').value    = hdmi1Res;
+    document.getElementById('hdmi2-res').value    = hdmi2Res;
+    document.getElementById('hdmi1-rotate').value = hdmi1Rotate;
+    document.getElementById('hdmi2-rotate').value = hdmi2Rotate;
+    document.getElementById('watchdog-toggle').className = 'toggle ' + (watchdogOn ? 'on' : '');
+  }
+
+  function toggleWatchdog() {
+    watchdogOn = !watchdogOn;
+    document.getElementById('watchdog-toggle').className = 'toggle ' + (watchdogOn ? 'on' : '');
+    markDirty();
+  }
+
+  // ── Presets ───────────────────────────────────────────────────────────────────
+  async function loadPresets() {
+    try {
+      const r = await fetch('/presets');
+      const d = await r.json();
+      renderPresets(d.presets || []);
+    } catch {}
+  }
+
+  function renderPresets(presets) {
+    const el = document.getElementById('preset-strip');
+    if (!presets.length) {
+      el.innerHTML = '<span class="preset-empty">No presets saved yet</span>';
+      return;
+    }
+    el.innerHTML = presets.map(p => `
+      <div class="preset-chip" onclick="applyPreset('${p.name.replace(/'/g,"\\'")}')">
+        ${p.name}
+        <span class="del" onclick="event.stopPropagation();deletePreset('${p.name.replace(/'/g,"\\'")}')">✕</span>
+      </div>`).join('');
+  }
+
+  async function savePreset() {
+    const name = prompt('Preset name (e.g. "Show Mode", "Rehearsal"):');
+    if (!name || !name.trim()) return;
+    try {
+      const r = await fetch('/presets/save', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ name: name.trim(), hdmi1_source: hdmi1Source, hdmi2_source: hdmi2Source }),
+      });
+      const d = await r.json();
+      if (d.ok) { renderPresets(d.presets); showToast(`Preset "${name.trim()}" saved.`, 'success'); }
+      else showToast(d.message || 'Save failed', 'error');
+    } catch { showToast('Network error.', 'error'); }
+  }
+
+  async function applyPreset(name) {
+    showToast(`Applying preset "${name}"…`, 'info');
+    try {
+      const r = await fetch('/presets/apply', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ name }),
+      });
+      const d = await r.json();
+      if (d.ok) {
+        showToast(`Preset "${name}" applied.`, 'success');
+        setTimeout(fetchStatus, 2000);
+      } else {
+        showToast(d.message || 'Apply failed', 'error');
+      }
+    } catch { showToast('Network error.', 'error'); }
+  }
+
+  async function deletePreset(name) {
+    if (!confirm(`Delete preset "${name}"?`)) return;
+    try {
+      const r = await fetch('/presets/delete', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ name }),
+      });
+      const d = await r.json();
+      if (d.ok) { renderPresets(d.presets); showToast(`Preset "${name}" deleted.`, 'info'); }
+    } catch { showToast('Network error.', 'error'); }
+  }
+
+  // ── Blackout ──────────────────────────────────────────────────────────────────
+  const BLACKOUT_BTN_HTML = `<svg viewBox="0 0 24 24"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg>Blackout`;
+
+  function resetBlackoutBtn() {
+    const btn = document.getElementById('blackout-btn');
+    if (btn) { btn.innerHTML = BLACKOUT_BTN_HTML; btn.disabled = false; }
+  }
+
+  async function blackout() {
+    const btn = document.getElementById('blackout-btn');
+    if (btn) { btn.disabled = true; btn.innerHTML = spinnerHTML('Blacking out…'); }
+    try {
+      await fetch('/blackout', { method: 'POST' });
+      document.getElementById('blackout-bar').style.display = 'flex';
+      if (btn) { btn.style.display = 'none'; }
+    } catch { showToast('Blackout failed.', 'error'); }
+    resetBlackoutBtn();   // restore the label while hidden, so however
+                          // blackout ends the button reappears correct
+  }
+
+  async function blackoutResume() {
+    await fetch('/blackout/clear', { method: 'POST' });
+    document.getElementById('blackout-bar').style.display = 'none';
+    const btn = document.getElementById('blackout-btn');
+    if (btn) btn.style.display = '';
+    resetBlackoutBtn();
+    showToast('Displays resumed.', 'success');
+  }
+
+  // ── System health ─────────────────────────────────────────────────────────────
+  function updateHealthDisplay(d) {
+    document.getElementById('h-temp').textContent   = d.cpu_temp     || '—';
+    document.getElementById('h-cpu').textContent    = d.cpu_percent  != null ? `${d.cpu_percent}%` : '—';
+    document.getElementById('h-gpu').textContent    = d.gpu_clock_mhz != null ? `${d.gpu_clock_mhz} MHz` : '—';
+    document.getElementById('h-ram').textContent    = d.ram_used     != null ? `${d.ram_used}/${d.ram_total} MB` : '—';
+    document.getElementById('h-uptime').textContent = d.uptime       || '—';
+  }
+
+  // ── Config backup / restore ───────────────────────────────────────────────────
+  function downloadConfig() {
+    window.location = '/config/download';
+  }
+
+  // ── Update check ─────────────────────────────────────────────────────────────
+  async function loadUpdateStatus() {
+    try {
+      const r = await fetch('/update-status');
+      const d = await r.json();
+      renderVersionRow('ontime',    d.ontime);
+      renderVersionRow('companion', d.companion);
+      renderVersionRow('os',        d.os);
+      if (d.companion?.channel && d.companion.channel !== companionChannel) {
+        companionChannel = d.companion.channel;
+        updateChannelToggle();
+      }
+    } catch {}
+  }
+
+  function renderVersionRow(key, data) {
+    const row       = document.getElementById(`${key}-version-row`);
+    const verEl     = document.getElementById(`${key}-ver-installed`);
+    const badgeEl   = document.getElementById(`${key}-ver-badge`);
+    if (!row || !data) return;
+
+    row.style.display = 'flex';
+
+    if (!data.checked) {
+      verEl.textContent   = '—';
+      badgeEl.className   = 'version-badge checking';
+      badgeEl.textContent = 'Checking…';
+      return;
+    }
+
+    if (!data.installed) {
+      row.style.display = 'none';
+      return;
+    }
+
+    verEl.textContent = `v${data.installed}`;
+
+    // Remove any existing update button
+    const existing = row.querySelector('.btn-sm');
+    if (existing) existing.remove();
+
+    if (data.update_available) {
+      badgeEl.className   = 'version-badge available';
+      badgeEl.textContent = `v${data.latest} available`;
+      const btn = document.createElement('button');
+      btn.className = 'btn-sm';
+      btn.style.marginLeft = 'auto';
+      btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M21 10.12h-6.78l2.74-2.82c-2.73-2.7-7.15-2.8-9.88-.1-2.73 2.71-2.73 7.08 0 9.79s7.15 2.71 9.88 0C18.32 15.65 19 14.08 19 12.1h2c0 1.98-.88 4.55-2.64 6.29-3.51 3.48-9.21 3.48-12.72 0-3.5-3.47-3.53-9.11-.02-12.58s9.14-3.47 12.65 0L21 3v7.12z"/></svg>Update`;
+      btn.onclick = key === 'ontime' ? updateOntimeServer : updateCompanion;
+      row.appendChild(btn);
+    } else {
+      badgeEl.className   = 'version-badge uptodate';
+      badgeEl.textContent = '✓ Up to date';
+    }
+  }
+
+  async function updateOntimeServer() {
+    const btn = document.querySelector('#ontime-version-row .btn-sm');
+    if (btn) { btn.disabled = true; btn.innerHTML = spinnerHTML('Updating…'); }
+    showToast('Updating OnTime — this may take 1–2 minutes…', 'info');
+    try {
+      const r = await fetch('/ontime/update', { method: 'POST' });
+      const d = await r.json();
+      ontimeRunning = d.running;
+      updateLocalPanel();
+      showToast(d.ok ? `OnTime updated: ${d.message}` : `Update failed: ${d.message}`, d.ok ? 'success' : 'error');
+      if (d.ok) setTimeout(loadUpdateStatus, 2000);
+    } catch { showToast('Network error during update.', 'error'); }
+  }
+
+  async function recheckUpdates() {
+    document.querySelectorAll('.version-badge').forEach(el => {
+      el.className = 'version-badge checking';
+      el.textContent = 'Checking…';
+    });
+    await fetch('/updates/recheck', { method: 'POST' });
+    setTimeout(loadUpdateStatus, 4000);
+  }
+
+  async function uploadConfig(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const form = new FormData();
+    form.append('config', file);
+    showToast('Uploading config…', 'info');
+    try {
+      const r = await fetch('/config/upload', { method: 'POST', body: form });
+      const d = await r.json();
+      if (d.ok) {
+        showToast('Config restored — reloading…', 'success');
+        setTimeout(() => location.reload(), 1500);
+      } else {
+        showToast(`Upload failed: ${d.message}`, 'error');
+      }
+    } catch { showToast('Network error.', 'error'); }
+    input.value = '';
+  }
+</script>
+</body>
+</html>
