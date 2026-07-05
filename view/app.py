@@ -238,27 +238,42 @@ def _open_window(source):
     ], env=_chromium_env())
 
 
-_os_update = {"latest": None, "update_available": False}
+_os_update = {"latest": None, "update_available": False, "checked": False}
 
 
-def _check_os_update():
-    """Once at boot (+ daily): compare OS_VERSION to the latest GitHub release."""
+def _refresh_os_update():
+    """Compare OS_VERSION to the latest GitHub release; update _os_update."""
     def vt(v):
         try:
             return tuple(int(x) for x in str(v).lstrip("v").split(".")[:3])
         except Exception:
             return (0, 0, 0)
+    try:
+        repo = load_config().get("os_update_repo", "")
+        if repo:
+            r = requests.get(f"https://api.github.com/repos/{repo}/releases/latest", timeout=10)
+            latest = r.json().get("tag_name", "").lstrip("v") or None
+            _os_update["latest"] = latest
+            _os_update["update_available"] = bool(latest and vt(latest) > vt(OS_VERSION))
+            _os_update["checked"] = True
+    except Exception as e:
+        _os_update["checked"] = True
+        print(f"[updates] os check failed: {e}")
+
+
+def _check_os_update():
+    """Boot + daily refresh loop."""
     while True:
-        try:
-            repo = load_config().get("os_update_repo", "")
-            if repo:
-                r = requests.get(f"https://api.github.com/repos/{repo}/releases/latest", timeout=10)
-                latest = r.json().get("tag_name", "").lstrip("v") or None
-                _os_update["latest"] = latest
-                _os_update["update_available"] = bool(latest and vt(latest) > vt(OS_VERSION))
-        except Exception as e:
-            print(f"[updates] os check failed: {e}")
+        _refresh_os_update()
         time.sleep(86400)
+
+
+@app.route("/os/recheck", methods=["POST"])
+def os_recheck():
+    _refresh_os_update()
+    return jsonify({"ok": True, "installed": OS_VERSION,
+                    "latest": _os_update["latest"],
+                    "update_available": _os_update["update_available"]})
 
 
 _watchdog_override = False
@@ -760,6 +775,7 @@ def status():
         "os_version": OS_VERSION,
         "os_latest": _os_update["latest"],
         "os_update_available": _os_update["update_available"],
+        "os_checked": _os_update.get("checked", False),
         "os_update_result": _os_update_result(),
         "watchdog":  config.get("watchdog", True),
         "watchdog_override": _watchdog_override,

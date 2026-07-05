@@ -224,6 +224,20 @@
     .btn-sm:disabled { opacity: 0.35; cursor: not-allowed; }
     .btn-sm.success:hover:not(:disabled) { border-color: var(--green-bd); color: var(--green); background: var(--green-bg); }
 
+    /* ── Version rows (Downstage OS panel) ── */
+    .version-row {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .version-tag { font-family: var(--font-mono); font-size: 12px; color: var(--text); }
+    .version-badge {
+      font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px;
+      border: 1px solid transparent;
+    }
+    .version-badge.uptodate  { background: var(--green-bg); border-color: var(--green-bd); color: var(--green); }
+    .version-badge.available { background: var(--amber-bg); border-color: var(--amber-bd); color: var(--amber); }
+    .version-badge.checking  { background: var(--blue-bg);  border-color: var(--blue-bd);  color: var(--blue); }
+    .version-row .btn-sm { margin-left: auto; }
+
     /* ── Timezone ── */
     .tz-row { display: flex; gap: 8px; align-items: center; }
     .tz-row select {
@@ -611,6 +625,20 @@
         </div>
       </div>
 
+      <!-- Downstage OS -->
+      <div class="field" style="margin-top:22px; margin-bottom:0">
+        <div class="section-label">Downstage OS</div>
+        <div class="local-panel">
+          <div class="version-row">
+            <span class="version-tag" id="os-ver-installed">—</span>
+            <span class="version-badge checking" id="os-ver-badge">Checking…</span>
+            <button class="btn-sm" id="os-update-btn" onclick="osUpdate()" style="display:none">Update</button>
+            <button class="btn-sm" id="os-check-btn" onclick="osRecheck()">Check</button>
+          </div>
+          <div class="external-url-hint" id="os-update-note" style="display:none"></div>
+        </div>
+      </div>
+
     </div>
 
     <div class="card-footer">
@@ -747,6 +775,34 @@
   }
 
   // ── Status ────────────────────────────────────────────────────────────────────
+  function renderOsPanel(d) {
+    const ver   = document.getElementById('os-ver-installed');
+    const badge = document.getElementById('os-ver-badge');
+    const btn   = document.getElementById('os-update-btn');
+    const note  = document.getElementById('os-update-note');
+    if (!ver) return;
+    ver.textContent = `v${d.os_version}`;
+    if (!d.os_checked) {
+      badge.className = 'version-badge checking'; badge.textContent = 'Checking…';
+    } else if (d.os_update_available) {
+      badge.className = 'version-badge available'; badge.textContent = `v${d.os_latest} available`;
+    } else {
+      badge.className = 'version-badge uptodate'; badge.textContent = 'Up to date';
+    }
+    btn.style.display = d.os_update_available ? '' : 'none';
+    if (d.os_update_result?.startsWith('rolled-back')) {
+      note.textContent = 'Last update failed and was rolled back automatically.';
+      note.style.display = '';
+    }
+  }
+
+  async function osRecheck() {
+    const b = document.getElementById('os-check-btn');
+    b.disabled = true; b.textContent = 'Checking…';
+    try { await fetch('/os/recheck', { method: 'POST' }); await fetchStatus(true); } catch {}
+    b.disabled = false; b.textContent = 'Check';
+  }
+
   async function osUpdate() {
     if (!confirm('Update Downstage OS?\n\nThe setup service restarts during the update (the display is not interrupted). If the new version fails to start, the previous one is restored automatically.')) return;
     try {
@@ -784,14 +840,8 @@
       const d = await r.json();
       document.getElementById('watchdog-bar').style.display = d.watchdog_override ? 'flex' : 'none';
       const osEl = document.getElementById('os-version-label');
-      if (osEl && d.os_version) {
-        osEl.innerHTML = `Downstage OS v${d.os_version}` +
-          (d.os_update_available
-            ? ` <a class="upd" href="#" onclick="osUpdate();return false">— update to v${d.os_latest}</a>`
-            : '') +
-          (d.os_update_result?.startsWith('rolled-back')
-            ? ` <span class="upd">(last update rolled back)</span>` : '');
-      }
+      if (osEl && d.os_version) osEl.textContent = `Downstage OS v${d.os_version}`;
+      renderOsPanel(d);
       watchdogOn = d.watchdog ?? true;
       document.getElementById('watchdog-toggle').className = 'toggle ' + (watchdogOn ? 'on' : '');
       if (d.connected) {
