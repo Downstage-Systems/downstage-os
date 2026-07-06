@@ -388,6 +388,23 @@ def _kill_orphan_windows():
 HOTSPOT_CON = "downstage-hotspot"
 
 
+def _real_network_ip():
+    """First non-hotspot, non-loopback IPv4 — None when the hotspot is the
+    only network. Used by the front panel to decide which page matters."""
+    try:
+        out = subprocess.check_output(["ip", "-4", "-o", "addr", "show"],
+                                      text=True, timeout=5)
+        for line in out.splitlines():
+            parts = line.split()
+            iface, addr = parts[1], parts[3].split("/")[0]
+            if iface == "lo" or addr.startswith("10.42."):
+                continue
+            return addr
+    except Exception:
+        pass
+    return None
+
+
 def hotspot_is_active():
     try:
         out = subprocess.check_output(
@@ -791,10 +808,11 @@ class EPaperDisplay:
         try:
             img  = self._new_image()
             draw = ImageDraw.Draw(img)
-            if hotspot_is_active():
+            hs = hotspot_is_active()
+            if hs and not _real_network_ip():
                 self._page_hotspot(draw)
             else:
-                self._page_status(draw)
+                self._page_status(draw, hotspot=hs)
             self._flush(img)
         except Exception as e:
             print(f"[epaper] render error: {e}")
@@ -811,7 +829,7 @@ class EPaperDisplay:
         draw.text((58, y - 2), value, font=font or self._font_md, fill=0)
 
     # ── Normal page: network + OnTime status ─────────────────────────────────
-    def _page_status(self, draw):
+    def _page_status(self, draw, hotspot=False):
         config    = load_config()
         ip        = config.get("ip", "")
         local_ip  = get_local_ip()
@@ -820,7 +838,7 @@ class EPaperDisplay:
         source    = config.get("source", "/timer")
         temp      = _cpu_temp() or ""
 
-        self._header(draw, "DOWNSTAGE VIEW", temp)
+        self._header(draw, "DOWNSTAGE VIEW", "HOTSPOT ON" if hotspot else temp)
 
         self._row(draw, 26, "WiFi",   (ssid or "Not connected")[:22])
         self._row(draw, 44, "Setup",  f"{local_ip}:8080" if local_ip != "unknown" else "No network")

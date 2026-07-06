@@ -945,16 +945,19 @@ class OLEDDisplay:
             return
         try:
             with luma_canvas(self._device) as draw:
-                if hotspot_is_active():
+                hs = hotspot_is_active()
+                # hotspot page only when it's the only way in — with ethernet
+                # up, techs need the real address, not the fallback
+                if hs and not _real_network_ip():
                     self._page_hotspot(draw)
                 else:
-                    self._page_status(draw)
+                    self._page_status(draw, hotspot=hs)
             self._jitter = 1 - self._jitter
         except Exception as e:
             print(f"[oled] render error: {e}")
 
     # ── Normal page ───────────────────────────────────────────────────────────
-    def _page_status(self, draw):
+    def _page_status(self, draw, hotspot=False):
         j         = self._jitter
         config    = load_config()
         mode      = config.get("mode", "remote")
@@ -963,9 +966,9 @@ class OLEDDisplay:
         net       = get_network_info()
 
         draw.text((0, 0 + j), "DOWNSTAGE ONE", fill=255)
-        temp = _cpu_temp()
-        if temp:
-            draw.text((128 - len(temp) * 6, 0 + j), temp, fill=255)
+        right = "HS ON" if hotspot else (_cpu_temp() or "")
+        if right:
+            draw.text((128 - len(right) * 6, 0 + j), right, fill=255)
         draw.line([(0, 12 + j), (127, 12 + j)], fill=255)
 
         # setup address — the single most useful line on the box
@@ -1734,6 +1737,23 @@ def companion_set_channel():
 # after a network has been seen, so a mid-show WiFi blip can't hijack the radio.
 
 HOTSPOT_CON = "downstage-hotspot"
+
+
+def _real_network_ip():
+    """First non-hotspot, non-loopback IPv4 — None when the hotspot is the
+    only network. Used by the front panel to decide which page matters."""
+    try:
+        out = subprocess.check_output(["ip", "-4", "-o", "addr", "show"],
+                                      text=True, timeout=5)
+        for line in out.splitlines():
+            parts = line.split()
+            iface, addr = parts[1], parts[3].split("/")[0]
+            if iface == "lo" or addr.startswith("10.42."):
+                continue
+            return addr
+    except Exception:
+        pass
+    return None
 
 
 def hotspot_is_active():
