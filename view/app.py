@@ -209,7 +209,7 @@ def _open_window(source):
         # render true black — no window would show the desktop
         return subprocess.Popen([
             "chromium", *_COMMON_FLAGS, profile,
-            "--start-fullscreen", "--window-size=1280,720", "--window-position=0,0",
+            "--kiosk",
             "http://localhost:8080/blackout-page",
         ], env=_chromium_env())
 
@@ -226,7 +226,7 @@ def _open_window(source):
     if source == "holding":
         return subprocess.Popen([
             "chromium", *_COMMON_FLAGS, profile,
-            "--start-fullscreen", "--window-size=1280,720", "--window-position=0,0",
+            "--kiosk",
             "http://localhost:8080/holding",
         ], env=_chromium_env())
 
@@ -237,7 +237,7 @@ def _open_window(source):
             return _open_window("config")
         return subprocess.Popen([
             "chromium", *_COMMON_FLAGS, profile,
-            "--start-fullscreen", "--window-size=1280,720", "--window-position=0,0", url,
+            "--kiosk", url,
         ], env=_chromium_env())
 
     if source == "cleantimer":
@@ -249,7 +249,7 @@ def _open_window(source):
 
     return subprocess.Popen([
         "chromium", *_COMMON_FLAGS, profile,
-        "--start-fullscreen", "--window-size=1280,720", "--window-position=0,0", url,
+        "--kiosk", url,
     ], env=_chromium_env())
 
 
@@ -1372,7 +1372,7 @@ def displays_identify():
             _kill(_win); _kill_orphan_windows()
             _win = subprocess.Popen([
                 "chromium", *_COMMON_FLAGS, "--user-data-dir=/tmp/kiosk-lite",
-                "--start-fullscreen", "--window-size=1280,720", "--window-position=0,0",
+                "--kiosk",
                 f"http://localhost:8080/identify-page/{label}",
             ], env=_chromium_env())
         time.sleep(5)
