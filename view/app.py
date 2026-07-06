@@ -50,6 +50,14 @@ _COMMON_FLAGS = [
     "--noerrdialogs",
     "--disable-session-crashed-bubble",
     "--hide-crash-restore-bubble",
+    # Pi Zero 2 W memory diet — chromium subprocesses OOM under pressure,
+    # leaving a black page that never retries
+    "--renderer-process-limit=1",
+    "--disable-extensions",
+    "--disable-background-networking",
+    "--disable-crash-reporter",
+    "--disk-cache-size=1048576",
+    "--js-flags=--max-old-space-size=128",
     "--disable-infobars",
     "--no-first-run",
     "--no-memcheck",
@@ -961,6 +969,13 @@ def reset():
     save_config({"ip": "", "source": "/timer"})
     close_window()
     epaper.force_refresh()
+    return jsonify({"ok": True})
+
+
+@app.route("/refresh", methods=["POST"])
+def refresh_display():
+    """Relaunch the display window — the one-tap heal for a stuck/black page."""
+    threading.Thread(target=launch_window, daemon=True).start()
     return jsonify({"ok": True})
 
 
