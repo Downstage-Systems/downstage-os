@@ -224,6 +224,24 @@
     .btn-sm:disabled { opacity: 0.35; cursor: not-allowed; }
     .btn-sm.active { border-color: var(--accent); color: var(--accent); background: var(--accent-lo); }
     .display-ctl-row { display: flex; gap: 6px; flex-wrap: wrap; }
+    .mode-toggle {
+      display: grid; grid-template-columns: 1fr 1fr;
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 10px; padding: 4px; gap: 4px;
+    }
+    .mode-btn {
+      padding: 10px 12px; border: none; border-radius: 7px;
+      background: transparent; color: var(--muted);
+      font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+      display: flex; align-items: center; justify-content: center; gap: 7px; transition: all 0.18s;
+    }
+    .mode-btn.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 6px rgba(0,0,0,0.4); }
+    .display-settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .display-setting-row { display: flex; flex-direction: column; gap: 5px; }
+    .display-setting-row label {
+      font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
     .btn-sm.success:hover:not(:disabled) { border-color: var(--green-bd); color: var(--green); background: var(--green-bg); }
 
     /* ── Version rows (Downstage OS panel) ── */
@@ -583,15 +601,29 @@
         <div class="section-label">Network</div>
         <div class="local-panel">
           <div class="tz-current"><span id="net-current">Loading…</span></div>
-          <div class="display-ctl-row" style="margin:10px 0">
-            <button class="btn-sm" id="net-dhcp-btn" onclick="setNetMode('auto')">DHCP</button>
-            <button class="btn-sm" id="net-static-btn" onclick="setNetMode('manual')">Static IP</button>
+          <div class="mode-toggle" style="margin:10px 0">
+            <button class="mode-btn" id="net-dhcp-btn" onclick="setNetMode('auto')">DHCP (Automatic)</button>
+            <button class="mode-btn" id="net-static-btn" onclick="setNetMode('manual')">Static IP</button>
           </div>
-          <div id="net-static-fields" style="display:none;flex-direction:column;gap:8px">
-            <input id="net-ip" inputmode="decimal" placeholder="IP address — 192.168.1.50" autocomplete="off" spellcheck="false">
-            <input id="net-prefix" inputmode="numeric" value="24" placeholder="Prefix (CIDR) — 24" autocomplete="off">
-            <input id="net-gw" inputmode="decimal" placeholder="Gateway — 192.168.1.1" autocomplete="off" spellcheck="false">
-            <input id="net-dns" placeholder="DNS — 1.1.1.1 8.8.8.8" autocomplete="off" spellcheck="false">
+          <div id="net-static-fields" style="display:none">
+            <div class="display-settings-grid">
+              <div class="display-setting-row">
+                <label>IP Address</label>
+                <input id="net-ip" inputmode="decimal" placeholder="192.168.1.50" autocomplete="off" spellcheck="false">
+              </div>
+              <div class="display-setting-row">
+                <label>Prefix (CIDR)</label>
+                <input id="net-prefix" inputmode="numeric" value="24" placeholder="24" autocomplete="off">
+              </div>
+              <div class="display-setting-row">
+                <label>Gateway</label>
+                <input id="net-gw" inputmode="decimal" placeholder="192.168.1.1" autocomplete="off" spellcheck="false">
+              </div>
+              <div class="display-setting-row">
+                <label>DNS (space-separated)</label>
+                <input id="net-dns" placeholder="1.1.1.1 8.8.8.8" autocomplete="off" spellcheck="false">
+              </div>
+            </div>
           </div>
           <div class="display-ctl-row" style="margin-top:10px">
             <button class="btn-sm success" id="net-apply-btn" onclick="applyNetwork()">Apply</button>
@@ -1228,7 +1260,7 @@
     netMode = mode;
     document.getElementById('net-dhcp-btn').classList.toggle('active', mode === 'auto');
     document.getElementById('net-static-btn').classList.toggle('active', mode === 'manual');
-    document.getElementById('net-static-fields').style.display = mode === 'manual' ? 'flex' : 'none';
+    document.getElementById('net-static-fields').style.display = mode === 'manual' ? '' : 'none';
   }
   function setNetMode(mode) { applyNetModeUI(mode); }
 
