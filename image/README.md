@@ -27,6 +27,10 @@ shrinks/restores fast; PiShrink makes it auto-expand onto larger cards.
    auto-expand to fill any card on first boot.
 5. Archive as `downstage-one-golden-vX.Y.Z.img.gz` (or `-view-`).
 
+Golden image package requirements beyond stock: `python3-websocket`
+(the View's fast source-switching drives chromium via CDP), `util-linux-extra`
+(hwclock, One only).
+
 The provisioning service (`downstage-provision.service` +
 `firstboot-provision.py`) must be installed in the image beforehand:
 

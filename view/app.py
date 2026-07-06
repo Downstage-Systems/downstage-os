@@ -202,55 +202,90 @@ def _is_ontime_source(source):
     return source not in ("config", "off", "external", None, "")
 
 
-def _open_window(source):
-    profile = "--user-data-dir=/tmp/kiosk-lite"
-
+def _source_url(source):
+    """Map a source name to the URL the kiosk window should show."""
     if source == "off":
-        # render true black — no window would show the desktop
-        return subprocess.Popen([
-            "chromium", *_COMMON_FLAGS, profile,
-            "--kiosk",
-            "http://localhost:8080/blackout-page",
-        ], env=_chromium_env())
-
+        return "http://localhost:8080/blackout-page"
     if source == "config":
-        return subprocess.Popen([
-            "chromium", *_COMMON_FLAGS, profile,
-            "--app=http://localhost:8080",
-            "--start-maximized",
-        ], env=_chromium_env())
-
+        return "http://localhost:8080"
+    if source == "holding":
+        return "http://localhost:8080/holding"
     config = load_config()
     ip     = config.get("ip", "")
-
-    if source == "holding":
-        return subprocess.Popen([
-            "chromium", *_COMMON_FLAGS, profile,
-            "--kiosk",
-            "http://localhost:8080/holding",
-        ], env=_chromium_env())
-
     if source == "external":
-        url = config.get("external_url", "").strip()
-        if not url:
-            # No URL configured — fall back to the config UI
-            return _open_window("config")
-        return subprocess.Popen([
-            "chromium", *_COMMON_FLAGS, profile,
+        return config.get("external_url", "").strip() or "http://localhost:8080"
+    if source == "cleantimer":
+        return (f"http://{ip}:4001/timer/"
+                f"?hideClock=true&hideCards=true&hideProgress=true"
+                f"&hideLogo=true&keyColour=000000&timerColour=ffffff")
+    return f"http://{ip}:4001{source}"
+
+
+_DEBUG_PORT = 9222   # chromium DevTools, loopback only
+
+
+def _navigate(url):
+    """Point the RUNNING kiosk page at a new URL via CDP Page.navigate —
+    ~2s versus ~20s cold start on the Zero 2 W. Kiosk-mode chromium ignores
+    second-instance URL handoffs and this build's /json/new is unreliable,
+    so the websocket protocol is the one lever that works.
+    Requires python3-websocket (in the golden image)."""
+    try:
+        import websocket
+    except ImportError:
+        return False
+    base = f"http://127.0.0.1:{_DEBUG_PORT}"
+    try:
+        pages = [t for t in requests.get(f"{base}/json", timeout=2).json()
+                 if t.get("type") == "page"]
+        if not pages:
+            return False
+        ws = websocket.create_connection(pages[0]["webSocketDebuggerUrl"],
+                                         timeout=8, suppress_origin=True)
+        ws.send(json.dumps({"id": 1, "method": "Page.navigate",
+                            "params": {"url": url}}))
+        ws.recv()
+        ws.close()
+        return True
+    except Exception as e:
+        print(f"[navigate] {type(e).__name__}: {e}")
+        return False
+
+
+def _show(url):
+    """Show a URL on the output: reuse the live window when possible,
+    cold-start chromium only when there isn't one. A freshly cold-started
+    chromium needs ~20s before its DevTools port answers on this hardware,
+    so navigation retries patiently rather than triggering cascading
+    cold starts."""
+    global _win
+    with _wlock:
+        if _win and _win.poll() is None:
+            deadline = time.time() + 75
+            while time.time() < deadline:
+                if _navigate(url):
+                    print(f"[window] navigated -> {url}")
+                    return
+                if _win.poll() is not None:
+                    break   # window died — cold start below
+                time.sleep(2)
+            print("[window] navigation unavailable — cold starting")
+        _kill(_win)
+        _kill_orphan_windows()
+        _win = subprocess.Popen([
+            "chromium", *_COMMON_FLAGS,
+            "--user-data-dir=/tmp/kiosk-lite",
+            f"--remote-debugging-port={_DEBUG_PORT}",
+            "--remote-allow-origins=*",
             "--kiosk", url,
         ], env=_chromium_env())
+        print(f"[window] cold start -> {url}")
 
-    if source == "cleantimer":
-        url = (f"http://{ip}:4001/timer/"
-               f"?hideClock=true&hideCards=true&hideProgress=true"
-               f"&hideLogo=true&keyColour=000000&timerColour=ffffff")
-    else:
-        url = f"http://{ip}:4001{source}"
 
-    return subprocess.Popen([
-        "chromium", *_COMMON_FLAGS, profile,
-        "--kiosk", url,
-    ], env=_chromium_env())
+def _open_window(source):
+    """Compatibility shim — shows the source and returns the window handle."""
+    _show(_source_url(source))
+    return _win
 
 
 _os_update = {"latest": None, "update_available": False, "checked": False}
@@ -296,16 +331,12 @@ _watchdog_override = False
 
 def _launch_watchdog_window():
     """Swap to the holding page without touching config."""
-    global _win
     try:
         source = load_config().get("source", "/timer")
-        with _wlock:
-            _kill(_win)
-            _kill_orphan_windows()
-            _win = _open_window("holding" if _is_ontime_source(source) else source)
-        print("[watchdog] holding window launched")
+        _show(_source_url("holding" if _is_ontime_source(source) else source))
+        print("[watchdog] holding window shown")
     except Exception as e:
-        print(f"[watchdog] FAILED to launch holding window: {e}")
+        print(f"[watchdog] FAILED to show holding window: {e}")
 
 
 def _ontime_watchdog():
@@ -401,9 +432,10 @@ def _kill_orphan_windows():
     """Kill kiosk Chromium left over from a previous Flask instance — the old
     window keeps the profile lock and swallows new launches."""
     try:
-        subprocess.run(["pkill", "-f", "user-data-dir=/tmp/kiosk-lite"],
+        r = subprocess.run(["pkill", "-f", "user-data-dir=/tmp/kiosk-lite"],
                        timeout=5, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        time.sleep(1)
+        if r.returncode == 0:      # only pause if something was actually killed
+            time.sleep(1)
     except Exception:
         pass
     _mark_profiles_clean()
@@ -700,12 +732,8 @@ def os_update():
 
 
 def launch_window():
-    global _win
     config = load_config()
-    with _wlock:
-        _kill(_win)
-        _kill_orphan_windows()
-        _win = _open_window(config.get("source", "/timer"))
+    _show(_source_url(config.get("source", "/timer")))
 
 
 def close_window():
@@ -1365,16 +1393,9 @@ def _view_output():
 
 @app.route("/displays/identify", methods=["POST"])
 def displays_identify():
-    global _win
     label = (load_config().get("serial", "") or "VIEW").split("-")[-1] or "VIEW"
     def run():
-        with _wlock:
-            _kill(_win); _kill_orphan_windows()
-            _win = subprocess.Popen([
-                "chromium", *_COMMON_FLAGS, "--user-data-dir=/tmp/kiosk-lite",
-                "--kiosk",
-                f"http://localhost:8080/identify-page/{label}",
-            ], env=_chromium_env())
+        _show(f"http://localhost:8080/identify-page/{label}")
         time.sleep(5)
         launch_window()
     threading.Thread(target=run, daemon=True).start()
@@ -1444,9 +1465,7 @@ def boot():
 
     time.sleep(3)
     config = load_config()
-    global _win
-    with _wlock:
-        _win = _open_window(config.get("source", "/timer") if config.get("ip") else "config")
+    _show(_source_url(config.get("source", "/timer") if config.get("ip") else "config"))
 
 
 if __name__ == "__main__":
