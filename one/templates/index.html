@@ -508,6 +508,7 @@
     }
     .alert-bar.blackout  { background: rgba(0,0,0,0.7); border-color: #333; color: #666; }
     .alert-bar.watchdog  { background: var(--amber-bg); border-color: var(--amber-bd); color: var(--amber); }
+    .alert-bar.power     { background: var(--red-bg); border-color: var(--red-bd); color: var(--red); }
     .alert-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
     .alert-bar .alert-action {
       margin-left: auto; padding: 5px 12px; border-radius: 6px; border: 1px solid currentColor;
@@ -633,6 +634,11 @@
       </div>
 
       <!-- Watchdog offline banner -->
+      <div class="alert-bar power" id="power-bar" style="display:none">
+        <div class="alert-dot"></div>
+        <span id="power-bar-text">Low voltage detected — check the power supply</span>
+      </div>
+
       <div class="alert-bar watchdog" id="watchdog-bar" style="display:none">
         <div class="alert-dot"></div>
         <span>OnTime offline — holding page active</span>
@@ -738,6 +744,7 @@
             <svg viewBox="0 0 24 24"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg>
             Blackout
           </button>
+          <button class="btn-sm" onclick="identifyDisplays()" title="Flash a big 1 and 2 on the outputs">Identify</button>
         </div>
 
         <!-- HDMI tabs -->
@@ -900,7 +907,6 @@
             </div>
           </div>
           <div class="display-ctl-row" style="margin-top:12px">
-            <button class="btn-sm" onclick="identifyDisplays()" title="Flash a big 1 and 2 on the outputs">Identify Outputs</button>
             <button class="btn-sm" id="hdmi1-power-btn" onclick="toggleOutputPower(1)">HDMI 1: On</button>
             <button class="btn-sm" id="hdmi2-power-btn" onclick="toggleOutputPower(2)">HDMI 2: On</button>
           </div>
@@ -1426,6 +1432,20 @@
 
       // Blackout / watchdog banners
       document.getElementById('blackout-bar').style.display  = d.blackout          ? 'flex' : 'none';
+      // Power supply warning (Pi firmware undervoltage flags)
+      const pw = d.power || {};
+      const pwBar = document.getElementById('power-bar');
+      if (pw.undervolt_now) {
+        document.getElementById('power-bar-text').textContent =
+          'LOW VOLTAGE — the power supply cannot deliver enough current. Use the official 27W USB-C supply.';
+        pwBar.style.display = 'flex';
+      } else if (pw.undervolt_boot) {
+        document.getElementById('power-bar-text').textContent =
+          'Low voltage was detected since boot — the power supply may be marginal. Displays and USB may misbehave.';
+        pwBar.style.display = 'flex';
+      } else {
+        pwBar.style.display = 'none';
+      }
       document.getElementById('watchdog-bar').style.display  = d.watchdog_override  ? 'flex' : 'none';
       const bbtn = document.getElementById('blackout-btn');
       if (bbtn) bbtn.style.display = d.blackout ? 'none' : '';

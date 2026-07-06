@@ -176,6 +176,22 @@ def check_ontime(ip, timeout=3):
         return False
 
 
+def _power_state():
+    """Pi firmware power flags (vcgencmd get_throttled): bit0 undervoltage
+    now, bit16 undervoltage since boot — the 'lightning bolt' warning."""
+    try:
+        out = subprocess.check_output(["vcgencmd", "get_throttled"],
+                                      text=True, timeout=3).strip()
+        val = int(out.split("=")[1], 16)
+        return {
+            "undervolt_now":  bool(val & 0x1),
+            "throttled_now":  bool(val & 0x4),
+            "undervolt_boot": bool(val & 0x10000),
+        }
+    except Exception:
+        return {"undervolt_now": False, "throttled_now": False, "undervolt_boot": False}
+
+
 def _cpu_temp():
     try:
         raw = Path("/sys/class/thermal/thermal_zone0/temp").read_text().strip()
@@ -966,7 +982,13 @@ class OLEDDisplay:
         net       = get_network_info()
 
         draw.text((0, 0 + j), "DOWNSTAGE ONE", fill=255)
-        right = "HS ON" if hotspot else (_cpu_temp() or "")
+        pw = _power_state()
+        if pw["undervolt_now"]:
+            right = "LOW PWR!"
+        elif hotspot:
+            right = "HS ON"
+        else:
+            right = _cpu_temp() or ""
         if right:
             draw.text((128 - len(right) * 6, 0 + j), right, fill=255)
         draw.line([(0, 12 + j), (127, 12 + j)], fill=255)
@@ -1158,6 +1180,7 @@ def status():
         "hotspot_active":       hotspot_is_active(),
         "hotspot_ssid":         config.get("hotspot_ssid", ""),
         "cpu_temp":             _cpu_temp(),
+        "power":                _power_state(),
         "cpu_percent":          _cpu_percent(),
         "gpu_clock_mhz":        _gpu_clock_mhz(),
         "ram_used":             ram[0] if ram else None,
