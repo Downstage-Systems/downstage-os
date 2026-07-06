@@ -1461,8 +1461,7 @@
         pwBar.style.display = 'none';
       }
       document.getElementById('watchdog-bar').style.display  = d.watchdog_override  ? 'flex' : 'none';
-      const bbtn = document.getElementById('blackout-btn');
-      if (bbtn) bbtn.style.display = d.blackout ? 'none' : '';
+      if (d.blackout !== blackoutActive) { blackoutActive = d.blackout; renderBlackoutBtn(); }
 
       // Watchdog toggle
       watchdogOn = d.watchdog ?? true;
@@ -1958,7 +1957,7 @@
       while (Date.now() < deadline) {
         for (const base of bases) {
           try {
-            const r = await fetch(`${base}/network/confirm`, { method: 'POST', cache: 'no-store' });
+            const r = await fetch(`${base}/network/confirm`, { method: 'POST', cache: 'no-store', signal: AbortSignal.timeout(3000) });
             if (r.ok) {
               note.textContent = `Confirmed — settings kept. Reach the unit at ${resp.hostname}.local:8080` + (body.ip ? ` or ${body.ip}:8080` : '') + '.';
               btn.disabled = false; btn.textContent = 'Apply';
@@ -2242,32 +2241,40 @@
   }
 
   // ── Blackout ──────────────────────────────────────────────────────────────────
-  const BLACKOUT_BTN_HTML = `<svg viewBox="0 0 24 24"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg>Blackout`;
+  const BLACKOUT_ICON = `<svg viewBox="0 0 24 24"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg>`;
+  let blackoutActive = false;
 
-  function resetBlackoutBtn() {
+  function renderBlackoutBtn() {
     const btn = document.getElementById('blackout-btn');
-    if (btn) { btn.innerHTML = BLACKOUT_BTN_HTML; btn.disabled = false; }
+    if (!btn) return;
+    btn.disabled = false;
+    btn.style.display = '';
+    btn.innerHTML = BLACKOUT_ICON + (blackoutActive ? 'Resume' : 'Blackout');
   }
 
   async function blackout() {
+    // toggles: black out, or resume if already blacked out
     const btn = document.getElementById('blackout-btn');
-    if (btn) { btn.disabled = true; btn.innerHTML = spinnerHTML('Blacking out…'); }
+    if (btn) { btn.disabled = true; btn.innerHTML = spinnerHTML(blackoutActive ? 'Resuming…' : 'Blacking out…'); }
     try {
-      await fetch('/blackout', { method: 'POST' });
-      document.getElementById('blackout-bar').style.display = 'flex';
-      if (btn) { btn.style.display = 'none'; }
-    } catch { showToast('Blackout failed.', 'error'); }
-    resetBlackoutBtn();   // restore the label while hidden, so however
-                          // blackout ends the button reappears correct
+      if (blackoutActive) {
+        await fetch('/blackout/clear', { method: 'POST' });
+        blackoutActive = false;
+        document.getElementById('blackout-bar').style.display = 'none';
+        showToast('Displays resumed.', 'success');
+      } else {
+        await fetch('/blackout', { method: 'POST' });
+        blackoutActive = true;
+        document.getElementById('blackout-bar').style.display = 'flex';
+        showToast('Displays blacked out.', 'info');
+      }
+    } catch { showToast('Request failed.', 'error'); }
+    renderBlackoutBtn();
   }
 
-  async function blackoutResume() {
-    await fetch('/blackout/clear', { method: 'POST' });
-    document.getElementById('blackout-bar').style.display = 'none';
-    const btn = document.getElementById('blackout-btn');
-    if (btn) btn.style.display = '';
-    resetBlackoutBtn();
-    showToast('Displays resumed.', 'success');
+  async function blackoutResume() {   // banner button
+    blackoutActive = true;            // ensure toggle path resumes
+    await blackout();
   }
 
   // ── System health ─────────────────────────────────────────────────────────────

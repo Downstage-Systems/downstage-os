@@ -345,12 +345,16 @@ def _apply_display_settings():
         n   = idx + 1
         res = config.get(f"hdmi{n}_res",    "1920x1080")
         rot = config.get(f"hdmi{n}_rotate", "normal")
+        # re-anchor positions: a mode change alters widths, and stale offsets
+        # leave gaps/overlap — content then isn't centered on the glass
+        cmd = ["xrandr", "--output", name, "--mode", res, "--rotate", rot]
+        if idx == 0:
+            cmd += ["--pos", "0x0"]
+        else:
+            cmd += ["--right-of", outputs[idx - 1]]
         try:
-            subprocess.run(
-                ["xrandr", "--output", name, "--mode", res, "--rotate", rot],
-                env=env, timeout=10, check=True,
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-            )
+            subprocess.run(cmd, env=env, timeout=10, check=True,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except Exception as e:
             print(f"[xrandr] failed for {name}: {e}")
 
@@ -538,6 +542,8 @@ def get_displays():
 
 _COMMON_FLAGS = [
     "--noerrdialogs",
+    "--disable-session-crashed-bubble",
+    "--hide-crash-restore-bubble",
     "--disable-infobars",
     "--no-first-run",
     "--disable-restore-session-state",
@@ -639,6 +645,20 @@ def _open_window(source, display, hdmi_index):
     ], env=_chromium_env())
 
 
+def _mark_profiles_clean():
+    """Chromium shows 'Restore pages?' if the profile says it crashed —
+    which it will after any hard kill. Rewrite the exit state before launch."""
+    import glob
+    for pref in glob.glob("/tmp/kiosk-*/Default/Preferences"):
+        try:
+            s = Path(pref).read_text()
+            s = s.replace('"exited_cleanly":false', '"exited_cleanly":true')
+            s = s.replace('"exit_type":"Crashed"', '"exit_type":"Normal"')
+            Path(pref).write_text(s)
+        except Exception:
+            pass
+
+
 def _kill_orphan_windows():
     """
     Kill any kiosk Chromium windows left over from a previous Flask instance.
@@ -654,6 +674,7 @@ def _kill_orphan_windows():
         time.sleep(1)   # let X release the windows
     except Exception:
         pass
+    _mark_profiles_clean()
 
 
 def launch_all_windows():
@@ -981,14 +1002,14 @@ class OLEDDisplay:
         connected = check_ontime(ip, timeout=2) if ip else False
         net       = get_network_info()
 
-        draw.text((0, 0 + j), "DOWNSTAGE ONE", fill=255)
         pw = _power_state()
         if pw["undervolt_now"]:
-            right = "LOW PWR!"
+            title, right = "LOW POWER!", (_cpu_temp() or "")
         elif hotspot:
-            right = "HS ON"
+            title, right = "DOWNSTAGE ONE", "HS ON"
         else:
-            right = _cpu_temp() or ""
+            title, right = "DOWNSTAGE ONE", (_cpu_temp() or "")
+        draw.text((0, 0 + j), title, fill=255)
         if right:
             draw.text((128 - len(right) * 6, 0 + j), right, fill=255)
         draw.line([(0, 12 + j), (127, 12 + j)], fill=255)
@@ -2200,10 +2221,25 @@ def wifi_connect():
             stop_hotspot()
             time.sleep(3)   # let the radio switch back to client mode
 
-        cmd = ["sudo", "nmcli", "dev", "wifi", "connect", ssid]
         if password:
-            cmd += ["password", password]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=45)
+            # Explicit profile with key-mgmt set — `nmcli dev wifi connect`
+            # generates a profile netplan's NM backend rejects
+            # ("802-11-wireless-security.key-mgmt: property is missing")
+            subprocess.run(["sudo", "nmcli", "connection", "delete", ssid],
+                           timeout=10, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            result = subprocess.run(
+                ["sudo", "nmcli", "connection", "add", "type", "wifi",
+                 "con-name", ssid, "ifname", "wlan0", "ssid", ssid,
+                 "802-11-wireless-security.key-mgmt", "wpa-psk",
+                 "802-11-wireless-security.psk", password,
+                 "connection.autoconnect", "yes"],
+                capture_output=True, text=True, timeout=30)
+            if result.returncode == 0:
+                result = subprocess.run(["sudo", "nmcli", "connection", "up", ssid],
+                                        capture_output=True, text=True, timeout=45)
+        else:
+            result = subprocess.run(["sudo", "nmcli", "dev", "wifi", "connect", ssid],
+                                    capture_output=True, text=True, timeout=45)
         ok  = result.returncode == 0
         msg = (result.stdout + result.stderr).strip()
 

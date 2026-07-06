@@ -1303,7 +1303,7 @@
       while (Date.now() < deadline) {
         for (const base of bases) {
           try {
-            const r = await fetch(`${base}/network/confirm`, { method: 'POST', cache: 'no-store' });
+            const r = await fetch(`${base}/network/confirm`, { method: 'POST', cache: 'no-store', signal: AbortSignal.timeout(3000) });
             if (r.ok) {
               note.textContent = `Confirmed — settings kept. Reach the unit at ${resp.hostname}.local:8080` + (body.ip ? ` or ${body.ip}:8080` : '') + '.';
               btn.disabled = false; btn.textContent = 'Apply'; setTimeout(loadNetwork, 1500); return;

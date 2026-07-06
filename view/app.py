@@ -48,6 +48,8 @@ _wlock = threading.Lock()
 
 _COMMON_FLAGS = [
     "--noerrdialogs",
+    "--disable-session-crashed-bubble",
+    "--hide-crash-restore-bubble",
     "--disable-infobars",
     "--no-first-run",
     "--no-memcheck",
@@ -373,6 +375,20 @@ def holding_page():
     ), 200, {"Content-Type": "text/html"}
 
 
+def _mark_profiles_clean():
+    """Chromium shows 'Restore pages?' if the profile says it crashed —
+    which it will after any hard kill. Rewrite the exit state before launch."""
+    import glob
+    for pref in glob.glob("/tmp/kiosk-lite/Default/Preferences"):
+        try:
+            s = Path(pref).read_text()
+            s = s.replace('"exited_cleanly":false', '"exited_cleanly":true')
+            s = s.replace('"exit_type":"Crashed"', '"exit_type":"Normal"')
+            Path(pref).write_text(s)
+        except Exception:
+            pass
+
+
 def _kill_orphan_windows():
     """Kill kiosk Chromium left over from a previous Flask instance — the old
     window keeps the profile lock and swallows new launches."""
@@ -382,6 +398,7 @@ def _kill_orphan_windows():
         time.sleep(1)
     except Exception:
         pass
+    _mark_profiles_clean()
 
 
 # ── Hotspot ───────────────────────────────────────────────────────────────────
@@ -784,6 +801,7 @@ class EPaperDisplay:
         return Image.new('1', (self.W, self.H), 255)
 
     def _flush(self, image):
+        image = image.rotate(180)   # panel is mounted upside-down in the enclosure
         with self._lock:
             # e-ink refreshes flash the panel — skip if nothing changed
             frame = image.tobytes()
@@ -1169,10 +1187,25 @@ def wifi_connect():
             print(f"[wifi] stopping hotspot to join '{ssid}'")
             stop_hotspot()
             time.sleep(3)
-        cmd = ["sudo", "nmcli", "dev", "wifi", "connect", ssid]
         if password:
-            cmd += ["password", password]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=45)
+            # Explicit profile with key-mgmt set — `nmcli dev wifi connect`
+            # generates a profile netplan's NM backend rejects
+            # ("802-11-wireless-security.key-mgmt: property is missing")
+            subprocess.run(["sudo", "nmcli", "connection", "delete", ssid],
+                           timeout=10, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            result = subprocess.run(
+                ["sudo", "nmcli", "connection", "add", "type", "wifi",
+                 "con-name", ssid, "ifname", "wlan0", "ssid", ssid,
+                 "802-11-wireless-security.key-mgmt", "wpa-psk",
+                 "802-11-wireless-security.psk", password,
+                 "connection.autoconnect", "yes"],
+                capture_output=True, text=True, timeout=30)
+            if result.returncode == 0:
+                result = subprocess.run(["sudo", "nmcli", "connection", "up", ssid],
+                                        capture_output=True, text=True, timeout=45)
+        else:
+            result = subprocess.run(["sudo", "nmcli", "dev", "wifi", "connect", ssid],
+                                    capture_output=True, text=True, timeout=45)
         ok  = result.returncode == 0
         msg = (result.stdout + result.stderr).strip()
         if ok:
