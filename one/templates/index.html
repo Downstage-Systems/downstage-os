@@ -362,15 +362,27 @@
 
     /* ── Toast ── */
     .toast {
-      margin-top: 14px; padding: 11px 14px; border-radius: 9px;
-      font-size: 13px; display: none; align-items: flex-start; gap: 9px;
+      position: fixed; left: 50%; bottom: 18px;
+      transform: translateX(-50%) translateY(90px);
+      width: calc(100% - 32px); max-width: 560px;
+      padding: 12px 16px; border-radius: 12px; z-index: 95;
+      font-size: 13px; font-weight: 500;
+      display: flex; align-items: flex-start; gap: 9px;
       border: 1px solid transparent;
+      background: var(--surface);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+      opacity: 0; pointer-events: none;
+      transition: transform 0.25s ease, opacity 0.25s ease;
     }
+    .toast.above-savebar { bottom: 88px; }
     .toast svg { width: 15px; height: 15px; fill: currentColor; flex-shrink: 0; margin-top: 1px; }
-    .toast.error   { background: var(--red-bg);   border-color: var(--red-bd);   color: var(--red);   display: flex; }
-    .toast.success { background: var(--green-bg); border-color: var(--green-bd); color: var(--green); display: flex; }
-    .toast.info    { background: var(--blue-bg);  border-color: var(--blue-bd);  color: var(--blue);  display: flex; }
-    .toast.warning { background: var(--amber-bg); border-color: var(--amber-bd); color: var(--amber); display: flex; }
+    .toast.error, .toast.success, .toast.info, .toast.warning {
+      transform: translateX(-50%) translateY(0); opacity: 1;
+    }
+    .toast.error   { border-color: var(--red-bd);   color: var(--red); }
+    .toast.success { border-color: var(--green-bd); color: var(--green); }
+    .toast.info    { border-color: var(--blue-bd);  color: var(--blue); }
+    .toast.warning { border-color: var(--amber-bd); color: var(--amber); }
 
     /* ── Footer ── */
     .card-footer {
@@ -1088,7 +1100,7 @@
         </button>
       </div>
 
-      <div class="toast" id="toast"></div>
+
     </div>
 
     <div class="card-footer">
@@ -1189,6 +1201,8 @@
     </div>
   </div>
 </div>
+
+<div class="toast" id="toast"></div>
 
 <script>
   // ── IP History ───────────────────────────────────────────────────────────────
@@ -1863,12 +1877,22 @@
     warning: `<svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>`,
   };
 
+  let _toastTimer = null;
   function showToast(msg, type) {
     const el = document.getElementById('toast');
     el.innerHTML = (ICONS[type]||'') + `<span>${msg}</span>`;
-    el.className = `toast ${type}`;
+    // sit above the unsaved-changes bar when it's showing
+    const sb = document.getElementById('save-bar');
+    el.className = `toast ${type}` + (sb && sb.classList.contains('visible') ? ' above-savebar' : '');
+    clearTimeout(_toastTimer);
+    // errors/warnings linger longer; info/success get out of the way
+    _toastTimer = setTimeout(clearToast, (type === 'error' || type === 'warning') ? 6000 : 3500);
   }
-  function clearToast() { const el=document.getElementById('toast'); el.className='toast'; el.textContent=''; }
+  function clearToast() {
+    clearTimeout(_toastTimer);
+    const el = document.getElementById('toast');
+    el.className = 'toast';
+  }
   function spinnerHTML(label) {
     return `<svg class="spin" viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 14.96 20 13.54 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 9.04 4 10.46 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>${label}`;
   }
