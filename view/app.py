@@ -342,6 +342,23 @@ def blackout_page_view():
     return '<html><body style="margin:0;background:#000"></body></html>', 200, {"Content-Type": "text/html"}
 
 
+@app.route("/identify-page/<label>")
+def identify_page(label):
+    label = re.sub(r"[^A-Za-z0-9 ]", "", label)[:12]
+    return (
+        '<!DOCTYPE html><html><head><style>'
+        '*{margin:0;padding:0}'
+        'body{background:#12A95C;color:#fff;display:flex;flex-direction:column;'
+        'align-items:center;justify-content:center;height:100vh;'
+        'font-family:sans-serif;text-align:center}'
+        '.n{font-size:30vh;font-weight:800;line-height:1}'
+        '.l{font-size:5vh;letter-spacing:0.3em;text-transform:uppercase;opacity:.85}'
+        '</style></head><body>'
+        f'<div class="n">{label}</div><div class="l">This Screen</div>'
+        '</body></html>'
+    ), 200, {"Content-Type": "text/html"}
+
+
 @app.route("/holding")
 def holding_page():
     return (
@@ -917,6 +934,139 @@ def desktop():
     return jsonify({"ok": True})
 
 
+# ── Network (static IP) ───────────────────────────────────────────────────────
+# Same revert-on-timeout safety as the One: a wrong static setting can't
+# strand the unit — it reverts to the previous config after 90s unless the
+# UI reconnects and confirms.
+
+import ipaddress
+
+_net_revert = {"event": None, "snapshot": None, "conn": None}
+
+
+def _default_conn():
+    try:
+        route = subprocess.check_output(["ip", "route", "show", "default"],
+                                        text=True, timeout=5)
+        m = re.search(r"dev (\S+)", route)
+        iface = m.group(1) if m else "wlan0"
+        out = subprocess.check_output(
+            ["nmcli", "-t", "-f", "NAME,DEVICE", "connection", "show", "--active"],
+            text=True, timeout=5)
+        for line in out.splitlines():
+            name, _, dev = line.rpartition(":")
+            if dev == iface:
+                return name, iface
+    except Exception:
+        pass
+    return None, None
+
+
+def _conn_ipv4(conn):
+    try:
+        out = subprocess.check_output(
+            ["nmcli", "-t", "-f",
+             "ipv4.method,ipv4.addresses,ipv4.gateway,ipv4.dns",
+             "connection", "show", conn], text=True, timeout=5)
+        d = {}
+        for line in out.splitlines():
+            k, _, v = line.partition(":")
+            d[k] = v
+        return d
+    except Exception:
+        return {}
+
+
+def _apply_ipv4(conn, method, addr=None, gw=None, dns=None):
+    cmd = ["sudo", "nmcli", "connection", "modify", conn, "ipv4.method", method]
+    if method == "manual":
+        cmd += ["ipv4.addresses", addr, "ipv4.gateway", gw or "", "ipv4.dns", dns or ""]
+    else:
+        cmd += ["ipv4.addresses", "", "ipv4.gateway", "", "ipv4.dns", ""]
+    subprocess.run(cmd, timeout=15, check=True,
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(["sudo", "nmcli", "connection", "up", conn], timeout=30,
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def _revert_worker(conn, snapshot, event):
+    if event.wait(90):
+        return
+    print("[network] not confirmed in 90s — reverting")
+    try:
+        _apply_ipv4(conn, snapshot.get("ipv4.method", "auto"),
+                    snapshot.get("ipv4.addresses") or None,
+                    snapshot.get("ipv4.gateway") or None,
+                    snapshot.get("ipv4.dns") or None)
+    except Exception as e:
+        print(f"[network] revert failed: {e}")
+    _net_revert["event"] = None
+
+
+@app.route("/network/info")
+def network_info():
+    conn, iface = _default_conn()
+    info = _conn_ipv4(conn) if conn else {}
+    return jsonify({
+        "conn": conn, "iface": iface,
+        "method": info.get("ipv4.method", "auto"),
+        "address": info.get("ipv4.addresses", ""),
+        "gateway": info.get("ipv4.gateway", ""),
+        "dns": info.get("ipv4.dns", ""),
+        "current_ip": get_local_ip(),
+        "reverting": _net_revert["event"] is not None,
+    })
+
+
+@app.route("/network/apply", methods=["POST"])
+def network_apply():
+    data = request.get_json() or {}
+    method = data.get("method", "auto")
+    conn, iface = _default_conn()
+    if not conn:
+        return jsonify({"ok": False, "message": "No active connection found"})
+    addr = gw = dns = None
+    if method == "manual":
+        try:
+            ip = data["ip"].strip()
+            prefix = int(data.get("prefix", 24))
+            ipaddress.ip_address(ip)
+            if not (1 <= prefix <= 32):
+                raise ValueError
+            addr = f"{ip}/{prefix}"
+            gw = (data.get("gateway") or "").strip()
+            dns = (data.get("dns") or "").strip().replace(" ", ",")
+            if gw:
+                ipaddress.ip_address(gw)
+        except Exception:
+            return jsonify({"ok": False, "message": "Invalid IP, prefix, or gateway"})
+    if _net_revert["event"] is not None:
+        return jsonify({"ok": False, "message": "A network change is already pending confirmation"})
+    snapshot = _conn_ipv4(conn)
+    event = threading.Event()
+    _net_revert.update({"event": event, "snapshot": snapshot, "conn": conn})
+    def do():
+        try:
+            _apply_ipv4(conn, method, addr, gw, dns)
+        except Exception as e:
+            print(f"[network] apply failed: {e}")
+        threading.Thread(target=_revert_worker, args=(conn, snapshot, event), daemon=True).start()
+    threading.Thread(target=do, daemon=True).start()
+    return jsonify({"ok": True, "revert_in": 90,
+                    "new_ip": data.get("ip") if method == "manual" else None,
+                    "hostname": socket.gethostname()})
+
+
+@app.route("/network/confirm", methods=["POST"])
+def network_confirm():
+    ev = _net_revert.get("event")
+    if ev is None:
+        return jsonify({"ok": True, "message": "Nothing pending"})
+    ev.set()
+    _net_revert["event"] = None
+    return jsonify({"ok": True, "message": "Network settings kept"})
+
+
 # ── WiFi routes ───────────────────────────────────────────────────────────────
 
 def _scan_wifi():
@@ -1117,6 +1267,92 @@ def system_restart():
         subprocess.Popen(["sudo", "reboot"])
     threading.Thread(target=do_restart, daemon=True).start()
     return jsonify({"ok": True})
+
+
+def _x_env():
+    """Env for X clients. The X server's auth cookie lives in the file named
+    on the Xorg '-auth' argument; ~/.Xauthority can be stale after an X
+    restart (esp. following a hostname change), so read the live one."""
+    env = os.environ.copy()
+    env.setdefault("DISPLAY", ":0")
+    try:
+        ps = subprocess.check_output(["pgrep", "-af", "Xorg"], text=True, timeout=5)
+        m = re.search(r"-auth (\S+)", ps)
+        if m and Path(m.group(1)).exists():
+            env["XAUTHORITY"] = m.group(1)
+    except Exception:
+        pass
+    return env
+
+
+def _view_output():
+    """Name of the single connected output (HDMI-1 / HDMI-A-1 etc)."""
+    try:
+        out = subprocess.check_output(["xrandr"], text=True, env=_x_env(), timeout=5)
+        for line in out.splitlines():
+            if " connected" in line:
+                return line.split()[0]
+    except Exception:
+        pass
+    return None
+
+
+@app.route("/displays/identify", methods=["POST"])
+def displays_identify():
+    global _win
+    label = (load_config().get("serial", "") or "VIEW").split("-")[-1] or "VIEW"
+    def run():
+        with _wlock:
+            _kill(_win); _kill_orphan_windows()
+            _win = subprocess.Popen([
+                "chromium", *_COMMON_FLAGS, "--user-data-dir=/tmp/kiosk-lite",
+                "--start-fullscreen", "--window-size=1280,720", "--window-position=0,0",
+                f"http://localhost:8080/identify-page/{label}",
+            ], env=_chromium_env())
+        time.sleep(5)
+        launch_window()
+    threading.Thread(target=run, daemon=True).start()
+    return jsonify({"ok": True})
+
+
+@app.route("/displays/power", methods=["POST"])
+def displays_power():
+    on   = bool((request.get_json() or {}).get("on", True))
+    name = _view_output()
+    if not name:
+        return jsonify({"ok": False, "message": "No output detected"})
+    try:
+        subprocess.run(["xrandr", "--output", name, "--auto" if on else "--off"],
+                       env=_x_env(), timeout=10, check=True,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if on:
+            threading.Thread(target=launch_window, daemon=True).start()
+        return jsonify({"ok": True, "on": on})
+    except Exception as e:
+        return jsonify({"ok": False, "message": str(e)})
+
+
+@app.route("/displays/power-status")
+def displays_power_status():
+    name = _view_output()
+    on = False
+    try:
+        out = subprocess.check_output(["xrandr", "--listmonitors"], text=True, env=_x_env(), timeout=5)
+        on = bool(name) and name in out
+    except Exception:
+        pass
+    return jsonify({"output": name, "on": on})
+
+
+@app.route("/logs")
+def logs():
+    n = min(int(request.args.get("lines", 200)), 1000)
+    try:
+        out = subprocess.check_output(
+            ["tail", "-n", str(n), str(BASE_DIR / "kiosk.log")], text=True, timeout=5)
+    except Exception as e:
+        out = f"(no log available: {e})"
+    return jsonify({"log": out})
 
 
 @app.route("/system/shutdown", methods=["POST"])

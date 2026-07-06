@@ -899,10 +899,53 @@
               </select>
             </div>
           </div>
+          <div class="display-ctl-row" style="margin-top:12px">
+            <button class="btn-sm" onclick="identifyDisplays()" title="Flash a big 1 and 2 on the outputs">Identify Outputs</button>
+            <button class="btn-sm" id="hdmi1-power-btn" onclick="toggleOutputPower(1)">HDMI 1: On</button>
+            <button class="btn-sm" id="hdmi2-power-btn" onclick="toggleOutputPower(2)">HDMI 2: On</button>
+          </div>
           <div class="toggle-row">
             <span class="toggle-label">OnTime watchdog (auto-switch to holding page when offline)</span>
             <button class="toggle on" id="watchdog-toggle" onclick="toggleWatchdog()"></button>
           </div>
+        </div>
+      </div>
+
+      <!-- Network (IP) -->
+      <div class="field">
+        <div class="section-label">Network</div>
+        <div class="local-panel">
+          <div class="tz-current">
+            <span id="net-current">Loading…</span>
+          </div>
+          <div class="mode-toggle" style="margin:10px 0">
+            <button class="mode-btn" id="net-dhcp-btn" onclick="setNetMode('auto')">DHCP (Automatic)</button>
+            <button class="mode-btn" id="net-static-btn" onclick="setNetMode('manual')">Static IP</button>
+          </div>
+          <div id="net-static-fields" style="display:none">
+            <div class="display-settings-grid">
+              <div class="display-setting-row">
+                <label>IP Address</label>
+                <input id="net-ip" inputmode="decimal" placeholder="192.168.1.50" autocomplete="off" spellcheck="false">
+              </div>
+              <div class="display-setting-row">
+                <label>Prefix (CIDR)</label>
+                <input id="net-prefix" inputmode="numeric" value="24" placeholder="24" autocomplete="off">
+              </div>
+              <div class="display-setting-row">
+                <label>Gateway</label>
+                <input id="net-gw" inputmode="decimal" placeholder="192.168.1.1" autocomplete="off" spellcheck="false">
+              </div>
+              <div class="display-setting-row">
+                <label>DNS (space-separated)</label>
+                <input id="net-dns" placeholder="1.1.1.1 8.8.8.8" autocomplete="off" spellcheck="false">
+              </div>
+            </div>
+          </div>
+          <div class="display-ctl-row" style="margin-top:10px">
+            <button class="btn-sm success" id="net-apply-btn" onclick="applyNetwork()">Apply</button>
+          </div>
+          <div class="external-url-hint" id="net-note" style="display:none"></div>
         </div>
       </div>
 
@@ -1066,6 +1109,10 @@
         <!-- Row 2: System actions -->
         <div class="footer-row">
           <span class="footer-label">System</span>
+          <button class="footer-btn" onclick="openLogs()" title="View the setup log">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+            Logs
+          </button>
           <button class="footer-btn" onclick="goToDesktop()" title="Close kiosk windows, return to desktop">
             <svg viewBox="0 0 24 24"><path d="M20 3H4v10c0 1.1.9 2 2 2h6v2H8v2h8v-2h-4v-2h6c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 12H4V5h16v10z"/></svg>
             Desktop
@@ -1122,6 +1169,17 @@
         Connect
       </button>
       <button class="btn-ghost" onclick="closeWifiModal()" style="font-size:13px;padding:10px 16px">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="log-modal">
+  <div class="modal" style="max-width:640px;width:92vw">
+    <h3>Setup Log</h3>
+    <pre id="log-body" style="font-family:var(--font-mono);font-size:11px;color:var(--text);background:var(--bg);border:1px solid var(--border2);border-radius:8px;padding:12px;max-height:60vh;overflow:auto;white-space:pre-wrap;word-break:break-all;margin:10px 0">Loading…</pre>
+    <div class="modal-btns">
+      <button class="btn-sm" onclick="loadLogs()">Refresh</button>
+      <button class="btn-ghost" onclick="closeLogs()" style="font-size:13px;padding:10px 16px">Close</button>
     </div>
   </div>
 </div>
@@ -1208,6 +1266,8 @@
     loadPresets();
     loadUpdateStatus();
     loadHotspotStatus();
+    loadOutputPower();
+    loadNetwork();
     // Quiet background refresh — keeps status + health tiles live without
     // flashing the "Checking…" state. Paused while the tab is hidden.
     setInterval(() => { if (!document.hidden) fetchStatus(true); }, 10000);
@@ -1692,6 +1752,54 @@
     ).catch(() => showToast('Reset started (connection dropped).', 'info'));
   }
 
+  // ── Display tools ─────────────────────────────────────────────────────────────
+  async function identifyDisplays() {
+    showToast('Flashing 1 and 2 on the outputs…', 'info');
+    await fetch('/displays/identify', { method: 'POST' });
+  }
+
+  let outputPower = { 1: true, 2: true };
+  async function loadOutputPower() {
+    try {
+      const d = await (await fetch('/displays/power-status')).json();
+      (d.outputs || []).forEach(o => { outputPower[o.index] = o.on; });
+      renderOutputPower();
+    } catch {}
+  }
+  function renderOutputPower() {
+    [1, 2].forEach(i => {
+      const b = document.getElementById(`hdmi${i}-power-btn`);
+      if (b) { b.textContent = `HDMI ${i}: ${outputPower[i] ? 'On' : 'Off'}`;
+               b.classList.toggle('blackout', !outputPower[i]); }
+    });
+  }
+  async function toggleOutputPower(i) {
+    const target = !outputPower[i];
+    if (!target && !confirm(`Turn HDMI ${i} off?\n\nThe output signal drops so a TV or projector can sleep. Turn it back on here or reboot to restore.`)) return;
+    try {
+      const d = await (await fetch('/displays/power', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ output: i, on: target }),
+      })).json();
+      if (d.ok) { outputPower[i] = target; renderOutputPower();
+                  showToast(`HDMI ${i} ${target ? 'on' : 'off'}.`, 'success'); }
+      else showToast(d.message || 'Failed', 'error');
+    } catch { showToast('Network error.', 'error'); }
+  }
+
+  // ── Log viewer ────────────────────────────────────────────────────────────────
+  function openLogs() { document.getElementById('log-modal').classList.add('open'); loadLogs(); }
+  function closeLogs() { document.getElementById('log-modal').classList.remove('open'); }
+  async function loadLogs() {
+    const el = document.getElementById('log-body');
+    el.textContent = 'Loading…';
+    try {
+      const d = await (await fetch('/logs?lines=250')).json();
+      el.textContent = d.log || '(empty)';
+      el.scrollTop = el.scrollHeight;
+    } catch { el.textContent = '(failed to load log)'; }
+  }
+
   // ── Pi system controls ────────────────────────────────────────────────────────
   async function restartPi() {
     if (!confirm('Restart the Pi? The kiosk will be offline for about 30 seconds.')) return;
@@ -1743,6 +1851,84 @@
   function clearToast() { const el=document.getElementById('toast'); el.className='toast'; el.textContent=''; }
   function spinnerHTML(label) {
     return `<svg class="spin" viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 14.96 20 13.54 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 9.04 4 10.46 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>${label}`;
+  }
+
+  // ── Network (static IP) ────────────────────────────────────────────────────────
+  let netMode = 'auto';
+  async function loadNetwork() {
+    try {
+      const d = await (await fetch('/network/info')).json();
+      netMode = d.method === 'manual' ? 'manual' : 'auto';
+      document.getElementById('net-current').innerHTML =
+        `Current: <span style="font-family:var(--font-mono);color:var(--text)">${d.current_ip}</span> ` +
+        `<span style="color:var(--muted)">on ${d.iface || '—'} · ${netMode === 'manual' ? 'static' : 'DHCP'}</span>`;
+      if (d.method === 'manual' && d.address) {
+        const [ip, prefix] = d.address.split('/');
+        document.getElementById('net-ip').value = ip || '';
+        document.getElementById('net-prefix').value = prefix || '24';
+        document.getElementById('net-gw').value = d.gateway || '';
+        document.getElementById('net-dns').value = (d.dns || '').replace(/,/g, ' ');
+      }
+      applyNetModeUI(netMode);
+    } catch {}
+  }
+  function applyNetModeUI(mode) {
+    netMode = mode;
+    document.getElementById('net-dhcp-btn').classList.toggle('active', mode === 'auto');
+    document.getElementById('net-static-btn').classList.toggle('active', mode === 'manual');
+    document.getElementById('net-static-fields').style.display = mode === 'manual' ? '' : 'none';
+  }
+  function setNetMode(mode) { applyNetModeUI(mode); }
+
+  async function applyNetwork() {
+    const body = { method: netMode };
+    if (netMode === 'manual') {
+      body.ip     = document.getElementById('net-ip').value.trim();
+      body.prefix = parseInt(document.getElementById('net-prefix').value.trim() || '24', 10);
+      body.gateway= document.getElementById('net-gw').value.trim();
+      body.dns    = document.getElementById('net-dns').value.trim();
+      if (!body.ip) { showToast('Enter an IP address.', 'error'); return; }
+    }
+    if (!confirm(`Apply ${netMode === 'manual' ? 'static IP ' + body.ip : 'DHCP'}?\n\nYour connection to the unit will briefly drop. If the new setting is unreachable, the unit automatically reverts to the current settings after 90 seconds — so a wrong value can't strand it.`)) return;
+
+    const btn = document.getElementById('net-apply-btn');
+    const note = document.getElementById('net-note');
+    btn.disabled = true; btn.textContent = 'Applying…';
+    note.style.display = ''; note.textContent = 'Applying — reconnecting to confirm…';
+    let resp;
+    try {
+      resp = await (await fetch('/network/apply', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(body),
+      })).json();
+    } catch { note.textContent = 'Apply request failed.'; btn.disabled = false; btn.textContent = 'Apply'; return; }
+    if (!resp.ok) { showToast(resp.message, 'error'); note.style.display='none'; btn.disabled = false; btn.textContent = 'Apply'; return; }
+
+    // Reconnect at the new location and confirm before the 90s revert fires.
+    const bases = [];
+    if (resp.hostname) bases.push(`http://${resp.hostname}.local:8080`);
+    if (body.ip)       bases.push(`http://${body.ip}:8080`);
+    bases.push('');   // same-origin (hostname unchanged / DHCP kept subnet)
+    const deadline = Date.now() + 80000;
+    (async function confirmLoop() {
+      while (Date.now() < deadline) {
+        for (const base of bases) {
+          try {
+            const r = await fetch(`${base}/network/confirm`, { method: 'POST', cache: 'no-store' });
+            if (r.ok) {
+              note.textContent = `Confirmed — settings kept. Reach the unit at ${resp.hostname}.local:8080` + (body.ip ? ` or ${body.ip}:8080` : '') + '.';
+              btn.disabled = false; btn.textContent = 'Apply';
+              setTimeout(loadNetwork, 1500);
+              return;
+            }
+          } catch {}
+        }
+        await new Promise(r => setTimeout(r, 4000));
+      }
+      note.textContent = 'Could not reach the unit at the new address — it has reverted to the previous settings. (Are you on the same subnet?)';
+      btn.disabled = false; btn.textContent = 'Apply';
+      setTimeout(loadNetwork, 2000);
+    })();
   }
 
   // ── Hotspot ───────────────────────────────────────────────────────────────────
@@ -1912,6 +2098,9 @@
 
   document.getElementById('wifi-modal').addEventListener('click', function(e) {
     if (e.target === this) closeWifiModal();
+  });
+  document.getElementById('log-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeLogs();
   });
   document.getElementById('wifi-password').addEventListener('keydown', e => {
     if (e.key === 'Enter') wifiConnectConfirm();

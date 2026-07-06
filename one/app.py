@@ -1356,6 +1356,87 @@ def system_restart():
     return jsonify({"ok": True})
 
 
+_output_power = {}   # output name -> False when powered off (live, non-persistent)
+
+
+def _open_identify_window(display, label, idx):
+    return subprocess.Popen([
+        "chromium", *_COMMON_FLAGS,
+        f"--user-data-dir=/tmp/kiosk-hdmi{idx}",
+        f"--window-position={display['x']},{display['y']}",
+        f"--window-size={display['w']},{display['h']}",
+        "--kiosk", f"http://localhost:8080/identify-page/{label}",
+    ], env=_chromium_env())
+
+
+@app.route("/displays/identify", methods=["POST"])
+def displays_identify():
+    """Flash a big number on each output for a few seconds, then restore."""
+    global _win
+    displays = get_displays(fresh=True)
+    def run():
+        with _wlock:
+            _kill(_win[0]); _kill(_win[1]); _kill_orphan_windows()
+            _win[0] = _open_identify_window(displays[0], "1", 1)
+            if len(displays) > 1:
+                _win[1] = _open_identify_window(displays[1], "2", 2)
+        time.sleep(5)
+        launch_all_windows()
+    threading.Thread(target=run, daemon=True).start()
+    return jsonify({"ok": True, "displays": len(displays)})
+
+
+@app.route("/displays/power", methods=["POST"])
+def displays_power():
+    """Turn a physical HDMI output on/off (lets TVs/projectors sleep).
+    Live action — everything returns on reboot."""
+    data = request.get_json() or {}
+    idx  = int(data.get("output", 1))
+    on   = bool(data.get("on", True))
+    names = _get_all_connected_outputs()
+    if idx < 1 or idx > len(names):
+        return jsonify({"ok": False, "message": "Output not connected"})
+    name = names[idx - 1]
+    env  = {**os.environ, "DISPLAY": ":0"}
+    try:
+        if on:
+            subprocess.run(["xrandr", "--output", name, "--auto"], env=env,
+                           timeout=10, check=True,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            _output_power[name] = True
+            threading.Thread(target=launch_all_windows, daemon=True).start()
+        else:
+            subprocess.run(["xrandr", "--output", name, "--off"], env=env,
+                           timeout=10, check=True,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            _output_power[name] = False
+        return jsonify({"ok": True, "output": idx, "on": on})
+    except Exception as e:
+        return jsonify({"ok": False, "message": str(e)})
+
+
+@app.route("/displays/power-status")
+def displays_power_status():
+    active = set(_get_output_names())
+    conn   = _get_all_connected_outputs()
+    return jsonify({"outputs": [
+        {"index": i + 1, "name": n, "on": n in active}
+        for i, n in enumerate(conn)
+    ]})
+
+
+@app.route("/logs")
+def logs():
+    n = min(int(request.args.get("lines", 200)), 1000)
+    try:
+        out = subprocess.check_output(
+            ["tail", "-n", str(n), str(BASE_DIR / "kiosk.log")],
+            text=True, timeout=5)
+    except Exception as e:
+        out = f"(no log available: {e})"
+    return jsonify({"log": out})
+
+
 @app.route("/system/shutdown", methods=["POST"])
 def system_shutdown():
     close_all_windows()
@@ -1822,6 +1903,151 @@ def diagnostics():
                      download_name=f"downstage-diag-{serial}.zip")
 
 
+# ── Network (static IP) ───────────────────────────────────────────────────────
+# Configuring the IP of the interface you're reachable through is risky: a
+# wrong setting strands the unit. So every apply arms a revert timer — the UI
+# must reconnect and confirm within the window, or the previous config is
+# restored automatically (the "reload in 5" pattern from managed switches).
+
+import ipaddress
+
+_net_revert = {"event": None, "snapshot": None, "conn": None}
+
+
+def _default_conn():
+    """(connection-name, iface) carrying the default route — the one the user
+    is most likely reaching the unit through."""
+    try:
+        route = subprocess.check_output(["ip", "route", "show", "default"],
+                                        text=True, timeout=5)
+        m = re.search(r"dev (\S+)", route)
+        iface = m.group(1) if m else "eth0"
+        out = subprocess.check_output(
+            ["nmcli", "-t", "-f", "NAME,DEVICE", "connection", "show", "--active"],
+            text=True, timeout=5)
+        for line in out.splitlines():
+            name, _, dev = line.rpartition(":")
+            if dev == iface:
+                return name, iface
+    except Exception:
+        pass
+    return None, None
+
+
+def _conn_ipv4(conn):
+    try:
+        out = subprocess.check_output(
+            ["nmcli", "-t", "-f",
+             "ipv4.method,ipv4.addresses,ipv4.gateway,ipv4.dns",
+             "connection", "show", conn], text=True, timeout=5)
+        d = {}
+        for line in out.splitlines():
+            k, _, v = line.partition(":")
+            d[k] = v
+        return d
+    except Exception:
+        return {}
+
+
+@app.route("/network/info")
+def network_info():
+    conn, iface = _default_conn()
+    info = _conn_ipv4(conn) if conn else {}
+    net = get_network_info()
+    return jsonify({
+        "conn":    conn,
+        "iface":   iface,
+        "method":  info.get("ipv4.method", "auto"),
+        "address": info.get("ipv4.addresses", ""),
+        "gateway": info.get("ipv4.gateway", ""),
+        "dns":     info.get("ipv4.dns", ""),
+        "current_ip": net["ip"],
+        "reverting": _net_revert["event"] is not None,
+    })
+
+
+def _apply_ipv4(conn, method, addr=None, gw=None, dns=None):
+    cmd = ["sudo", "nmcli", "connection", "modify", conn, "ipv4.method", method]
+    if method == "manual":
+        cmd += ["ipv4.addresses", addr, "ipv4.gateway", gw or "",
+                "ipv4.dns", dns or ""]
+    else:
+        cmd += ["ipv4.addresses", "", "ipv4.gateway", "", "ipv4.dns", ""]
+    subprocess.run(cmd, timeout=15, check=True,
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(["sudo", "nmcli", "connection", "up", conn],
+                   timeout=30, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def _revert_worker(conn, snapshot, event):
+    if event.wait(90):
+        return   # confirmed in time
+    print("[network] not confirmed in 90s — reverting")
+    try:
+        method = snapshot.get("ipv4.method", "auto")
+        _apply_ipv4(conn, method,
+                    snapshot.get("ipv4.addresses") or None,
+                    snapshot.get("ipv4.gateway") or None,
+                    snapshot.get("ipv4.dns") or None)
+    except Exception as e:
+        print(f"[network] revert failed: {e}")
+    _net_revert["event"] = None
+
+
+@app.route("/network/apply", methods=["POST"])
+def network_apply():
+    data   = request.get_json() or {}
+    method = data.get("method", "auto")
+    conn, iface = _default_conn()
+    if not conn:
+        return jsonify({"ok": False, "message": "No active connection found"})
+
+    addr = gw = dns = None
+    if method == "manual":
+        try:
+            ip     = data["ip"].strip()
+            prefix = int(data.get("prefix", 24))
+            ipaddress.ip_address(ip)
+            if not (1 <= prefix <= 32):
+                raise ValueError("prefix")
+            addr = f"{ip}/{prefix}"
+            gw = (data.get("gateway") or "").strip()
+            dns = (data.get("dns") or "").strip().replace(" ", ",")
+            if gw:
+                ipaddress.ip_address(gw)
+        except Exception:
+            return jsonify({"ok": False, "message": "Invalid IP, prefix, or gateway"})
+
+    if _net_revert["event"] is not None:
+        return jsonify({"ok": False, "message": "A network change is already pending confirmation"})
+
+    snapshot = _conn_ipv4(conn)
+    event = threading.Event()
+    _net_revert.update({"event": event, "snapshot": snapshot, "conn": conn})
+
+    def do():
+        try:
+            _apply_ipv4(conn, method, addr, gw, dns)
+        except Exception as e:
+            print(f"[network] apply failed: {e}")
+        threading.Thread(target=_revert_worker, args=(conn, snapshot, event),
+                         daemon=True).start()
+    threading.Thread(target=do, daemon=True).start()
+    new_ip = data.get("ip") if method == "manual" else None
+    return jsonify({"ok": True, "revert_in": 90, "new_ip": new_ip,
+                    "hostname": socket.gethostname()})
+
+
+@app.route("/network/confirm", methods=["POST"])
+def network_confirm():
+    ev = _net_revert.get("event")
+    if ev is None:
+        return jsonify({"ok": True, "message": "Nothing pending"})
+    ev.set()
+    _net_revert["event"] = None
+    return jsonify({"ok": True, "message": "Network settings kept"})
+
+
 # ── WiFi ──────────────────────────────────────────────────────────────────────
 
 def _active_ssid():
@@ -1999,6 +2225,23 @@ def blackout_clear():
 @app.route("/blackout-page")
 def blackout_page_view():
     return '<html><body style="margin:0;background:#000"></body></html>', 200, {"Content-Type": "text/html"}
+
+
+@app.route("/identify-page/<label>")
+def identify_page(label):
+    label = re.sub(r"[^A-Za-z0-9 ]", "", label)[:12]
+    return (
+        '<!DOCTYPE html><html><head><style>'
+        '*{margin:0;padding:0}'
+        'body{background:#12A95C;color:#fff;display:flex;flex-direction:column;'
+        'align-items:center;justify-content:center;height:100vh;'
+        'font-family:sans-serif;text-align:center}'
+        '.n{font-size:40vh;font-weight:800;line-height:1}'
+        '.l{font-size:5vh;letter-spacing:0.3em;text-transform:uppercase;opacity:.85}'
+        '</style></head><body>'
+        f'<div class="n">{label}</div><div class="l">This Output</div>'
+        '</body></html>'
+    ), 200, {"Content-Type": "text/html"}
 
 
 @app.route("/holding")
