@@ -21,11 +21,12 @@ View boot config (already on the bench unit; verify it survives capture):
   `gpu_mem=16` — NOT fkms/gpu_mem=128, which starved the 512MB board into
   swap thrash (~120MB reclaimed). Legacy `hdmi_group/mode` lines are
   commented; they do nothing under full KMS.
-- `/boot/firmware/cmdline.txt`: ends with `video=HDMI-A-1:1920x1080@60D`
+- `/boot/firmware/cmdline.txt`: ends with `video=HDMI-A-1:1280x720@60D`
   (forced digital output for fbcon).
-- `~/.xinitrc`: injects 1280x720 + 1920x1080 modelines via xrandr before
-  picking 720p — EDID-less display chains (adapters, walls, TVs in standby
-  at boot) advertise no modes under KMS and would land on 1024x768.
+- `~/.xinitrc`: injects a 1280x720 modeline via xrandr before setting it —
+  the View is 720p only (TV upscales, the Zero 2 W saves RAM/CPU), and
+  EDID-less display chains (adapters, walls, TVs in standby at boot)
+  advertise no modes under KMS and would land on 1024x768.
 
 ## One-time: capture the golden image (per product)
 
