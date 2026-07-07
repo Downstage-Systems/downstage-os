@@ -100,10 +100,10 @@ def load_config():
     data.setdefault("hotspot_ssid", "Downstage-0001")
     data.setdefault("hotspot_pass", "cue-grip-28")
     data.setdefault("hotspot_auto", True)
-    data.setdefault("cleantimer_freeze", True)
-    data.setdefault("cleantimer_hideprogress", True)
-    data.setdefault("cleantimer_hideclock", True)
-    data.setdefault("cleantimer_hidecards", True)
+    # per-output custom timer options, seeded from the legacy global keys
+    for n in (1, 2):
+        for opt in ("freeze", "hideprogress", "hideclock", "hidecards"):
+            data.setdefault(f"hdmi{n}_ct_{opt}", data.get(f"cleantimer_{opt}", True))
     data.setdefault("os_update_repo", "")   # e.g. "youruser/downstage-os"
     return data
 
@@ -584,19 +584,20 @@ def _chromium_env():
     return env
 
 
-def _cleantimer_params():
+def _cleantimer_params(hdmi_index):
     """Query string for the Custom Timer preset — always chromakey-ready
-    (black key, white timer, no cards/logo), with the show-day options
-    from config."""
+    (black key, white timer, no logo), with per-output show-day options
+    from config (each HDMI can run its own custom timer)."""
     cfg = load_config()
+    k = f"hdmi{hdmi_index}_ct_"
     params = ["hideLogo=true", "keyColour=000000", "timerColour=ffffff"]
-    if cfg.get("cleantimer_hidecards", True):
+    if cfg.get(k + "hidecards", True):
         params.append("hideCards=true")
-    if cfg.get("cleantimer_hideprogress", True):
+    if cfg.get(k + "hideprogress", True):
         params.append("hideProgress=true")
-    if cfg.get("cleantimer_hideclock", True):
+    if cfg.get(k + "hideclock", True):
         params.append("hideClock=true")
-    if cfg.get("cleantimer_freeze", True):
+    if cfg.get(k + "freeze", True):
         params.append("freezeOvertime=true")
     return "&".join(params)
 
@@ -679,7 +680,7 @@ def _open_window(source, display, hdmi_index):
         # error page is a terrible first impression; show the welcome screen
         url = "http://localhost:8080/welcome"
     elif source == "cleantimer":
-        url = f"http://{ip}:4001/timer/?" + _cleantimer_params()
+        url = f"http://{ip}:4001/timer/?" + _cleantimer_params(hdmi_index)
     elif source == "custom":
         url = "http://localhost:8080/view/custom"
     else:
@@ -1220,10 +1221,9 @@ def save():
         "hdmi1_rotate": hdmi1_rotate, "hdmi2_rotate": hdmi2_rotate,
         "hdmi1_external_url": hdmi1_ext, "hdmi2_external_url": hdmi2_ext,
         "ip_history": history, "watchdog": watchdog,
-        "cleantimer_freeze": bool(data.get("cleantimer_freeze", True)),
-        "cleantimer_hideprogress": bool(data.get("cleantimer_hideprogress", True)),
-        "cleantimer_hideclock": bool(data.get("cleantimer_hideclock", True)),
-        "cleantimer_hidecards": bool(data.get("cleantimer_hidecards", True)),
+        **{f"hdmi{n}_ct_{opt}": bool(data.get(f"hdmi{n}_ct_{opt}", True))
+           for n in (1, 2)
+           for opt in ("freeze", "hideprogress", "hideclock", "hidecards")},
     })
     _blackout_active   = False
     _watchdog_override = False

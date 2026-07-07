@@ -1292,11 +1292,19 @@
   let currentMode      = "{{ config.mode }}";
   let hdmi1Source      = "{{ config.hdmi1_source }}";
   let hdmi2Source      = "{{ config.hdmi2_source }}";
-  const cleanOpts = {
-    freeze:       {{ config.get('cleantimer_freeze', True) | tojson }},
-    hideprogress: {{ config.get('cleantimer_hideprogress', True) | tojson }},
-    hideclock:    {{ config.get('cleantimer_hideclock', True) | tojson }},
-    hidecards:    {{ config.get('cleantimer_hidecards', True) | tojson }},
+  const ctOpts = {
+    1: {
+      freeze:       {{ config.get('hdmi1_ct_freeze', True) | tojson }},
+      hideprogress: {{ config.get('hdmi1_ct_hideprogress', True) | tojson }},
+      hideclock:    {{ config.get('hdmi1_ct_hideclock', True) | tojson }},
+      hidecards:    {{ config.get('hdmi1_ct_hidecards', True) | tojson }},
+    },
+    2: {
+      freeze:       {{ config.get('hdmi2_ct_freeze', True) | tojson }},
+      hideprogress: {{ config.get('hdmi2_ct_hideprogress', True) | tojson }},
+      hideclock:    {{ config.get('hdmi2_ct_hideclock', True) | tojson }},
+      hidecards:    {{ config.get('hdmi2_ct_hidecards', True) | tojson }},
+    },
   };
   let hdmi1ExternalUrl = {{ (config.hdmi1_external_url or '') | tojson }};
   let hdmi2ExternalUrl = {{ (config.hdmi2_external_url or '') | tojson }};
@@ -1422,17 +1430,18 @@
     if (active === 'external') {
       input.value = activeHdmiTab === 1 ? hdmi1ExternalUrl : hdmi2ExternalUrl;
     }
+    syncCleanOptToggles();   // options follow the active HDMI tab
   }
 
   function toggleCleanOpt(name) {
-    cleanOpts[name] = !cleanOpts[name];
+    ctOpts[activeHdmiTab][name] = !ctOpts[activeHdmiTab][name];
     syncCleanOptToggles();
     markDirty();
   }
   function syncCleanOptToggles() {
     for (const name of ['freeze', 'hideprogress', 'hideclock', 'hidecards']) {
       document.getElementById(`cleantimer-${name}-toggle`).className =
-        'toggle ' + (cleanOpts[name] ? 'on' : '');
+        'toggle ' + (ctOpts[activeHdmiTab][name] ? 'on' : '');
     }
   }
 
@@ -1601,7 +1610,8 @@
           hdmi1_res: hdmi1Res, hdmi2_res: hdmi2Res,
           hdmi1_rotate: hdmi1Rotate, hdmi2_rotate: hdmi2Rotate,
           hdmi1_external_url: hdmi1ExternalUrl, hdmi2_external_url: hdmi2ExternalUrl,
-          cleantimer_freeze: cleanOpts.freeze, cleantimer_hideprogress: cleanOpts.hideprogress, cleantimer_hideclock: cleanOpts.hideclock, cleantimer_hidecards: cleanOpts.hidecards,
+          hdmi1_ct_freeze: ctOpts[1].freeze, hdmi1_ct_hideprogress: ctOpts[1].hideprogress, hdmi1_ct_hideclock: ctOpts[1].hideclock, hdmi1_ct_hidecards: ctOpts[1].hidecards,
+          hdmi2_ct_freeze: ctOpts[2].freeze, hdmi2_ct_hideprogress: ctOpts[2].hideprogress, hdmi2_ct_hideclock: ctOpts[2].hideclock, hdmi2_ct_hidecards: ctOpts[2].hidecards,
           watchdog: watchdogOn,
         }),
       });
