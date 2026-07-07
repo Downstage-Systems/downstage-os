@@ -731,18 +731,6 @@
         </div>
       </div>
 
-      <!-- Quick Presets -->
-      <div class="field">
-        <div class="section-label">Quick Presets</div>
-        <div class="preset-strip" id="preset-strip">
-          <span class="preset-empty">No presets saved yet</span>
-        </div>
-        <button class="btn-sm" onclick="savePreset()">
-          <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-          Save Current as Preset
-        </button>
-      </div>
-
       <!-- HDMI source selector -->
       <div class="field">
         <div class="section-label">Display Sources</div>
@@ -895,6 +883,18 @@
         </div>
       </div>
 
+      <!-- Quick Presets -->
+      <div class="field">
+        <div class="section-label">Quick Presets</div>
+        <div class="preset-strip" id="preset-strip">
+          <span class="preset-empty">No presets saved yet</span>
+        </div>
+        <button class="btn-sm" onclick="savePreset()">
+          <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+          Save Current as Preset
+        </button>
+      </div>
+
       <!-- Display settings: resolution + rotation -->
       <div class="field">
         <div class="section-label">Display Settings</div>
@@ -942,6 +942,32 @@
           <div class="toggle-row">
             <span class="toggle-label">OnTime watchdog (auto-switch to holding page when offline)</span>
             <button class="toggle on" id="watchdog-toggle" onclick="toggleWatchdog()"></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Companion -->
+      <div class="field">
+        <div class="section-label">Bitfocus Companion</div>
+        <div class="local-panel">
+          <div class="local-panel-header">
+            <div class="local-panel-title">
+              <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 14.93V15h-2v1.93A8.001 8.001 0 014.07 9H6V7H4.07A8.001 8.001 0 0111 4.07V6h2V4.07A8.001 8.001 0 0119.93 11H18v2h1.93A8.001 8.001 0 0113 16.93z"/></svg>
+              Companion
+            </div>
+            <span class="status-badge" id="companion-status-badge">—</span>
+          </div>
+          <div class="local-actions" id="companion-actions"></div>
+          <div class="version-row" id="companion-version-row">
+            <span class="version-tag" id="companion-ver-installed">—</span>
+            <span class="version-badge checking" id="companion-ver-badge">Checking…</span>
+          </div>
+          <div class="channel-row">
+            <span class="channel-label">Channel</span>
+            <div class="channel-toggle" id="companion-channel-toggle">
+              <button class="channel-btn" id="ch-stable" onclick="setCompanionChannel('stable')">Stable</button>
+              <button class="channel-btn" id="ch-beta"   onclick="setCompanionChannel('beta')">Beta</button>
+            </div>
           </div>
         </div>
       </div>
@@ -1079,32 +1105,6 @@
               Upload Config
               <input type="file" id="config-upload-input" accept=".json" style="display:none" onchange="uploadConfig(this)">
             </label>
-          </div>
-        </div>
-      </div>
-
-      <!-- Companion -->
-      <div class="field">
-        <div class="section-label">Bitfocus Companion</div>
-        <div class="local-panel">
-          <div class="local-panel-header">
-            <div class="local-panel-title">
-              <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 14.93V15h-2v1.93A8.001 8.001 0 014.07 9H6V7H4.07A8.001 8.001 0 0111 4.07V6h2V4.07A8.001 8.001 0 0119.93 11H18v2h1.93A8.001 8.001 0 0113 16.93z"/></svg>
-              Companion
-            </div>
-            <span class="status-badge" id="companion-status-badge">—</span>
-          </div>
-          <div class="local-actions" id="companion-actions"></div>
-          <div class="version-row" id="companion-version-row">
-            <span class="version-tag" id="companion-ver-installed">—</span>
-            <span class="version-badge checking" id="companion-ver-badge">Checking…</span>
-          </div>
-          <div class="channel-row">
-            <span class="channel-label">Channel</span>
-            <div class="channel-toggle" id="companion-channel-toggle">
-              <button class="channel-btn" id="ch-stable" onclick="setCompanionChannel('stable')">Stable</button>
-              <button class="channel-btn" id="ch-beta"   onclick="setCompanionChannel('beta')">Beta</button>
-            </div>
           </div>
         </div>
       </div>
