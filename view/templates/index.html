@@ -710,8 +710,15 @@
                 <input id="net-ip" inputmode="decimal" placeholder="192.168.1.50" autocomplete="off" spellcheck="false">
               </div>
               <div class="display-setting-row">
-                <label>Prefix (CIDR)</label>
-                <input id="net-prefix" inputmode="numeric" value="24" placeholder="24" autocomplete="off">
+                <label>Subnet Mask</label>
+                <select class="setting-select" id="net-prefix">
+                  <option value="24" selected>255.255.255.0</option>
+                  <option value="16">255.255.0.0</option>
+                  <option value="8">255.0.0.0</option>
+                  <option value="25">255.255.255.128</option>
+                  <option value="23">255.255.254.0</option>
+                  <option value="22">255.255.252.0</option>
+                </select>
               </div>
               <div class="display-setting-row">
                 <label>Gateway</label>
@@ -1379,7 +1386,9 @@
       if (d.method === 'manual' && d.address) {
         const [ip, prefix] = d.address.split('/');
         document.getElementById('net-ip').value = ip || '';
-        document.getElementById('net-prefix').value = prefix || '24';
+        const prefSel = document.getElementById('net-prefix');
+        prefSel.value = prefix || '24';
+        if (prefSel.value !== (prefix || '24')) prefSel.value = '24';
         document.getElementById('net-gw').value = d.gateway || '';
         document.getElementById('net-dns').value = (d.dns || '').replace(/,/g, ' ');
       }
