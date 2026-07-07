@@ -2563,13 +2563,19 @@ def pattern_page(name):
 @app.route("/holding")
 def holding_page():
     return (
-        '<!DOCTYPE html><html><head><style>'
+        '<!DOCTYPE html><html><head><meta charset="utf-8"><style>'
         '*{margin:0;padding:0}'
-        'body{background:#000;color:#222;display:flex;align-items:center;'
-        'justify-content:center;height:100vh;font-family:sans-serif;text-align:center}'
+        'body{background:#000;display:flex;flex-direction:column;align-items:center;'
+        'justify-content:center;height:100vh;font-family:sans-serif;text-align:center;'
+        'gap:3vh;cursor:none}'
+        'svg{width:14vh;height:14vh;opacity:0.22}'
+        'p{font-size:2.4vh;color:#2a2f35;letter-spacing:0.08em}'
         '</style></head><body>'
-        '<div><div style="font-size:48px;margin-bottom:16px">⏱</div>'
-        '<div style="font-size:18px;color:#333">Waiting for OnTime…</div></div>'
+        '<svg viewBox="0 0 96 96"><rect x="6" y="10" width="84" height="66" rx="10" '
+        'fill="none" stroke="#e8ecef" stroke-width="7"/>'
+        '<rect x="20" y="54" width="40" height="9" rx="4.5" fill="#2fd97b"/>'
+        '<rect x="20" y="83" width="56" height="7" rx="3.5" fill="#2fd97b"/></svg>'
+        '<p>Waiting for OnTime&#8230;</p>'
         '</body></html>'
     ), 200, {"Content-Type": "text/html"}
 
