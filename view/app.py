@@ -92,6 +92,7 @@ def load_config():
     data.setdefault("cleantimer_freeze", True)
     data.setdefault("cleantimer_hideprogress", True)
     data.setdefault("cleantimer_hideclock", True)
+    data.setdefault("cleantimer_hidecards", True)
     data.setdefault("watchdog", True)
     data.setdefault("os_update_repo", "")   # e.g. "youruser/downstage-os"
     data.setdefault("ip_history", [])
@@ -211,12 +212,13 @@ def _is_ontime_source(source):
 
 
 def _cleantimer_params():
-    """Query string for the Clean Timer preset — always chromakey-ready
+    """Query string for the Custom Timer preset — always chromakey-ready
     (black key, white timer, no cards/logo), with the show-day options
     from config."""
     cfg = load_config()
-    params = ["hideCards=true", "hideLogo=true",
-              "keyColour=000000", "timerColour=ffffff"]
+    params = ["hideLogo=true", "keyColour=000000", "timerColour=ffffff"]
+    if cfg.get("cleantimer_hidecards", True):
+        params.append("hideCards=true")
     if cfg.get("cleantimer_hideprogress", True):
         params.append("hideProgress=true")
     if cfg.get("cleantimer_hideclock", True):
@@ -991,7 +993,7 @@ class EPaperDisplay:
 
     SOURCE_LABELS = {
         "config": "Config UI", "off": "Off", "external": "External URL",
-        "cleantimer": "Clean Timer", "/timer": "Stage Timer",
+        "cleantimer": "Custom Timer", "/timer": "Stage Timer",
         "/countdown": "Countdown", "/backstage": "Backstage",
         "/studio": "Studio Clock", "/timeline": "Timeline",
         "/info": "Public Info", "/op": "Operator", "/cuesheet": "Cue Sheet",
@@ -1206,6 +1208,7 @@ def save():
                  "cleantimer_freeze": bool(data.get("cleantimer_freeze", True)),
                  "cleantimer_hideprogress": bool(data.get("cleantimer_hideprogress", True)),
                  "cleantimer_hideclock": bool(data.get("cleantimer_hideclock", True)),
+                 "cleantimer_hidecards": bool(data.get("cleantimer_hidecards", True)),
                  "ip_history": history})
     epaper.force_refresh()
     threading.Thread(target=launch_window, daemon=True).start()

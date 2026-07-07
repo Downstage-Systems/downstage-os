@@ -103,6 +103,7 @@ def load_config():
     data.setdefault("cleantimer_freeze", True)
     data.setdefault("cleantimer_hideprogress", True)
     data.setdefault("cleantimer_hideclock", True)
+    data.setdefault("cleantimer_hidecards", True)
     data.setdefault("os_update_repo", "")   # e.g. "youruser/downstage-os"
     return data
 
@@ -584,12 +585,13 @@ def _chromium_env():
 
 
 def _cleantimer_params():
-    """Query string for the Clean Timer preset — always chromakey-ready
+    """Query string for the Custom Timer preset — always chromakey-ready
     (black key, white timer, no cards/logo), with the show-day options
     from config."""
     cfg = load_config()
-    params = ["hideCards=true", "hideLogo=true",
-              "keyColour=000000", "timerColour=ffffff"]
+    params = ["hideLogo=true", "keyColour=000000", "timerColour=ffffff"]
+    if cfg.get("cleantimer_hidecards", True):
+        params.append("hideCards=true")
     if cfg.get("cleantimer_hideprogress", True):
         params.append("hideProgress=true")
     if cfg.get("cleantimer_hideclock", True):
@@ -1221,6 +1223,7 @@ def save():
         "cleantimer_freeze": bool(data.get("cleantimer_freeze", True)),
         "cleantimer_hideprogress": bool(data.get("cleantimer_hideprogress", True)),
         "cleantimer_hideclock": bool(data.get("cleantimer_hideclock", True)),
+        "cleantimer_hidecards": bool(data.get("cleantimer_hidecards", True)),
     })
     _blackout_active   = False
     _watchdog_override = False
