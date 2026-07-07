@@ -7,9 +7,14 @@
 | Downstage One | NVMe SSD (M.2 HAT) | M.2-to-USB adapter on the Mac; Raspberry Pi Imager writes NVMe drives fine |
 | Downstage View | microSD | normal SD card workflow |
 
-NVMe notes (One): fresh Pi 5 boards may need the bootloader set to try NVMe
-first — `sudo rpi-eeprom-config --edit` and set `BOOT_ORDER=0xf416` before
-first NVMe boot. NVMe is also far more resilient to power cuts than SD
+NVMe notes (One): every unit MUST have `BOOT_ORDER=0xf416` (NVMe first,
+SD second — verify with `sudo rpi-eeprom-config | grep BOOT_ORDER`). The
+order is load-bearing twice over: fresh Pi 5 boards may not try NVMe at
+all, and the failsafe SD (a provisioned golden card left in the slot)
+only stays dormant if NVMe boots first — SD-first would boot the backup
+every time. Non-interactive fix:
+`rpi-eeprom-config --out f; sed -i s/0xf461/0xf416/ f; rpi-eeprom-config --apply f`
+then reboot to flash. NVMe is also far more resilient to power cuts than SD
 (controller-level wear leveling and power-loss handling) — the SD-corruption
 concern applies mainly to the View.
 
