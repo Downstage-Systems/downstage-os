@@ -90,6 +90,8 @@ def load_config():
     data.setdefault("hotspot_pass", "dolly-wrap-45")
     data.setdefault("hotspot_auto", True)
     data.setdefault("cleantimer_freeze", True)
+    data.setdefault("cleantimer_hideprogress", True)
+    data.setdefault("cleantimer_hideclock", True)
     data.setdefault("watchdog", True)
     data.setdefault("os_update_repo", "")   # e.g. "youruser/downstage-os"
     data.setdefault("ip_history", [])
@@ -208,6 +210,22 @@ def _is_ontime_source(source):
     return source not in ("config", "off", "external", None, "")
 
 
+def _cleantimer_params():
+    """Query string for the Clean Timer preset — always chromakey-ready
+    (black key, white timer, no cards/logo), with the show-day options
+    from config."""
+    cfg = load_config()
+    params = ["hideCards=true", "hideLogo=true",
+              "keyColour=000000", "timerColour=ffffff"]
+    if cfg.get("cleantimer_hideprogress", True):
+        params.append("hideProgress=true")
+    if cfg.get("cleantimer_hideclock", True):
+        params.append("hideClock=true")
+    if cfg.get("cleantimer_freeze", True):
+        params.append("freezeOvertime=true")
+    return "&".join(params)
+
+
 def _source_url(source):
     """Map a source name to the URL the kiosk window should show."""
     if source.startswith("pattern-"):
@@ -225,10 +243,7 @@ def _source_url(source):
     if not ip:
         return "http://localhost:8080/holding"
     if source == "cleantimer":
-        freeze = "&freezeOvertime=true" if config.get("cleantimer_freeze", True) else ""
-        return (f"http://{ip}:4001/timer/"
-                f"?hideClock=true&hideCards=true&hideProgress=true"
-                f"&hideLogo=true&keyColour=000000&timerColour=ffffff{freeze}")
+        return f"http://{ip}:4001/timer/?" + _cleantimer_params()
     return f"http://{ip}:4001{source}"
 
 
@@ -1189,6 +1204,8 @@ def save():
     save_config({"ip": ip, "source": source, "external_url": external_url,
                  "watchdog": bool(data.get("watchdog", True)),
                  "cleantimer_freeze": bool(data.get("cleantimer_freeze", True)),
+                 "cleantimer_hideprogress": bool(data.get("cleantimer_hideprogress", True)),
+                 "cleantimer_hideclock": bool(data.get("cleantimer_hideclock", True)),
                  "ip_history": history})
     epaper.force_refresh()
     threading.Thread(target=launch_window, daemon=True).start()

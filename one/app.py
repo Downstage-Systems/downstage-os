@@ -101,6 +101,8 @@ def load_config():
     data.setdefault("hotspot_pass", "cue-grip-28")
     data.setdefault("hotspot_auto", True)
     data.setdefault("cleantimer_freeze", True)
+    data.setdefault("cleantimer_hideprogress", True)
+    data.setdefault("cleantimer_hideclock", True)
     data.setdefault("os_update_repo", "")   # e.g. "youruser/downstage-os"
     return data
 
@@ -581,6 +583,22 @@ def _chromium_env():
     return env
 
 
+def _cleantimer_params():
+    """Query string for the Clean Timer preset — always chromakey-ready
+    (black key, white timer, no cards/logo), with the show-day options
+    from config."""
+    cfg = load_config()
+    params = ["hideCards=true", "hideLogo=true",
+              "keyColour=000000", "timerColour=ffffff"]
+    if cfg.get("cleantimer_hideprogress", True):
+        params.append("hideProgress=true")
+    if cfg.get("cleantimer_hideclock", True):
+        params.append("hideClock=true")
+    if cfg.get("cleantimer_freeze", True):
+        params.append("freezeOvertime=true")
+    return "&".join(params)
+
+
 def _open_window(source, display, hdmi_index):
     """
     Launch a Chromium window on the given display.
@@ -659,10 +677,7 @@ def _open_window(source, display, hdmi_index):
         # error page is a terrible first impression; show the welcome screen
         url = "http://localhost:8080/welcome"
     elif source == "cleantimer":
-        freeze = "&freezeOvertime=true" if load_config().get("cleantimer_freeze", True) else ""
-        url = (f"http://{ip}:4001/timer/"
-               f"?hideClock=true&hideCards=true&hideProgress=true"
-               f"&hideLogo=true&keyColour=000000&timerColour=ffffff{freeze}")
+        url = f"http://{ip}:4001/timer/?" + _cleantimer_params()
     elif source == "custom":
         url = "http://localhost:8080/view/custom"
     else:
@@ -1204,6 +1219,8 @@ def save():
         "hdmi1_external_url": hdmi1_ext, "hdmi2_external_url": hdmi2_ext,
         "ip_history": history, "watchdog": watchdog,
         "cleantimer_freeze": bool(data.get("cleantimer_freeze", True)),
+        "cleantimer_hideprogress": bool(data.get("cleantimer_hideprogress", True)),
+        "cleantimer_hideclock": bool(data.get("cleantimer_hideclock", True)),
     })
     _blackout_active   = False
     _watchdog_override = False

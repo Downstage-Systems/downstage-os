@@ -203,6 +203,8 @@
     .source-chip.selected .chip-opt { display: flex; }
     .source-chip.chip-wide { grid-column: span 2; }
     .chip-opt-label { font-size: 11px; color: var(--muted); flex: 1; line-height: 1.3; text-align: left; }
+    .chip-opt { flex-wrap: wrap; gap: 6px 18px; }
+    .chip-opt-item { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 150px; }
 
     .source-chip-icon {
       width: 26px; height: 26px; border-radius: 6px;
@@ -549,9 +551,19 @@
           <div class="source-chip chip-wide" data-source="cleantimer" onclick="selectSource(this)">
             <div class="source-chip-icon"><svg viewBox="0 0 24 24"><path d="M15 1H9v2h6V1zm-4 13h2V8h-2v6zm8.03-6.61l1.42-1.42c-.43-.51-.9-.99-1.41-1.41l-1.42 1.42A8.962 8.962 0 0012 4c-4.97 0-9 4.03-9 9s4.02 9 9 9a8.994 8.994 0 007.03-14.61zM12 20c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg></div>
             <span class="source-chip-label">Clean Timer</span>
-            <div class="chip-opt" onclick="event.stopPropagation()" title="Hold 00:00 instead of counting up into overtime">
-              <span class="chip-opt-label">Freeze at 00:00</span>
-              <button class="toggle on" id="cleantimer-freeze-toggle" onclick="toggleCleanFreeze()"></button>
+            <div class="chip-opt" onclick="event.stopPropagation()">
+              <div class="chip-opt-item" title="Hold 00:00 instead of counting up into overtime">
+                <span class="chip-opt-label">Freeze at 00:00</span>
+                <button class="toggle on" id="cleantimer-freeze-toggle" onclick="toggleCleanOpt('freeze')"></button>
+              </div>
+              <div class="chip-opt-item" title="Hide the progress bar under the timer">
+                <span class="chip-opt-label">Hide progress bar</span>
+                <button class="toggle on" id="cleantimer-hideprogress-toggle" onclick="toggleCleanOpt('hideprogress')"></button>
+              </div>
+              <div class="chip-opt-item" title="Hide the time-of-day clock">
+                <span class="chip-opt-label">Hide time of day</span>
+                <button class="toggle on" id="cleantimer-hideclock-toggle" onclick="toggleCleanOpt('hideclock')"></button>
+              </div>
             </div>
           </div>
 
@@ -840,7 +852,11 @@
 <script>
   let currentSource = "{{ config.source }}";
   let externalUrl   = {{ (config.external_url or '') | tojson }};
-  let cleanFreeze   = {{ config.get('cleantimer_freeze', True) | tojson }};
+  const cleanOpts = {
+    freeze:       {{ config.get('cleantimer_freeze', True) | tojson }},
+    hideprogress: {{ config.get('cleantimer_hideprogress', True) | tojson }},
+    hideclock:    {{ config.get('cleantimer_hideclock', True) | tojson }},
+  };
 
   // ── IP History ───────────────────────────────────────────────────────────────
   const IP_HISTORY = {{ ip_history | tojson }};
@@ -920,10 +936,16 @@
     }
   }
 
-  function toggleCleanFreeze() {
-    cleanFreeze = !cleanFreeze;
-    document.getElementById('cleantimer-freeze-toggle').className = 'toggle ' + (cleanFreeze ? 'on' : '');
+  function toggleCleanOpt(name) {
+    cleanOpts[name] = !cleanOpts[name];
+    syncCleanOptToggles();
     markDirty();
+  }
+  function syncCleanOptToggles() {
+    for (const name of ['freeze', 'hideprogress', 'hideclock']) {
+      document.getElementById(`cleantimer-${name}-toggle`).className =
+        'toggle ' + (cleanOpts[name] ? 'on' : '');
+    }
   }
 
   function selectSource(chip) {
@@ -982,9 +1004,7 @@
   }
 
   let watchdogOn = true;
-  document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('cleantimer-freeze-toggle').className = 'toggle ' + (cleanFreeze ? 'on' : '');
-  });
+  document.addEventListener('DOMContentLoaded', syncCleanOptToggles);
 
   function toggleWatchdog() {
     watchdogOn = !watchdogOn;
@@ -1049,7 +1069,7 @@
     try {
       const r = await fetch('/save', {
         method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ ip, source: currentSource, external_url: externalUrl, watchdog: watchdogOn, cleantimer_freeze: cleanFreeze }),
+        body: JSON.stringify({ ip, source: currentSource, external_url: externalUrl, watchdog: watchdogOn, cleantimer_freeze: cleanOpts.freeze, cleantimer_hideprogress: cleanOpts.hideprogress, cleantimer_hideclock: cleanOpts.hideclock }),
       });
       const d = await r.json();
       d.ok ? showToast('Settings saved — display updating.', 'success') : showToast(d.error, 'error');
