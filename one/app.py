@@ -798,6 +798,9 @@ def _hdmi_monitor():
         if curr != prev:
             print(f"[hdmi] display change detected: {prev} → {curr}")
             time.sleep(2)   # let X settle after hotplug
+            # a hot-plugged output is connected but has no mode — activate it
+            # and apply configured res/rotation before opening windows on it
+            _apply_display_settings()
             launch_all_windows()
             prev = curr
 
