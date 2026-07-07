@@ -1127,6 +1127,7 @@
             <span class="version-tag" id="os-serial" style="color:var(--muted)"></span>
             <span class="version-badge checking" id="os-ver-badge">Checking…</span>
             <button class="btn-sm" id="os-update-btn" onclick="osUpdate()" style="display:none">Update</button>
+            <button class="btn-sm" id="os-check-btn" onclick="osRecheck()" title="Check GitHub for a newer Downstage OS release">Check</button>
             <button class="btn-sm" onclick="window.location='/diagnostics'" title="Download a support diagnostics bundle">Diagnostics</button>
           </div>
           <div class="external-url-hint" id="os-update-note" style="display:none"></div>
@@ -2469,6 +2470,13 @@
       showToast(d.ok ? `OnTime updated: ${d.message}` : `Update failed: ${d.message}`, d.ok ? 'success' : 'error');
       if (d.ok) setTimeout(loadUpdateStatus, 2000);
     } catch { showToast('Network error during update.', 'error'); }
+  }
+
+  async function osRecheck() {
+    const b = document.getElementById('os-check-btn');
+    b.disabled = true; b.textContent = 'Checking…';
+    await recheckUpdates();
+    setTimeout(() => { b.disabled = false; b.textContent = 'Check'; }, 4500);
   }
 
   async function recheckUpdates() {
