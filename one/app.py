@@ -521,12 +521,17 @@ def _ontime_runtime(ip, timeout=2):
 
 # ── Display detection ─────────────────────────────────────────────────────────
 
+# The Pi 5's driver names don't match the jacks: the jack we label HDMI 1
+# on the unit is xrandr's "HDMI-2" and vice versa. Product port numbers are
+# what the customer sees on the case — translate here, nowhere else.
+_XRANDR_TO_PORT = {"HDMI-1": 2, "HDMI-2": 1, "HDMI-A-1": 2, "HDMI-A-2": 1}
+
+
 def _port_num(output_name, fallback=1):
-    """Physical HDMI port number from an xrandr output name (HDMI-2,
-    HDMI-A-2 → 2). The port is the unit's identity for an output — a lone
-    display on port 2 is HDMI 2, not "the first display we found"."""
-    m = re.search(r"HDMI(?:-A)?-(\d+)", output_name or "")
-    return int(m.group(1)) if m else fallback
+    """Product port number (case label) for an xrandr output name. The port
+    is the unit's identity for an output — a lone display on the HDMI 1 jack
+    is HDMI 1, not "the first display we found"."""
+    return _XRANDR_TO_PORT.get(output_name, fallback)
 
 
 @_ttl_cache(10)
