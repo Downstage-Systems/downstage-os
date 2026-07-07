@@ -202,11 +202,15 @@ def _clean_external_url(url):
 
 
 def _is_ontime_source(source):
+    if source and source.startswith("pattern-"):
+        return False
     return source not in ("config", "off", "external", None, "")
 
 
 def _source_url(source):
     """Map a source name to the URL the kiosk window should show."""
+    if source.startswith("pattern-"):
+        return f"http://localhost:8080/pattern/{source.split('-', 1)[1]}"
     if source == "off":
         return "http://localhost:8080/blackout-page"
     if source == "config":
@@ -386,6 +390,114 @@ def _ontime_watchdog():
 @app.route("/blackout-page")
 def blackout_page_view():
     return '<html><body style="margin:0;background:#000"></body></html>', 200, {"Content-Type": "text/html"}
+
+
+_PATTERN_PAGE = """<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+*{margin:0;padding:0}body{background:#000;overflow:hidden;cursor:none}canvas{display:block}
+</style></head><body><canvas id="c"></canvas><script>
+const name = location.pathname.split("/").pop();
+const cv = document.getElementById("c"), x = cv.getContext("2d");
+function draw() {
+  const W = cv.width = innerWidth, H = cv.height = innerHeight;
+  x.fillStyle = "#000"; x.fillRect(0, 0, W, H);
+  const mono = px => px + "px 'Courier New', monospace";
+
+  function grid(color) {
+    x.strokeStyle = color; x.lineWidth = 1;
+    const step = W / 16;
+    for (let i = 0; i <= 16; i++) { x.beginPath(); x.moveTo(i*step, 0); x.lineTo(i*step, H); x.stroke(); }
+    for (let j = 0; j <= Math.ceil(H/step); j++) { x.beginPath(); x.moveTo(0, j*step); x.lineTo(W, j*step); x.stroke(); }
+  }
+  function circles() {
+    x.strokeStyle = "#E8ECEF"; x.lineWidth = 2;
+    const r = H * 0.11;
+    [[r*1.1, r*1.1], [W-r*1.1, r*1.1], [r*1.1, H-r*1.1], [W-r*1.1, H-r*1.1]].forEach(([cx, cy]) => {
+      x.beginPath(); x.arc(cx, cy, r, 0, 7); x.stroke();
+      x.fillStyle = "#fff"; x.beginPath(); x.arc(cx, cy, r*0.3, 0, 7); x.fill();
+    });
+    x.beginPath(); x.arc(W/2, H/2, H*0.46, 0, 7); x.stroke();
+  }
+  function label(txt, y) {
+    x.font = "bold " + mono(H*0.022); x.textAlign = "center";
+    x.fillStyle = "#000"; x.fillRect(W/2 - W*0.13, y - H*0.025, W*0.26, H*0.045);
+    x.strokeStyle = "#E8ECEF"; x.strokeRect(W/2 - W*0.13, y - H*0.025, W*0.26, H*0.045);
+    x.fillStyle = "#E8ECEF"; x.fillText(txt, W/2, y + H*0.008);
+  }
+
+  if (name === "bars") {                          // SMPTE-style 75% bars
+    const cols = ["#c0c0c0","#c0c000","#00c0c0","#00c000","#c000c0","#c00000","#0000c0"];
+    const bw = W / 7, h1 = H * 0.67;
+    cols.forEach((c, i) => { x.fillStyle = c; x.fillRect(i*bw, 0, bw+1, h1); });
+    const rev = ["#0000c0","#131313","#c000c0","#131313","#00c0c0","#131313","#c0c0c0"];
+    rev.forEach((c, i) => { x.fillStyle = c; x.fillRect(i*bw, h1, bw+1, H*0.08); });
+    const y2 = h1 + H*0.08;
+    const plu = [["#00214c", W*0.25], ["#fff", W*0.125], ["#32006a", W*0.125], ["#131313", W*0.5]];
+    let px0 = 0;
+    plu.forEach(([c, w]) => { x.fillStyle = c; x.fillRect(px0, y2, w+1, H - y2); px0 += w; });
+    const pw = W*0.5/6, py = px0 - W*0.5;
+    [["#090909",1],["#131313",3],["#1d1d1d",5]].forEach(([c, k]) => {
+      x.fillStyle = c; x.fillRect(py + pw*k, y2, pw, H - y2);
+    });
+  }
+  else if (name === "grid") {                     // geometry / overscan
+    grid("#E8ECEF"); circles();
+    x.strokeStyle = "#2FD97B"; x.lineWidth = 3;
+    x.strokeRect(1, 1, W-2, H-2);                 // outermost pixel frame
+    x.beginPath(); x.moveTo(W/2, H*0.42); x.lineTo(W/2, H*0.58); x.stroke();
+    x.beginPath(); x.moveTo(W*0.46, H/2); x.lineTo(W*0.54, H/2); x.stroke();
+    label(W + " x " + H, H*0.9);
+  }
+  else if (name === "ramp") {                     // levels / banding
+    const g = x.createLinearGradient(0, 0, W, 0);
+    g.addColorStop(0, "#000"); g.addColorStop(1, "#fff");
+    x.fillStyle = g; x.fillRect(0, 0, W, H*0.45);
+    for (let i = 0; i < 12; i++) {                // 0-100% steps
+      const v = Math.round(255 * (i / 11));
+      x.fillStyle = "rgb(" + v + "," + v + "," + v + ")";
+      x.fillRect(i * W/12, H*0.5, W/12+1, H*0.25);
+      x.fillStyle = v > 128 ? "#000" : "#fff"; x.font = mono(H*0.02); x.textAlign = "center";
+      x.fillText(Math.round(i/11*100) + "%", i*W/12 + W/24, H*0.63);
+    }
+    for (let i = 0; i < 12; i++) {                // near-black 1-12%
+      const v = Math.round(255 * ((i+1) / 100));
+      x.fillStyle = "rgb(" + v + "," + v + "," + v + ")";
+      x.fillRect(i * W/12, H*0.8, W/12+1, H*0.2);
+      x.fillStyle = "#666"; x.font = mono(H*0.018);
+      x.fillText((i+1) + "%", i*W/12 + W/24, H*0.91);
+    }
+  }
+  else {                                          // "card" — the full plate
+    grid("#3a3a3a"); circles();
+    const bx = W*0.125, bw2 = W*0.75;
+    const hues = ["#f00","#f80","#ff0","#8f0","#0f0","#0f8","#0ff","#08f","#00f","#80f","#f0f","#f08"];
+    hues.forEach((c, i) => { x.fillStyle = c; x.fillRect(bx + i*bw2/12, H*0.2, bw2/12 - 4, H*0.11); });
+    ["#f00", "#0f0", "#00f"].forEach((c, k) => {  // RGB ramps
+      const g = x.createLinearGradient(bx, 0, bx + bw2, 0);
+      g.addColorStop(0, "#000"); g.addColorStop(0.75, c); g.addColorStop(1, "#fff");
+      x.fillStyle = g; x.fillRect(bx, H*(0.34 + k*0.075), bw2, H*0.07);
+    });
+    for (let i = 0; i < 12; i++) {                // gray steps
+      const v = Math.round(255 * (i / 11));
+      x.fillStyle = "rgb(" + v + "," + v + "," + v + ")";
+      x.fillRect(bx + i*bw2/12, H*0.6, bw2/12 - 4, H*0.1);
+      x.fillStyle = v > 128 ? "#000" : "#fff"; x.font = mono(H*0.016); x.textAlign = "center";
+      x.fillText(Math.round(i/11*100) + "%", bx + i*bw2/12 + bw2/24, H*0.66);
+    }
+    x.fillStyle = "#2FD97B";                      // downstage edge
+    x.fillRect(bx, H*0.73, bw2*0.42, H*0.012);
+    x.fillRect(bx + bw2*0.46, H*0.73, bw2*0.12, H*0.012);
+    label("DOWNSTAGE  ·  " + W + " x " + H + "  ·  " + (W/H).toFixed(2) + ":1", H*0.83);
+  }
+}
+draw(); addEventListener("resize", draw);
+</script></body></html>"""
+
+
+@app.route("/pattern/<name>")
+def pattern_page(name):
+    if name not in ("card", "bars", "grid", "ramp"):
+        name = "card"
+    return _PATTERN_PAGE, 200, {"Content-Type": "text/html"}
 
 
 @app.route("/identify-page/<label>")
