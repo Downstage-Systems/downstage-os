@@ -890,6 +890,30 @@ def ontime_is_running():
         return False
 
 
+def _hide_ontime_windows():
+    """OnTime 4.7's --headless still opens its Electron editor window — a
+    white window that lurks behind the kiosk and photobombs source switches.
+    Unmap (hide) it; closing it would quit the app. Retries while the app
+    finishes launching."""
+    script = (
+        'AUTH=$(pgrep -af Xorg | grep -oE "\\-auth [^ ]+" | awk \'{print $2}\' | head -1); '
+        'ok=1; for wid in $(env DISPLAY=:0 XAUTHORITY=$AUTH xdotool search --name "^ontime" 2>/dev/null); do '
+        'env DISPLAY=:0 XAUTHORITY=$AUTH xdotool windowunmap $wid && ok=0; done; exit $ok'
+    )
+    deadline = time.time() + 90
+    while time.time() < deadline:
+        time.sleep(5)
+        try:
+            r = subprocess.run(["sudo", "bash", "-c", script], timeout=15,
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if r.returncode == 0:
+                print("[ontime] editor window hidden")
+                return
+        except Exception:
+            pass
+    print("[ontime] no editor window appeared to hide")
+
+
 def start_local_ontime():
     global _ontime_proc
     entry = _ontime_entry()
@@ -903,6 +927,7 @@ def start_local_ontime():
             [str(entry), "--no-sandbox", "--headless"],
             stdout=log, stderr=log, cwd=str(ONTIME_ROOT),
         )
+    threading.Thread(target=_hide_ontime_windows, daemon=True).start()
     return True, "started"
 
 
