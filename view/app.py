@@ -93,6 +93,8 @@ def load_config():
     data.setdefault("cleantimer_hideprogress", True)
     data.setdefault("cleantimer_hideclock", True)
     data.setdefault("cleantimer_hidecards", True)
+    data.setdefault("cleantimer_keycolour",   "000000")
+    data.setdefault("cleantimer_timercolour", "ffffff")
     data.setdefault("watchdog", True)
     data.setdefault("os_update_repo", "")   # e.g. "youruser/downstage-os"
     data.setdefault("ip_history", [])
@@ -211,12 +213,20 @@ def _is_ontime_source(source):
     return source not in ("config", "off", "external", None, "")
 
 
+def _hex6(v, default):
+    """Sanitize a colour value to 6-digit hex (no #) or fall back."""
+    v = (v or "").lstrip("#").lower()
+    return v if re.fullmatch(r"[0-9a-f]{6}", v) else default
+
+
 def _cleantimer_params():
     """Query string for the Custom Timer preset — always chromakey-ready
     (black key, white timer, no cards/logo), with the show-day options
     from config."""
     cfg = load_config()
-    params = ["hideLogo=true", "keyColour=000000", "timerColour=ffffff"]
+    params = ["hideLogo=true",
+              "keyColour=" + _hex6(cfg.get("cleantimer_keycolour"), "000000"),
+              "timerColour=" + _hex6(cfg.get("cleantimer_timercolour"), "ffffff")]
     if cfg.get("cleantimer_hidecards", True):
         params.append("hideCards=true")
     if cfg.get("cleantimer_hideprogress", True):
@@ -1209,6 +1219,8 @@ def save():
                  "cleantimer_hideprogress": bool(data.get("cleantimer_hideprogress", True)),
                  "cleantimer_hideclock": bool(data.get("cleantimer_hideclock", True)),
                  "cleantimer_hidecards": bool(data.get("cleantimer_hidecards", True)),
+                 "cleantimer_keycolour": _hex6(data.get("cleantimer_keycolour"), "000000"),
+                 "cleantimer_timercolour": _hex6(data.get("cleantimer_timercolour"), "ffffff"),
                  "ip_history": history})
     epaper.force_refresh()
     threading.Thread(target=launch_window, daemon=True).start()

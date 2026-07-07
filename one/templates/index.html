@@ -322,6 +322,12 @@
     .chip-opt .toggle { width: 26px; height: 14px; border-radius: 7px; }
     .chip-opt .toggle::after { top: 2px; left: 2px; width: 10px; height: 10px; }
     .chip-opt .toggle.on::after { left: 14px; }
+    .chip-opt input[type="color"] {
+      width: 34px; height: 18px; padding: 0; border: 1px solid var(--border2);
+      border-radius: 5px; background: none; cursor: pointer;
+    }
+    .chip-opt input[type="color"]::-webkit-color-swatch-wrapper { padding: 1px; }
+    .chip-opt input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
 
     .source-chip-icon {
       width: 26px; height: 26px; border-radius: 6px;
@@ -850,6 +856,14 @@
                 <span class="chip-opt-label">Hide message cards</span>
                 <button class="toggle on" id="cleantimer-hidecards-toggle" onclick="toggleCleanOpt('hidecards')"></button>
               </div>
+              <div class="chip-opt-item" title="Background colour — set to your chromakey colour, black for direct video">
+                <span class="chip-opt-label">Key colour</span>
+                <input type="color" id="cleantimer-keycolour" value="#000000" onchange="setCleanColour('keycolour', this.value)">
+              </div>
+              <div class="chip-opt-item" title="Colour of the timer digits">
+                <span class="chip-opt-label">Timer colour</span>
+                <input type="color" id="cleantimer-timercolour" value="#ffffff" onchange="setCleanColour('timercolour', this.value)">
+              </div>
             </div>
           </div>
 
@@ -1301,12 +1315,16 @@
       hideprogress: {{ config.get('hdmi1_ct_hideprogress', True) | tojson }},
       hideclock:    {{ config.get('hdmi1_ct_hideclock', True) | tojson }},
       hidecards:    {{ config.get('hdmi1_ct_hidecards', True) | tojson }},
+      keycolour:    {{ config.get('hdmi1_ct_keycolour', '000000') | tojson }},
+      timercolour:  {{ config.get('hdmi1_ct_timercolour', 'ffffff') | tojson }},
     },
     2: {
       freeze:       {{ config.get('hdmi2_ct_freeze', True) | tojson }},
       hideprogress: {{ config.get('hdmi2_ct_hideprogress', True) | tojson }},
       hideclock:    {{ config.get('hdmi2_ct_hideclock', True) | tojson }},
       hidecards:    {{ config.get('hdmi2_ct_hidecards', True) | tojson }},
+      keycolour:    {{ config.get('hdmi2_ct_keycolour', '000000') | tojson }},
+      timercolour:  {{ config.get('hdmi2_ct_timercolour', 'ffffff') | tojson }},
     },
   };
   let hdmi1ExternalUrl = {{ (config.hdmi1_external_url or '') | tojson }};
@@ -1446,6 +1464,14 @@
       document.getElementById(`cleantimer-${name}-toggle`).className =
         'toggle ' + (ctOpts[activeHdmiTab][name] ? 'on' : '');
     }
+    for (const name of ['keycolour', 'timercolour']) {
+      document.getElementById(`cleantimer-${name}`).value = '#' + ctOpts[activeHdmiTab][name];
+    }
+  }
+
+  function setCleanColour(name, value) {
+    ctOpts[activeHdmiTab][name] = value.replace('#', '');
+    markDirty();
   }
 
   function selectSource(chip) {
@@ -1615,6 +1641,8 @@
           hdmi1_external_url: hdmi1ExternalUrl, hdmi2_external_url: hdmi2ExternalUrl,
           hdmi1_ct_freeze: ctOpts[1].freeze, hdmi1_ct_hideprogress: ctOpts[1].hideprogress, hdmi1_ct_hideclock: ctOpts[1].hideclock, hdmi1_ct_hidecards: ctOpts[1].hidecards,
           hdmi2_ct_freeze: ctOpts[2].freeze, hdmi2_ct_hideprogress: ctOpts[2].hideprogress, hdmi2_ct_hideclock: ctOpts[2].hideclock, hdmi2_ct_hidecards: ctOpts[2].hidecards,
+          hdmi1_ct_keycolour: ctOpts[1].keycolour, hdmi1_ct_timercolour: ctOpts[1].timercolour,
+          hdmi2_ct_keycolour: ctOpts[2].keycolour, hdmi2_ct_timercolour: ctOpts[2].timercolour,
           watchdog: watchdogOn,
         }),
       });

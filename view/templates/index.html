@@ -209,6 +209,12 @@
     .chip-opt .toggle { width: 26px; height: 14px; border-radius: 7px; }
     .chip-opt .toggle::after { top: 2px; left: 2px; width: 10px; height: 10px; }
     .chip-opt .toggle.on::after { left: 14px; }
+    .chip-opt input[type="color"] {
+      width: 34px; height: 18px; padding: 0; border: 1px solid var(--border2);
+      border-radius: 5px; background: none; cursor: pointer;
+    }
+    .chip-opt input[type="color"]::-webkit-color-swatch-wrapper { padding: 1px; }
+    .chip-opt input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
 
     .source-chip-icon {
       width: 26px; height: 26px; border-radius: 6px;
@@ -573,6 +579,14 @@
                 <span class="chip-opt-label">Hide message cards</span>
                 <button class="toggle on" id="cleantimer-hidecards-toggle" onclick="toggleCleanOpt('hidecards')"></button>
               </div>
+              <div class="chip-opt-item" title="Background colour — set to your chromakey colour, black for direct video">
+                <span class="chip-opt-label">Key colour</span>
+                <input type="color" id="cleantimer-keycolour" value="#000000" onchange="setCleanColour('keycolour', this.value)">
+              </div>
+              <div class="chip-opt-item" title="Colour of the timer digits">
+                <span class="chip-opt-label">Timer colour</span>
+                <input type="color" id="cleantimer-timercolour" value="#ffffff" onchange="setCleanColour('timercolour', this.value)">
+              </div>
             </div>
           </div>
 
@@ -866,6 +880,8 @@
     hideprogress: {{ config.get('cleantimer_hideprogress', True) | tojson }},
     hideclock:    {{ config.get('cleantimer_hideclock', True) | tojson }},
     hidecards:    {{ config.get('cleantimer_hidecards', True) | tojson }},
+    keycolour:    {{ config.get('cleantimer_keycolour', '000000') | tojson }},
+    timercolour:  {{ config.get('cleantimer_timercolour', 'ffffff') | tojson }},
   };
 
   // ── IP History ───────────────────────────────────────────────────────────────
@@ -956,6 +972,14 @@
       document.getElementById(`cleantimer-${name}-toggle`).className =
         'toggle ' + (cleanOpts[name] ? 'on' : '');
     }
+    for (const name of ['keycolour', 'timercolour']) {
+      document.getElementById(`cleantimer-${name}`).value = '#' + cleanOpts[name];
+    }
+  }
+
+  function setCleanColour(name, value) {
+    cleanOpts[name] = value.replace('#', '');
+    markDirty();
   }
 
   function selectSource(chip) {
@@ -1079,7 +1103,7 @@
     try {
       const r = await fetch('/save', {
         method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ ip, source: currentSource, external_url: externalUrl, watchdog: watchdogOn, cleantimer_freeze: cleanOpts.freeze, cleantimer_hideprogress: cleanOpts.hideprogress, cleantimer_hideclock: cleanOpts.hideclock, cleantimer_hidecards: cleanOpts.hidecards }),
+        body: JSON.stringify({ ip, source: currentSource, external_url: externalUrl, watchdog: watchdogOn, cleantimer_freeze: cleanOpts.freeze, cleantimer_hideprogress: cleanOpts.hideprogress, cleantimer_hideclock: cleanOpts.hideclock, cleantimer_hidecards: cleanOpts.hidecards, cleantimer_keycolour: cleanOpts.keycolour, cleantimer_timercolour: cleanOpts.timercolour }),
       });
       const d = await r.json();
       d.ok ? showToast('Settings saved — display updating.', 'success') : showToast(d.error, 'error');

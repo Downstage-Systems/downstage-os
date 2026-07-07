@@ -104,6 +104,8 @@ def load_config():
     for n in (1, 2):
         for opt in ("freeze", "hideprogress", "hideclock", "hidecards"):
             data.setdefault(f"hdmi{n}_ct_{opt}", data.get(f"cleantimer_{opt}", True))
+        data.setdefault(f"hdmi{n}_ct_keycolour",   "000000")
+        data.setdefault(f"hdmi{n}_ct_timercolour", "ffffff")
     data.setdefault("os_update_repo", "")   # e.g. "youruser/downstage-os"
     return data
 
@@ -599,13 +601,21 @@ def _chromium_env():
     return env
 
 
+def _hex6(v, default):
+    """Sanitize a colour value to 6-digit hex (no #) or fall back."""
+    v = (v or "").lstrip("#").lower()
+    return v if re.fullmatch(r"[0-9a-f]{6}", v) else default
+
+
 def _cleantimer_params(hdmi_index):
     """Query string for the Custom Timer preset — always chromakey-ready
     (black key, white timer, no logo), with per-output show-day options
     from config (each HDMI can run its own custom timer)."""
     cfg = load_config()
     k = f"hdmi{hdmi_index}_ct_"
-    params = ["hideLogo=true", "keyColour=000000", "timerColour=ffffff"]
+    params = ["hideLogo=true",
+              "keyColour=" + _hex6(cfg.get(k + "keycolour"), "000000"),
+              "timerColour=" + _hex6(cfg.get(k + "timercolour"), "ffffff")]
     if cfg.get(k + "hidecards", True):
         params.append("hideCards=true")
     if cfg.get(k + "hideprogress", True):
@@ -1234,6 +1244,9 @@ def save():
         **{f"hdmi{n}_ct_{opt}": bool(data.get(f"hdmi{n}_ct_{opt}", True))
            for n in (1, 2)
            for opt in ("freeze", "hideprogress", "hideclock", "hidecards")},
+        **{f"hdmi{n}_ct_{c}": _hex6(data.get(f"hdmi{n}_ct_{c}"), d)
+           for n in (1, 2)
+           for c, d in (("keycolour", "000000"), ("timercolour", "ffffff"))},
     })
     _blackout_active   = False
     _watchdog_override = False
