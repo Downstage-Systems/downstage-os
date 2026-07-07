@@ -100,6 +100,7 @@ def load_config():
     data.setdefault("hotspot_ssid", "Downstage-0001")
     data.setdefault("hotspot_pass", "cue-grip-28")
     data.setdefault("hotspot_auto", True)
+    data.setdefault("cleantimer_freeze", True)
     data.setdefault("os_update_repo", "")   # e.g. "youruser/downstage-os"
     return data
 
@@ -658,9 +659,10 @@ def _open_window(source, display, hdmi_index):
         # error page is a terrible first impression; show the welcome screen
         url = "http://localhost:8080/welcome"
     elif source == "cleantimer":
+        freeze = "&freezeOvertime=true" if load_config().get("cleantimer_freeze", True) else ""
         url = (f"http://{ip}:4001/timer/"
                f"?hideClock=true&hideCards=true&hideProgress=true"
-               f"&hideLogo=true&keyColour=000000&timerColour=ffffff")
+               f"&hideLogo=true&keyColour=000000&timerColour=ffffff{freeze}")
     elif source == "custom":
         url = "http://localhost:8080/view/custom"
     else:
@@ -1201,6 +1203,7 @@ def save():
         "hdmi1_rotate": hdmi1_rotate, "hdmi2_rotate": hdmi2_rotate,
         "hdmi1_external_url": hdmi1_ext, "hdmi2_external_url": hdmi2_ext,
         "ip_history": history, "watchdog": watchdog,
+        "cleantimer_freeze": bool(data.get("cleantimer_freeze", True)),
     })
     _blackout_active   = False
     _watchdog_override = False

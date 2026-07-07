@@ -89,6 +89,7 @@ def load_config():
     data.setdefault("hotspot_ssid", "Downstage-V001")
     data.setdefault("hotspot_pass", "dolly-wrap-45")
     data.setdefault("hotspot_auto", True)
+    data.setdefault("cleantimer_freeze", True)
     data.setdefault("watchdog", True)
     data.setdefault("os_update_repo", "")   # e.g. "youruser/downstage-os"
     data.setdefault("ip_history", [])
@@ -224,9 +225,10 @@ def _source_url(source):
     if not ip:
         return "http://localhost:8080/holding"
     if source == "cleantimer":
+        freeze = "&freezeOvertime=true" if config.get("cleantimer_freeze", True) else ""
         return (f"http://{ip}:4001/timer/"
                 f"?hideClock=true&hideCards=true&hideProgress=true"
-                f"&hideLogo=true&keyColour=000000&timerColour=ffffff")
+                f"&hideLogo=true&keyColour=000000&timerColour=ffffff{freeze}")
     return f"http://{ip}:4001{source}"
 
 
@@ -1186,6 +1188,7 @@ def save():
     _watchdog_override = False
     save_config({"ip": ip, "source": source, "external_url": external_url,
                  "watchdog": bool(data.get("watchdog", True)),
+                 "cleantimer_freeze": bool(data.get("cleantimer_freeze", True)),
                  "ip_history": history})
     epaper.force_refresh()
     threading.Thread(target=launch_window, daemon=True).start()
