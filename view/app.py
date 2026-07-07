@@ -50,6 +50,9 @@ _COMMON_FLAGS = [
     "--noerrdialogs",
     "--disable-session-crashed-bubble",
     "--hide-crash-restore-bubble",
+    # paint House Black from the first frame — otherwise every fresh window
+    # flashes white on screen before the page's dark background loads
+    "--default-background-color=0b0d10",
     # Pi Zero 2 W memory diet — chromium subprocesses OOM under pressure,
     # leaving a black page that never retries
     "--renderer-process-limit=1",
