@@ -932,6 +932,7 @@ def index():
         "index.html",
         config=config,
         local_ip=get_local_ip(),
+        hostname=socket.gethostname(),
         ip_history=config.get("ip_history", []),
     )
 

@@ -96,6 +96,17 @@
       font-size: 10px; color: var(--muted); margin-top: 4px;
       text-transform: uppercase; letter-spacing: 0.2em;
     }
+    .addr-chip {
+      margin-left: auto; text-align: right; flex-shrink: 0;
+      display: flex; flex-direction: column; gap: 3px; align-items: flex-end;
+    }
+    .addr-chip .addr-main {
+      font-family: var(--font-mono); font-size: 12px; color: var(--accent);
+      background: var(--surface); border: 1px solid var(--border2);
+      padding: 3px 8px; border-radius: 6px;
+    }
+    .addr-chip .addr-sub { font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+
 
     /* ── Card ── */
     .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
@@ -633,6 +644,12 @@
       <h1>Downstage <span class="product">One</span></h1>
       <p>Setup &amp; Control</p>
     </div>
+    <div class="addr-chip">
+      <span class="addr-main">{{ hostname }}.local:8080</span>
+      <span class="addr-sub">
+        {% if net_iface == 'eth0' %}🔌 {{ local_ip }}{% elif net_iface == 'wlan0' %}📶 {{ local_ip }}{% else %}{{ local_ip }}{% endif %}
+      </span>
+    </div>
   </div>
 
   <div class="card">
@@ -1104,18 +1121,7 @@
     </div>
 
     <div class="card-footer">
-      <div class="footer-info">
-        <code>http://{{ hostname }}.local:8080</code>
-        <span style="margin-left:8px;opacity:0.6">
-          {% if net_iface == 'eth0' %}
-            🔌 {{ local_ip }}
-          {% elif net_iface == 'wlan0' %}
-            📶 {{ local_ip }}
-          {% else %}
-            {{ local_ip }}
-          {% endif %}
-        </span>
-      </div>
+
       <div class="footer-btns">
         <!-- Row 1: navigation -->
         <div class="footer-row">

@@ -95,6 +95,17 @@
       font-size: 10px; color: var(--muted); margin-top: 4px;
       text-transform: uppercase; letter-spacing: 0.2em;
     }
+    .addr-chip {
+      margin-left: auto; text-align: right; flex-shrink: 0;
+      display: flex; flex-direction: column; gap: 3px; align-items: flex-end;
+    }
+    .addr-chip .addr-main {
+      font-family: var(--font-mono); font-size: 12px; color: var(--accent);
+      background: var(--surface); border: 1px solid var(--border2);
+      padding: 3px 8px; border-radius: 6px;
+    }
+    .addr-chip .addr-sub { font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+
 
     /* ── Card ── */
     .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
@@ -453,6 +464,10 @@
       <h1>Downstage <span class="product">View</span></h1>
       <p>Network Display Node</p>
     </div>
+    <div class="addr-chip">
+      <span class="addr-main">{{ hostname }}.local:8080</span>
+      <span class="addr-sub">📶 {{ local_ip }}</span>
+    </div>
   </div>
 
   <div class="card">
@@ -714,7 +729,7 @@
     </div>
 
     <div class="card-footer">
-      <div class="footer-info">Config UI: <code>http://{{ local_ip }}:8080</code>
+      <div class="footer-info">
         <span class="os-version" id="os-version-label"></span>
         <div class="oss-credit">Built on <a href="https://www.getontime.no" target="_blank" rel="noopener">Ontime</a>, free open-source software (GPL v3) · <a href="https://github.com/cpvalente/ontime" target="_blank" rel="noopener">source</a></div>
       </div>
