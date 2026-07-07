@@ -410,18 +410,29 @@ function draw() {
   }
   function circles() {
     x.strokeStyle = "#E8ECEF"; x.lineWidth = 2;
-    const r = H * 0.11;
-    [[r*1.1, r*1.1], [W-r*1.1, r*1.1], [r*1.1, H-r*1.1], [W-r*1.1, H-r*1.1]].forEach(([cx, cy]) => {
-      x.beginPath(); x.arc(cx, cy, r, 0, 7); x.stroke();
+    const r = H * 0.12;
+    // corner circles tangent to both screen edges
+    [[r, r], [W-r, r], [r, H-r], [W-r, H-r]].forEach(([cx, cy]) => {
+      x.beginPath(); x.arc(cx, cy, r-1, 0, 7); x.stroke();
       x.fillStyle = "#fff"; x.beginPath(); x.arc(cx, cy, r*0.3, 0, 7); x.fill();
     });
-    x.beginPath(); x.arc(W/2, H/2, H*0.46, 0, 7); x.stroke();
+    // center circle touches top and bottom edges
+    x.beginPath(); x.arc(W/2, H/2, H/2 - 1, 0, 7); x.stroke();
   }
   function label(txt, y) {
-    x.font = "bold " + mono(H*0.022); x.textAlign = "center";
-    x.fillStyle = "#000"; x.fillRect(W/2 - W*0.13, y - H*0.025, W*0.26, H*0.045);
-    x.strokeStyle = "#E8ECEF"; x.strokeRect(W/2 - W*0.13, y - H*0.025, W*0.26, H*0.045);
-    x.fillStyle = "#E8ECEF"; x.fillText(txt, W/2, y + H*0.008);
+    x.font = "bold " + mono(H*0.022);
+    x.textAlign = "center"; x.textBaseline = "middle";
+    const tw = x.measureText(txt).width, bw = tw + H*0.06, bh = H*0.055;
+    x.fillStyle = "#000"; x.fillRect(W/2 - bw/2, y - bh/2, bw, bh);
+    x.strokeStyle = "#E8ECEF"; x.lineWidth = 2; x.strokeRect(W/2 - bw/2, y - bh/2, bw, bh);
+    x.fillStyle = "#E8ECEF"; x.fillText(txt, W/2, y);
+    x.textBaseline = "alphabetic";
+  }
+  function aspect() {
+    const r = W / H;
+    const known = [[16/9, "16:9"], [16/10, "16:10"], [4/3, "4:3"], [21/9, "21:9"], [1, "1:1"], [9/16, "9:16"]];
+    for (const [v, n] of known) if (Math.abs(r - v) < 0.02) return n;
+    return r.toFixed(2) + ":1";
   }
 
   if (name === "bars") {                          // SMPTE-style 75% bars
@@ -468,6 +479,8 @@ function draw() {
   }
   else {                                          // "card" — the full plate
     grid("#3a3a3a"); circles();
+    x.strokeStyle = "#fff"; x.lineWidth = 4;
+    x.strokeRect(2, 2, W-4, H-4);                 // outer frame — edge check
     const bx = W*0.125, bw2 = W*0.75;
     const hues = ["#f00","#f80","#ff0","#8f0","#0f0","#0f8","#0ff","#08f","#00f","#80f","#f0f","#f08"];
     hues.forEach((c, i) => { x.fillStyle = c; x.fillRect(bx + i*bw2/12, H*0.2, bw2/12 - 4, H*0.11); });
@@ -486,7 +499,7 @@ function draw() {
     x.fillStyle = "#2FD97B";                      // downstage edge
     x.fillRect(bx, H*0.73, bw2*0.42, H*0.012);
     x.fillRect(bx + bw2*0.46, H*0.73, bw2*0.12, H*0.012);
-    label("DOWNSTAGE  ·  " + W + " x " + H + "  ·  " + (W/H).toFixed(2) + ":1", H*0.83);
+    label("DOWNSTAGE  ·  " + W + " x " + H + "  ·  " + aspect(), H*0.83);
   }
 }
 draw(); addEventListener("resize", draw);
