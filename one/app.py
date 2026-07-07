@@ -2428,6 +2428,10 @@ def blackout_clear():
         try:
             subprocess.run(["xdotool", "windowmap", wid],
                            env=env, timeout=3, check=True)
+            # unmap withdrew the window, so openbox forgot its fullscreen
+            # state — without this it comes back decorated (title bar)
+            subprocess.run(["wmctrl", "-i", "-r", wid, "-b", "add,fullscreen"],
+                           env=env, timeout=3, check=True)
         except Exception as e:
             restored = False
             print(f"[blackout] remap {wid}: {e}")
