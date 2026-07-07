@@ -29,7 +29,8 @@ shrinks/restores fast; PiShrink makes it auto-expand onto larger cards.
 
 Golden image package requirements beyond stock: `xdotool`, `x11-utils` (One: window management + display refresh), `python3-websocket`
 (the View's fast source-switching drives chromium via CDP), `util-linux-extra`
-(hwclock, One only).
+(hwclock, One only), `iw` (both: hotspot client detection for the
+WiFi-rejoin fallback).
 
 The provisioning service (`downstage-provision.service` +
 `firstboot-provision.py`) must be installed in the image beforehand:
