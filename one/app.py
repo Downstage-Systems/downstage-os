@@ -494,7 +494,7 @@ def _is_ontime_source(source):
     # params) — it must not appear in this exclusion list or the watchdog
     # will relaunch a dead page instead of the holding screen.
     return source not in ("config", "companion", "off",
-                          "blackout", "holding", "external", None, "")
+                          "blackout", "holding", "welcome", "external", None, "")
 
 
 def _ontime_runtime(ip, timeout=2):
@@ -592,6 +592,13 @@ def _open_window(source, display, hdmi_index):
             "http://localhost:8080/blackout-page",
         ], env=_chromium_env())
 
+    if source == "welcome":
+        return subprocess.Popen([
+            "chromium", *_COMMON_FLAGS,
+            profile, pos, size, "--kiosk",
+            "http://localhost:8080/welcome",
+        ], env=_chromium_env())
+
     if source == "holding":
         return subprocess.Popen([
             "chromium", *_COMMON_FLAGS,
@@ -633,8 +640,8 @@ def _open_window(source, display, hdmi_index):
 
     if not ip and source != "custom":
         # OnTime source but no server configured (fresh unit) — a browser
-        # error page is a terrible first impression; hold instead
-        url = "http://localhost:8080/holding"
+        # error page is a terrible first impression; show the welcome screen
+        url = "http://localhost:8080/welcome"
     elif source == "cleantimer":
         url = (f"http://{ip}:4001/timer/"
                f"?hideClock=true&hideCards=true&hideProgress=true"
@@ -692,14 +699,20 @@ def launch_all_windows():
     d1 = displays[0]
     d2 = displays[1] if len(displays) > 1 else None
 
+    # Out-of-box: no server configured and not running one — show the
+    # welcome screen (mark + live address) instead of config UI on a TV
+    unconfigured = config.get("mode", "remote") == "remote" and not config.get("ip")
+    s1 = "welcome" if unconfigured else config.get("hdmi1_source", "config")
+    s2 = "welcome" if unconfigured else config.get("hdmi2_source", "/timer")
+
     with _wlock:
         _kill(_win[0])
         _kill(_win[1])
         _kill_orphan_windows()
 
-        _win[0] = _open_window(config.get("hdmi1_source", "config"), d1, 1)
+        _win[0] = _open_window(s1, d1, 1)
         if d2:
-            _win[1] = _open_window(config.get("hdmi2_source", "/timer"), d2, 2)
+            _win[1] = _open_window(s2, d2, 2)
         else:
             _win[1] = None
 
@@ -2330,6 +2343,62 @@ def identify_page(label):
     ), 200, {"Content-Type": "text/html"}
 
 
+@app.route("/welcome")
+def welcome_page():
+    """Boot / out-of-box screen for the HDMI outputs: the mark, the unit's
+    live address, and hotspot credentials when broadcasting. Polls status so
+    the address updates as networks come and go."""
+    config = load_config()
+    return f"""<!DOCTYPE html><html><head><style>
+@font-face {{ font-family:'Rajdhani'; font-weight:700; src:url('/static/fonts/rajdhani-700.woff2') format('woff2'); }}
+@font-face {{ font-family:'STMono'; src:url('/static/fonts/share-tech-mono-400.woff2') format('woff2'); }}
+* {{ margin:0; padding:0; box-sizing:border-box; }}
+body {{ background:#0B0D10; color:#E8ECEF; height:100vh; display:flex; flex-direction:column;
+       align-items:center; justify-content:center; gap:3.5vh; font-family:'Rajdhani',sans-serif;
+       text-align:center; cursor:none; }}
+.mark {{ width:18vh; height:18vh; }}
+h1 {{ font-size:7vh; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; }}
+h1 span {{ color:#2FD97B; }}
+.addr {{ font-family:'STMono',monospace; font-size:4.2vh; color:#2FD97B; }}
+.sub  {{ font-family:'STMono',monospace; font-size:2.2vh; color:#9AA4AD; }}
+#hs {{ display:none; border:1px solid #F5A52440; border-radius:1.5vh; padding:2vh 3.5vh; }}
+#hs .t {{ font-family:'STMono',monospace; font-size:2vh; color:#F5A524; letter-spacing:0.2em;
+          text-transform:uppercase; margin-bottom:1vh; }}
+#hs .v {{ font-family:'STMono',monospace; font-size:2.6vh; color:#E8ECEF; }}
+.ser {{ position:fixed; bottom:3vh; font-family:'STMono',monospace; font-size:1.6vh; color:#3a444d;
+        letter-spacing:0.2em; }}
+</style></head><body>
+<svg class="mark" viewBox="0 0 96 96"><rect x="6" y="10" width="84" height="66" rx="10" fill="none" stroke="#e8ecef" stroke-width="7"/><rect x="20" y="54" width="40" height="9" rx="4.5" fill="#2fd97b"/><rect x="64" y="54" width="12" height="9" rx="4.5" fill="#e8ecef" opacity="0.28"/><rect x="20" y="83" width="26" height="7" rx="3.5" fill="#2fd97b"/><rect x="50" y="83" width="26" height="7" rx="3.5" fill="#2fd97b"/></svg>
+<h1>Downstage <span>One</span></h1>
+<div>
+  <div class="addr" id="addr">{socket.gethostname()}.local:8080</div>
+  <div class="sub" id="ip"></div>
+</div>
+<div id="hs">
+  <div class="t">No network — join this WiFi</div>
+  <div class="v" id="hs-ssid"></div>
+  <div class="v" style="color:#9AA4AD" id="hs-pass"></div>
+  <div class="v" style="margin-top:0.6vh">10.42.0.1:8080</div>
+</div>
+<div class="ser">{config.get("serial", "")} · DOWNSTAGE.SYSTEMS</div>
+<script>
+async function tick() {{
+  try {{
+    const d = await (await fetch('/status')).json();
+    document.getElementById('ip').textContent = d.local_ip !== 'unknown' ? 'or ' + d.local_ip + ':8080' : '';
+    const hs = document.getElementById('hs');
+    if (d.hotspot_active) {{
+      const h = await (await fetch('/hotspot/status')).json();
+      document.getElementById('hs-ssid').textContent = h.ssid;
+      document.getElementById('hs-pass').textContent = 'password: ' + h.pass;
+      hs.style.display = 'block';
+    }} else hs.style.display = 'none';
+  }} catch {{}}
+}}
+tick(); setInterval(tick, 5000);
+</script></body></html>""", 200, {"Content-Type": "text/html"}
+
+
 @app.route("/holding")
 def holding_page():
     return (
@@ -2450,6 +2519,17 @@ def boot():
         time.sleep(4)
 
     _activate_all_connected_outputs()   # ensure both HDMI ports are active before opening windows
+
+    # Boot splash: the welcome screen (mark + address) while services settle,
+    # then the configured views. Unconfigured units simply stay on welcome.
+    global _win
+    displays = get_displays(fresh=True)
+    with _wlock:
+        _kill_orphan_windows()
+        _win[0] = _open_window("welcome", displays[0], 1)
+        if len(displays) > 1:
+            _win[1] = _open_window("welcome", displays[1], 2)
+    time.sleep(8)
     launch_all_windows()
     threading.Thread(target=_check_updates_background, daemon=True).start()
 
