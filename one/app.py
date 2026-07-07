@@ -1909,24 +1909,81 @@ def stop_hotspot():
     return True, "stopped"
 
 
+def _saved_wifi_profiles():
+    """Names of saved infrastructure WiFi profiles (excludes the hotspot)."""
+    try:
+        out = subprocess.check_output(
+            ["nmcli", "-t", "-f", "NAME,TYPE", "connection", "show"],
+            text=True, timeout=10)
+        return [l.rsplit(":", 1)[0] for l in out.splitlines()
+                if l.endswith(":802-11-wireless")
+                and l.rsplit(":", 1)[0] != HOTSPOT_CON]
+    except Exception:
+        return []
+
+
+def _hotspot_has_clients():
+    try:
+        out = subprocess.check_output(["iw", "dev", "wlan0", "station", "dump"],
+                                      text=True, timeout=5)
+        return "Station" in out
+    except Exception:
+        return False
+
+
+def _try_saved_wifi():
+    """Ask NM to bring up each saved WiFi profile; True on first success."""
+    for name in _saved_wifi_profiles():
+        try:
+            r = subprocess.run(["sudo", "nmcli", "connection", "up", name],
+                               capture_output=True, text=True, timeout=75)
+            if r.returncode == 0:
+                print(f"[hotspot] rejoined WiFi: {name}")
+                return True
+        except Exception:
+            pass
+    return False
+
+
 def _hotspot_fallback():
-    """First-boot aid: if the unit has no network at all ~90s after boot,
-    start the hotspot so the setup UI is reachable. Stops watching as soon
-    as any real network is seen."""
+    """Provisioning aid: no network after boot -> start the hotspot so the
+    setup UI is reachable. When saved WiFi credentials exist, keep nudging
+    NetworkManager at them first (the radio can miss its first association
+    after a reboot) and only give up after several tries. Once the hotspot
+    is up it owns the radio, so NM can never rejoin WiFi on its own -- while
+    nobody is connected to the hotspot, quietly retry the saved WiFi every
+    10 minutes and retire the hotspot if it succeeds."""
     time.sleep(90)
-    while True:
-        config = load_config()
-        if not config.get("hotspot_auto", True):
-            return
-        if hotspot_is_active():
-            return
-        net = get_network_info()
-        if net["ip"] != "unknown":
-            return   # network exists — provisioning aid no longer needed
-        print("[hotspot] no network found — starting fallback hotspot")
-        ok, msg = start_hotspot()
-        print(f"[hotspot] fallback start: ok={ok} ({msg})")
+    config = load_config()
+    if not config.get("hotspot_auto", True) or hotspot_is_active():
         return
+    if get_network_info()["ip"] != "unknown":
+        return
+    for attempt in range(3):
+        if not _saved_wifi_profiles():
+            break
+        print(f"[hotspot] no network -- retrying saved WiFi ({attempt + 1}/3)")
+        if _try_saved_wifi():
+            return
+        time.sleep(20)
+        if get_network_info()["ip"] != "unknown":
+            return
+    print("[hotspot] no network found -- starting fallback hotspot")
+    ok, msg = start_hotspot()
+    print(f"[hotspot] fallback start: ok={ok} ({msg})")
+    while ok and hotspot_is_active():
+        time.sleep(600)
+        if not hotspot_is_active():
+            return
+        if not _saved_wifi_profiles() or _hotspot_has_clients():
+            continue
+        print("[hotspot] idle -- retrying saved WiFi")
+        stop_hotspot()
+        time.sleep(8)
+        if _try_saved_wifi():
+            return
+        ok, msg = start_hotspot()
+        print(f"[hotspot] WiFi still absent -- hotspot back up: ok={ok}")
 
 
 @app.route("/hotspot/status")
