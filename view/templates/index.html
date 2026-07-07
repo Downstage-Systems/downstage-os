@@ -1372,9 +1372,10 @@
     try {
       const d = await (await fetch('/network/info')).json();
       netMode = d.method === 'manual' ? 'manual' : 'auto';
+      const ifaceName = { eth0: 'Ethernet', wlan0: 'Wi-Fi' }[d.iface] || d.iface || '—';
       document.getElementById('net-current').innerHTML =
         `Current: <span style="font-family:var(--font-mono);color:var(--text)">${d.current_ip}</span> ` +
-        `<span style="color:var(--muted)">on ${d.iface || '—'} · ${netMode === 'manual' ? 'static' : 'DHCP'}</span>`;
+        `<span style="color:var(--muted)">${ifaceName} · ${netMode === 'manual' ? 'Static' : 'DHCP'}</span>`;
       if (d.method === 'manual' && d.address) {
         const [ip, prefix] = d.address.split('/');
         document.getElementById('net-ip').value = ip || '';
