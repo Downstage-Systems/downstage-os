@@ -631,7 +631,11 @@ def _open_window(source, display, hdmi_index):
             url,
         ], env=_chromium_env())
 
-    if source == "cleantimer":
+    if not ip and source != "custom":
+        # OnTime source but no server configured (fresh unit) — a browser
+        # error page is a terrible first impression; hold instead
+        url = "http://localhost:8080/holding"
+    elif source == "cleantimer":
         url = (f"http://{ip}:4001/timer/"
                f"?hideClock=true&hideCards=true&hideProgress=true"
                f"&hideLogo=true&keyColour=000000&timerColour=ffffff")

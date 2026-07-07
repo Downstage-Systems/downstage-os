@@ -217,6 +217,8 @@ def _source_url(source):
     ip     = config.get("ip", "")
     if source == "external":
         return config.get("external_url", "").strip() or "http://localhost:8080"
+    if not ip:
+        return "http://localhost:8080/holding"
     if source == "cleantimer":
         return (f"http://{ip}:4001/timer/"
                 f"?hideClock=true&hideCards=true&hideProgress=true"
