@@ -1144,14 +1144,7 @@
     <div class="card-footer">
 
       <div class="footer-btns">
-        <!-- Row 1: navigation -->
-        <div class="footer-row">
-          <button class="footer-btn" id="editor-btn" onclick="openEditor()" title="Open OnTime Editor in a new tab">
-            <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-            OnTime Editor
-          </button>
-        </div>
-        <!-- Row 2: System actions -->
+        <!-- System actions -->
         <div class="footer-row">
           <span class="footer-label">System</span>
           <button class="footer-btn" onclick="openLogs()" title="View the setup log">
@@ -1424,7 +1417,9 @@
       badge.className = 'status-badge running';
       badge.textContent = 'Running';
       actions.innerHTML = `<button class="btn-sm danger" onclick="toggleOntime('stop')">
-        <svg viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>Stop Server</button>`;
+        <svg viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>Stop Server</button>
+        <button class="btn-sm" onclick="openEditor()" title="Open OnTime Editor in a new tab">
+        <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>OnTime Editor</button>`;
     }
   }
 
