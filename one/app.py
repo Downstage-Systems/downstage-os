@@ -84,6 +84,11 @@ def load_config():
     data.setdefault("ip_history",   [])
     data.setdefault("hdmi1_res",    "1920x1080")
     data.setdefault("hdmi2_res",    "1920x1080")
+    # 1080p is the ceiling — a timer never needs 4K, and the Pi shouldn't
+    # spend 4x the GPU on it (also clamps configs saved before the cap)
+    for k in ("hdmi1_res", "hdmi2_res"):
+        if data[k] not in ("1920x1080", "1280x720"):
+            data[k] = "1920x1080"
     data.setdefault("hdmi1_rotate", "normal")
     data.setdefault("hdmi2_rotate", "normal")
     data.setdefault("presets",           [])
@@ -2765,7 +2770,7 @@ def boot():
         start_local_ontime()
         time.sleep(4)
 
-    _activate_all_connected_outputs()   # ensure both HDMI ports are active before opening windows
+    _apply_display_settings()   # activate both HDMI ports and enforce configured (max 1080p) modes
 
     # Boot splash: the welcome screen (mark + address) while services settle,
     # then the configured views. Unconfigured units simply stay on welcome.
