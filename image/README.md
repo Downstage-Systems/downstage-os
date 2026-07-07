@@ -44,6 +44,13 @@ Golden image package requirements beyond stock: `xdotool`, `x11-utils` (One: win
 (hwclock, One only), `iw` (both: hotspot client detection for the
 WiFi-rejoin fallback), `wmctrl` (One: reassert fullscreen after blackout).
 
+Hardware watchdog (both products, already on the bench units; rides into
+the image): `/etc/systemd/system.conf.d/50-downstage-watchdog.conf` sets
+`RuntimeWatchdogSec=15` — the SoC watchdog reboots a hard-frozen unit in
+15 s. The 50- prefix must outrank Pi OS's own `40-rpi-enable-watchdog.conf`
+(1 min). Kernel log confirms with 'Watchdog running with a hardware
+timeout of 15s'.
+
 The provisioning service (`downstage-provision.service` +
 `firstboot-provision.py`) must be installed in the image beforehand:
 
