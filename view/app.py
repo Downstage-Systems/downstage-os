@@ -1495,13 +1495,46 @@ def get_timezone():
     return jsonify({"timezone": tz})
 
 
+# Full IANA list is ~600 entries of noise for a show device — offer the
+# zones a touring/AV crew actually lands in, west to east.
+_CURATED_TIMEZONES = [
+    "UTC",
+    # Americas
+    "Pacific/Honolulu", "America/Anchorage", "America/Los_Angeles",
+    "America/Vancouver", "America/Phoenix", "America/Denver",
+    "America/Edmonton", "America/Chicago", "America/Winnipeg",
+    "America/Mexico_City", "America/New_York", "America/Toronto",
+    "America/Bogota", "America/Lima", "America/Halifax",
+    "America/Puerto_Rico", "America/Santiago", "America/Sao_Paulo",
+    "America/Argentina/Buenos_Aires",
+    # Europe / Africa
+    "Europe/London", "Europe/Dublin", "Europe/Lisbon", "Europe/Madrid",
+    "Europe/Paris", "Europe/Amsterdam", "Europe/Berlin", "Europe/Rome",
+    "Europe/Stockholm", "Europe/Warsaw", "Europe/Athens", "Europe/Istanbul",
+    "Europe/Moscow", "Africa/Cairo", "Africa/Lagos", "Africa/Nairobi",
+    "Africa/Johannesburg",
+    # Asia / Pacific
+    "Asia/Jerusalem", "Asia/Dubai", "Asia/Karachi", "Asia/Kolkata",
+    "Asia/Dhaka", "Asia/Bangkok", "Asia/Singapore", "Asia/Hong_Kong",
+    "Asia/Shanghai", "Asia/Taipei", "Asia/Manila", "Asia/Tokyo",
+    "Asia/Seoul", "Australia/Perth", "Australia/Adelaide",
+    "Australia/Brisbane", "Australia/Sydney", "Pacific/Auckland",
+    "Pacific/Fiji",
+]
+
+
 @app.route("/system/timezones", methods=["GET"])
 def list_timezones():
+    zones = [z for z in _CURATED_TIMEZONES
+             if Path(f"/usr/share/zoneinfo/{z}").exists()]
     try:
-        out   = subprocess.check_output(["timedatectl", "list-timezones"], text=True, timeout=10)
-        zones = [z.strip() for z in out.splitlines() if z.strip()]
+        current = subprocess.check_output(
+            ["timedatectl", "show", "--property=Timezone", "--value"],
+            text=True, timeout=5).strip()
+        if current and current not in zones:
+            zones.insert(1, current)   # keep an off-list zone selectable
     except Exception:
-        zones = []
+        pass
     return jsonify({"timezones": zones})
 
 
