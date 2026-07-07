@@ -42,6 +42,7 @@ _ontime_proc = None
 _ontime_lock = threading.Lock()
 
 _blackout_active   = False
+_blackout_hidden   = []      # window ids unmapped by /blackout
 _watchdog_override = False
 _watchdog_lock     = threading.Lock()
 
@@ -2336,20 +2337,27 @@ def wifi_forget():
 
 @app.route("/blackout", methods=["POST"])
 def blackout():
-    global _blackout_active, _win
+    """Hide the kiosk windows instead of replacing them. The desktop behind
+    them is a pure black void, so unmapping is an instant blackout — and the
+    hidden windows keep their state for an instant restore."""
+    global _blackout_active
     _blackout_active = True
-    displays = get_displays(fresh=True)
-    d1 = displays[0]
-    d2 = displays[1] if len(displays) > 1 else None
-    with _wlock:
-        _kill(_win[0])
-        _kill(_win[1])
-        _kill_orphan_windows()
-        _win[0] = _open_window("blackout", d1, 1)
-        if d2:
-            _win[1] = _open_window("blackout", d2, 2)
-        else:
-            _win[1] = None
+    env = {**os.environ, "DISPLAY": ":0"}
+    _blackout_hidden.clear()
+    try:
+        wids = subprocess.check_output(
+            ["xdotool", "search", "--onlyvisible", "--class", "chromium"],
+            env=env, text=True, timeout=5,
+        ).split()
+    except Exception:
+        wids = []
+    for wid in wids:
+        try:
+            subprocess.run(["xdotool", "windowunmap", wid],
+                           env=env, timeout=3, check=True)
+            _blackout_hidden.append(wid)
+        except Exception as e:
+            print(f"[blackout] unmap {wid}: {e}")
     return jsonify({"ok": True, "blackout": True})
 
 
@@ -2357,7 +2365,18 @@ def blackout():
 def blackout_clear():
     global _blackout_active
     _blackout_active = False
-    threading.Thread(target=launch_all_windows, daemon=True).start()
+    env = {**os.environ, "DISPLAY": ":0"}
+    restored = bool(_blackout_hidden)
+    for wid in _blackout_hidden:
+        try:
+            subprocess.run(["xdotool", "windowmap", wid],
+                           env=env, timeout=3, check=True)
+        except Exception as e:
+            restored = False
+            print(f"[blackout] remap {wid}: {e}")
+    _blackout_hidden.clear()
+    if not restored:
+        threading.Thread(target=launch_all_windows, daemon=True).start()
     return jsonify({"ok": True, "blackout": False})
 
 
