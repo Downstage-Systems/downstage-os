@@ -352,7 +352,7 @@ def _apply_display_settings():
     outputs = _get_output_names()
     env     = {**os.environ, "DISPLAY": ":0"}
     for idx, name in enumerate(outputs):
-        n   = idx + 1
+        n   = min(_port_num(name, idx + 1), 2)
         res = config.get(f"hdmi{n}_res",    "1920x1080")
         rot = config.get(f"hdmi{n}_rotate", "normal")
         # re-anchor positions: a mode change alters widths, and stale offsets
@@ -521,11 +521,19 @@ def _ontime_runtime(ip, timeout=2):
 
 # ── Display detection ─────────────────────────────────────────────────────────
 
+def _port_num(output_name, fallback=1):
+    """Physical HDMI port number from an xrandr output name (HDMI-2,
+    HDMI-A-2 → 2). The port is the unit's identity for an output — a lone
+    display on port 2 is HDMI 2, not "the first display we found"."""
+    m = re.search(r"HDMI(?:-A)?-(\d+)", output_name or "")
+    return int(m.group(1)) if m else fallback
+
+
 @_ttl_cache(10)
 def get_displays():
     """
-    Return connected displays sorted left-to-right by x offset.
-    Each entry: {"w", "h", "x", "y"}
+    Return connected displays sorted by physical HDMI port.
+    Each entry: {"name", "port", "w", "h", "x", "y"}
     Cached for 10s (status polling); pass fresh=True where geometry must be
     current, e.g. right before opening windows.
     """
@@ -537,17 +545,19 @@ def get_displays():
         )
         displays = []
         for line in out.splitlines()[1:]:
-            m = re.search(r"(\d+)/\d+x(\d+)/\d+\+(\d+)\+(\d+)", line)
+            m = re.search(r"(\d+)/\d+x(\d+)/\d+\+(\d+)\+(\d+)\s+(\S+)\s*$", line)
             if m:
+                name = m.group(5)
                 displays.append({
+                    "name": name, "port": _port_num(name, len(displays) + 1),
                     "w": int(m.group(1)), "h": int(m.group(2)),
                     "x": int(m.group(3)), "y": int(m.group(4)),
                 })
         if displays:
-            return sorted(displays, key=lambda d: d["x"])
+            return sorted(displays, key=lambda d: d["port"])
     except Exception:
         pass
-    return [{"w": 1920, "h": 1080, "x": 0, "y": 0}]
+    return [{"name": "HDMI-1", "port": 1, "w": 1920, "h": 1080, "x": 0, "y": 0}]
 
 
 # ── Browser launcher ──────────────────────────────────────────────────────────
@@ -731,28 +741,24 @@ def launch_all_windows():
     global _win
     config   = load_config()
     displays = get_displays(fresh=True)
-    d1 = displays[0]
-    d2 = displays[1] if len(displays) > 1 else None
 
     # Out-of-box: sources that need the (unconfigured) OnTime server show the
     # welcome screen — but deliberately chosen non-OnTime sources (test
     # patterns, external, off) are honored as-is
     unconfigured = config.get("mode", "remote") == "remote" and not config.get("ip")
-    h1 = config.get("hdmi1_source", "config")
-    h2 = config.get("hdmi2_source", "/timer")
-    s1 = "welcome" if (unconfigured and (_is_ontime_source(h1) or h1 == "config")) else h1
-    s2 = "welcome" if (unconfigured and (_is_ontime_source(h2) or h2 == "config")) else h2
 
     with _wlock:
         _kill(_win[0])
         _kill(_win[1])
         _kill_orphan_windows()
 
-        _win[0] = _open_window(s1, d1, 1)
-        if d2:
-            _win[1] = _open_window(s2, d2, 2)
-        else:
-            _win[1] = None
+        _win[0] = _win[1] = None
+        for d in displays:
+            n = min(d["port"], 2)
+            default = "config" if n == 1 else "/timer"
+            h = config.get(f"hdmi{n}_source", default)
+            s = "welcome" if (unconfigured and (_is_ontime_source(h) or h == "config")) else h
+            _win[n - 1] = _open_window(s, d, n)
 
 
 def close_all_windows():
@@ -797,19 +803,15 @@ def _launch_watchdog_windows():
     try:
         config   = load_config()
         displays = get_displays(fresh=True)
-        d1 = displays[0]
-        d2 = displays[1] if len(displays) > 1 else None
-        h1 = config.get("hdmi1_source", "config")
-        h2 = config.get("hdmi2_source", "/timer")
         with _wlock:
             _kill(_win[0])
             _kill(_win[1])
             _kill_orphan_windows()
-            _win[0] = _open_window("holding" if _is_ontime_source(h1) else h1, d1, 1)
-            if d2:
-                _win[1] = _open_window("holding" if _is_ontime_source(h2) else h2, d2, 2)
-            else:
-                _win[1] = None
+            _win[0] = _win[1] = None
+            for d in displays:
+                n = min(d["port"], 2)
+                h = config.get(f"hdmi{n}_source", "config" if n == 1 else "/timer")
+                _win[n - 1] = _open_window("holding" if _is_ontime_source(h) else h, d, n)
         print("[watchdog] holding windows launched")
     except Exception as e:
         print(f"[watchdog] FAILED to launch holding windows: {e}")
@@ -1380,10 +1382,9 @@ def _mjpeg_stream(x, y, w, h):
 
 @app.route("/stream/hdmi<int:n>")
 def stream_hdmi(n):
-    displays = get_displays()
-    if n < 1 or n > len(displays):
+    d = next((x for x in get_displays() if x["port"] == n), None)
+    if not d:
         return "Display not available", 404
-    d = displays[n - 1]
     return Response(
         _mjpeg_stream(d["x"], d["y"], d["w"], d["h"]),
         mimetype="multipart/x-mixed-replace; boundary=frame",
@@ -1562,9 +1563,10 @@ def displays_identify():
     def run():
         with _wlock:
             _kill(_win[0]); _kill(_win[1]); _kill_orphan_windows()
-            _win[0] = _open_identify_window(displays[0], "1", 1)
-            if len(displays) > 1:
-                _win[1] = _open_identify_window(displays[1], "2", 2)
+            _win[0] = _win[1] = None
+            for d in displays:
+                n = min(d["port"], 2)
+                _win[n - 1] = _open_identify_window(d, str(d["port"]), n)
         time.sleep(5)
         launch_all_windows()
     threading.Thread(target=run, daemon=True).start()
