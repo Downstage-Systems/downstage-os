@@ -398,6 +398,7 @@
     .toggle-label { font-size: 12px; color: var(--muted); flex: 1; min-width: 0; line-height: 1.4; }
     .toggle {
       width: 36px; height: 20px; border-radius: 10px; border: none; cursor: pointer;
+      padding: 0;   /* the global button padding (12px 20px) floors the box at 40x24 otherwise */
       background: var(--border2); position: relative; transition: background 0.2s; flex-shrink: 0;
       padding: 0;
     }
