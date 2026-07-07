@@ -787,6 +787,16 @@
           <button class="btn-sm" onclick="identifyDisplays()" title="Flash a big 1 and 2 on the outputs">Identify</button>
         </div>
 
+        <!-- Quick Presets — one-tap recall of a full output setup -->
+        <div class="source-group-label">Quick Presets</div>
+        <div class="preset-strip" id="preset-strip">
+          <span class="preset-empty">No presets saved yet</span>
+        </div>
+        <button class="btn-sm" onclick="savePreset()" style="margin-bottom:14px">
+          <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+          Save Current as Preset
+        </button>
+
         <!-- HDMI tabs -->
         <div class="hdmi-tabs">
           <button class="hdmi-tab active" id="tab-hdmi1" onclick="selectHdmiTab(1)">
@@ -953,18 +963,6 @@
 
         </div>
 
-      </div>
-
-      <!-- Quick Presets -->
-      <div class="field">
-        <div class="section-label">Quick Presets</div>
-        <div class="preset-strip" id="preset-strip">
-          <span class="preset-empty">No presets saved yet</span>
-        </div>
-        <button class="btn-sm" onclick="savePreset()">
-          <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-          Save Current as Preset
-        </button>
       </div>
 
       <!-- Display settings: resolution + rotation -->
