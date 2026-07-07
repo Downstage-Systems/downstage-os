@@ -900,10 +900,12 @@ def _hide_ontime_windows():
     """OnTime 4.7's --headless still opens its Electron editor window — a
     white window that lurks behind the kiosk and photobombs source switches.
     Unmap (hide) it; closing it would quit the app. Retries while the app
-    finishes launching."""
+    finishes launching. Match by WM_CLASS (ontime/ontime-electron), never by
+    name — kiosk chromium windows showing OnTime views are titled
+    "ontime - …" too, and a name match unmaps the kiosk itself."""
     script = (
         'AUTH=$(pgrep -af Xorg | grep -oE "\\-auth [^ ]+" | awk \'{print $2}\' | head -1); '
-        'ok=1; for wid in $(env DISPLAY=:0 XAUTHORITY=$AUTH xdotool search --name "^ontime" 2>/dev/null); do '
+        'ok=1; for wid in $(env DISPLAY=:0 XAUTHORITY=$AUTH xdotool search --class "^[Oo]ntime" 2>/dev/null); do '
         'env DISPLAY=:0 XAUTHORITY=$AUTH xdotool windowunmap $wid && ok=0; done; exit $ok'
     )
     deadline = time.time() + 90
