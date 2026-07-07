@@ -16,6 +16,17 @@ concern applies mainly to the View.
 View notes: golden card is small (8GB class) — keep the image lean so it
 shrinks/restores fast; PiShrink makes it auto-expand onto larger cards.
 
+View boot config (already on the bench unit; verify it survives capture):
+- `/boot/firmware/config.txt`: `dtoverlay=vc4-kms-v3d,cma-128` and
+  `gpu_mem=16` — NOT fkms/gpu_mem=128, which starved the 512MB board into
+  swap thrash (~120MB reclaimed). Legacy `hdmi_group/mode` lines are
+  commented; they do nothing under full KMS.
+- `/boot/firmware/cmdline.txt`: ends with `video=HDMI-A-1:1920x1080@60D`
+  (forced digital output for fbcon).
+- `~/.xinitrc`: injects 1280x720 + 1920x1080 modelines via xrandr before
+  picking 720p — EDID-less display chains (adapters, walls, TVs in standby
+  at boot) advertise no modes under KMS and would land on 1024x768.
+
 ## One-time: capture the golden image (per product)
 
 1. Get a bench unit (One or View) to the software state you want to ship.
