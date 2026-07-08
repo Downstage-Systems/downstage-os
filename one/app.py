@@ -586,6 +586,7 @@ _COMMON_FLAGS = [
     "--disable-features=TranslateUI",
     "--check-for-update-interval=31536000",
     "--password-store=basic",   # skip GNOME keyring prompt
+    "--disk-cache-size=52428800",   # cap the browser cache — appliances run for months between reboots
 ]
 
 
