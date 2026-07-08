@@ -1149,6 +1149,8 @@
             <div style="display:flex; gap:8px; margin-left:auto">
               <button class="btn-sm success" id="os-update-btn" onclick="osUpdate()" style="display:none">Update</button>
               <button class="btn-sm" id="os-check-btn" onclick="osRecheck()" title="Check GitHub for a newer Downstage OS release">Check</button>
+              <button class="btn-sm" onclick="osInstallFile()" title="Install a downloaded release archive — for venues with no internet">Install from file</button>
+              <input type="file" id="os-file-input" accept=".tar.gz,.tgz,application/gzip" style="display:none" onchange="osUpdateFromFile(this)">
               <button class="btn-sm" onclick="window.location='/diagnostics'" title="Download a support diagnostics bundle">Diagnostics</button>
             </div>
           </div>
@@ -2511,6 +2513,24 @@
       showToast(d.ok ? `OnTime updated: ${d.message}` : `Update failed: ${d.message}`, d.ok ? 'success' : 'error');
       if (d.ok) setTimeout(loadUpdateStatus, 2000);
     } catch { showToast('Network error during update.', 'error'); }
+  }
+
+
+  function osInstallFile() { document.getElementById('os-file-input').click(); }
+  async function osUpdateFromFile(input) {
+    const f = input.files[0];
+    if (!f) return;
+    if (!confirm(`Install Downstage OS from ${f.name}?\n\nThe setup service restarts during the install (displays are not interrupted). If the new version fails to start, the previous one is restored automatically.`)) { input.value = ''; return; }
+    showToast('Uploading update…', 'info');
+    const fd = new FormData();
+    fd.append('release', f);
+    try {
+      const r = await fetch('/os/update-file', { method: 'POST', body: fd });
+      const d = await r.json();
+      showToast(d.ok ? d.message : `Install failed: ${d.message}`, d.ok ? 'info' : 'error');
+      if (d.ok) setTimeout(loadUpdateStatus, 10000);
+    } catch { showToast('Upload failed.', 'error'); }
+    input.value = '';
   }
 
   async function osRecheck() {

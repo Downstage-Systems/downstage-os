@@ -800,6 +800,8 @@
             <span class="version-badge checking" id="os-ver-badge">Checking…</span>
             <button class="btn-sm" id="os-update-btn" onclick="osUpdate()" style="display:none">Update</button>
             <button class="btn-sm" id="os-check-btn" onclick="osRecheck()">Check</button>
+            <button class="btn-sm" onclick="osInstallFile()" title="Install a downloaded release archive — for venues with no internet">Install from file</button>
+            <input type="file" id="os-file-input" accept=".tar.gz,.tgz,application/gzip" style="display:none" onchange="osUpdateFromFile(this)">
             <button class="btn-sm" onclick="window.location='/diagnostics'" title="Download a support diagnostics bundle">Diagnostics</button>
           </div>
           <div class="external-url-hint" id="os-update-note" style="display:none"></div>
@@ -1018,6 +1020,24 @@
       note.textContent = 'Last update failed and was rolled back automatically.';
       note.style.display = '';
     }
+  }
+
+
+  function osInstallFile() { document.getElementById('os-file-input').click(); }
+  async function osUpdateFromFile(input) {
+    const f = input.files[0];
+    if (!f) return;
+    if (!confirm(`Install Downstage OS from ${f.name}?\n\nThe setup service restarts during the install (displays are not interrupted). If the new version fails to start, the previous one is restored automatically.`)) { input.value = ''; return; }
+    showToast('Uploading update…', 'info');
+    const fd = new FormData();
+    fd.append('release', f);
+    try {
+      const r = await fetch('/os/update-file', { method: 'POST', body: fd });
+      const d = await r.json();
+      showToast(d.ok ? d.message : `Install failed: ${d.message}`, d.ok ? 'info' : 'error');
+      if (d.ok) setTimeout(() => fetchStatus(true), 10000);
+    } catch { showToast('Upload failed.', 'error'); }
+    input.value = '';
   }
 
   async function osRecheck() {

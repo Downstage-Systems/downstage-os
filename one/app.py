@@ -1778,6 +1778,57 @@ def os_update():
         return jsonify({"ok": False, "message": str(e)})
 
 
+@app.route("/os/update-file", methods=["POST"])
+def os_update_file():
+    """Offline update: install a release archive uploaded through the
+    browser — same staging, validation, swap, and auto-rollback as the
+    GitHub path. For venues with no internet."""
+    import tarfile, py_compile
+    f = request.files.get("release")
+    if not f:
+        return jsonify({"ok": False, "message": "No file uploaded"})
+    force = request.form.get("force") == "true"
+    try:
+        work = Path("/tmp/ds-os-update")
+        subprocess.run(["rm", "-rf", str(work)])
+        work.mkdir(parents=True)
+        tarball = work / "src.tar.gz"
+        f.save(tarball)
+        with tarfile.open(tarball) as tf:
+            tf.extractall(work, filter="data")
+        roots = [p for p in work.iterdir() if p.is_dir()]
+        src_dir = next((p / _OS_VARIANT for p in roots
+                        if (p / _OS_VARIANT / "app.py").exists()), None)
+        if not src_dir:
+            return jsonify({"ok": False,
+                            "message": f"Not a Downstage OS release — the archive has no {_OS_VARIANT}/app.py"})
+        py_compile.compile(str(src_dir / "app.py"), doraise=True)
+        if not (src_dir / "templates" / "index.html").exists():
+            return jsonify({"ok": False, "message": "Archive is missing templates/index.html"})
+        m = re.search(r'OS_VERSION = "([^"]+)"', (src_dir / "app.py").read_text())
+        ver = m.group(1) if m else None
+        if not ver:
+            return jsonify({"ok": False, "message": "Archive has no OS_VERSION"})
+        if not force and _version_tuple(ver) <= _version_tuple(OS_VERSION):
+            return jsonify({"ok": False,
+                            "message": f"Archive is v{ver} — this unit already runs v{OS_VERSION}"})
+        tag = f"v{ver}"
+        script = work / "swap.sh"
+        script.write_text(_SWAP_SCRIPT.format(
+            src=src_dir, app=_OS_APPDIR, tag=tag, restart=_OS_RESTART_CMD))
+        script.chmod(0o755)
+        subprocess.Popen(
+            ["systemd-run", "--user", "--collect", f"--unit=ds-os-update-{int(time.time())}",
+             "bash", str(script)],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+        return jsonify({"ok": True, "message": f"Installing {tag} — service will restart"})
+    except py_compile.PyCompileError as e:
+        return jsonify({"ok": False, "message": f"Archive failed validation: {e}"})
+    except Exception as e:
+        return jsonify({"ok": False, "message": str(e)})
+
+
 # ── Local OnTime routes ───────────────────────────────────────────────────────
 
 @app.route("/ontime/install", methods=["POST"])
