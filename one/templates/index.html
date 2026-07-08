@@ -1142,17 +1142,17 @@
       <div class="field">
         <div class="section-label">Downstage OS</div>
         <div class="local-panel">
-          <div class="version-row" id="os-version-row" style="display:flex">
+          <div class="version-row" id="os-version-row" style="display:flex; margin-top:0; padding-top:0; border-top:none">
             <span class="version-tag" id="os-ver-installed">—</span>
             <span class="version-tag" id="os-serial" style="color:var(--muted)"></span>
             <span class="version-badge checking" id="os-ver-badge">Checking…</span>
-            <div style="display:flex; gap:8px; margin-left:auto">
-              <button class="btn-sm success" id="os-update-btn" onclick="osUpdate()" style="display:none">Update</button>
-              <button class="btn-sm" id="os-check-btn" onclick="osRecheck()" title="Check GitHub for a newer Downstage OS release">Check</button>
-              <button class="btn-sm" onclick="osInstallFile()" title="Install a downloaded release archive — for venues with no internet">Install from file</button>
-              <input type="file" id="os-file-input" accept=".tar.gz,.tgz,application/gzip" style="display:none" onchange="osUpdateFromFile(this)">
-              <button class="btn-sm" onclick="window.location='/diagnostics'" title="Download a support diagnostics bundle">Diagnostics</button>
-            </div>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px">
+            <button class="btn-sm success" id="os-update-btn" onclick="osUpdate()" style="display:none">Update</button>
+            <button class="btn-sm" id="os-check-btn" onclick="osRecheck()" title="Check GitHub for a newer Downstage OS release">Check</button>
+            <button class="btn-sm" onclick="osInstallFile()" title="Install a downloaded release archive — for venues with no internet">Install from file</button>
+            <input type="file" id="os-file-input" accept=".tar.gz,.tgz,application/gzip" style="display:none" onchange="osUpdateFromFile(this)">
+            <button class="btn-sm" onclick="window.location='/diagnostics'" title="Download a support diagnostics bundle">Diagnostics</button>
           </div>
           <div class="external-url-hint" id="os-update-note" style="display:none"></div>
         </div>

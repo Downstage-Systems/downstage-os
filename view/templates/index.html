@@ -794,10 +794,12 @@
       <div class="field" style="margin-top:22px; margin-bottom:0">
         <div class="section-label">Downstage OS</div>
         <div class="local-panel">
-          <div class="version-row">
+          <div class="version-row" style="margin-top:0; padding-top:0; border-top:none">
             <span class="version-tag" id="os-ver-installed">—</span>
             <span class="version-tag" id="os-serial" style="color:var(--muted)"></span>
             <span class="version-badge checking" id="os-ver-badge">Checking…</span>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px">
             <button class="btn-sm" id="os-update-btn" onclick="osUpdate()" style="display:none">Update</button>
             <button class="btn-sm" id="os-check-btn" onclick="osRecheck()">Check</button>
             <button class="btn-sm" onclick="osInstallFile()" title="Install a downloaded release archive — for venues with no internet">Install from file</button>
