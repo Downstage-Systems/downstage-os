@@ -762,6 +762,13 @@ def launch_all_windows():
     # patterns, external, off) are honored as-is
     unconfigured = config.get("mode", "remote") == "remote" and not config.get("ip")
 
+    # An OnTime source with the server down must never hit chromium's error
+    # page — hold on the branded page; the watchdog restores when it answers
+    ip = "127.0.0.1" if config.get("mode") == "local" else config.get("ip", "")
+    sources = [config.get(f"hdmi{n}_source", "config" if n == 1 else "/timer") for n in (1, 2)]
+    needs = any(_is_ontime_source(s) for s in sources)
+    ontime_ok = check_ontime(ip, timeout=2) if (needs and ip) else False
+
     with _wlock:
         _kill(_win[0])
         _kill(_win[1])
@@ -773,6 +780,8 @@ def launch_all_windows():
             default = "config" if n == 1 else "/timer"
             h = config.get(f"hdmi{n}_source", default)
             s = "welcome" if (unconfigured and (_is_ontime_source(h) or h == "config")) else h
+            if _is_ontime_source(s) and not ontime_ok:
+                s = "holding"
             _win[n - 1] = _open_window(s, d, n)
 
 
@@ -874,6 +883,11 @@ def _ontime_watchdog():
                     _watchdog_override = True
                     threading.Thread(target=_launch_watchdog_windows, daemon=True).start()
                 was_connected = False
+            if not connected and mode == "local" and ontime_installed() \
+                    and not ontime_is_running():
+                # local server died — this unit owns it, so revive it
+                print("[watchdog] local OnTime is down — restarting it")
+                start_local_ontime()
             elif not was_connected and connected:
                 print("[watchdog] OnTime back online — restoring windows")
                 _watchdog_override = False
@@ -2796,14 +2810,18 @@ def holding_page():
         'body{background:#000;display:flex;flex-direction:column;align-items:center;'
         'justify-content:center;height:100vh;font-family:sans-serif;text-align:center;'
         'gap:3vh;cursor:none}'
-        'svg{width:14vh;height:14vh;opacity:0.22}'
-        'p{font-size:2.4vh;color:#2a2f35;letter-spacing:0.08em}'
+        'svg{width:15vh;height:15vh;opacity:0.5}'
+        '.brand{font-size:2.2vh;color:#3d444c;letter-spacing:0.45em;font-weight:600}'
+        'h1{font-size:3vh;color:#565e66;font-weight:500;letter-spacing:0.05em}'
+        'p{font-size:1.9vh;color:#2a2f35;letter-spacing:0.08em}'
         '</style></head><body>'
         '<svg viewBox="0 0 96 96"><rect x="6" y="10" width="84" height="66" rx="10" '
         'fill="none" stroke="#e8ecef" stroke-width="7"/>'
         '<rect x="20" y="54" width="40" height="9" rx="4.5" fill="#2fd97b"/>'
         '<rect x="20" y="83" width="56" height="7" rx="3.5" fill="#2fd97b"/></svg>'
-        '<p>Waiting for OnTime&#8230;</p>'
+        '<div class="brand">DOWNSTAGE</div>'
+        '<h1>OnTime server is off</h1>'
+        '<p>This display reconnects automatically</p>'
         '</body></html>'
     ), 200, {"Content-Type": "text/html"}
 
@@ -2909,9 +2927,16 @@ def boot():
     mode   = config.get("mode", "remote")
     ip     = "127.0.0.1" if mode == "local" else config.get("ip", "")
 
-    if mode == "local" and ontime_installed() and not ontime_is_running():
+    if mode == "local" and ontime_installed() and not check_ontime("127.0.0.1", timeout=2):
+        # decide by HTTP, not pgrep — on a service restart the old OnTime is
+        # still dying when we check, pgrep sees it, and nothing starts a new one
         start_local_ontime()
-        time.sleep(4)
+    if ip:
+        # give OnTime a real chance to answer before windows point at it —
+        # a fixed sleep raced slow starts and parked chromium on an error page
+        deadline = time.time() + 30
+        while time.time() < deadline and not check_ontime(ip, timeout=2):
+            time.sleep(2)
 
     _apply_display_settings()   # activate both HDMI ports and enforce configured (max 1080p) modes
 

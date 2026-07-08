@@ -254,6 +254,10 @@ def _source_url(source):
         return config.get("external_url", "").strip() or "http://localhost:8080"
     if not ip:
         return "http://localhost:8080/holding"
+    if _is_ontime_source(source) and not check_ontime(ip, timeout=2):
+        # server down — branded holding page instead of a browser error;
+        # the watchdog navigates back when it answers
+        return "http://localhost:8080/holding"
     if source == "cleantimer":
         return f"http://{ip}:4001/timer/?" + _cleantimer_params()
     return f"http://{ip}:4001{source}"
@@ -615,14 +619,18 @@ def holding_page():
         'body{background:#000;display:flex;flex-direction:column;align-items:center;'
         'justify-content:center;height:100vh;font-family:sans-serif;text-align:center;'
         'gap:3vh;cursor:none}'
-        'svg{width:14vh;height:14vh;opacity:0.22}'
-        'p{font-size:2.4vh;color:#2a2f35;letter-spacing:0.08em}'
+        'svg{width:15vh;height:15vh;opacity:0.5}'
+        '.brand{font-size:2.2vh;color:#3d444c;letter-spacing:0.45em;font-weight:600}'
+        'h1{font-size:3vh;color:#565e66;font-weight:500;letter-spacing:0.05em}'
+        'p{font-size:1.9vh;color:#2a2f35;letter-spacing:0.08em}'
         '</style></head><body>'
         '<svg viewBox="0 0 96 96"><rect x="6" y="10" width="84" height="66" rx="10" '
         'fill="none" stroke="#e8ecef" stroke-width="7"/>'
         '<rect x="20" y="54" width="40" height="9" rx="4.5" fill="#2fd97b"/>'
         '<rect x="20" y="83" width="56" height="7" rx="3.5" fill="#2fd97b"/></svg>'
-        '<p>Waiting for OnTime&#8230;</p>'
+        '<div class="brand">DOWNSTAGE</div>'
+        '<h1>OnTime server is off</h1>'
+        '<p>This display reconnects automatically</p>'
         '</body></html>'
     ), 200, {"Content-Type": "text/html"}
 
