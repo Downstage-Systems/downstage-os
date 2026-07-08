@@ -166,6 +166,29 @@ def _ontime_runtime(ip, timeout=2):
     return None
 
 
+def _active_link():
+    """("Ethernet"|"WiFi: <ssid>"|"Hotspot"|"Not connected") for the front
+    panel — a rack tech should see HOW the unit is on the network."""
+    try:
+        out = subprocess.check_output(["ip", "-4", "-o", "addr", "show"],
+                                      text=True, timeout=5)
+        for line in out.splitlines():
+            parts = line.split()
+            iface, addr = parts[1], parts[3].split("/")[0]
+            if iface == "lo":
+                continue
+            if addr.startswith("10.42."):
+                return "Hotspot"
+            if iface.startswith(("eth", "enx", "en")):
+                return "Ethernet"
+            if iface.startswith("wlan"):
+                ssid = _active_ssid()
+                return f"WiFi: {ssid}" if ssid else "WiFi"
+    except Exception:
+        pass
+    return "Not connected"
+
+
 def _active_ssid():
     try:
         out = subprocess.check_output(
@@ -1212,14 +1235,17 @@ class EPaperDisplay:
 
         self._header(draw, "DOWNSTAGE VIEW", "HOTSPOT ON" if hotspot else temp)
 
-        self._row(draw, 26, "WiFi",   (ssid or "Not connected")[:22])
+        self._row(draw, 26, "Net",    _active_link()[:24])
         self._row(draw, 44, "Setup",  f"{local_ip}:8080" if local_ip != "unknown" else "No network")
         draw.line([(5, 62), (self.W - 5, 62)], fill=0)
         self._row(draw, 68, "OnTime", ip if ip else "Not configured")
         status = "CONNECTED" if connected else "OFFLINE"
         marker = chr(9679) if connected else chr(9675)   # filled / hollow dot
         draw.text((5, 86), f"{marker} {status}", font=self._font_md, fill=0)
-        self._row(draw, 106, "View", self.SOURCE_LABELS.get(source, source))
+        view_lbl = self.SOURCE_LABELS.get(source, source)
+        w = draw.textlength(view_lbl, font=self._font_sm)
+        draw.text((self.W - w - 5, 88), view_lbl, font=self._font_sm, fill=0)
+        self._row(draw, 106, "Name", socket.gethostname())
 
     # ── Hotspot page: everything a tech needs to get in ──────────────────────
     def _page_hotspot(self, draw):
