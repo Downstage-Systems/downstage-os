@@ -576,9 +576,6 @@ function draw() {
       x.fillStyle = v > 128 ? "#000" : "#fff"; x.font = mono(H*0.016); x.textAlign = "center";
       x.fillText(Math.round(i/11*100) + "%", bx + i*bw2/12 + bw2/24, H*0.66);
     }
-    x.fillStyle = "#2FD97B";                      // downstage edge
-    x.fillRect(bx, H*0.73, bw2*0.42, H*0.012);
-    x.fillRect(bx + bw2*0.46, H*0.73, bw2*0.12, H*0.012);
     label("DOWNSTAGE  ·  " + W + " x " + H + "  ·  " + aspect(), H*0.83);
   }
 }
