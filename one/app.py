@@ -1131,15 +1131,18 @@ class OLEDDisplay:
         net       = get_network_info()
 
         pw = _power_state()
+        temp = _cpu_temp() or ""
+        m = re.match(r"(\d+)", temp)
+        temp = f"{m.group(1)}C" if m else ""   # "54.0°C" → "54C": tight OLED header
         if pw["undervolt_now"]:
-            title, right = "LOW POWER!", (_cpu_temp() or "")
+            title, right = "LOW POWER!", temp
         elif hotspot:
             title, right = "DOWNSTAGE ONE", "HS ON"
         else:
-            title, right = "DOWNSTAGE ONE", (_cpu_temp() or "")
+            title, right = "DOWNSTAGE ONE", temp
         draw.text((0, 0 + j), title, fill=255)
         if right:
-            draw.text((128 - len(right) * 6, 0 + j), right, fill=255)
+            draw.text((127 - draw.textlength(right), 0 + j), right, fill=255)
         draw.line([(0, 12 + j), (127, 12 + j)], fill=255)
 
         # setup address — the single most useful line on the box
