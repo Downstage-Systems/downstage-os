@@ -3,6 +3,7 @@ import os
 import re
 import socket
 import subprocess
+import signal
 import threading
 import time
 from pathlib import Path
@@ -1104,6 +1105,23 @@ class OLEDDisplay:
                 draw.text((22, 46), "DOWNSTAGE ONE", fill=255)
         except Exception as e:
             print(f"[oled] splash error: {e}")
+
+    def shutdown_screen(self):
+        """Farewell frame at clean shutdown — Argon standby power keeps the
+        OLED lit, so a powered-off unit reads as deliberately, safely off."""
+        if not self._device:
+            return
+        try:
+            self._stop.set() if hasattr(self, "_stop") else None
+            with luma_canvas(self._device) as draw:
+                draw.rounded_rectangle([46, 0, 82, 26], radius=5, outline=255, width=3)
+                draw.rounded_rectangle([53, 16, 68, 20], radius=2, fill=255)
+                draw.rounded_rectangle([53, 30, 75, 33], radius=1, fill=255)
+                for text, y in (("Powered off", 40), ("Safe to unplug", 53)):
+                    w = draw.textlength(text)
+                    draw.text(((128 - w) / 2, y), text, fill=255)
+        except Exception as e:
+            print(f"[oled] shutdown screen: {e}")
 
     def _render(self):
         if not self._device:
@@ -2995,4 +3013,18 @@ if __name__ == "__main__":
     threading.Thread(target=_ontime_watchdog, daemon=True).start()
     threading.Thread(target=_cpu_sampler,     daemon=True).start()
     threading.Thread(target=_hotspot_fallback, daemon=True).start()
+    def _on_sigterm(signum, frame):
+        # A service stop during system shutdown is our last chance to own
+        # the panel. Reboot leaves the panel alone; poweroff gets the
+        # farewell. os._exit skips luma's atexit cleanup (which would
+        # blank the display we just drew).
+        try:
+            jobs = subprocess.check_output(["systemctl", "list-jobs"],
+                                           text=True, timeout=2)
+            if "poweroff.target" in jobs or "halt.target" in jobs:
+                oled.shutdown_screen()
+        except Exception:
+            pass
+        os._exit(0)
+    signal.signal(signal.SIGTERM, _on_sigterm)
     app.run(host="0.0.0.0", port=8080, use_reloader=False, threaded=True)
