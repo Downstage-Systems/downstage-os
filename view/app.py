@@ -252,6 +252,8 @@ def _source_url(source):
     ip     = config.get("ip", "")
     if source == "external":
         return config.get("external_url", "").strip() or "http://localhost:8080"
+    if source == "welcome":
+        return "http://localhost:8080/welcome"
     if not ip:
         return "http://localhost:8080/holding"
     if _is_ontime_source(source) and not check_ontime(ip, timeout=2):
@@ -607,6 +609,38 @@ def identify_page(label):
         '.l{font-size:5vh;letter-spacing:0.3em;text-transform:uppercase;opacity:.85}'
         '</style></head><body>'
         f'<div class="n">{label}</div><div class="l">This Screen</div>'
+        '</body></html>'
+    ), 200, {"Content-Type": "text/html"}
+
+
+@app.route("/welcome")
+def welcome_page():
+    config = load_config()
+    host   = socket.gethostname()
+    ip     = get_local_ip()
+    addr   = f"{host}.local:8080"
+    ip_line = f"http://{ip}:8080" if ip != "unknown" else "connect network or join the setup hotspot"
+    return (
+        '<!DOCTYPE html><html><head><meta charset="utf-8">'
+        '<meta http-equiv="refresh" content="10"><style>'
+        '*{margin:0;padding:0}'
+        'body{background:#0B0D10;display:flex;flex-direction:column;align-items:center;'
+        'justify-content:center;height:100vh;font-family:sans-serif;text-align:center;'
+        'gap:2.6vh;cursor:none}'
+        'svg{width:16vh;height:16vh}'
+        '.brand{font-size:3.2vh;color:#e8ecef;letter-spacing:0.4em;font-weight:600}'
+        '.brand span{color:#2fd97b}'
+        '.addr{font-family:monospace;font-size:3.4vh;color:#2fd97b}'
+        'p{font-size:1.9vh;color:#565e66;letter-spacing:0.06em}'
+        '</style></head><body>'
+        '<svg viewBox="0 0 96 96"><rect x="6" y="10" width="84" height="66" rx="10" '
+        'fill="none" stroke="#e8ecef" stroke-width="7"/>'
+        '<rect x="20" y="54" width="40" height="9" rx="4.5" fill="#2fd97b"/>'
+        '<rect x="20" y="83" width="56" height="7" rx="3.5" fill="#2fd97b"/></svg>'
+        '<div class="brand">DOWNSTAGE <span>VIEW</span></div>'
+        f'<div class="addr">{addr}</div>'
+        f'<p>{ip_line} &middot; set up from any browser on the same network</p>'
+        f'<p>{config.get("serial", "")}</p>'
         '</body></html>'
     ), 200, {"Content-Type": "text/html"}
 
@@ -1789,7 +1823,7 @@ def boot():
 
     time.sleep(3)
     config = load_config()
-    _show(_source_url(config.get("source", "/timer") if config.get("ip") else "config"))
+    _show(_source_url(config.get("source", "/timer") if config.get("ip") else "welcome"))
 
 
 if __name__ == "__main__":
