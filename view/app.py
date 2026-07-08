@@ -1365,22 +1365,29 @@ class TouchPanel:
             print(f"[touch] no touch controller ({e}) — panel stays display-only")
             return
         was_down = False
+        last_frame = 0.0
         while True:
-            time.sleep(0.04)
+            time.sleep(0.01)
             try:
                 pts = self._poll()
-                if pts is None:
-                    continue
                 now = time.time()
-                if pts and not was_down:
-                    was_down = True
-                    self.last_raw = pts[0]
-                    self.last_mapped = self._map(*pts[0])
-                    self._on_down(self.last_mapped, now)
-                elif not pts and was_down:
+                if pts is not None:
+                    last_frame = now
+                    if pts and not was_down:
+                        was_down = True
+                        self.last_raw = pts[0]
+                        self.last_mapped = self._map(*pts[0])
+                        self._on_down(self.last_mapped, now)
+                    elif not pts and was_down:
+                        was_down = False
+                        self._on_up(now)
+                elif was_down and now - last_frame > 0.15:
+                    # controller stopped sending frames — the finger is gone
                     was_down = False
                     self._on_up(now)
-                elif pts:
+                if was_down:
+                    # hold progress advances on the wall clock, not on frames —
+                    # a motionless finger emits nothing new but is still held
                     self._check_hold(now)
                 if self.mode == "buttons" and now - self._last_activity > self.IDLE_LOCK:
                     self._exit_buttons()
