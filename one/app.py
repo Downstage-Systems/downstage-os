@@ -40,6 +40,7 @@ _win   = [None, None]   # [hdmi1_proc, hdmi2_proc]
 _wlock = threading.Lock()
 _ontime_proc = None
 _ontime_lock = threading.Lock()
+_ontime_desired = False   # True while the local server is supposed to be running
 
 _blackout_active   = False
 _blackout_hidden   = []      # window ids unmapped by /blackout
@@ -883,10 +884,11 @@ def _ontime_watchdog():
                     _watchdog_override = True
                     threading.Thread(target=_launch_watchdog_windows, daemon=True).start()
                 was_connected = False
-            if not connected and mode == "local" and ontime_installed() \
-                    and not ontime_is_running():
-                # local server died — this unit owns it, so revive it
-                print("[watchdog] local OnTime is down — restarting it")
+            if not connected and mode == "local" and _ontime_desired \
+                    and ontime_installed() and not ontime_is_running():
+                # the server is supposed to be running and died — revive it.
+                # A deliberate Stop Server clears _ontime_desired and stays stopped.
+                print("[watchdog] local OnTime died — restarting it")
                 start_local_ontime()
             elif not was_connected and connected:
                 print("[watchdog] OnTime back online — restoring windows")
@@ -977,6 +979,8 @@ def _hide_ontime_windows():
 
 
 def start_local_ontime():
+    global _ontime_desired
+    _ontime_desired = True
     global _ontime_proc
     entry = _ontime_entry()
     if not entry:
@@ -994,7 +998,8 @@ def start_local_ontime():
 
 
 def stop_local_ontime():
-    global _ontime_proc
+    global _ontime_proc, _ontime_desired
+    _ontime_desired = False   # deliberate stop — the watchdog must not revive it
     with _ontime_lock:
         _kill(_ontime_proc)
         _ontime_proc = None
