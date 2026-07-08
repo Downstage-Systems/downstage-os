@@ -1200,13 +1200,6 @@ class EPaperDisplay:
     def _render(self):
         if not self._epd:
             return
-        page = getattr(self, "touch_page", None)
-        if page:
-            try:
-                page()
-            except Exception as e:
-                print(f"[touch] page render failed: {e}")
-            return
         try:
             img  = self._new_image()
             draw = ImageDraw.Draw(img)
@@ -1294,227 +1287,6 @@ class EPaperDisplay:
 
 
 epaper = EPaperDisplay()
-
-
-# ── e-Paper touch layer (GT1151 on I2C 0x14) ─────────────────────────────────
-# Front-panel appliance controls. Locked by default: a double-tap wakes the
-# button page, 30s idle re-locks. Disable with config "eink_touch": false —
-# the panel then behaves exactly as before this feature existed.
-
-_pattern_override = False
-
-
-class TouchPanel:
-    IDLE_LOCK = 30      # seconds on the button page before re-locking
-    HOLD_SHUTDOWN = 3   # seconds of press to power off
-
-    def __init__(self, panel):
-        self.panel = panel
-        self.mode = "locked"
-        self.last_raw = None
-        self.last_mapped = None
-        self._taps = []
-        self._down_at = None
-        self._down_zone = None
-        self._last_activity = 0
-        self._note = ""
-        self._bus = None
-
-    def start(self):
-        threading.Thread(target=self._loop, daemon=True).start()
-
-    # GT1151 register protocol (Goodix GT9xx family)
-    def _read(self, reg, n):
-        from smbus2 import i2c_msg
-        w = i2c_msg.write(0x14, [reg >> 8, reg & 0xFF])
-        r = i2c_msg.read(0x14, n)
-        self._bus.i2c_rdwr(w, r)
-        return list(r)
-
-    def _clear(self):
-        from smbus2 import i2c_msg
-        self._bus.i2c_rdwr(i2c_msg.write(0x14, [0x81, 0x4E, 0x00]))
-
-    def _poll(self):
-        s = self._read(0x814E, 1)[0]
-        if not (s & 0x80):
-            return None            # nothing new since last clear
-        n = s & 0x0F
-        pts = []
-        if 0 < n <= 5:
-            d = self._read(0x814F, n * 8)
-            for i in range(n):
-                o = i * 8
-                x = d[o + 1] | (d[o + 2] << 8)
-                y = d[o + 3] | (d[o + 4] << 8)
-                pts.append((x, y))
-        self._clear()
-        return pts
-
-    def _map(self, x, y):
-        # panel is portrait 122x250 natively; our image is landscape 250x122
-        return (y, 121 - x) if x <= 121 and y <= 249 else (x, y)
-
-    def _loop(self):
-        try:
-            from smbus2 import SMBus
-            self._bus = SMBus(1)
-            self._read(0x8140, 4)   # probe — raises if no controller
-            print("[touch] GT1151 online")
-        except Exception as e:
-            print(f"[touch] no touch controller ({e}) — panel stays display-only")
-            return
-        was_down = False
-        while True:
-            time.sleep(0.04)
-            try:
-                pts = self._poll()
-                if pts is None:
-                    continue
-                now = time.time()
-                if pts and not was_down:
-                    was_down = True
-                    self.last_raw = pts[0]
-                    self.last_mapped = self._map(*pts[0])
-                    self._on_down(self.last_mapped, now)
-                elif not pts and was_down:
-                    was_down = False
-                    self._on_up(now)
-                elif pts:
-                    self._check_hold(now)
-                if self.mode == "buttons" and now - self._last_activity > self.IDLE_LOCK:
-                    self._exit_buttons()
-            except Exception as e:
-                print(f"[touch] loop error: {e}")
-                time.sleep(2)
-
-    # ── gesture handling ──
-    def _on_down(self, pt, now):
-        self._last_activity = now
-        self._down_at = now
-        if self.mode == "locked":
-            self._taps = [t for t in self._taps if now - t < 0.8] + [now]
-            if len(self._taps) >= 2:
-                self._taps = []
-                self._enter_buttons()
-        else:
-            self._down_zone = self._zone(pt)
-
-    def _on_up(self, now):
-        if self.mode != "buttons" or self._down_zone is None:
-            self._down_at = None
-            return
-        held = now - (self._down_at or now)
-        zone = self._down_zone
-        self._down_zone = None
-        self._down_at = None
-        if zone == "shutdown":
-            self._note = "hold 3s to power off" if held < self.HOLD_SHUTDOWN else ""
-            self._redraw()
-            return
-        self._last_activity = now
-        if zone == "exit":
-            self._exit_buttons()
-        elif zone == "pattern":
-            self._act_pattern()
-        elif zone == "reload":
-            self._act_reload()
-        elif zone == "hotspot":
-            self._act_hotspot()
-
-    def _check_hold(self, now):
-        if (self.mode == "buttons" and self._down_zone == "shutdown"
-                and self._down_at and now - self._down_at >= self.HOLD_SHUTDOWN):
-            self._down_zone = None
-            print("[touch] shutdown held — powering off")
-            self.panel.touch_page = None
-            shutdown_unit()
-
-    def _zone(self, pt):
-        x, y = pt
-        if y < 22:
-            return "exit"
-        if y < 72:
-            return "pattern" if x < 125 else "reload"
-        return "hotspot" if x < 125 else "shutdown"
-
-    # ── actions ──
-    def _act_pattern(self):
-        global _pattern_override
-        _pattern_override = not _pattern_override
-        if _pattern_override:
-            threading.Thread(target=_show,
-                             args=("http://localhost:8080/pattern/card",),
-                             daemon=True).start()
-        else:
-            threading.Thread(target=launch_window, daemon=True).start()
-        self._note = ""
-        self._redraw()
-
-    def _act_reload(self):
-        threading.Thread(target=launch_window, daemon=True).start()
-        self._note = "display reloading"
-        self._redraw()
-
-    def _act_hotspot(self):
-        if hotspot_is_active():
-            threading.Thread(target=stop_hotspot, daemon=True).start()
-            self._note = "hotspot stopping"
-        else:
-            threading.Thread(target=start_hotspot, daemon=True).start()
-            self._note = "hotspot starting"
-        self._redraw()
-
-    # ── button page rendering ──
-    def _enter_buttons(self):
-        self.mode = "buttons"
-        self._note = ""
-        self._last_activity = time.time()
-        self.panel.touch_page = self._render_buttons
-        self._redraw()
-
-    def _exit_buttons(self):
-        self.mode = "locked"
-        self.panel.touch_page = None
-        self.panel.force_refresh()
-
-    def _redraw(self):
-        threading.Thread(target=self._render_buttons, daemon=True).start()
-
-    def _render_buttons(self):
-        p = self.panel
-        if not p._epd:
-            return
-        img  = p._new_image()
-        draw = ImageDraw.Draw(img)
-        draw.rectangle([0, 0, p.W, 20], fill=0)
-        draw.text((5, 3), "PANEL CONTROLS", font=p._font_md, fill=255)
-        w = draw.textlength("tap here to exit", font=p._font_sm)
-        draw.text((p.W - w - 5, 5), "tap here to exit", font=p._font_sm, fill=255)
-        draw.line([(125, 22), (125, p.H)], fill=0)
-        draw.line([(0, 72), (p.W, 72)], fill=0)
-        pat = "PATTERN: ON" if _pattern_override else "PATTERN"
-        hot = "HOTSPOT: ON" if hotspot_is_active() else "HOTSPOT"
-        for label, cx, cy in ((pat, 62, 40), ("RELOAD", 187, 40),
-                              (hot, 62, 90), ("SHUTDOWN", 187, 84)):
-            tw = draw.textlength(label, font=p._font_md)
-            draw.text((cx - tw / 2, cy), label, font=p._font_md, fill=0)
-        tw = draw.textlength("hold 3s", font=p._font_sm)
-        draw.text((187 - tw / 2, 102), "hold 3s", font=p._font_sm, fill=0)
-        if self._note:
-            tw = draw.textlength(self._note, font=p._font_sm)
-            draw.text((62 - tw / 2, 106), self._note, font=p._font_sm, fill=0)
-        p._flush(img)
-
-
-touch = TouchPanel(epaper)
-
-
-@app.route("/touch/debug")
-def touch_debug():
-    return jsonify({"mode": touch.mode, "raw": touch.last_raw,
-                    "mapped": touch.last_mapped,
-                    "pattern_override": _pattern_override})
 
 
 # ── Flask routes ──────────────────────────────────────────────────────────────
@@ -2078,18 +1850,13 @@ def logs():
 
 @app.route("/system/shutdown", methods=["POST"])
 def system_shutdown():
-    shutdown_unit()
-    return jsonify({"ok": True})
-
-
-def shutdown_unit():
-    """Clean poweroff with the e-ink farewell — used by the UI and the panel."""
     close_window()
     epaper.shutdown_screen()
     def do_shutdown():
         time.sleep(3)   # let the e-ink finish its refresh before power drops
         subprocess.Popen(["sudo", "poweroff"])
     threading.Thread(target=do_shutdown, daemon=True).start()
+    return jsonify({"ok": True})
 
 
 # ── Boot ──────────────────────────────────────────────────────────────────────
@@ -2110,8 +1877,6 @@ def boot():
 
 if __name__ == "__main__":
     epaper.start()
-    if load_config().get("eink_touch", True):
-        touch.start()   # revert: set config "eink_touch": false and restart
     threading.Thread(target=boot, daemon=True).start()
     threading.Thread(target=_hotspot_fallback, daemon=True).start()
     threading.Thread(target=_ontime_watchdog, daemon=True).start()
