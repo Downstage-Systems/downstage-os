@@ -91,7 +91,7 @@ for kind, a, b in LINES:
         y -= 5
 c.setFont("Inter", 7.5); c.setFillColor(DIM)
 c.drawString(m, 30, f"Advanced access: ssh pi@{hostname}.local · password: downstage")
-c.setFont("STMono", 7); c.drawRightString(W-m, 30, "DOWNSTAGE.SYSTEMS")
+c.setFont("STMono", 7); c.drawRightString(W-m, 30, "support: hello@downstage.systems")
 c.setFont("Inter", 7.5)
 c.drawString(m, 19, "Built on Ontime, free open-source software (GPL v3) · source: github.com/cpvalente/ontime")
 c.save()
