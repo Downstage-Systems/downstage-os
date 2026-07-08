@@ -45,6 +45,7 @@ _ontime_desired = False   # True while the local server is supposed to be runnin
 _blackout_active   = False
 _blackout_hidden   = []      # window ids unmapped by /blackout
 _watchdog_override = False
+_wd_connected      = None    # watchdog's view of OnTime (None = not yet established)
 _watchdog_lock     = threading.Lock()
 
 _update_status = {
@@ -852,51 +853,50 @@ def _ontime_watchdog():
     Requires 2 consecutive failed checks (~60s) before tripping so a single
     slow/dropped check on busy WiFi doesn't flap the displays.
     """
-    global _watchdog_override
-    was_connected = None   # None = not yet established
+    global _watchdog_override, _wd_connected
     misses = 0
     while True:
         time.sleep(30)
         config = load_config()
         if not config.get("watchdog", True):
-            was_connected = None
+            _wd_connected = None
             misses = 0
             continue
         mode = config.get("mode", "remote")
         ip   = "127.0.0.1" if mode == "local" else config.get("ip", "")
         if not ip:
-            was_connected = None
+            _wd_connected = None
             misses = 0
             continue
         connected = check_ontime(ip, timeout=3)
         with _watchdog_lock:
-            if was_connected is None:
-                was_connected = connected
+            if _wd_connected is None:
+                _wd_connected = connected
                 continue
             if not connected:
                 misses += 1
             else:
                 misses = 0
-            if was_connected and misses >= 2:
+            if _wd_connected and misses >= 2:
                 if _blackout_active:
                     print("[watchdog] OnTime offline but blackout active — leaving displays black")
                 else:
                     print("[watchdog] OnTime offline (2 checks) — switching to holding page")
                     _watchdog_override = True
                     threading.Thread(target=_launch_watchdog_windows, daemon=True).start()
-                was_connected = False
+                _wd_connected = False
             if not connected and mode == "local" and _ontime_desired \
                     and ontime_installed() and not ontime_is_running():
                 # the server is supposed to be running and died — revive it.
                 # A deliberate Stop Server clears _ontime_desired and stays stopped.
                 print("[watchdog] local OnTime died — restarting it")
                 start_local_ontime()
-            elif not was_connected and connected:
+            elif not _wd_connected and connected:
                 print("[watchdog] OnTime back online — restoring windows")
                 _watchdog_override = False
                 if not _blackout_active:
                     threading.Thread(target=launch_all_windows, daemon=True).start()
-                was_connected = True
+                _wd_connected = True
 
 
 # ── Companion ─────────────────────────────────────────────────────────────────
@@ -1861,9 +1861,28 @@ def ontime_install():
     return jsonify({"ok": ok, "message": msg})
 
 
+def _relaunch_when_ontime_up():
+    """Fast display recovery after Start Server: the watchdog polls every
+    30s, which reads as a stuck holding card — poll tightly instead and
+    relaunch the moment the server answers."""
+    global _watchdog_override, _wd_connected
+    deadline = time.time() + 45
+    while time.time() < deadline:
+        if check_ontime("127.0.0.1", timeout=2):
+            print("[ontime] server answering — restoring displays now")
+            _watchdog_override = False
+            _wd_connected = True
+            if not _blackout_active:
+                launch_all_windows()
+            return
+        time.sleep(1.5)
+
+
 @app.route("/ontime/start", methods=["POST"])
 def ontime_start():
     ok, msg = start_local_ontime()
+    if ok:
+        threading.Thread(target=_relaunch_when_ontime_up, daemon=True).start()
     return jsonify({"ok": ok, "message": msg, "running": ontime_is_running()})
 
 
