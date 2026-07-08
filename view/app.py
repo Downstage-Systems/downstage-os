@@ -1260,6 +1260,28 @@ class EPaperDisplay:
         draw.text((5, 84), "Join the WiFi above, then open:", font=self._font_sm, fill=0)
         draw.text((5, 99), "http://10.42.0.1:8080", font=self._font_md, fill=0)
 
+    def shutdown_screen(self):
+        """Drawn just before poweroff — e-ink holds the image with no power,
+        so a shut-down unit in a case reads as deliberately, safely off."""
+        if not self._epd:
+            return
+        try:
+            img  = self._new_image()
+            draw = ImageDraw.Draw(img)
+            # the Downstage mark, drawn in PIL: screen outline + stage bars
+            mx, my = 18, 26
+            draw.rounded_rectangle([mx, my, mx + 62, my + 48], radius=8, outline=0, width=5)
+            draw.rounded_rectangle([mx + 12, my + 30, mx + 40, my + 37], radius=3, fill=0)
+            draw.rounded_rectangle([mx + 12, my + 56, mx + 52, my + 62], radius=3, fill=0)
+            tx = 100
+            draw.text((tx, 24), "DOWNSTAGE VIEW", font=self._font_md, fill=0)
+            draw.text((tx, 46), socket.gethostname(), font=self._font_md, fill=0)
+            draw.text((tx, 68), "Powered off", font=self._font_md, fill=0)
+            draw.text((tx, 86), "Safe to unplug", font=self._font_sm, fill=0)
+            self._flush(img)
+        except Exception as e:
+            print(f"[epaper] shutdown screen: {e}")
+
     def force_refresh(self):
         threading.Thread(target=self._render, daemon=True).start()
 
@@ -1829,8 +1851,9 @@ def logs():
 @app.route("/system/shutdown", methods=["POST"])
 def system_shutdown():
     close_window()
+    epaper.shutdown_screen()
     def do_shutdown():
-        time.sleep(1)
+        time.sleep(3)   # let the e-ink finish its refresh before power drops
         subprocess.Popen(["sudo", "poweroff"])
     threading.Thread(target=do_shutdown, daemon=True).start()
     return jsonify({"ok": True})
