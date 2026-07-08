@@ -108,6 +108,7 @@ def load_config():
         data.setdefault(f"hdmi{n}_ct_keycolour",   "000000")
         data.setdefault(f"hdmi{n}_ct_timercolour", "ffffff")
     data.setdefault("os_update_repo", "")   # e.g. "youruser/downstage-os"
+    data.setdefault("ontime_autostart", True)   # local server starts at boot; Stop Server flips this off
     return data
 
 
@@ -981,6 +982,7 @@ def _hide_ontime_windows():
 def start_local_ontime():
     global _ontime_desired
     _ontime_desired = True
+    save_config({"ontime_autostart": True})
     global _ontime_proc
     entry = _ontime_entry()
     if not entry:
@@ -1000,6 +1002,7 @@ def start_local_ontime():
 def stop_local_ontime():
     global _ontime_proc, _ontime_desired
     _ontime_desired = False   # deliberate stop — the watchdog must not revive it
+    save_config({"ontime_autostart": False})   # …and a power cycle must not either
     with _ontime_lock:
         _kill(_ontime_proc)
         _ontime_proc = None
@@ -2932,9 +2935,12 @@ def boot():
     mode   = config.get("mode", "remote")
     ip     = "127.0.0.1" if mode == "local" else config.get("ip", "")
 
-    if mode == "local" and ontime_installed() and not check_ontime("127.0.0.1", timeout=2):
+    if (mode == "local" and ontime_installed()
+            and config.get("ontime_autostart", True)
+            and not check_ontime("127.0.0.1", timeout=2)):
         # decide by HTTP, not pgrep — on a service restart the old OnTime is
-        # still dying when we check, pgrep sees it, and nothing starts a new one
+        # still dying when we check, pgrep sees it, and nothing starts a new
+        # one. A deliberate Stop Server persists across power cycles.
         start_local_ontime()
     if ip:
         # give OnTime a real chance to answer before windows point at it —
