@@ -97,8 +97,8 @@ def load_config():
     data.setdefault("hdmi1_external_url", "")
     data.setdefault("hdmi2_external_url", "")
     # Per-unit identity from the build log (this unit: DS1-A-2607-0001)
-    data.setdefault("hotspot_ssid", "Downstage-0001")
-    data.setdefault("hotspot_pass", "cue-grip-28")
+    data.setdefault("hotspot_ssid", f"Downstage-{socket.gethostname().split(chr(45))[-1] or chr(48)*4}")
+    data.setdefault("hotspot_pass", "downstage")
     data.setdefault("hotspot_auto", True)
     # per-output custom timer options, seeded from the legacy global keys
     for n in (1, 2):
