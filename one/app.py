@@ -2282,6 +2282,12 @@ def diagnostics():
             return f"error: {e}"
     cfg = load_config()
     cfg.pop("hotspot_pass", None)
+    # external viewer URLs may carry private tokens (stagetimer signatures,
+    # api keys) — keep the destination, drop the query string
+    for k in list(cfg):
+        if k.endswith("external_url") and isinstance(cfg[k], str) and "?" in cfg[k]:
+            base, _, q = cfg[k].partition("?")
+            cfg[k] = base + "?[redacted: " + str(len(q)) + " chars]"
     serial = cfg.get("serial", "unknown")
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
@@ -2295,6 +2301,9 @@ def diagnostics():
                    sh("nmcli -t -f active,ssid,signal dev wifi 2>/dev/null | head -20"))
         z.writestr("system.txt", sh("uptime") + sh("free -m") + sh("df -h /") +
                    sh("vcgencmd measure_temp 2>/dev/null") +
+                   sh("vcgencmd measure_volts 2>/dev/null") +
+                   "throttling (0x0 = never undervolted/throttled; bit0=UV now, "
+                   "bit16=UV since boot): " + sh("vcgencmd get_throttled 2>/dev/null") +
                    sh("cat /proc/device-tree/model 2>/dev/null; echo"))
         z.writestr("storage.txt",
                    sh("lsblk -o NAME,SIZE,TYPE,MOUNTPOINT") + "\n=== boot device errors ===\n" +
@@ -2303,6 +2312,15 @@ def diagnostics():
                    "battery_uV: " + sh("cat /sys/class/rtc/rtc0/battery_voltage 2>/dev/null") +
                    "charging_uV: " + sh("cat /sys/class/rtc/rtc0/charging_voltage 2>/dev/null"))
         z.writestr("app.log", sh(f"tail -n 400 {_OS_APPDIR}/kiosk.log 2>/dev/null"))
+        z.writestr("devices.txt",
+                   "=== USB devices ===\n" + sh("lsusb") +
+                   "\n=== services ===\n" +
+                   "ontime-kiosk: " + sh("systemctl --user is-active ontime-kiosk 2>/dev/null") +
+                   "companion: " + sh("systemctl is-active companion 2>/dev/null") +
+                   "ontime-server: " + sh("pgrep -f squashfs-root/ontime >/dev/null && echo running || echo stopped") +
+                   "\n=== recent service restarts ===\n" +
+                   sh("journalctl --user -u ontime-kiosk -q --since '-2h' 2>/dev/null | "
+                      "grep -iE 'started|stopped|failed|main process' | tail -10 || echo none"))
         z.writestr("audit.log",
                    "# Hardware-integrity and access log (disclosed; see user guide).\n"
                    "# Records hardware changes and logins, not operator usage.\n\n" +
