@@ -2303,6 +2303,10 @@ def diagnostics():
                    "battery_uV: " + sh("cat /sys/class/rtc/rtc0/battery_voltage 2>/dev/null") +
                    "charging_uV: " + sh("cat /sys/class/rtc/rtc0/charging_voltage 2>/dev/null"))
         z.writestr("app.log", sh(f"tail -n 400 {_OS_APPDIR}/kiosk.log 2>/dev/null"))
+        z.writestr("audit.log",
+                   "# Hardware-integrity and access log (disclosed; see user guide).\n"
+                   "# Records hardware changes and logins, not operator usage.\n\n" +
+                   sh(f"tail -n 500 {AUDIT_LOG} 2>/dev/null || echo '(no events logged yet)'"))
     buf.seek(0)
     return send_file(buf, as_attachment=True, mimetype="application/zip",
                      download_name=f"downstage-diag-{serial}.zip")
@@ -2970,7 +2974,101 @@ def presets_delete():
 
 # ── Boot ──────────────────────────────────────────────────────────────────────
 
+# ── Tamper-evidence / audit log ───────────────────────────────────────────────
+# Disclosed hardware-integrity + access log (documented in the user guide).
+# Records changes to the unit's hardware identity (storage, network, USB) and
+# access/power events, so an owner or support can tell if something changed.
+# Not usage tracking — it watches the machine's own composition, not what the
+# operator does with it.
+
+AUDIT_LOG      = BASE_DIR / "audit.log"
+AUDIT_BASELINE = BASE_DIR / ".hw-baseline.json"
+
+
+def _hw_snapshot():
+    """Stable fingerprint of the unit's hardware identity."""
+    def sh(c):
+        try:
+            return subprocess.check_output(c, shell=True, text=True,
+                                           stderr=subprocess.DEVNULL, timeout=8).strip()
+        except Exception:
+            return ""
+    snap = {}
+    # storage: model + serial of every block device (survives reformat)
+    snap["storage"] = sorted(l for l in sh(
+        "lsblk -dn -o NAME,SERIAL,MODEL 2>/dev/null").splitlines() if l.strip())
+    # network hardware addresses
+    snap["macs"] = sorted(sh(
+        "cat /sys/class/net/*/address 2>/dev/null").split())
+    # USB devices by vendor:product (Stream Deck, keyboards, adapters)
+    snap["usb"] = sorted(l.split("ID ", 1)[-1].split()[0]
+                         for l in sh("lsusb").splitlines() if " ID " in l)
+    # Pi board serial — the identity of the compute itself
+    snap["board"] = sh("cat /proc/cpuinfo | grep -i serial | awk '{print $3}'")
+    return snap
+
+
+def _audit(event, detail=""):
+    """Append a timestamped line to the tamper log (best-effort, never fatal)."""
+    try:
+        ts = subprocess.check_output(["date", "-Is"], text=True, timeout=3).strip()
+        with open(AUDIT_LOG, "a") as f:
+            f.write(f"{ts}\t{event}\t{detail}\n")
+    except Exception:
+        pass
+
+
+def _audit_boot_and_hw():
+    """At boot: log the power-on, then diff hardware against the baseline and
+    record any component that was added, removed, or swapped."""
+    _audit("BOOT", f"os={OS_VERSION} uptime_reset")
+    try:
+        now = _hw_snapshot()
+        if AUDIT_BASELINE.exists():
+            old = json.loads(AUDIT_BASELINE.read_text())
+            for cat in ("storage", "macs", "usb", "board"):
+                a, b = set(old.get(cat, []) if isinstance(old.get(cat), list) else [old.get(cat)]), \
+                       set(now.get(cat, []) if isinstance(now.get(cat), list) else [now.get(cat)])
+                for gone in a - b:
+                    _audit("HW_REMOVED", f"{cat}: {gone}")
+                for added in b - a:
+                    _audit("HW_ADDED", f"{cat}: {added}")
+        else:
+            _audit("HW_BASELINE", "first boot — baseline recorded")
+        AUDIT_BASELINE.write_text(json.dumps(now))
+    except Exception as e:
+        _audit("HW_ERROR", str(e))
+
+
+def _audit_access_watch():
+    """Background: fold SSH/console logins from the journal into the audit log.
+    Runs every 5 min; dedups on the raw line so we log each session once."""
+    seen = set()
+    while True:
+        try:
+            out = subprocess.check_output(
+                "journalctl -q --since '-6min' 2>/dev/null | "
+                "grep -iE 'sshd.*(Accepted|Failed|session opened)|login\\[' | tail -40",
+                shell=True, text=True, timeout=10)
+            for line in out.splitlines():
+                key = line[-120:]
+                if key and key not in seen:
+                    seen.add(key)
+                    kind = "SSH_LOGIN" if "Accepted" in line else \
+                           "SSH_FAILED" if "Failed" in line else "LOGIN"
+                    who = line.split("for ", 1)[-1].split(" from ")[0] if "for " in line else ""
+                    frm = line.split(" from ", 1)[-1].split()[0] if " from " in line else ""
+                    _audit(kind, f"{who} {frm}".strip())
+            if len(seen) > 500:
+                seen = set(list(seen)[-200:])
+        except Exception:
+            pass
+        time.sleep(300)
+
+
 def boot():
+    _audit_boot_and_hw()
+    threading.Thread(target=_audit_access_watch, daemon=True).start()
     # Hide idle mouse cursor
     try:
         subprocess.Popen(
@@ -3031,6 +3129,7 @@ if __name__ == "__main__":
             jobs = subprocess.check_output(["systemctl", "list-jobs"],
                                            text=True, timeout=2)
             if "poweroff.target" in jobs or "halt.target" in jobs:
+                _audit("SHUTDOWN", "clean poweroff")
                 oled.shutdown_screen()
         except Exception:
             pass
