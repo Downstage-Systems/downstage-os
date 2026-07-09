@@ -654,6 +654,23 @@
     .channel-btn:hover { background: var(--surface2); color: var(--text); }
     .channel-btn.active { background: var(--surface2); color: var(--text); font-weight: 700; }
     .channel-btn.active.beta { color: var(--amber); }
+
+    /* ── Mobile (phones open this page constantly) ── */
+    @media (max-width: 560px) {
+      body { padding: 14px 8px; }
+      .card-body { padding: 18px 13px; }
+      .logo-row { flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
+      .addr-chip { margin-left: 0; width: 100%; align-items: flex-start; text-align: left; }
+      .display-ctl-row { flex-wrap: wrap; }
+      .display-ctl-row .btn-sm { flex: 1 1 auto; }
+      .mode-btn, .hdmi-tab { font-size: 12px; padding: 9px 5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .hdmi-tab .source-name { display: none; }
+      .source-grid { grid-template-columns: 1fr; }
+      .source-chip.chip-wide { grid-column: auto; }
+      .chip-opt-item { min-width: 0; flex: 1 1 100%; }
+      .footer-row { flex-wrap: wrap; }
+      .health-grid { grid-template-columns: repeat(2, 1fr); }
+    }
   </style>
 </head>
 <body>
