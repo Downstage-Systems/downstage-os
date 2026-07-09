@@ -15,6 +15,15 @@ OS_VERSION = "1.2.0"   # Downstage OS release — bump on tagged releases
 OS_PRODUCT = "Downstage One"
 
 app = Flask(__name__)
+
+
+@app.after_request
+def _no_store(resp):
+    # the config UI must never be served stale from browser cache — the page
+    # changes with every OS update, and a cached copy silently breaks controls
+    if resp.content_type and resp.content_type.startswith("text/html"):
+        resp.headers["Cache-Control"] = "no-store, must-revalidate"
+    return resp
 BASE_DIR    = Path(__file__).parent
 CONFIG_FILE = BASE_DIR / "config.json"
 ONTIME_DIR  = BASE_DIR / "ontime-server"
