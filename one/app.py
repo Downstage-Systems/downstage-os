@@ -11,7 +11,7 @@ from pathlib import Path
 import requests
 from flask import Flask, jsonify, render_template, request, send_file, Response
 
-OS_VERSION = "1.2.0"   # Downstage OS release — bump on tagged releases
+OS_VERSION = "1.2.1"   # Downstage OS release — bump on tagged releases
 OS_PRODUCT = "Downstage One"
 
 app = Flask(__name__)
