@@ -474,6 +474,19 @@
     .modal p  { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
     .modal input { margin-bottom: 14px; }
     .modal-btns { display: flex; gap: 8px; }
+
+    /* ── Mobile (opened from phones) ── */
+    @media (max-width: 560px) {
+      body { padding: 14px 8px; }
+      .card-body { padding: 18px 13px; }
+      .logo-row { flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
+      .addr-chip { margin-left: 0; width: 100%; align-items: flex-start; text-align: left; }
+      .display-ctl-row { flex-wrap: wrap; }
+      .mode-btn { font-size: 12px; padding: 9px 5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .source-grid { grid-template-columns: 1fr; }
+      .source-chip.chip-wide { grid-column: auto; }
+      .chip-opt-item { min-width: 0; flex: 1 1 100%; }
+    }
   </style>
 </head>
 <body>
