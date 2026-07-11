@@ -384,10 +384,28 @@ def _resync_displays():
             if (d["w"], d["h"]) != (w, h):
                 ok = False
         if ok:
+            _restart_wm()
             return True
         print(f"[xrandr] resync attempt {attempt + 1}: modes not applied yet, retrying")
     print("[xrandr] resync: outputs did not reach configured modes")
+    _restart_wm()
     return False
+
+
+def _restart_wm():
+    """Restart openbox so it re-reads the monitor layout. After a hot-plug on
+    a headless boot openbox still believes the screen is one giant monitor,
+    and fullscreens every kiosk window across BOTH outputs — xrandr looks
+    perfect while the image is stretched over two screens."""
+    try:
+        subprocess.run(["openbox", "--restart"],
+                       env={**os.environ, "DISPLAY": ":0"},
+                       timeout=10, check=True,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        time.sleep(1.5)   # let the WM settle before windows are relaunched
+        print("[wm] openbox restarted — monitor layout re-read")
+    except Exception as e:
+        print(f"[wm] openbox restart failed: {e}")
 
 
 def _apply_display_settings():
