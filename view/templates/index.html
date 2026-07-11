@@ -258,6 +258,13 @@
     .btn-sm.active { border-color: var(--accent); color: var(--accent); background: var(--accent-lo); }
     .display-ctl-row { display: flex; gap: 6px; flex-wrap: wrap; }
     .view-toggle { margin-bottom: 18px; }
+    /* Show Mode quick bar: OnTime tools, shown only while the server answers */
+    .show-quick { display: none; }
+    body.show-mode .show-quick.qb-live {
+      display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px;
+    }
+    .show-quick .btn-sm { flex: 1 1 auto; justify-content: center; }
+    .show-quick .btn-sm svg { fill: var(--accent); }
     .view-toggle .mode-btn { padding: 9px 8px; font-size: 13px; }
     /* colour identity: setup reads amber (standby), show reads green (run) */
     #view-tab-full.active { color: var(--blue);   background: rgba(245,165,36,0.10); }
@@ -527,6 +534,22 @@
         <button class="mode-btn" id="view-tab-show" onclick="setViewMode('show')">
           <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
           Show Mode
+        </button>
+      </div>
+
+      <!-- Show Mode quick bar — OnTime tools on the connected server -->
+      <div class="show-quick" id="show-quick">
+        <button class="btn-sm" onclick="quickOpen('/editor/')" title="Open the OnTime Editor in a new tab">
+          <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+          OnTime Editor
+        </button>
+        <button class="btn-sm" onclick="quickOpen('/timercontrol')" title="Open OnTime Timer Control in a new tab — start, stop and roll cues">
+          <svg viewBox="0 0 24 24"><path d="M15 1H9v2h6V1zm-4 13h2V8h-2v6zm8.03-6.61l1.42-1.42c-.43-.51-.9-.99-1.41-1.41l-1.42 1.42A8.962 8.962 0 0012 4c-4.97 0-9 4.03-9 9s4.02 9 9 9 9-4.03 9-9c0-2.12-.74-4.07-1.97-5.61zM12 20c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>
+          Timer Control
+        </button>
+        <button class="btn-sm" onclick="quickOpen('/messagecontrol')" title="Open OnTime Message Control in a new tab — send messages to stage displays">
+          <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>
+          Messages
         </button>
       </div>
 
@@ -1106,6 +1129,9 @@
       if (d.serial) document.getElementById('os-serial').textContent = d.serial;
       watchdogOn = d.watchdog ?? true;
       document.getElementById('watchdog-toggle').className = 'toggle ' + (watchdogOn ? 'on' : '');
+      lastServerIp = d.ip || '';
+      const qb = document.getElementById('show-quick');
+      if (qb) qb.classList.toggle('qb-live', !!d.connected);
       if (d.connected) {
         bar.className = 'status-bar connected';
         txt.textContent = `Connected — ${d.ip}:4001`;
@@ -1572,6 +1598,14 @@
   };
 
   let _toastTimer = null;
+  // ── Show Mode quick bar ──
+  let lastServerIp = '';
+  function quickOpen(path) {
+    const host = lastServerIp || document.getElementById('ip').value.trim();
+    if (!host) return;
+    window.open(`http://${host}:4001${path}`, '_blank');
+  }
+
   // ── Show / Full view mode — persisted per browser ──
   function setViewMode(m) {
     document.body.classList.toggle('show-mode', m === 'show');
