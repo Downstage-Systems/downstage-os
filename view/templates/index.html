@@ -257,6 +257,15 @@
     .btn-sm:disabled { opacity: 0.35; cursor: not-allowed; }
     .btn-sm.active { border-color: var(--accent); color: var(--accent); background: var(--accent-lo); }
     .display-ctl-row { display: flex; gap: 6px; flex-wrap: wrap; }
+    .view-toggle { margin-bottom: 18px; }
+    .view-toggle .mode-btn { padding: 9px 8px; font-size: 13px; }
+    /* colour identity: setup reads amber (standby), show reads green (run) */
+    #view-tab-full.active { color: var(--blue);   background: rgba(245,165,36,0.10); }
+    #view-tab-full.active svg { fill: var(--blue); }
+    #view-tab-show.active { color: var(--accent); background: var(--accent-lo); }
+    #view-tab-show.active svg { fill: var(--accent); }
+    body.show-mode .full-only { display: none !important; }
+
     .mode-toggle {
       display: grid; grid-template-columns: 1fr 1fr;
       background: var(--surface2); border: 1px solid var(--border2);
@@ -509,6 +518,18 @@
   <div class="card">
     <div class="card-body">
 
+      <!-- View tabs: Full Setup vs simplified Show Mode -->
+      <div class="mode-toggle view-toggle">
+        <button class="mode-btn active" id="view-tab-full" onclick="setViewMode('full')">
+          <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+          Full Setup
+        </button>
+        <button class="mode-btn" id="view-tab-show" onclick="setViewMode('show')">
+          <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+          Show Mode
+        </button>
+      </div>
+
       <!-- Status -->
       <div class="watchdog-bar" id="watchdog-bar" style="display:none">
         <div class="status-dot"></div>
@@ -521,7 +542,7 @@
       </div>
 
       <!-- Server address -->
-      <div class="field">
+      <div class="field full-only">
         <div class="section-label">OnTime Server Address</div>
         <div class="ip-row">
           <div class="ip-input-wrap">
@@ -693,7 +714,7 @@
 
 
       <!-- Network (IP) -->
-      <div class="field" style="margin-top:22px">
+      <div class="field full-only" style="margin-top:22px">
         <div class="section-label">Network</div>
         <div class="local-panel">
           <div class="tz-current"><span id="net-current">Loading…</span></div>
@@ -736,7 +757,7 @@
       </div>
 
       <!-- WiFi -->
-      <div class="field" style="margin-top:22px">
+      <div class="field full-only" style="margin-top:22px">
         <div class="section-label">WiFi</div>
         <div class="local-panel">
           <div class="wifi-header">
@@ -768,7 +789,7 @@
       </div>
 
       <!-- Timezone -->
-      <div class="field" style="margin-top:22px; margin-bottom:0">
+      <div class="field full-only" style="margin-top:22px; margin-bottom:0">
         <div class="section-label">Pi Timezone</div>
         <div class="local-panel">
           <div class="tz-current">Current: <span id="tz-current">Loading…</span></div>
@@ -788,7 +809,7 @@
       </div>
 
       <!-- Downstage OS -->
-      <div class="field" style="margin-top:22px; margin-bottom:0">
+      <div class="field full-only" style="margin-top:22px; margin-bottom:0">
         <div class="section-label">Downstage OS</div>
         <div class="local-panel">
           <div class="version-row" style="margin-top:0; padding-top:0; border-top:none">
@@ -809,7 +830,7 @@
 
     </div>
 
-    <div class="card-footer">
+    <div class="card-footer full-only">
       <div class="footer-info">
         <span class="os-version" id="os-version-label"></span>
         <div class="oss-credit">Built on <a href="https://www.getontime.no" target="_blank" rel="noopener">Ontime</a>, free open-source software (GPL v3) · <a href="https://github.com/cpvalente/ontime" target="_blank" rel="noopener">source</a></div>
@@ -1551,6 +1572,15 @@
   };
 
   let _toastTimer = null;
+  // ── Show / Full view mode — persisted per browser ──
+  function setViewMode(m) {
+    document.body.classList.toggle('show-mode', m === 'show');
+    document.getElementById('view-tab-show').classList.toggle('active', m === 'show');
+    document.getElementById('view-tab-full').classList.toggle('active', m !== 'show');
+    try { localStorage.setItem('dsv-view-mode', m); } catch (e) {}
+  }
+  try { setViewMode(localStorage.getItem('dsv-view-mode') || 'full'); } catch (e) {}
+
   function showToast(msg, type) {
     const el = document.getElementById('toast');
     el.innerHTML = (ICONS[type] || '') + `<span>${msg}</span>`;

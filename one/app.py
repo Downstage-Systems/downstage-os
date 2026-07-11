@@ -47,13 +47,16 @@ VIEWS = [
 
 # ── Process handles ───────────────────────────────────────────────────────────
 _win   = [None, None]   # [hdmi1_proc, hdmi2_proc]
+_win_sig = [None, None]  # per-window target signature — for selective relaunch
 _wlock = threading.Lock()
 _ontime_proc = None
 _ontime_lock = threading.Lock()
 _ontime_desired = False   # True while the local server is supposed to be running
 
 _blackout_active   = False
-_blackout_hidden   = []      # window ids unmapped by /blackout
+_blackout_hidden   = {}      # window id → output number (0 = untracked orphan)
+_blackout_outputs  = set()   # outputs currently blacked out (1, 2)
+_testcard_override = set()   # outputs showing a temporary test card (no config change)
 _watchdog_override = False
 _wd_connected      = None    # watchdog's view of OnTime (None = not yet established)
 _watchdog_lock     = threading.Lock()
@@ -86,7 +89,7 @@ def load_config():
             data = {}
     else:
         data = {}
-    data.setdefault("mode", "remote")
+    data.setdefault("mode", "local")
     data.setdefault("ip", "")
     # Migrate old single-view format
     old_view = data.pop("view", "/timer")
@@ -355,6 +358,36 @@ def _activate_all_connected_outputs():
             print(f"[xrandr] activated {name}")
         except Exception as e:
             print(f"[xrandr] could not activate {name}: {e}")
+
+
+def _resync_displays():
+    """
+    Apply display settings and verify every output actually landed on its
+    configured mode.  A display plugged in after boot (especially a headless
+    boot) may not have its EDID modes probed yet, so the first xrandr --mode
+    call can fail silently — retry with growing delays before giving up.
+    """
+    config = load_config()
+    for attempt in range(3):
+        _apply_display_settings()
+        time.sleep(1 + attempt)
+        ok = True
+        for d in get_displays(fresh=True):
+            n   = min(d["port"], 2)
+            res = config.get(f"hdmi{n}_res", "1920x1080")
+            try:
+                w, h = (int(v) for v in res.split("x"))
+            except Exception:
+                continue
+            if config.get(f"hdmi{n}_rotate", "normal") in ("left", "right"):
+                w, h = h, w
+            if (d["w"], d["h"]) != (w, h):
+                ok = False
+        if ok:
+            return True
+        print(f"[xrandr] resync attempt {attempt + 1}: modes not applied yet, retrying")
+    print("[xrandr] resync: outputs did not reach configured modes")
+    return False
 
 
 def _apply_display_settings():
@@ -699,7 +732,7 @@ def _open_window(source, display, hdmi_index):
         ], env=_chromium_env())
 
     config = load_config()
-    mode   = config.get("mode", "remote")
+    mode   = config.get("mode", "local")
     ip     = "127.0.0.1" if mode == "local" else config.get("ip", "")
 
     if source == "external":
@@ -765,38 +798,56 @@ def _kill_orphan_windows():
     _mark_profiles_clean()
 
 
-def launch_all_windows():
-    """Read config and (re)open windows on both displays."""
-    global _win
+def launch_all_windows(force=True):
+    """Read config and (re)open windows. force=True (boot, watchdog) relaunches
+    every output. force=False (Save) relaunches ONLY the outputs whose resolved
+    target actually changed — so editing HDMI 2 leaves HDMI 1 running untouched."""
+    global _win, _win_sig
     config   = load_config()
     displays = get_displays(fresh=True)
 
     # Out-of-box: sources that need the (unconfigured) OnTime server show the
     # welcome screen — but deliberately chosen non-OnTime sources (test
     # patterns, external, off) are honored as-is
-    unconfigured = config.get("mode", "remote") == "remote" and not config.get("ip")
+    unconfigured = config.get("mode", "local") == "remote" and not config.get("ip")
 
     # An OnTime source with the server down must never hit chromium's error
     # page — hold on the branded page; the watchdog restores when it answers
-    ip = "127.0.0.1" if config.get("mode") == "local" else config.get("ip", "")
+    ip = "127.0.0.1" if config.get("mode", "local") == "local" else config.get("ip", "")
     sources = [config.get(f"hdmi{n}_source", "config" if n == 1 else "/timer") for n in (1, 2)]
     needs = any(_is_ontime_source(s) for s in sources)
     ontime_ok = check_ontime(ip, timeout=2) if (needs and ip) else False
 
     with _wlock:
-        _kill(_win[0])
-        _kill(_win[1])
-        _kill_orphan_windows()
+        # full launch (or recovery after a lost service instance): wipe everything
+        if force or (_win[0] is None and _win[1] is None):
+            _kill(_win[0]); _kill(_win[1]); _kill_orphan_windows()
+            _win[0] = _win[1] = None
+            _win_sig[0] = _win_sig[1] = None
 
-        _win[0] = _win[1] = None
+        present = set()
         for d in displays:
-            n = min(d["port"], 2)
+            n = min(d["port"], 2); i = n - 1; present.add(i)
             default = "config" if n == 1 else "/timer"
             h = config.get(f"hdmi{n}_source", default)
             s = "welcome" if (unconfigured and (_is_ontime_source(h) or h == "config")) else h
             if _is_ontime_source(s) and not ontime_ok:
                 s = "holding"
-            _win[n - 1] = _open_window(s, d, n)
+            # signature = everything that affects this window's URL (its own
+            # config only, so the other output never enters into it)
+            extra = (_cleantimer_params(n) if s == "cleantimer"
+                     else config.get(f"hdmi{n}_external_url", "") if s == "external" else "")
+            sig = (s, d["w"], d["h"], d["x"], d["y"], extra)
+            alive = _win[i] is not None and _win[i].poll() is None
+            if alive and _win_sig[i] == sig:
+                continue   # unchanged — leave this output alone
+            _kill(_win[i])
+            _win[i] = _open_window(s, d, n)
+            _win_sig[i] = sig
+        # a display that vanished (unplugged): close its window
+        for i in (0, 1):
+            if i not in present and _win[i] is not None:
+                _kill(_win[i]); _win[i] = None; _win_sig[i] = None
 
 
 def close_all_windows():
@@ -832,8 +883,9 @@ def _hdmi_monitor():
             print(f"[hdmi] display change detected: {prev} → {curr}")
             time.sleep(2)   # let X settle after hotplug
             # a hot-plugged output is connected but has no mode — activate it
-            # and apply configured res/rotation before opening windows on it
-            _apply_display_settings()
+            # and apply configured res/rotation before opening windows on it,
+            # verifying modes stuck (EDID may not be probed on first try)
+            _resync_displays()
             launch_all_windows()
             prev = curr
 
@@ -873,7 +925,7 @@ def _ontime_watchdog():
             _wd_connected = None
             misses = 0
             continue
-        mode = config.get("mode", "remote")
+        mode = config.get("mode", "local")
         ip   = "127.0.0.1" if mode == "local" else config.get("ip", "")
         if not ip:
             _wd_connected = None
@@ -1076,6 +1128,7 @@ class OLEDDisplay:
         self._device = None
         self._stop   = threading.Event()
         self._jitter = 0   # alternate 1px vertical shift — OLED burn-in relief
+        self._hold_until = 0   # while set, the status loop must not paint over us
 
     def start(self):
         if not _OLED_LIB:
@@ -1135,6 +1188,8 @@ class OLEDDisplay:
     def _render(self):
         if not self._device:
             return
+        if time.monotonic() < self._hold_until:
+            return   # power-button countdown owns the panel
         try:
             with luma_canvas(self._device) as draw:
                 hs = hotspot_is_active()
@@ -1152,7 +1207,7 @@ class OLEDDisplay:
     def _page_status(self, draw, hotspot=False):
         j         = self._jitter
         config    = load_config()
-        mode      = config.get("mode", "remote")
+        mode      = config.get("mode", "local")
         ip        = "127.0.0.1" if mode == "local" else config.get("ip", "")
         connected = check_ontime(ip, timeout=2) if ip else False
         net       = get_network_info()
@@ -1202,11 +1257,119 @@ class OLEDDisplay:
         draw.text((0, 30 + j), config.get("hotspot_pass", ""), fill=255)
         draw.text((0, 44 + j), "10.42.0.1:8080", fill=255)
 
+    def countdown(self, n):
+        """Full-screen digit while the power button is held — 3, 2, 1."""
+        if not self._device:
+            return
+        self._hold_until = time.monotonic() + 2   # keep the status loop away
+        try:
+            font = None
+            try:
+                from PIL import ImageFont
+                font = ImageFont.truetype(
+                    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 46)
+            except Exception:
+                pass
+            with luma_canvas(self._device) as draw:
+                s = str(n)
+                if font:
+                    bbox = draw.textbbox((0, 0), s, font=font)
+                    w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
+                    draw.text(((128 - w) / 2 - bbox[0], (50 - h) / 2 - bbox[1]),
+                              s, font=font, fill=255)
+                else:
+                    draw.text((60, 20), s, fill=255)
+                msg = "Hold to shut down"
+                draw.text(((128 - draw.textlength(msg)) / 2, 52), msg, fill=255)
+        except Exception as e:
+            print(f"[oled] countdown: {e}")
+
+    def resume(self):
+        """Countdown cancelled — hand the panel back to the status loop."""
+        self._hold_until = 0
+        self.force_refresh()
+
     def force_refresh(self):
         threading.Thread(target=self._render, daemon=True).start()
 
 
 oled = OLEDDisplay()
+
+
+# ── Physical power button ─────────────────────────────────────────────────────
+# logind is set to HandlePowerKey=ignore so this thread is the sole consumer
+# of the front button: a 3 s hold shuts down, with a full-screen countdown on
+# the OLED; releasing early cancels. logind's HandlePowerKeyLongPress=poweroff
+# (5 s) remains as a failsafe if this process is ever dead.
+
+def _find_power_button_device():
+    try:
+        for p in sorted(Path("/sys/class/input").glob("event*")):
+            name = (p / "device" / "name").read_text().strip()
+            if name == "pwr_button":
+                return f"/dev/input/{p.name}"
+    except Exception:
+        pass
+    return None
+
+
+def _power_button_monitor():
+    import select
+    import struct
+    dev = _find_power_button_device()
+    if not dev:
+        print("[pwrbtn] no pwr_button input device — monitor disabled")
+        return
+    fmt  = "llHHi"   # struct input_event, 64-bit
+    size = struct.calcsize(fmt)
+    KEY_POWER = 116
+    try:
+        f = open(dev, "rb", buffering=0)
+    except Exception as e:
+        print(f"[pwrbtn] cannot open {dev}: {e}")
+        return
+    print(f"[pwrbtn] monitoring {dev}")
+    while True:
+        try:
+            data = f.read(size)
+            if not data or len(data) < size:
+                time.sleep(1)
+                continue
+            _, _, etype, code, value = struct.unpack(fmt, data)
+            if etype != 1 or code != KEY_POWER or value != 1:
+                continue
+            # button down — count 3, 2, 1 on the OLED, watching for release
+            t0 = time.monotonic()
+            cancelled = False
+            shown = None
+            while True:
+                held = time.monotonic() - t0
+                if held >= 3.0:
+                    break
+                n = 3 - int(held)
+                if n != shown:
+                    oled.countdown(n)
+                    shown = n
+                r, _, _ = select.select([f], [], [], 0.05)
+                if r:
+                    d2 = f.read(size)
+                    if d2 and len(d2) >= size:
+                        _, _, et2, c2, v2 = struct.unpack(fmt, d2[:size])
+                        if et2 == 1 and c2 == KEY_POWER and v2 == 0:
+                            cancelled = True
+                            break
+            if cancelled:
+                print("[pwrbtn] released early — shutdown cancelled")
+                oled.resume()
+                continue
+            print("[pwrbtn] 3 s hold — shutting down")
+            _audit("SHUTDOWN", "front button 3 s hold")
+            close_all_windows()
+            subprocess.Popen(["sudo", "poweroff"])
+            return
+        except Exception as e:
+            print(f"[pwrbtn] error: {e}")
+            time.sleep(2)
 
 
 # ── Flask routes ──────────────────────────────────────────────────────────────
@@ -1302,12 +1465,15 @@ def save():
            for c, d in (("keycolour", "000000"), ("timercolour", "ffffff"))},
     })
     _blackout_active   = False
+    _blackout_outputs.clear()
+    _blackout_hidden.clear()
+    _testcard_override.clear()
     _watchdog_override = False
     oled.force_refresh()
     def _apply_and_launch():
         _apply_display_settings()
         time.sleep(0.5)
-        launch_all_windows()
+        launch_all_windows(force=False)   # only relaunch outputs that changed
     threading.Thread(target=_apply_and_launch, daemon=True).start()
     return jsonify({"ok": True})
 
@@ -1326,7 +1492,7 @@ def status():
         config = load_config()
     except Exception:
         config = {}
-    mode      = config.get("mode", "remote")
+    mode      = config.get("mode", "local")
     ip        = "127.0.0.1" if mode == "local" else config.get("ip", "")
     try:
         connected = check_ontime(ip, timeout=2) if ip else False
@@ -1363,6 +1529,8 @@ def status():
         "companion_running":    companion_is_running(),
         "displays":             displays,
         "blackout":             _blackout_active,
+        "blackout_outputs":     sorted(_blackout_outputs),
+        "testcard_outputs":     sorted(_testcard_override),
         "watchdog_override":    _watchdog_override,
         "watchdog":             config.get("watchdog", True),
         "hotspot_active":       hotspot_is_active(),
@@ -1379,18 +1547,20 @@ def status():
 
 @app.route("/reset", methods=["POST"])
 def reset():
-    save_config({"ip": "", "mode": "remote", "hdmi1_source": "config", "hdmi2_source": "/timer"})
+    save_config({"ip": "", "mode": "local", "hdmi1_source": "config", "hdmi2_source": "/timer"})
     close_all_windows()
     oled.force_refresh()
     return jsonify({"ok": True})
 
 
-def _refresh_windows():
-    """Send F5 to every Chromium window we launched."""
+def _refresh_windows(only=None):
+    """Send F5 to the Chromium windows we launched (all, or one output)."""
     env = {**os.environ, "DISPLAY": ":0"}
     with _wlock:
-        procs = [p for p in _win if p and p.poll() is None]
-    for proc in procs:
+        procs = [(i + 1, p) for i, p in enumerate(_win) if p and p.poll() is None]
+    for n, proc in procs:
+        if only and n != only:
+            continue
         try:
             ids = subprocess.check_output(
                 ["xdotool", "search", "--pid", str(proc.pid)],
@@ -1407,7 +1577,21 @@ def _refresh_windows():
 
 @app.route("/refresh", methods=["POST"])
 def refresh_displays():
-    threading.Thread(target=_refresh_windows, daemon=True).start()
+    data = request.get_json(silent=True) or {}
+    only = data.get("output")
+    only = int(only) if only in (1, 2, "1", "2") else None
+    threading.Thread(target=_refresh_windows, args=(only,), daemon=True).start()
+    return jsonify({"ok": True})
+
+
+@app.route("/displays/resync", methods=["POST"])
+def resync_displays():
+    """Re-negotiate the HDMI handshake: re-probe outputs, re-apply configured
+    modes with verification, then relaunch all windows at fresh geometry."""
+    def _do():
+        _resync_displays()
+        launch_all_windows()
+    threading.Thread(target=_do, daemon=True).start()
     return jsonify({"ok": True})
 
 
@@ -1417,7 +1601,10 @@ def go_to_desktop():
     return jsonify({"ok": True})
 
 
-def _mjpeg_stream(x, y, w, h):
+_stream_procs = {1: [], 2: []}   # live ffmpeg grabs per output
+
+
+def _mjpeg_stream(x, y, w, h, n=0):
     """Capture a display region via ffmpeg and yield MJPEG frames."""
     env = os.environ.copy()
     env.setdefault("DISPLAY", ":0")
@@ -1432,6 +1619,19 @@ def _mjpeg_stream(x, y, w, h):
         "pipe:1",
     ]
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, env=env)
+    if n in _stream_procs:
+        procs = _stream_procs[n]
+        procs[:] = [p for p in procs if p.poll() is None]
+        procs.append(proc)
+        # a page refresh abandons its stream, but the server only notices on
+        # the next failed write — cap the grabs per output so zombies can't
+        # pile up and starve the fresh stream
+        while len(procs) > 2:
+            old_p = procs.pop(0)
+            try:
+                old_p.kill()
+            except Exception:
+                pass
     buf = b""
     try:
         while True:
@@ -1452,15 +1652,19 @@ def _mjpeg_stream(x, y, w, h):
     finally:
         proc.kill()
         proc.wait()
+        if n in _stream_procs and proc in _stream_procs[n]:
+            _stream_procs[n].remove(proc)
 
 
 @app.route("/stream/hdmi<int:n>")
 def stream_hdmi(n):
-    d = next((x for x in get_displays() if x["port"] == n), None)
+    # fresh geometry — a cached entry can point the grab at a stale region
+    # after a mode change or hot-plug
+    d = next((x for x in get_displays(fresh=True) if x["port"] == n), None)
     if not d:
         return "Display not available", 404
     return Response(
-        _mjpeg_stream(d["x"], d["y"], d["w"], d["h"]),
+        _mjpeg_stream(d["x"], d["y"], d["w"], d["h"], min(n, 2)),
         mimetype="multipart/x-mixed-replace; boundary=frame",
     )
 
@@ -2637,39 +2841,75 @@ def wifi_forget():
 
 # ── Blackout ──────────────────────────────────────────────────────────────────
 
-@app.route("/blackout", methods=["POST"])
-def blackout():
-    """Hide the kiosk windows instead of replacing them. The desktop behind
-    them is a pure black void, so unmapping is an instant blackout — and the
-    hidden windows keep their state for an instant restore."""
-    global _blackout_active
-    _blackout_active = True
-    env = {**os.environ, "DISPLAY": ":0"}
-    _blackout_hidden.clear()
+def _parse_output(data):
+    """Optional {"output": 1|2} in a request body → int or None (= all)."""
+    only = data.get("output")
+    return int(only) if only in (1, 2, "1", "2") else None
+
+
+def _wids_for_output(n, env):
+    """Visible window ids belonging to the Chromium we launched on output n."""
+    with _wlock:
+        proc = _win[n - 1]
+    if not (proc and proc.poll() is None):
+        return []
     try:
-        wids = subprocess.check_output(
-            ["xdotool", "search", "--onlyvisible", "--class", "chromium"],
+        return subprocess.check_output(
+            ["xdotool", "search", "--onlyvisible", "--pid", str(proc.pid)],
             env=env, text=True, timeout=5,
         ).split()
     except Exception:
-        wids = []
-    for wid in wids:
+        return []
+
+
+@app.route("/blackout", methods=["POST"])
+def blackout():
+    """Hide kiosk windows instead of replacing them. The desktop behind
+    them is a pure black void, so unmapping is an instant blackout — and the
+    hidden windows keep their state for an instant restore. Pass
+    {"output": 1|2} to black out a single display; no body blacks out all."""
+    global _blackout_active
+    data = request.get_json(silent=True) or {}
+    only = _parse_output(data)
+    env  = {**os.environ, "DISPLAY": ":0"}
+    targets = {}   # wid → output
+    for n in ([only] if only else [1, 2]):
+        for wid in _wids_for_output(n, env):
+            targets[wid] = n
+    if not only:
+        # a full blackout also catches windows we didn't launch
+        try:
+            for wid in subprocess.check_output(
+                    ["xdotool", "search", "--onlyvisible", "--class", "chromium"],
+                    env=env, text=True, timeout=5).split():
+                targets.setdefault(wid, 0)
+        except Exception:
+            pass
+    for wid, n in targets.items():
         try:
             subprocess.run(["xdotool", "windowunmap", wid],
                            env=env, timeout=3, check=True)
-            _blackout_hidden.append(wid)
+            _blackout_hidden[wid] = n
         except Exception as e:
             print(f"[blackout] unmap {wid}: {e}")
-    return jsonify({"ok": True, "blackout": True})
+    _blackout_outputs.update({only} if only else {1, 2})
+    _blackout_active = True
+    return jsonify({"ok": True, "blackout": True,
+                    "outputs": sorted(_blackout_outputs)})
 
 
 @app.route("/blackout/clear", methods=["POST"])
 def blackout_clear():
+    """Restore blacked-out windows. {"output": 1|2} resumes one display;
+    no body resumes everything."""
     global _blackout_active
-    _blackout_active = False
-    env = {**os.environ, "DISPLAY": ":0"}
-    restored = bool(_blackout_hidden)
-    for wid in _blackout_hidden:
+    data = request.get_json(silent=True) or {}
+    only = _parse_output(data)
+    env  = {**os.environ, "DISPLAY": ":0"}
+    restored = True
+    for wid, n in list(_blackout_hidden.items()):
+        if only and n not in (only, 0):
+            continue
         try:
             subprocess.run(["xdotool", "windowmap", wid],
                            env=env, timeout=3, check=True)
@@ -2677,13 +2917,71 @@ def blackout_clear():
             # state — without this it comes back decorated (title bar)
             subprocess.run(["wmctrl", "-i", "-r", wid, "-b", "add,fullscreen"],
                            env=env, timeout=3, check=True)
+            del _blackout_hidden[wid]
         except Exception as e:
             restored = False
             print(f"[blackout] remap {wid}: {e}")
-    _blackout_hidden.clear()
+    if only:
+        _blackout_outputs.discard(only)
+    else:
+        _blackout_outputs.clear()
+        _blackout_hidden.clear()
+    _blackout_active = bool(_blackout_outputs)
     if not restored:
         threading.Thread(target=launch_all_windows, daemon=True).start()
-    return jsonify({"ok": True, "blackout": False})
+    return jsonify({"ok": True, "blackout": _blackout_active,
+                    "outputs": sorted(_blackout_outputs)})
+
+
+@app.route("/displays/swap", methods=["POST"])
+def displays_swap():
+    """Swap HDMI 1 and 2 — source, external URL, and custom-timer settings.
+    Applies immediately (no Save); resolution/rotation stay with the glass."""
+    config  = load_config()
+    keys    = ["source", "external_url"] + [
+        f"ct_{o}" for o in ("freeze", "hideprogress", "hideclock",
+                            "hidecards", "keycolour", "timercolour")]
+    defaults = {"hdmi1_source": "config", "hdmi2_source": "/timer"}
+    updates  = {}
+    for k in keys:
+        a = config.get(f"hdmi1_{k}", defaults.get(f"hdmi1_{k}"))
+        b = config.get(f"hdmi2_{k}", defaults.get(f"hdmi2_{k}"))
+        updates[f"hdmi1_{k}"], updates[f"hdmi2_{k}"] = b, a
+    save_config(updates)
+    _audit("SWAP", "HDMI 1 and 2 sources swapped")
+    _testcard_override.clear()   # a temp test card doesn't survive a swap
+    threading.Thread(target=lambda: launch_all_windows(force=False),
+                     daemon=True).start()
+    return jsonify({"ok": True,
+                    "hdmi1_source": updates["hdmi1_source"],
+                    "hdmi2_source": updates["hdmi2_source"]})
+
+
+@app.route("/displays/testcard", methods=["POST"])
+def displays_testcard():
+    """Temporarily show the test card on one output — a live action that
+    never touches the saved source. {"output": 1|2, "on": true|false}."""
+    data = request.get_json(silent=True) or {}
+    n    = _parse_output(data) or 1
+    on   = bool(data.get("on", True))
+    def run():
+        global _win
+        if on:
+            with _wlock:
+                d = next((x for x in get_displays(fresh=True) if x["port"] == n), None)
+                if not d:
+                    return
+                i = n - 1
+                _kill(_win[i])
+                _win[i] = _open_window("pattern-card", d, n)
+                _win_sig[i] = None   # not the configured target — restore relaunches
+            _testcard_override.add(n)
+        else:
+            _testcard_override.discard(n)
+            # sig is None for this output, so only it gets relaunched
+            launch_all_windows(force=False)
+    threading.Thread(target=run, daemon=True).start()
+    return jsonify({"ok": True, "output": n, "testcard": on})
 
 
 @app.route("/blackout-page")
@@ -2694,10 +2992,12 @@ def blackout_page_view():
 @app.route("/identify-page/<label>")
 def identify_page(label):
     label = re.sub(r"[^A-Za-z0-9 ]", "", label)[:12]
+    # colour identity matches the config UI: HDMI 1 light blue, HDMI 2 green
+    colour = {"1": "#2E90D9"}.get(label, "#12A95C")
     return (
         '<!DOCTYPE html><html><head><style>'
         '*{margin:0;padding:0}'
-        'body{background:#12A95C;color:#fff;display:flex;flex-direction:column;'
+        f'body{{background:{colour};color:#fff;display:flex;flex-direction:column;'
         'align-items:center;justify-content:center;height:100vh;'
         'font-family:sans-serif;text-align:center}'
         '.n{font-size:40vh;font-weight:800;line-height:1}'
@@ -3098,7 +3398,7 @@ def boot():
 
     time.sleep(3)
     config = load_config()
-    mode   = config.get("mode", "remote")
+    mode   = config.get("mode", "local")
     ip     = "127.0.0.1" if mode == "local" else config.get("ip", "")
 
     if (mode == "local" and ontime_installed()
@@ -3138,6 +3438,7 @@ if __name__ == "__main__":
     threading.Thread(target=_ontime_watchdog, daemon=True).start()
     threading.Thread(target=_cpu_sampler,     daemon=True).start()
     threading.Thread(target=_hotspot_fallback, daemon=True).start()
+    threading.Thread(target=_power_button_monitor, daemon=True).start()
     def _on_sigterm(signum, frame):
         # A service stop during system shutdown is our last chance to own
         # the panel. Reboot leaves the panel alone; poweroff gets the

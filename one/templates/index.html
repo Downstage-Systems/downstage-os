@@ -38,6 +38,10 @@
       --border:    #1d232a;
       --border2:   #242B33;   /* Edge */
       --accent:    #2FD97B;   /* Run Green */
+      --hdmi1:     #58B6FF;   /* HDMI 1 identity — light blue */
+      --hdmi1-lo:  rgba(88,182,255,0.14);
+      --hdmi2:     #2FD97B;   /* HDMI 2 identity — Run Green */
+      --hdmi2-lo:  rgba(47,217,123,0.14);
       --accent-lo: rgba(47,217,123,0.12);
       --text:      #E8ECEF;   /* Text */
       --muted:     #9AA4AD;   /* Dim */
@@ -235,6 +239,10 @@
     .preview-box:hover { border-color: var(--muted2); }
     .preview-box.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-lo); }
 
+    .preview-box, .preview-box img {
+      -webkit-touch-callout: none;   /* long-press opens our menu, not iOS's */
+      -webkit-user-select: none; user-select: none;
+    }
     .preview-box img {
       width: 100%; height: 100%; object-fit: cover; display: block;
     }
@@ -249,6 +257,11 @@
       pointer-events: none;
     }
 
+    .preview-hint {
+      font-size: 11px; color: var(--muted2);
+      margin: 6px 2px 2px; letter-spacing: 0.02em;
+    }
+
     .preview-offline {
       position: absolute; inset: 0;
       display: flex; align-items: center; justify-content: center;
@@ -256,7 +269,8 @@
     }
 
     /* ── Display controls (under previews) ── */
-    .display-ctl-row { display: flex; gap: 6px; margin: 8px 0 12px; }
+    .display-ctl-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 12px; }
+    .display-ctl-row .btn-sm { flex: 1 1 auto; justify-content: center; }
     .btn-sm.blackout { border-color: var(--red-bd); color: var(--red); }
     .btn-sm.blackout:hover:not(:disabled) { background: var(--red-bg); color: var(--red); }
 
@@ -655,6 +669,60 @@
     .channel-btn.active { background: var(--surface2); color: var(--text); font-weight: 700; }
     .channel-btn.active.beta { color: var(--amber); }
 
+    /* ── Per-output colour identity: HDMI 1 light blue, HDMI 2 green ── */
+    #preview-box-1.active { border-color: var(--hdmi1); box-shadow: 0 0 0 2px var(--hdmi1-lo); }
+    #preview-box-2.active { border-color: var(--hdmi2); box-shadow: 0 0 0 2px var(--hdmi2-lo); }
+    #preview-box-1 .preview-badge { color: var(--hdmi1); }
+    #preview-box-2 .preview-badge { color: var(--hdmi2); }
+    #tab-hdmi1.active svg { fill: var(--hdmi1); }
+    #tab-hdmi2.active svg { fill: var(--hdmi2); }
+    #hdmi1-label { color: var(--hdmi1); }
+    #hdmi2-label { color: var(--hdmi2); }
+    /* selected source chip takes the active output's colour */
+    body[data-hdmi="1"] .source-chip.selected { background: var(--hdmi1-lo); border-color: var(--hdmi1); }
+    body[data-hdmi="1"] .source-chip.selected .source-chip-icon { background: rgba(88,182,255,0.22); }
+    body[data-hdmi="1"] .source-chip.selected .source-chip-icon svg { fill: var(--hdmi1); }
+    body[data-hdmi="1"] .source-chip.selected .source-chip-label { color: var(--hdmi1); }
+
+    /* ── Right-click menu on the HDMI previews ── */
+    .ctx-menu {
+      position: fixed; z-index: 300; min-width: 215px;
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 10px; padding: 5px;
+      box-shadow: 0 10px 32px rgba(0,0,0,0.55);
+    }
+    .ctx-title {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; padding: 6px 10px 4px;
+    }
+    .ctx-item {
+      display: flex; align-items: center; gap: 9px; width: 100%;
+      padding: 8px 10px; border: none; background: transparent;
+      color: var(--text); font-family: inherit; font-size: 13px;
+      border-radius: 7px; cursor: pointer; text-align: left;
+    }
+    .ctx-item:hover { background: var(--surface); }
+    .ctx-item svg { width: 14px; height: 14px; fill: currentColor; opacity: 0.8; flex-shrink: 0; }
+    .ctx-sep { height: 1px; background: var(--border); margin: 4px 6px; }
+
+    /* ── View tabs: Show mode strips the page to mid-show controls ── */
+    .view-toggle { margin-bottom: 18px; }
+    .view-toggle .mode-btn { padding: 9px 8px; font-size: 13px; }
+    /* colour identity: setup reads amber (standby), show reads green (run) */
+    #view-tab-full.active { color: var(--blue);   background: rgba(245,165,36,0.10); }
+    #view-tab-full.active svg { fill: var(--blue); }
+    #view-tab-show.active { color: var(--accent); background: var(--accent-lo); }
+    #view-tab-show.active svg { fill: var(--accent); }
+    body.show-mode .full-only { display: none !important; }
+
+    /* ── Show Mode quick bar: one-tap links to the tools used mid-show ── */
+    .show-quick { display: none; }
+    body.show-mode .show-quick {
+      display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px;
+    }
+    .show-quick .btn-sm { flex: 1 1 auto; justify-content: center; }
+    .show-quick .btn-sm svg { fill: var(--accent); }
+
     /* ── Mobile (phones open this page constantly) ── */
     @media (max-width: 560px) {
       body { padding: 14px 8px; }
@@ -670,6 +738,7 @@
       .chip-opt-item { min-width: 0; flex: 1 1 100%; }
       .footer-row { flex-wrap: wrap; }
       .health-grid { grid-template-columns: repeat(2, 1fr); }
+      .ctx-item { padding: 12px 12px; font-size: 14px; }
     }
   </style>
 </head>
@@ -695,10 +764,42 @@
   <div class="card">
     <div class="card-body">
 
+      <!-- View tabs: Full Setup vs simplified Show Mode -->
+      <div class="mode-toggle view-toggle">
+        <button class="mode-btn active" id="view-tab-full" onclick="setViewMode('full')">
+          <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+          Full Setup
+        </button>
+        <button class="mode-btn" id="view-tab-show" onclick="setViewMode('show')">
+          <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+          Show Mode
+        </button>
+      </div>
+
+      <!-- Show Mode quick bar — one-tap tools for mid-show -->
+      <div class="show-quick">
+        <button class="btn-sm" onclick="quickOpen('/editor/')" title="Open the OnTime Editor in a new tab">
+          <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+          OnTime Editor
+        </button>
+        <button class="btn-sm" onclick="quickOpen('/timercontrol')" title="Open OnTime Timer Control in a new tab — start, stop and roll cues">
+          <svg viewBox="0 0 24 24"><path d="M15 1H9v2h6V1zm-4 13h2V8h-2v6zm8.03-6.61l1.42-1.42c-.43-.51-.9-.99-1.41-1.41l-1.42 1.42A8.962 8.962 0 0012 4c-4.97 0-9 4.03-9 9s4.02 9 9 9 9-4.03 9-9c0-2.12-.74-4.07-1.97-5.61zM12 20c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>
+          Timer Control
+        </button>
+        <button class="btn-sm" onclick="quickOpen('/messagecontrol')" title="Open OnTime Message Control in a new tab — send messages to stage displays">
+          <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>
+          Messages
+        </button>
+        <button class="btn-sm" onclick="openCompanion()" title="Open the Companion admin UI in a new tab — Stream Deck buttons and pages">
+          <svg viewBox="0 0 24 24"><path d="M4 5h4v4H4V5zm6 0h4v4h-4V5zm6 0h4v4h-4V5zM4 11h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4zM4 17h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4z"/></svg>
+          Companion
+        </button>
+      </div>
+
       <!-- Blackout banner -->
       <div class="alert-bar blackout" id="blackout-bar" style="display:none">
         <div class="alert-dot"></div>
-        <span>Displays are blacked out</span>
+        <span id="blackout-bar-text">Displays are blacked out</span>
         <button class="alert-action" onclick="blackoutResume()">Resume</button>
       </div>
 
@@ -720,20 +821,20 @@
       </div>
 
       <!-- Mode toggle -->
-      <div class="section-label">Server Mode</div>
-      <div class="mode-toggle">
-        <button class="mode-btn" id="btn-remote" onclick="setMode('remote')">
-          <svg viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3a4.237 4.237 0 00-6 0zm-4-4l2 2a7.074 7.074 0 0110 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
-          Remote Server
-        </button>
+      <div class="section-label full-only">Server Mode</div>
+      <div class="mode-toggle full-only">
         <button class="mode-btn" id="btn-local" onclick="setMode('local')">
           <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-5 12H4v-2h11v2zm5-4H4v-2h16v2zm0-4H4V6h16v2z"/></svg>
           Local (this Pi)
         </button>
+        <button class="mode-btn" id="btn-remote" onclick="setMode('remote')">
+          <svg viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3a4.237 4.237 0 00-6 0zm-4-4l2 2a7.074 7.074 0 0110 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+          Remote Server
+        </button>
       </div>
 
       <!-- Remote: IP -->
-      <div id="remote-section" class="field">
+      <div id="remote-section" class="field full-only">
         <div class="section-label">OnTime Server Address</div>
         <div class="ip-row">
           <div class="ip-input-wrap">
@@ -753,7 +854,7 @@
       </div>
 
       <!-- Local: OnTime panel -->
-      <div id="local-section" class="field" style="display:none">
+      <div id="local-section" class="field full-only" style="display:none">
         <div class="section-label">OnTime Server (Local)</div>
         <div class="local-panel">
           <div class="local-panel-header">
@@ -777,19 +878,19 @@
 
         <!-- Live previews -->
         <div class="preview-row" id="preview-row">
-          <div class="preview-box active" id="preview-box-1" onclick="selectHdmiTab(1)">
-            <img id="preview-img-1" src="/stream/hdmi1"
-                 onerror="this.style.display='none';document.getElementById('preview-off-1').style.display='flex'">
+          <div class="preview-box active" id="preview-box-1" onclick="selectHdmiTab(1)" oncontextmenu="openPreviewMenu(event, 1)">
+            <img id="preview-img-1" alt="">
             <div class="preview-offline" id="preview-off-1" style="display:none">No signal</div>
             <div class="preview-badge">HDMI 1</div>
           </div>
-          <div class="preview-box" id="preview-box-2" onclick="selectHdmiTab(2)">
-            <img id="preview-img-2" src="/stream/hdmi2"
-                 onerror="this.style.display='none';document.getElementById('preview-off-2').style.display='flex'">
+          <div class="preview-box" id="preview-box-2" onclick="selectHdmiTab(2)" oncontextmenu="openPreviewMenu(event, 2)">
+            <img id="preview-img-2" alt="">
             <div class="preview-offline" id="preview-off-2" style="display:none">No signal</div>
             <div class="preview-badge">HDMI 2</div>
           </div>
         </div>
+
+        <div class="preview-hint">Right-click a preview (long-press on phones) for quick actions</div>
 
         <!-- Display controls — act on the outputs previewed above -->
         <div class="display-ctl-row">
@@ -802,6 +903,14 @@
             Blackout
           </button>
           <button class="btn-sm" onclick="identifyDisplays()" title="Flash a big 1 and 2 on the outputs">Identify</button>
+          <button class="btn-sm" onclick="resyncDisplays()" title="Re-negotiate the HDMI handshake — re-detects connected displays, re-applies resolution and rotation, and relaunches the outputs. Use if a display shows the wrong size after plugging in.">
+            <svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12zm-9-1c2.76 0 5-2.24 5-5h-2c0 1.66-1.34 3-3 3s-3-1.34-3-3 1.34-3 3-3v2l3-3-3-3v2c-2.76 0-5 2.24-5 5s2.24 5 5 5z"/></svg>
+            Re-sync HDMI
+          </button>
+          <button class="btn-sm" onclick="refreshPreviews()" title="Restart the two preview thumbnails above — the displays themselves are untouched.">
+            <svg viewBox="0 0 24 24"><path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8A5.87 5.87 0 016 12c0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/></svg>
+            Refresh Previews
+          </button>
         </div>
 
         <!-- Quick Presets — one-tap recall of a full output setup -->
@@ -984,7 +1093,7 @@
       </div>
 
       <!-- Display settings: resolution + rotation -->
-      <div class="field">
+      <div class="field full-only">
         <div class="section-label">Display Settings</div>
         <div class="local-panel">
           <div class="display-settings-grid">
@@ -1033,7 +1142,7 @@
       </div>
 
       <!-- Companion -->
-      <div class="field">
+      <div class="field full-only">
         <div class="section-label">Bitfocus Companion</div>
         <div class="local-panel">
           <div class="local-panel-header">
@@ -1060,7 +1169,7 @@
       </div>
 
       <!-- Network (IP) -->
-      <div class="field">
+      <div class="field full-only">
         <div class="section-label">Network</div>
         <div class="local-panel">
           <div class="tz-current">
@@ -1105,7 +1214,7 @@
       </div>
 
       <!-- WiFi -->
-      <div class="field">
+      <div class="field full-only">
         <div class="section-label">WiFi</div>
         <div class="local-panel">
           <div class="wifi-header">
@@ -1137,7 +1246,7 @@
       </div>
 
       <!-- Timezone -->
-      <div class="field">
+      <div class="field full-only">
         <div class="section-label">Pi Timezone</div>
         <div class="local-panel">
           <div class="tz-current">Current: <span id="tz-current">Loading…</span></div>
@@ -1157,7 +1266,7 @@
       </div>
 
       <!-- Downstage OS version -->
-      <div class="field">
+      <div class="field full-only">
         <div class="section-label">Downstage OS</div>
         <div class="local-panel">
           <div class="version-row" id="os-version-row" style="display:flex; margin-top:0; padding-top:0; border-top:none">
@@ -1177,7 +1286,7 @@
       </div>
 
       <!-- System Health -->
-      <div class="field">
+      <div class="field full-only">
         <div class="section-label">System Health</div>
         <div class="local-panel">
           <div class="health-grid" id="health-grid">
@@ -1191,7 +1300,7 @@
       </div>
 
       <!-- Config Backup -->
-      <div class="field">
+      <div class="field full-only">
         <div class="section-label">Config Backup / Restore</div>
         <div class="local-panel">
           <div class="local-actions">
@@ -1219,7 +1328,7 @@
 
     </div>
 
-    <div class="card-footer">
+    <div class="card-footer full-only">
 
       <div class="footer-btns">
         <!-- System actions -->
@@ -1259,6 +1368,9 @@
   </div>
 
 </div>
+
+<!-- Right-click menu for the HDMI previews -->
+<div class="ctx-menu" id="ctx-menu" style="display:none"></div>
 
 <!-- Floating save bar -->
 <div class="save-bar" id="save-bar">
@@ -1441,6 +1553,7 @@
   // ── HDMI tabs ────────────────────────────────────────────────────────────────
   function selectHdmiTab(n) {
     activeHdmiTab = n;
+    document.body.dataset.hdmi = n;   // keys the per-output colour identity
     document.getElementById('tab-hdmi1').classList.toggle('active', n === 1);
     document.getElementById('tab-hdmi2').classList.toggle('active', n === 2);
     document.getElementById('preview-box-1').classList.toggle('active', n === 1);
@@ -1554,6 +1667,7 @@
   }
 
   async function toggleOntime(action) {
+    if (action === 'stop' && !confirm('Stop the OnTime server?\n\nAny display showing a timer view will fall to the holding screen until you start it again.')) return;
     try {
       const r = await fetch(`/ontime/${action}`, { method: 'POST' });
       const d = await r.json();
@@ -1584,7 +1698,14 @@
       if (d.serial) document.getElementById('os-serial').textContent = d.serial;
 
       // Blackout / watchdog banners
+      outState.blackout = d.blackout_outputs || [];
+      outState.testcard = d.testcard_outputs || [];
       document.getElementById('blackout-bar').style.display  = d.blackout          ? 'flex' : 'none';
+      if (d.blackout) {
+        document.getElementById('blackout-bar-text').textContent =
+          outState.blackout.length === 1 ? `HDMI ${outState.blackout[0]} is blacked out`
+                                         : 'Displays are blacked out';
+      }
       // Power supply warning (Pi firmware undervoltage flags)
       const pw = d.power || {};
       const pwBar = document.getElementById('power-bar');
@@ -1852,6 +1973,7 @@
   }
 
   async function toggleCompanion(action) {
+    if (action === 'stop' && !confirm('Stop Companion?\n\nStream Deck buttons will go dark until you start it again.')) return;
     try {
       const r = await fetch(`/companion/${action}`, { method: 'POST' });
       const d = await r.json();
@@ -1990,10 +2112,182 @@
   }
 
   // ── Desktop / Reset ───────────────────────────────────────────────────────────
+  // ── Right-click menu on the HDMI previews ──
+  let outState = { blackout: [], testcard: [] };   // per-output live overrides
+
+  function openPreviewMenu(e, n) {
+    e.preventDefault();
+    selectHdmiTab(n);
+    const menu = document.getElementById('ctx-menu');
+    const col  = n === 1 ? 'var(--hdmi1)' : 'var(--hdmi2)';
+    const tc   = outState.testcard.includes(n);
+    const bo   = outState.blackout.includes(n);
+    menu.innerHTML = `
+      <div class="ctx-title" style="color:${col}">HDMI ${n} — ${SOURCE_LABELS[n === 1 ? hdmi1Source : hdmi2Source] || ''}</div>
+      <button class="ctx-item" onclick="ctxReload(${n})">
+        <svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+        Reload this output
+      </button>
+      <button class="ctx-item" onclick="ctxRefreshPreview(${n})">
+        <svg viewBox="0 0 24 24"><path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8A5.87 5.87 0 016 12c0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/></svg>
+        Refresh this preview
+      </button>
+      <button class="ctx-item" onclick="ctxIdentify()">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+        Identify outputs
+      </button>
+      <button class="ctx-item" onclick="ctxTestCard(${n}, ${!tc})">
+        <svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zM5 7h6v6H5V7zm8 0h6v2h-6V7zm0 4h6v2h-6v-2zM5 15h14v2H5v-2z"/></svg>
+        ${tc ? 'Restore source' : 'Show test card'}
+      </button>
+      <button class="ctx-item" onclick="ctxBlackoutOne(${n}, ${!bo})">
+        <svg viewBox="0 0 24 24"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg>
+        ${bo ? 'Resume this output' : 'Blackout this output'}
+      </button>
+      <div class="ctx-sep"></div>
+      <button class="ctx-item" onclick="ctxSwapSources()">
+        <svg viewBox="0 0 24 24"><path d="M6.99 11L3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/></svg>
+        Swap HDMI 1 &#8646; 2 sources
+      </button>
+      <button class="ctx-item" onclick="ctxBlackout()">
+        <svg viewBox="0 0 24 24"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg>
+        Blackout all
+      </button>`;
+    menu.style.display = 'block';
+    const r = menu.getBoundingClientRect();
+    menu.style.left = Math.max(4, Math.min(e.clientX, window.innerWidth  - r.width  - 8)) + 'px';
+    menu.style.top  = Math.max(4, Math.min(e.clientY, window.innerHeight - r.height - 8)) + 'px';
+  }
+  // Touch long-press (500 ms) opens the same menu — iOS Safari never fires
+  // contextmenu, and Android's native one is suppressed by preventDefault.
+  for (const n of [1, 2]) {
+    const box = document.getElementById('preview-box-' + n);
+    let lpTimer = null, lpFired = false;
+    box.addEventListener('touchstart', e => {
+      lpFired = false;
+      const t = e.touches[0];
+      lpTimer = setTimeout(() => {
+        lpFired = true;
+        if (navigator.vibrate) navigator.vibrate(15);
+        openPreviewMenu({ preventDefault() {}, clientX: t.clientX, clientY: t.clientY }, n);
+      }, 500);
+    }, { passive: true });
+    box.addEventListener('touchmove',   () => clearTimeout(lpTimer), { passive: true });
+    box.addEventListener('touchcancel', () => clearTimeout(lpTimer));
+    box.addEventListener('touchend', e => {
+      clearTimeout(lpTimer);
+      // swallow the synthetic click that follows, or it instantly closes the menu
+      if (lpFired) e.preventDefault();
+    }, { passive: false });
+  }
+
+  function closeCtxMenu() {
+    document.getElementById('ctx-menu').style.display = 'none';
+  }
+  document.addEventListener('click', closeCtxMenu);
+  document.addEventListener('scroll', closeCtxMenu, true);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeCtxMenu(); });
+
+  async function ctxReload(n) {
+    closeCtxMenu();
+    showToast(`Reloading HDMI ${n}…`, 'info');
+    await fetch('/refresh', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ output: n }) });
+  }
+  function ctxRefreshPreview(n) {
+    closeCtxMenu();
+    armPreview(n);
+  }
+  function ctxIdentify() { closeCtxMenu(); identifyDisplays(); }
+  function ctxBlackout() { closeCtxMenu(); blackout(); }
+  async function ctxTestCard(n, on) {
+    closeCtxMenu();
+    showToast(on ? `Test card on HDMI ${n}…` : `Restoring HDMI ${n}…`, 'info');
+    await fetch('/displays/testcard', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ output: n, on }) });
+    if (on) { if (!outState.testcard.includes(n)) outState.testcard.push(n); }
+    else    { outState.testcard = outState.testcard.filter(x => x !== n); }
+    setTimeout(() => ctxRefreshPreview(n), 3500);   // preview follows the change
+  }
+  async function ctxBlackoutOne(n, on) {
+    closeCtxMenu();
+    await fetch(on ? '/blackout' : '/blackout/clear',
+                { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ output: n }) });
+    if (on) { if (!outState.blackout.includes(n)) outState.blackout.push(n); }
+    else    { outState.blackout = outState.blackout.filter(x => x !== n); }
+    showToast(on ? `HDMI ${n} blacked out.` : `HDMI ${n} resumed.`, on ? 'info' : 'success');
+  }
+  async function ctxSwapSources() {
+    closeCtxMenu();
+    showToast('Swapping HDMI 1 and 2…', 'info');
+    const r = await fetch('/displays/swap', { method: 'POST' });
+    const d = await r.json();
+    if (!d.ok) { showToast('Swap failed.', 'error'); return; }
+    hdmi1Source = d.hdmi1_source; hdmi2Source = d.hdmi2_source;
+    [hdmi1ExternalUrl, hdmi2ExternalUrl] = [hdmi2ExternalUrl, hdmi1ExternalUrl];
+    [ctOpts[1], ctOpts[2]] = [ctOpts[2], ctOpts[1]];
+    refreshSourceGrid(); updateHdmiLabels();
+    showToast('Sources swapped.', 'success');
+  }
+
+  // ── Show Mode quick bar ──
+  function quickOpen(path) {
+    // OnTime views live on the configured server: this Pi in local mode,
+    // the remote address otherwise
+    const host = currentMode === 'remote'
+      ? (document.getElementById('ip').value.trim() || window.location.hostname)
+      : window.location.hostname;
+    window.open(`http://${host}:4001${path}`, '_blank');
+  }
+
+  // ── Show / Full view mode — persisted per browser ──
+  function setViewMode(m) {
+    document.body.classList.toggle('show-mode', m === 'show');
+    document.getElementById('view-tab-show').classList.toggle('active', m === 'show');
+    document.getElementById('view-tab-full').classList.toggle('active', m !== 'show');
+    try { localStorage.setItem('ds1-view-mode', m); } catch (e) {}
+  }
+  try { setViewMode(localStorage.getItem('ds1-view-mode') || 'full'); } catch (e) {}
+  document.body.dataset.hdmi = activeHdmiTab;   // colour identity from first paint
+
   async function refreshDisplays() {
     showToast('Refreshing displays…', 'info');
     await fetch('/refresh', { method: 'POST' });
     showToast('Displays refreshed.', 'success');
+  }
+
+  // Arm a preview with a cache-busted stream URL. If the stream fails (the
+  // server may still be reaping the last page-load's grab), retry with
+  // backoff instead of parking on "No signal" forever.
+  function armPreview(n, attempt = 0) {
+    const img = document.getElementById('preview-img-' + n);
+    const off = document.getElementById('preview-off-' + n);
+    if (!img) return;
+    img.onerror = () => {
+      img.style.display = 'none';
+      if (off) off.style.display = 'flex';
+      if (attempt < 4) setTimeout(() => armPreview(n, attempt + 1), 1500 * (attempt + 1));
+    };
+    if (off) off.style.display = 'none';
+    img.style.display = '';
+    img.src = '/stream/hdmi' + n + '?t=' + Date.now();
+  }
+  armPreview(1); armPreview(2);
+
+  // Restart just the two MJPEG preview streams — fresh ffmpeg grabs at
+  // current display geometry. Outputs untouched.
+  function refreshPreviews() {
+    armPreview(1); armPreview(2);
+    showToast('Previews refreshed.', 'success');
+  }
+
+  // Full HDMI handshake: re-probe outputs, re-apply modes, relaunch windows.
+  async function resyncDisplays() {
+    showToast('Re-syncing HDMI outputs…', 'info');
+    await fetch('/displays/resync', { method: 'POST' });
+    // give xrandr + window relaunch a moment, then restart the previews too
+    setTimeout(refreshPreviews, 6000);
   }
 
   async function resetKiosk() {
