@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import shutil
 import socket
 import subprocess
 import signal
@@ -29,6 +30,7 @@ CONFIG_FILE = BASE_DIR / "config.json"
 ONTIME_DIR  = BASE_DIR / "ontime-server"
 ONTIME_BIN  = ONTIME_DIR / "ontime.AppImage"
 ONTIME_ROOT = ONTIME_DIR / "squashfs-root"
+ONTIME_PREV = ONTIME_DIR / "prev"   # last version kept for one-click revert
 
 VIEWS = [
     {"label": "Stage Timer",      "path": "/timer",          "group": "Display"},
@@ -442,14 +444,21 @@ def _version_tuple(v):
         return (0, 0, 0)
 
 
-def _ontime_installed_version_str():
+def _ontime_version_from(root_dir, marker_dir):
     try:
-        pkg = ONTIME_ROOT / "resources" / "app" / "package.json"
-        if pkg.exists():
+        pkg = root_dir / "resources" / "app" / "package.json"
+        if pkg.exists():   # pre-4.10 layout
             return json.loads(pkg.read_text()).get("version")
+        marker = marker_dir / "version.txt"
+        if marker.exists():   # 4.10+ is asar-packed; installer leaves a marker
+            return marker.read_text().strip() or None
     except Exception:
         pass
     return None
+
+
+def _ontime_installed_version_str():
+    return _ontime_version_from(ONTIME_ROOT, ONTIME_DIR)
 
 
 def _companion_installed_version_str():
@@ -1008,7 +1017,10 @@ def companion_is_running():
 # ── Local OnTime ──────────────────────────────────────────────────────────────
 
 def _ontime_entry():
-    for c in [ONTIME_ROOT / "ontime", ONTIME_ROOT / "AppRun"]:
+    # 4.10 renamed the binary ontime → ontime-electron; AppRun is last resort
+    # only (it hard-codes $APPDIR and breaks when run from an extracted tree)
+    for c in [ONTIME_ROOT / "ontime", ONTIME_ROOT / "ontime-electron",
+              ONTIME_ROOT / "AppRun"]:
         if c.exists():
             return c
     return None
@@ -1072,8 +1084,10 @@ def start_local_ontime():
         if ontime_is_running():
             return True, "already running"
         log = open(BASE_DIR / "ontime.log", "a")
+        # --disable-gpu: newer OnTime builds (4.10+) crash allocating GPU
+        # buffers on the Pi even in headless mode (gbm dma_buf errors)
         _ontime_proc = subprocess.Popen(
-            [str(entry), "--no-sandbox", "--headless"],
+            [str(entry), "--no-sandbox", "--headless", "--disable-gpu"],
             stdout=log, stderr=log, cwd=str(ONTIME_ROOT),
         )
     threading.Thread(target=_hide_ontime_windows, daemon=True).start()
@@ -1114,23 +1128,95 @@ def install_ontime_server():
             return False, "No AppImage found in latest release"
 
         ONTIME_DIR.mkdir(exist_ok=True)
+        # stage everything BESIDE the live install — a bad download or a
+        # failed extract must never damage the version that is running
+        new_bin = ONTIME_DIR / "ontime.AppImage.new"
+        scratch = ONTIME_DIR / ".extract"
         with requests.get(asset["browser_download_url"], stream=True, timeout=300) as r:
             r.raise_for_status()
-            with open(ONTIME_BIN, "wb") as f:
+            with open(new_bin, "wb") as f:
                 for chunk in r.iter_content(65536):
                     f.write(chunk)
-        ONTIME_BIN.chmod(0o755)
+        new_bin.chmod(0o755)
 
+        shutil.rmtree(scratch, ignore_errors=True)
+        scratch.mkdir()
         subprocess.run(
-            [str(ONTIME_BIN), "--appimage-extract"],
-            cwd=str(ONTIME_DIR), check=True,
+            [str(new_bin), "--appimage-extract"],
+            cwd=str(scratch), check=True,
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         )
-        if not (ONTIME_DIR / "squashfs-root").exists():
+        if not (scratch / "squashfs-root").exists():
+            new_bin.unlink(missing_ok=True)
+            shutil.rmtree(scratch, ignore_errors=True)
             return False, "Extraction produced no output"
+
+        # swap: current version → prev/ (dropping the older prev), new → live
+        if ONTIME_BIN.exists() or ONTIME_ROOT.exists():
+            shutil.rmtree(ONTIME_PREV, ignore_errors=True)
+            ONTIME_PREV.mkdir()
+            if ONTIME_BIN.exists():
+                shutil.move(str(ONTIME_BIN), str(ONTIME_PREV / "ontime.AppImage"))
+            if ONTIME_ROOT.exists():
+                shutil.move(str(ONTIME_ROOT), str(ONTIME_PREV / "squashfs-root"))
+            if (ONTIME_DIR / "version.txt").exists():
+                shutil.move(str(ONTIME_DIR / "version.txt"),
+                            str(ONTIME_PREV / "version.txt"))
+        shutil.move(str(new_bin), str(ONTIME_BIN))
+        shutil.move(str(scratch / "squashfs-root"), str(ONTIME_ROOT))
+        # marker file — since 4.10 the app is packed in app.asar and there is
+        # no readable package.json in the tree
+        (ONTIME_DIR / "version.txt").write_text(version.lstrip("v"))
+        shutil.rmtree(scratch, ignore_errors=True)
         return True, version
     except Exception as e:
         return False, str(e)
+
+
+def _ontime_prev_version_str():
+    return _ontime_version_from(ONTIME_PREV / "squashfs-root", ONTIME_PREV)
+
+
+def _swap_ontime_prev():
+    """Exchange the live OnTime install with prev/ — used by revert (and by
+    revert-of-revert, which brings the newer version back)."""
+    tmp = ONTIME_DIR / ".swap"
+    shutil.rmtree(tmp, ignore_errors=True)
+    tmp.mkdir()
+    for name in ("ontime.AppImage", "squashfs-root", "version.txt"):
+        live = ONTIME_DIR / name
+        prev = ONTIME_PREV / name
+        if live.exists():
+            shutil.move(str(live), str(tmp / name))
+        if prev.exists():
+            shutil.move(str(prev), str(live))
+        if (tmp / name).exists():
+            ONTIME_PREV.mkdir(exist_ok=True)
+            shutil.move(str(tmp / name), str(prev))
+    shutil.rmtree(tmp, ignore_errors=True)
+
+
+def _backup_ontime_data():
+    """Snapshot the OnTime project data before an update — a new version may
+    migrate the rundown database one-way."""
+    try:
+        src_dir = Path.home() / ".getontime"
+        if src_dir.exists():
+            dst = Path.home() / ".getontime.pre-update"
+            shutil.rmtree(dst, ignore_errors=True)
+            shutil.copytree(src_dir, dst)
+            print("[ontime] project data backed up to ~/.getontime.pre-update")
+    except Exception as e:
+        print(f"[ontime] data backup failed: {e}")
+
+
+def _wait_ontime_up(seconds):
+    deadline = time.time() + seconds
+    while time.time() < deadline:
+        if check_ontime("127.0.0.1", timeout=2):
+            return True
+        time.sleep(1.5)
+    return False
 
 
 # ── OLED ─────────────────────────────────────────────────────────────────────
@@ -1936,6 +2022,8 @@ def system_shutdown():
 def update_status_route():
     d = dict(_update_status)
     d["os"] = dict(d["os"], last_result=_os_update_result())
+    d["ontime"]    = dict(d["ontime"],    prev=_ontime_prev_version_str())
+    d["companion"] = dict(d["companion"], prev=load_config().get("companion_prev") or None)
     return jsonify(d)
 
 
@@ -2156,12 +2244,48 @@ def ontime_update():
     if was_running:
         stop_local_ontime()
         time.sleep(1)
+    _backup_ontime_data()
     ok, msg = install_ontime_server()
-    if ok:
-        threading.Thread(target=_check_updates_background, daemon=True).start()
+    if not ok:
+        # nothing was touched — the old version is still live
         if was_running:
             start_local_ontime()
-    return jsonify({"ok": ok, "message": msg, "running": ontime_is_running()})
+        return jsonify({"ok": False, "message": msg, "running": ontime_is_running()})
+    _audit("ONTIME", f"updated to {msg}")
+    if was_running:
+        start_local_ontime()
+        if not _wait_ontime_up(30):
+            # the new build won't serve — put the old one back automatically
+            stop_local_ontime()
+            time.sleep(1)
+            _swap_ontime_prev()
+            start_local_ontime()
+            healthy = _wait_ontime_up(30)
+            _audit("ONTIME", "update failed health check — auto-reverted")
+            note = "" if healthy else " (still not answering — check the log)"
+            return jsonify({"ok": False, "reverted": True,
+                            "running": ontime_is_running(),
+                            "message": f"{msg} did not start — previous version restored{note}"})
+    threading.Thread(target=_check_updates_background, daemon=True).start()
+    return jsonify({"ok": True, "message": msg, "running": ontime_is_running()})
+
+
+@app.route("/ontime/revert", methods=["POST"])
+def ontime_revert():
+    if not (ONTIME_PREV / "squashfs-root").exists():
+        return jsonify({"ok": False, "message": "No previous version kept on this unit"})
+    was_running = ontime_is_running()
+    if was_running:
+        stop_local_ontime()
+        time.sleep(1)
+    _swap_ontime_prev()
+    ver = _ontime_installed_version_str() or "previous version"
+    if was_running:
+        start_local_ontime()
+        _wait_ontime_up(30)
+    _audit("ONTIME", f"reverted to {ver}")
+    threading.Thread(target=_check_updates_background, daemon=True).start()
+    return jsonify({"ok": True, "message": ver, "running": ontime_is_running()})
 
 
 # ── Companion routes ──────────────────────────────────────────────────────────
@@ -2253,6 +2377,7 @@ def companion_rescan_usb():
 def companion_update():
     channel = load_config().get("companion_channel", "stable")
     build   = "beta" if channel == "beta" else "stable"
+    prev    = _companion_installed_version_str()
     try:
         # companion-update is already installed and handles stable/beta correctly.
         # Calling it with one arg (channel only, no version) lets it pick the
@@ -2262,10 +2387,39 @@ def companion_update():
             timeout=300, check=True,
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         )
+        if prev:
+            save_config({"companion_prev": prev})   # enables one-click revert
+        _audit("COMPANION", f"updated ({build})")
         threading.Thread(target=_check_updates_background, daemon=True).start()
         return jsonify({"ok": True, "running": companion_is_running()})
     except subprocess.TimeoutExpired:
         return jsonify({"ok": False, "message": "Update timed out after 5 minutes"})
+    except Exception as e:
+        return jsonify({"ok": False, "message": str(e)})
+
+
+@app.route("/companion/revert", methods=["POST"])
+def companion_revert():
+    config = load_config()
+    prev   = str(config.get("companion_prev") or "")
+    if not re.fullmatch(r"[0-9][A-Za-z0-9.+-]*", prev):
+        return jsonify({"ok": False, "message": "No previous version recorded"})
+    channel = config.get("companion_channel", "stable")
+    build   = "beta" if channel == "beta" else "stable"
+    came_from = _companion_installed_version_str()
+    try:
+        subprocess.run(
+            ["sudo", "companion-update", build, prev],
+            timeout=600, check=True,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+        # remember what we reverted FROM, so you can step forward again
+        save_config({"companion_prev": came_from or ""})
+        _audit("COMPANION", f"reverted to {prev}")
+        threading.Thread(target=_check_updates_background, daemon=True).start()
+        return jsonify({"ok": True, "message": prev, "running": companion_is_running()})
+    except subprocess.TimeoutExpired:
+        return jsonify({"ok": False, "message": "Revert timed out after 10 minutes"})
     except Exception as e:
         return jsonify({"ok": False, "message": str(e)})
 

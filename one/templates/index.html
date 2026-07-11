@@ -1998,7 +1998,7 @@
 
   async function updateCompanion() {
     const ch = companionChannel === 'beta' ? 'beta' : 'stable';
-    if (!confirm(`Update Companion to the latest ${ch} version? This may take 2–3 minutes and will restart the service.`)) return;
+    if (!confirm(`Update Companion to the latest ${ch} version?\n\nThis takes 2–3 minutes and restarts the service — Stream Decks go dark during the update. The current version is recorded so you can revert afterwards.`)) return;
     const btn = document.getElementById('companion-update-btn');
     if (btn) { btn.disabled = true; btn.innerHTML = spinnerHTML('Updating…'); }
     showToast('Updating Companion — this may take a few minutes…', 'info');
@@ -2769,6 +2769,8 @@
       renderVersionRow('ontime',    d.ontime);
       renderVersionRow('companion', d.companion);
       renderVersionRow('os',        d.os);
+      renderRevertBtn('ontime',    d.ontime?.prev,    'revertOntimeServer()');
+      renderRevertBtn('companion', d.companion?.prev, 'revertCompanion()');
       // OS update button + last-result note
       const osBtn = document.getElementById('os-update-btn');
       if (osBtn) osBtn.style.display = d.os?.update_available ? '' : 'none';
@@ -2782,6 +2784,25 @@
         updateChannelToggle();
       }
     } catch {}
+  }
+
+  function renderRevertBtn(key, prev, handler) {
+    const row = document.getElementById(`${key}-version-row`);
+    if (!row) return;
+    let btn = document.getElementById(`${key}-revert-btn`);
+    // only offer a revert when the kept version differs from what is running
+    const cur = document.getElementById(`${key}-ver-installed`)?.textContent || '';
+    const show = prev && !cur.includes(prev);
+    if (!show) { if (btn) btn.remove(); return; }
+    if (!btn) {
+      btn = document.createElement('button');
+      btn.id = `${key}-revert-btn`;
+      btn.className = 'btn-sm';
+      btn.setAttribute('onclick', handler);
+      row.appendChild(btn);
+    }
+    btn.title = 'Reinstall the previous version kept on this unit';
+    btn.textContent = `Revert to v${String(prev).replace(/^v/, '')}`;
   }
 
   function renderVersionRow(key, data) {
@@ -2828,6 +2849,7 @@
   }
 
   async function updateOntimeServer() {
+    if (!confirm('Update OnTime to the latest release?\n\nThe timer server restarts during the update — avoid doing this during a show. The current version is kept on the unit, so you can revert with one click if the new one misbehaves.')) return;
     const btn = document.querySelector('#ontime-version-row .btn-sm');
     if (btn) { btn.disabled = true; btn.innerHTML = spinnerHTML('Updating…'); }
     showToast('Updating OnTime — this may take 1–2 minutes…', 'info');
@@ -2836,9 +2858,36 @@
       const d = await r.json();
       ontimeRunning = d.running;
       updateLocalPanel();
-      showToast(d.ok ? `OnTime updated: ${d.message}` : `Update failed: ${d.message}`, d.ok ? 'success' : 'error');
-      if (d.ok) setTimeout(loadUpdateStatus, 2000);
+      if (d.reverted) showToast(`Update failed — ${d.message}`, 'error');
+      else showToast(d.ok ? `OnTime updated: ${d.message}` : `Update failed: ${d.message}`, d.ok ? 'success' : 'error');
+      setTimeout(loadUpdateStatus, 2000);
     } catch { showToast('Network error during update.', 'error'); }
+  }
+
+  async function revertOntimeServer() {
+    if (!confirm('Revert OnTime to the previous version kept on this unit?\n\nThe timer server restarts during the revert.')) return;
+    showToast('Reverting OnTime…', 'info');
+    try {
+      const r = await fetch('/ontime/revert', { method: 'POST' });
+      const d = await r.json();
+      ontimeRunning = d.running;
+      updateLocalPanel();
+      showToast(d.ok ? `OnTime reverted to v${d.message}` : d.message, d.ok ? 'success' : 'error');
+      setTimeout(loadUpdateStatus, 2000);
+    } catch { showToast('Network error during revert.', 'error'); }
+  }
+
+  async function revertCompanion() {
+    if (!confirm('Reinstall the previous Companion version?\n\nThis takes a few minutes and restarts the Companion service — Stream Decks go dark until it is back.')) return;
+    showToast('Reverting Companion — this may take a few minutes…', 'info');
+    try {
+      const r = await fetch('/companion/revert', { method: 'POST' });
+      const d = await r.json();
+      companionRunning = d.running ?? companionRunning;
+      updateCompanionPanel();
+      showToast(d.ok ? `Companion reverted to v${d.message}` : d.message, d.ok ? 'success' : 'error');
+      setTimeout(loadUpdateStatus, 2000);
+    } catch { showToast('Network error during revert.', 'error'); }
   }
 
 
