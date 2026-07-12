@@ -2402,6 +2402,27 @@ def companion_update():
         return jsonify({"ok": False, "message": str(e)})
 
 
+@app.route("/companion/config-download")
+def companion_config_download():
+    """Full backup of Companion's config tree (pages, connections, surfaces,
+    every version dir) as a tar.gz, streamed to the browser. Restoring is a
+    support operation: untar over ~companion/.config with Companion stopped."""
+    src_dir = Path("/home/companion/.config/companion-nodejs")
+    fname = f"companion-config-{socket.gethostname()}-{time.strftime('%Y%m%d-%H%M')}.tgz"
+    tmp = Path("/tmp") / "companion-config-export.tgz"
+    try:
+        subprocess.run(
+            ["sudo", "tar", "czf", str(tmp), "--exclude=*.stale*",
+             "-C", str(src_dir.parent), src_dir.name],
+            check=True, timeout=120,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+        _audit("COMPANION", "config backup downloaded")
+        return send_file(tmp, as_attachment=True, download_name=fname)
+    except Exception as e:
+        return jsonify({"ok": False, "message": f"Backup failed: {e}"}), 500
+
+
 @app.route("/companion/revert", methods=["POST"])
 def companion_revert():
     config = load_config()
