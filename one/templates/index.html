@@ -2241,7 +2241,16 @@
                   body: JSON.stringify({ output: n }) });
     if (on) { if (!outState.blackout.includes(n)) outState.blackout.push(n); }
     else    { outState.blackout = outState.blackout.filter(x => x !== n); }
-    showToast(on ? `HDMI ${n} blacked out.` : `HDMI ${n} resumed.`, on ? 'info' : 'success');
+    const bar = document.getElementById('blackout-bar');
+    if (outState.blackout.length) {
+      document.getElementById('blackout-bar-text').textContent =
+        outState.blackout.length === 1 ? `HDMI ${outState.blackout[0]} is blacked out`
+                                       : 'Displays are blacked out';
+      bar.style.display = 'flex';
+    } else {
+      bar.style.display = 'none';
+    }
+    if (!on) showToast(`HDMI ${n} resumed.`, 'success');
   }
   async function ctxSwapSources() {
     closeCtxMenu();
@@ -2726,7 +2735,6 @@
         await fetch('/blackout', { method: 'POST' });
         blackoutActive = true;
         document.getElementById('blackout-bar').style.display = 'flex';
-        showToast('Displays blacked out.', 'info');
       }
     } catch { showToast('Request failed.', 'error'); }
     renderBlackoutBtn();
