@@ -656,6 +656,10 @@ _COMMON_FLAGS = [
     "--disable-features=TranslateUI",
     "--check-for-update-interval=31536000",
     "--password-store=basic",   # skip GNOME keyring prompt
+    # no phone-home: kills GCM push registration (which spams the log with
+    # DEPRECATED_ENDPOINT retries), update pings and safe-browsing fetches —
+    # none of it has any business on a show machine
+    "--disable-background-networking",
     "--disk-cache-size=52428800",   # cap the browser cache — appliances run for months between reboots
 ]
 
