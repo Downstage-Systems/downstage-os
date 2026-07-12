@@ -566,6 +566,17 @@
       font-size: 13px; font-weight: 600; border: 1px solid transparent;
     }
     .alert-bar.blackout  { background: rgba(0,0,0,0.7); border-color: #333; color: #666; }
+    /* blackout notice floats at the bottom and stays until resumed — it must
+       not scroll away with the page header while displays are dark */
+    #blackout-bar {
+      position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
+      width: calc(100% - 32px); max-width: 560px; margin-bottom: 0;
+      background: rgba(8,9,11,0.94); color: #9AA4AD; z-index: 85;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.7);
+      backdrop-filter: blur(6px);
+    }
+    /* step above the save bar when both are up */
+    body:has(.save-bar.visible) #blackout-bar { bottom: 92px; }
     .alert-bar.watchdog  { background: var(--amber-bg); border-color: var(--amber-bd); color: var(--amber); }
     .alert-bar.power     { background: var(--red-bg); border-color: var(--red-bd); color: var(--red); }
     .alert-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
