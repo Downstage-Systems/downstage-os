@@ -1175,6 +1175,7 @@
               <button class="channel-btn" id="ch-beta"   onclick="setCompanionChannel('beta')">Beta</button>
             </div>
           </div>
+          <div id="companion-channel-hint" style="display:none; margin-top:8px; font-size:12px; color:var(--muted)"></div>
           <div class="external-url-hint" style="display:block; margin-top:10px">Up to two 15-key Stream Decks can run from the USB ports (an XL counts as two — key backlights add up). For more, connect them through a powered USB hub.</div>
         </div>
       </div>
@@ -1970,7 +1971,11 @@
       if (d.ok) {
         companionChannel = channel;
         updateChannelToggle();
+        const hint = document.getElementById('companion-channel-hint');
+        if (hint) { hint.textContent = `Checking the newest ${channel} version…`; hint.style.display = ''; }
         showToast(`Companion channel set to ${channel}. Update check running…`, 'info');
+        setTimeout(loadUpdateStatus, 3000);
+        setTimeout(loadUpdateStatus, 8000);
       }
     } catch { showToast('Failed to set channel.', 'error'); }
   }
@@ -2812,6 +2817,22 @@
       if (d.companion?.channel && d.companion.channel !== companionChannel) {
         companionChannel = d.companion.channel;
         updateChannelToggle();
+      }
+      // channel hint: what the Update button would install right now
+      const chHint = document.getElementById('companion-channel-hint');
+      if (chHint && d.companion?.checked && d.companion.installed) {
+        const cur = d.companion.installed, latest = d.companion.latest;
+        const ch  = d.companion.channel || 'stable';
+        if (latest && latest !== cur) {
+          chHint.innerHTML = `Newest on the <b>${ch}</b> channel: <b>v${latest}</b> — installed: v${cur}. ` +
+            `<a href="#" onclick="updateCompanion();return false" style="color:var(--accent)">Update to v${latest}</a>`;
+          chHint.style.display = '';
+        } else if (latest) {
+          chHint.textContent = `v${cur} is the newest ${ch} version.`;
+          chHint.style.display = '';
+        } else {
+          chHint.style.display = 'none';
+        }
       }
     } catch {}
   }
