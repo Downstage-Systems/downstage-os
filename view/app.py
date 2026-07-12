@@ -181,18 +181,27 @@ def _active_link():
     try:
         out = subprocess.check_output(["ip", "-4", "-o", "addr", "show"],
                                       text=True, timeout=5)
+        # collect everything first — kernel order lists wlan0 before a USB
+        # eth0, so returning on first match hid Ethernet when both were up
+        has_eth = has_wifi = has_hotspot = False
         for line in out.splitlines():
             parts = line.split()
             iface, addr = parts[1], parts[3].split("/")[0]
             if iface == "lo":
                 continue
             if addr.startswith("10.42."):
-                return "Hotspot"
-            if iface.startswith(("eth", "enx", "en")):
-                return "Ethernet"
-            if iface.startswith("wlan"):
-                ssid = _active_ssid()
-                return f"WiFi: {ssid}" if ssid else "WiFi"
+                has_hotspot = True
+            elif iface.startswith(("eth", "enx", "en")):
+                has_eth = True
+            elif iface.startswith("wlan"):
+                has_wifi = True
+        if has_eth:
+            return "Ethernet"
+        if has_wifi:
+            ssid = _active_ssid()
+            return f"WiFi: {ssid}" if ssid else "WiFi"
+        if has_hotspot:
+            return "Hotspot"
     except Exception:
         pass
     return "Not connected"
