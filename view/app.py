@@ -1304,6 +1304,14 @@ class EPaperDisplay:
                 except AttributeError:
                     self._epd.init()
                     self._epd.display(self._epd.getbuffer(image))
+            # deep-sleep between refreshes. sleep() ends in module_exit(),
+            # which closes the SPI handle that init() opened — without it
+            # every refresh leaks one /dev/spidev fd and the process hits
+            # EMFILE (Errno 24) after ~1.5 days, killing e-ink AND HTTP.
+            try:
+                self._epd.sleep()
+            except Exception as e:
+                print(f"[epaper] sleep: {e}")
 
     def _render(self):
         if not self._epd:
