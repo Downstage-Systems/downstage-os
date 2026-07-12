@@ -439,7 +439,12 @@ def _apply_display_settings():
 
 def _version_tuple(v):
     try:
-        return tuple(int(x) for x in str(v).lstrip("v").split(".")[:3])
+        # leading digits per component — survives beta builds like "5.1.0+9638"
+        parts = []
+        for x in str(v).lstrip("v").split(".")[:3]:
+            m = re.match(r"\d+", x)
+            parts.append(int(m.group()) if m else 0)
+        return tuple(parts) if parts else (0, 0, 0)
     except Exception:
         return (0, 0, 0)
 
@@ -484,24 +489,21 @@ def _companion_installed_version_str():
 
 
 def _latest_companion_version(channel: str):
-    """Return latest Companion version string for the given channel."""
-    if channel == "beta":
-        r = requests.get(
-            "https://api.github.com/repos/bitfocus/companion/releases",
-            timeout=10,
-        )
-        releases = r.json()
-        for rel in releases:
-            tag = rel.get("tag_name", "").lstrip("v")
-            if tag:
-                return tag
-        return None
-    else:
-        r = requests.get(
-            "https://api.github.com/repos/bitfocus/companion/releases/latest",
-            timeout=10,
-        )
-        return r.json().get("tag_name", "").lstrip("v") or None
+    """Newest Companion build for this hardware (linux-arm64) from the same
+    Bitfocus API that companion-update installs from. GitHub releases don't
+    carry beta builds at all, so they showed stale versions on that channel."""
+    branch = "beta" if channel == "beta" else "stable"
+    r = requests.get(
+        "https://api.bitfocus.io/v1/product/companion/packages",
+        params={"branch": branch, "limit": 100},
+        timeout=10,
+    )
+    for p in r.json().get("packages", []):
+        if p.get("target") == "linux-arm64-tgz":
+            v = str(p.get("version", "")).lstrip("v")
+            # "5.1.0+9638-main-c84c2ebd7f" → "5.1.0+9638"
+            return v.split("-")[0] or None
+    return None
 
 
 def _check_updates_background():
