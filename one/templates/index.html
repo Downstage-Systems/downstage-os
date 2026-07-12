@@ -2878,30 +2878,36 @@
 
     verEl.textContent = `v${data.installed}`;
 
+    // dynamically injected update button (ontime/companion rows only —
+    // the OS row has its own static buttons). Tracked by id so it can be
+    // removed when an update stops being available (e.g. after a channel
+    // flip), and so it never collides with the revert button.
+    let ub = document.getElementById(`${key}-inline-update-btn`);
     if (data.update_available) {
       badgeEl.className   = 'version-badge available';
       badgeEl.textContent = `v${data.latest} available`;
-      // The OS row has static buttons (Update/Check/Diagnostics) — only the
-      // ontime/companion rows get a dynamically injected update button
       if (key !== 'os') {
-        const existing = row.querySelector('.btn-sm');
-        if (existing) existing.remove();
-        const btn = document.createElement('button');
-        btn.className = 'btn-sm';
-        btn.style.marginLeft = 'auto';
-        btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M21 10.12h-6.78l2.74-2.82c-2.73-2.7-7.15-2.8-9.88-.1-2.73 2.71-2.73 7.08 0 9.79s7.15 2.71 9.88 0C18.32 15.65 19 14.08 19 12.1h2c0 1.98-.88 4.55-2.64 6.29-3.51 3.48-9.21 3.48-12.72 0-3.5-3.47-3.53-9.11-.02-12.58s9.14-3.47 12.65 0L21 3v7.12z"/></svg>Update`;
-        btn.onclick = key === 'ontime' ? updateOntimeServer : updateCompanion;
-        row.appendChild(btn);
+        if (!ub) {
+          ub = document.createElement('button');
+          ub.id = `${key}-inline-update-btn`;
+          ub.className = 'btn-sm';
+          ub.style.marginLeft = 'auto';
+          ub.onclick = key === 'ontime' ? updateOntimeServer : updateCompanion;
+          row.appendChild(ub);
+        }
+        ub.innerHTML = `<svg viewBox="0 0 24 24"><path d="M21 10.12h-6.78l2.74-2.82c-2.73-2.7-7.15-2.8-9.88-.1-2.73 2.71-2.73 7.08 0 9.79s7.15 2.71 9.88 0C18.32 15.65 19 14.08 19 12.1h2c0 1.98-.88 4.55-2.64 6.29-3.51 3.48-9.21 3.48-12.72 0-3.5-3.47-3.53-9.11-.02-12.58s9.14-3.47 12.65 0L21 3v7.12z"/></svg>Update`;
+        ub.disabled = false;
       }
     } else {
       badgeEl.className   = 'version-badge uptodate';
       badgeEl.textContent = '✓ Up to date';
+      if (ub) ub.remove();
     }
   }
 
   async function updateOntimeServer() {
     if (!confirm('Update OnTime to the latest release?\n\nThe timer server restarts during the update — avoid doing this during a show. The current version is kept on the unit, so you can revert with one click if the new one misbehaves.')) return;
-    const btn = document.querySelector('#ontime-version-row .btn-sm');
+    const btn = document.getElementById('ontime-inline-update-btn');
     if (btn) { btn.disabled = true; btn.innerHTML = spinnerHTML('Updating…'); }
     showToast('Updating OnTime — this may take 1–2 minutes…', 'info');
     try {
