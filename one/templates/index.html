@@ -1299,7 +1299,7 @@
               <span style="font-size:13px" id="patches-text"></span>
               <button class="btn-sm success" id="patches-apply-btn" onclick="applyPatches()" style="margin-left:auto">Install patches</button>
             </div>
-            <div class="external-url-hint" id="patches-note" style="display:block; margin-top:6px">System patches are base-OS security and bug fixes, tested by Downstage on identical hardware before being offered here. The unit stays on the air while they install; restart afterwards when convenient.</div>
+            <div class="external-url-hint" id="patches-note" style="display:block; margin-top:6px">Tested by Downstage before they're offered. Displays stay live; restart when convenient.</div>
           </div>
         </div>
       </div>
@@ -2858,9 +2858,9 @@
     document.getElementById('patches-apply-btn').style.display = '';
     if (p.available) {
       row.style.display = '';
-      document.getElementById('patches-text').innerHTML =
-        `<b>System patches available</b> — tested by Downstage through ${p.tested_through}` +
-        (p.notes ? ` · ${p.notes}` : '');
+      const txt = document.getElementById('patches-text');
+      txt.innerHTML = '<b>System patches available</b>';
+      txt.title = `Tested through ${p.tested_through}` + (p.notes ? ` — ${p.notes}` : '');
     } else {
       row.style.display = 'none';
     }
