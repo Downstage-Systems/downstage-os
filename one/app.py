@@ -67,7 +67,29 @@ _update_status = {
     "ontime":    {"installed": None, "latest": None, "update_available": False, "checked": False},
     "companion": {"installed": None, "latest": None, "update_available": False, "checked": False},
     "os":        {"installed": None, "latest": None, "update_available": False, "checked": False},
+    "patches":   {"tested_through": None, "last_applied": None, "available": False, "checked": False},
 }
+
+# ── System patches (base OS) ──────────────────────────────────────────────────
+# Customers never run raw apt. We test `apt upgrade` on the bench, then bless
+# it by publishing patches.json (tested_through date) in the downstage-os
+# repo. Units only offer the button when the blessing is newer than the last
+# run on that unit. Fragile packages are pinned in the image
+# (/etc/apt/preferences.d/50-downstage-pins), so even a full upgrade cannot
+# touch the boot EEPROM updater.
+
+PATCH_STAMP    = BASE_DIR / ".os-patched"   # date this unit last applied blessed patches
+PATCH_BASELINE = "2026-04-27"               # golden image capture date — fallback stamp
+PATCH_LOG      = BASE_DIR / "patch.log"
+
+_patch_state = {"state": "idle", "message": ""}   # idle|running|done|failed
+
+
+def _patches_last_applied():
+    try:
+        return PATCH_STAMP.read_text().strip() or PATCH_BASELINE
+    except Exception:
+        return PATCH_BASELINE
 
 # ── OLED (optional) ───────────────────────────────────────────────────────────
 try:
@@ -566,6 +588,30 @@ def _check_updates_background():
         _update_status["os"]["checked"] = True
         _update_status["os"]["installed"] = OS_VERSION
         print(f"[updates] os check failed: {e}")
+    # blessed system patches marker
+    try:
+        repo = load_config().get("os_update_repo", "")
+        tested = notes = None
+        if repo:
+            r = requests.get(
+                f"https://raw.githubusercontent.com/{repo}/main/patches.json",
+                timeout=10,
+            )
+            if r.status_code == 200:
+                marker = r.json()
+                tested = marker.get("tested_through")
+                notes  = marker.get("notes", "")
+        last = _patches_last_applied()
+        _update_status["patches"] = {
+            "tested_through": tested,
+            "last_applied":   last,
+            "available":      bool(tested and tested > last),   # ISO dates sort lexically
+            "notes":          notes or "",
+            "checked":        True,
+        }
+    except Exception as e:
+        _update_status["patches"]["checked"] = True
+        print(f"[updates] patches check failed: {e}")
 
 
 def _clean_external_url(url):
@@ -1777,6 +1823,52 @@ def stream_hdmi(n):
         _mjpeg_stream(d["x"], d["y"], d["w"], d["h"], min(n, 2)),
         mimetype="multipart/x-mixed-replace; boundary=frame",
     )
+
+
+def _patch_worker(tested):
+    """apt update + upgrade with conservative dpkg conf handling, logged to
+    patch.log. Config files we changed are kept (--force-confold)."""
+    env = {**os.environ, "DEBIAN_FRONTEND": "noninteractive"}
+    try:
+        with open(PATCH_LOG, "ab") as log:
+            log.write(f"\n===== patch run {time.strftime('%F %T')} (through {tested}) =====\n".encode())
+            log.flush()
+            _patch_state["message"] = "Downloading package lists…"
+            subprocess.run(["sudo", "-E", "apt-get", "update"],
+                           env=env, check=True, timeout=600, stdout=log, stderr=log)
+            _patch_state["message"] = "Installing tested patches — this can take several minutes…"
+            subprocess.run(
+                ["sudo", "-E", "apt-get", "-y",
+                 "-o", "Dpkg::Options::=--force-confdef",
+                 "-o", "Dpkg::Options::=--force-confold",
+                 "upgrade"],
+                env=env, check=True, timeout=3600, stdout=log, stderr=log)
+        PATCH_STAMP.write_text(tested)
+        _audit("OS_PATCH", f"system patches applied (tested through {tested})")
+        _patch_state.update(state="done",
+                            message="Patches installed. Restart the unit when convenient.")
+        threading.Thread(target=_check_updates_background, daemon=True).start()
+    except Exception as e:
+        _audit("OS_PATCH", f"patch run FAILED: {e}")
+        _patch_state.update(state="failed",
+                            message=f"Patch run failed: {e} — see patch.log in diagnostics")
+
+
+@app.route("/system/patches/apply", methods=["POST"])
+def patches_apply():
+    if _patch_state["state"] == "running":
+        return jsonify({"ok": False, "message": "A patch run is already in progress"})
+    p = _update_status.get("patches") or {}
+    if not p.get("available"):
+        return jsonify({"ok": False, "message": "No tested patches available"})
+    _patch_state.update(state="running", message="Starting…")
+    threading.Thread(target=_patch_worker, args=(p["tested_through"],), daemon=True).start()
+    return jsonify({"ok": True})
+
+
+@app.route("/system/patches/status")
+def patches_status():
+    return jsonify({**(_update_status.get("patches") or {}), **_patch_state})
 
 
 @app.route("/system/timezone", methods=["GET"])

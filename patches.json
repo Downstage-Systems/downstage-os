@@ -1,0 +1,4 @@
+{
+  "tested_through": "2026-07-13",
+  "notes": "Debian 13 point updates incl. Chromium 149 — bench-validated on DS1-A-2607-0001"
+}

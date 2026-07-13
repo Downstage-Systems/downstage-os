@@ -1294,6 +1294,13 @@
             <button class="btn-sm" onclick="window.location='/diagnostics'" title="Download a support diagnostics bundle">Diagnostics</button>
           </div>
           <div class="external-url-hint" id="os-update-note" style="display:none"></div>
+          <div id="patches-row" style="display:none; margin-top:12px; padding-top:12px; border-top:1px solid var(--border)">
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap">
+              <span style="font-size:13px" id="patches-text"></span>
+              <button class="btn-sm success" id="patches-apply-btn" onclick="applyPatches()" style="margin-left:auto">Install patches</button>
+            </div>
+            <div class="external-url-hint" id="patches-note" style="display:block; margin-top:6px">System patches are base-OS security and bug fixes, tested by Downstage on identical hardware before being offered here. The unit stays on the air while they install; restart afterwards when convenient.</div>
+          </div>
         </div>
       </div>
 
@@ -2806,6 +2813,7 @@
       renderVersionRow('os',        d.os);
       renderRevertBtn('ontime',    d.ontime?.prev,    'revertOntimeServer()');
       renderRevertBtn('companion', d.companion?.prev, 'revertCompanion()');
+      renderPatchesRow(d.patches);
       // OS update button + last-result note
       const osBtn = document.getElementById('os-update-btn');
       if (osBtn) osBtn.style.display = d.os?.update_available ? '' : 'none';
@@ -2835,6 +2843,54 @@
         }
       }
     } catch {}
+  }
+
+  // ── blessed system patches ──
+  function renderPatchesRow(p) {
+    const row = document.getElementById('patches-row');
+    if (!row || !p) return;
+    if (p.state === 'running') {
+      row.style.display = '';
+      document.getElementById('patches-text').innerHTML = spinnerHTML(p.message || 'Installing patches…');
+      document.getElementById('patches-apply-btn').style.display = 'none';
+      return;
+    }
+    document.getElementById('patches-apply-btn').style.display = '';
+    if (p.available) {
+      row.style.display = '';
+      document.getElementById('patches-text').innerHTML =
+        `<b>System patches available</b> — tested by Downstage through ${p.tested_through}` +
+        (p.notes ? ` · ${p.notes}` : '');
+    } else {
+      row.style.display = 'none';
+    }
+  }
+
+  async function applyPatches() {
+    if (!confirm('Install system patches?\n\nThese are base-OS updates tested by Downstage. The displays keep running during the install (several minutes); restart the unit afterwards when convenient.\n\nAvoid doing this during a show.')) return;
+    const r = await fetch('/system/patches/apply', { method: 'POST' });
+    const d = await r.json();
+    if (!d.ok) { showToast(d.message, 'error'); return; }
+    showToast('Installing system patches — the unit stays on the air…', 'info');
+    pollPatches();
+  }
+
+  function pollPatches() {
+    const t = setInterval(async () => {
+      try {
+        const r = await fetch('/system/patches/status');
+        const p = await r.json();
+        renderPatchesRow(p);
+        if (p.state === 'done') {
+          clearInterval(t);
+          showToast(p.message, 'success');
+          loadUpdateStatus();
+        } else if (p.state === 'failed') {
+          clearInterval(t);
+          showToast(p.message, 'error');
+        }
+      } catch {}
+    }, 4000);
   }
 
   function renderRevertBtn(key, prev, handler) {
