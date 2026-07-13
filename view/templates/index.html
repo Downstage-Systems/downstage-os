@@ -848,6 +848,13 @@
             <button class="btn-sm" onclick="window.location='/diagnostics'" title="Download a support diagnostics bundle">Diagnostics</button>
           </div>
           <div class="external-url-hint" id="os-update-note" style="display:none"></div>
+          <div id="patches-row" style="display:none; margin-top:12px; padding-top:12px; border-top:1px solid var(--border)">
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap">
+              <span style="font-size:13px" id="patches-text"></span>
+              <button class="btn-sm" id="patches-apply-btn" onclick="applyPatches()" style="margin-left:auto">Install patches</button>
+            </div>
+            <div class="external-url-hint" id="patches-note" style="display:block; margin-top:6px">Tested by Downstage before they're offered. The display stays live; installs take a while on this hardware. Restart when convenient.</div>
+          </div>
         </div>
       </div>
 
@@ -1040,6 +1047,51 @@
   }
 
   // ── Status ────────────────────────────────────────────────────────────────────
+  // ── blessed system patches ──
+  async function loadPatches() {
+    try {
+      const r = await fetch('/system/patches/status');
+      renderPatchesRow(await r.json());
+    } catch {}
+  }
+  function renderPatchesRow(p) {
+    const row = document.getElementById('patches-row');
+    if (!row || !p) return;
+    if (p.state === 'running') {
+      row.style.display = '';
+      document.getElementById('patches-text').innerHTML = spinnerHTML(p.message || 'Installing patches…');
+      document.getElementById('patches-apply-btn').style.display = 'none';
+      return;
+    }
+    document.getElementById('patches-apply-btn').style.display = '';
+    if (p.available) {
+      row.style.display = '';
+      const txt = document.getElementById('patches-text');
+      txt.innerHTML = '<b>System patches available</b>';
+      txt.title = `Tested through ${p.tested_through}` + (p.notes ? ` — ${p.notes}` : '');
+    } else {
+      row.style.display = 'none';
+    }
+  }
+  async function applyPatches() {
+    if (!confirm('Install system patches?\n\nTested by Downstage. The display keeps running during the install — allow 30+ minutes on this hardware. Restart afterwards when convenient.\n\nAvoid doing this during a show.')) return;
+    const r = await fetch('/system/patches/apply', { method: 'POST' });
+    const d = await r.json();
+    if (!d.ok) { showToast(d.message, 'error'); return; }
+    showToast('Installing system patches — the display stays live…', 'info');
+    const t = setInterval(async () => {
+      try {
+        const rr = await fetch('/system/patches/status');
+        const p = await rr.json();
+        renderPatchesRow(p);
+        if (p.state === 'done')   { clearInterval(t); showToast(p.message, 'success'); }
+        if (p.state === 'failed') { clearInterval(t); showToast(p.message, 'error'); }
+      } catch {}
+    }, 6000);
+  }
+  loadPatches();
+  setInterval(loadPatches, 120000);
+
   function renderOsPanel(d) {
     const ver   = document.getElementById('os-ver-installed');
     const badge = document.getElementById('os-ver-badge');

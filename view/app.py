@@ -396,10 +396,96 @@ def _refresh_os_update():
         print(f"[updates] os check failed: {e}")
 
 
+# ── Blessed system patches — see the One's app.py for the full rationale.
+# The Zero 2 W is slow; a big backlog can take 30+ minutes, hence the timeout.
+
+PATCH_STAMP    = BASE_DIR / ".os-patched"
+PATCH_BASELINE = "2026-04-27"
+PATCH_LOG      = BASE_DIR / "patch.log"
+
+_patch_state  = {"state": "idle", "message": ""}
+_patch_status = {"tested_through": None, "last_applied": None,
+                 "available": False, "notes": "", "checked": False}
+
+
+def _patches_last_applied():
+    try:
+        return PATCH_STAMP.read_text().strip() or PATCH_BASELINE
+    except Exception:
+        return PATCH_BASELINE
+
+
+def _refresh_patches():
+    try:
+        repo = load_config().get("os_update_repo", "")
+        tested = notes = None
+        if repo:
+            r = requests.get(
+                f"https://raw.githubusercontent.com/{repo}/main/patches.json",
+                timeout=10,
+            )
+            if r.status_code == 200:
+                marker = r.json()
+                tested = marker.get("tested_through")
+                notes  = marker.get("notes", "")
+        last = _patches_last_applied()
+        _patch_status.update(
+            tested_through=tested, last_applied=last, notes=notes or "",
+            available=bool(tested and tested > last), checked=True)
+    except Exception as e:
+        _patch_status["checked"] = True
+        print(f"[updates] patches check failed: {e}")
+
+
+def _patch_worker(tested):
+    env = {**os.environ, "DEBIAN_FRONTEND": "noninteractive"}
+    try:
+        with open(PATCH_LOG, "ab") as log:
+            log.write(f"\n===== patch run {time.strftime('%F %T')} (through {tested}) =====\n".encode())
+            log.flush()
+            _patch_state["message"] = "Downloading package lists…"
+            subprocess.run(["sudo", "-E", "apt-get", "update"],
+                           env=env, check=True, timeout=900, stdout=log, stderr=log)
+            _patch_state["message"] = "Installing tested patches — 30+ minutes on this hardware…"
+            subprocess.run(
+                ["sudo", "-E", "apt-get", "-y",
+                 "-o", "Dpkg::Options::=--force-confdef",
+                 "-o", "Dpkg::Options::=--force-confold",
+                 "upgrade"],
+                env=env, check=True, timeout=7200, stdout=log, stderr=log)
+        PATCH_STAMP.write_text(tested)
+        _audit("OS_PATCH", f"system patches applied (tested through {tested})")
+        _patch_state.update(state="done",
+                            message="Patches installed. Restart the unit when convenient.")
+        _refresh_patches()
+    except Exception as e:
+        _audit("OS_PATCH", f"patch run FAILED: {e}")
+        _patch_state.update(state="failed",
+                            message=f"Patch run failed: {e} — see patch.log in diagnostics")
+
+
+@app.route("/system/patches/apply", methods=["POST"])
+def patches_apply():
+    if _patch_state["state"] == "running":
+        return jsonify({"ok": False, "message": "A patch run is already in progress"})
+    if not _patch_status.get("available"):
+        return jsonify({"ok": False, "message": "No tested patches available"})
+    _patch_state.update(state="running", message="Starting…")
+    threading.Thread(target=_patch_worker,
+                     args=(_patch_status["tested_through"],), daemon=True).start()
+    return jsonify({"ok": True})
+
+
+@app.route("/system/patches/status")
+def patches_status():
+    return jsonify({**_patch_status, **_patch_state})
+
+
 def _check_os_update():
     """Boot + daily refresh loop."""
     while True:
         _refresh_os_update()
+        _refresh_patches()
         time.sleep(86400)
 
 
@@ -457,6 +543,7 @@ def os_update_file():
 @app.route("/os/recheck", methods=["POST"])
 def os_recheck():
     _refresh_os_update()
+    _refresh_patches()
     return jsonify({"ok": True, "installed": OS_VERSION,
                     "latest": _os_update["latest"],
                     "update_available": _os_update["update_available"]})
