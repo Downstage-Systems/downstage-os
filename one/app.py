@@ -232,7 +232,9 @@ def _power_state():
     """Pi firmware power flags (vcgencmd get_throttled): bit0 undervoltage
     now, bit16 undervoltage since boot — the 'lightning bolt' warning."""
     try:
-        out = subprocess.check_output(["vcgencmd", "get_throttled"],
+        # raspi-utils 2026-06 needs /dev/vcio_gencmd (absent on this kernel)
+        # for non-root — root path still works, and pi has passwordless sudo
+        out = subprocess.check_output(["sudo", "vcgencmd", "get_throttled"],
                                       text=True, timeout=3).strip()
         val = int(out.split("=")[1], 16)
         return {
@@ -295,7 +297,7 @@ def _gpu_clock_mhz():
     """Return V3D (GPU) clock in MHz via vcgencmd, or None if unavailable."""
     try:
         out = subprocess.check_output(
-            ["vcgencmd", "measure_clock", "v3d"],
+            ["sudo", "vcgencmd", "measure_clock", "v3d"],
             text=True, timeout=3,
         ).strip()                          # e.g. "frequency(46)=960000000"
         m = re.search(r"=(\d+)", out)
