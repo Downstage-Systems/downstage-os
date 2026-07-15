@@ -449,16 +449,56 @@ def _apply_display_settings():
         rot = config.get(f"hdmi{n}_rotate", "normal")
         # re-anchor positions: a mode change alters widths, and stale offsets
         # leave gaps/overlap — content then isn't centered on the glass
-        cmd = ["xrandr", "--output", name, "--mode", res, "--rotate", rot]
-        if idx == 0:
-            cmd += ["--pos", "0x0"]
-        else:
-            cmd += ["--right-of", outputs[idx - 1]]
+        place = ["--pos", "0x0"] if idx == 0 else ["--right-of", outputs[idx - 1]]
+        cmd = ["xrandr", "--output", name, "--mode", res, "--rotate", rot] + place
         try:
             subprocess.run(cmd, env=env, timeout=10, check=True,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except Exception as e:
-            print(f"[xrandr] failed for {name}: {e}")
+            print(f"[xrandr] failed for {name}: {e} — forcing a CVT mode (no/bad EDID?)")
+            forced = _force_mode(name, res, env)
+            if forced:
+                try:
+                    subprocess.run(["xrandr", "--output", name, "--mode", forced,
+                                    "--rotate", rot] + place,
+                                   env=env, timeout=10, check=True,
+                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    print(f"[xrandr] {name} driven at forced {res}")
+                except Exception as e2:
+                    print(f"[xrandr] forced mode also failed for {name}: {e2}")
+
+
+# CVT 60Hz modelines for the resolutions the setup UI offers — used when a
+# display gives no EDID and the wanted mode therefore isn't in xrandr's list.
+_CVT_MODELINES = {
+    "1920x1080": ["173.00", "1920", "2048", "2248", "2576",
+                  "1080", "1083", "1088", "1120", "-hsync", "+vsync"],
+    "1280x720":  ["74.50", "1280", "1344", "1472", "1664",
+                  "720", "723", "728", "748", "-hsync", "+vsync"],
+}
+
+
+def _force_mode(name, res, env):
+    """No EDID (0mm x 0mm outputs, mirrored 1024x768 fallback) means the wanted
+    mode isn't in the output's list at all. Add a known CVT modeline for it, so
+    a display behind an EDID-less switcher or a sleepy projector still gets the
+    configured signal instead of the safe-mode clone."""
+    modeline = _CVT_MODELINES.get(res)
+    if not modeline:
+        print(f"[xrandr] no built-in modeline for {res}")
+        return None
+    try:
+        mode_name = f"{res}_forced"
+        subprocess.run(["xrandr", "--newmode", mode_name] + modeline,
+                       env=env, timeout=10,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)  # exists already → fine
+        subprocess.run(["xrandr", "--addmode", name, mode_name],
+                       env=env, timeout=10, check=True,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return mode_name
+    except Exception as e:
+        print(f"[xrandr] could not add forced mode for {name}: {e}")
+        return None
 
 
 def _version_tuple(v):
@@ -1749,8 +1789,60 @@ def resync_displays():
     def _do():
         _resync_displays()
         launch_all_windows()
+        _enforce_window_placement()
     threading.Thread(target=_do, daemon=True).start()
     return jsonify({"ok": True})
+
+
+def _enforce_window_placement(settle=4, tries=3):
+    """Chromium can ignore --window-position when two kiosk windows open
+    near-simultaneously — both land on one output, or they swap. Verify each
+    window sits on its configured display and move it if not."""
+    env = {**os.environ, "DISPLAY": ":0"}
+    time.sleep(settle)
+    for _ in range(tries):
+        displays = {min(d["port"], 2): d for d in get_displays(fresh=True)}
+        moved = False
+        with _wlock:
+            procs = [(i + 1, p) for i, p in enumerate(_win) if p and p.poll() is None]
+        for n, proc in procs:
+            d = displays.get(n)
+            if not d:
+                continue
+            try:
+                # the window belongs to chromium's forked child, not our Popen
+                # pid — find it by its per-output profile dir instead
+                pid = subprocess.check_output(
+                    ["pgrep", "-f", f"user-data-dir=/tmp/kiosk-hdmi{n}"],
+                    text=True, timeout=5).split()[0]
+                wins = subprocess.check_output(
+                    ["xdotool", "search", "--pid", pid],
+                    env=env, text=True, timeout=5).split()
+                if not wins:
+                    continue
+                win = wins[-1]
+                geo = subprocess.check_output(
+                    ["xdotool", "getwindowgeometry", win],
+                    env=env, text=True, timeout=5)
+                gm = re.search(r"Position:\s*(-?\d+),(-?\d+)", geo)
+                if not gm:
+                    continue
+                x, y = int(gm.group(1)), int(gm.group(2))
+                if (x, y) == (d["x"], d["y"]):
+                    continue
+                print(f"[wm] hdmi{n} window at {x},{y} — moving to {d['x']},{d['y']}")
+                subprocess.run(["wmctrl", "-i", "-r", win, "-b", "remove,fullscreen"],
+                               env=env, timeout=5)
+                subprocess.run(["xdotool", "windowmove", win, str(d["x"]), str(d["y"])],
+                               env=env, timeout=5)
+                subprocess.run(["wmctrl", "-i", "-r", win, "-b", "add,fullscreen"],
+                               env=env, timeout=5)
+                moved = True
+            except Exception as e:
+                print(f"[wm] placement check failed for hdmi{n}: {e}")
+        if not moved:
+            return
+        time.sleep(1.5)
 
 
 @app.route("/desktop", methods=["POST"])
