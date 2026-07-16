@@ -766,6 +766,22 @@
       .health-grid { grid-template-columns: repeat(2, 1fr); }
       .ctx-item { padding: 12px 12px; font-size: 14px; }
     }
+    /* ── Setup tabs — task-based panes; Displays is home ── */
+    .setup-tabs { display:flex; gap:2px; border-bottom:1px solid var(--border2); margin:18px 0 20px; }
+    .stab { position:relative; padding:10px 15px 11px; background:none; border:none;
+            border-bottom:2px solid transparent; font-family:var(--font-display);
+            font-weight:700; font-size:14px; letter-spacing:0.05em;
+            color:var(--muted); cursor:pointer; }
+    .stab:hover { color: var(--text); }
+    .stab.on { color:var(--text); border-bottom-color:var(--accent); }
+    .stab-upd { display:none; position:absolute; top:6px; right:3px; width:7px; height:7px;
+                border-radius:50%; background:var(--amber);
+                box-shadow:0 0 6px rgba(245,165,36,0.8); }
+    .stab-upd.on { display:block; }
+    .tpane { display:none; }
+    .tpane.on { display:block; }
+    /* Show Mode keeps its contract: displays content only, tabs hidden */
+    body.show-mode #tpane-displays { display:block !important; }
   </style>
 </head>
 <body>
@@ -852,6 +868,16 @@
         <span id="status-text">Checking connection…</span>
       </div>
 
+      <!-- Setup tabs: task-based — Displays is home; a dot = an update waits inside -->
+      <div class="setup-tabs full-only" id="setup-tabs">
+        <button class="stab" id="stab-displays" onclick="showSetupTab('displays')">Displays</button>
+        <button class="stab" id="stab-timer" onclick="showSetupTab('timer')">Timer<span class="stab-upd" id="upd-timer"></span></button>
+        <button class="stab" id="stab-companion" onclick="showSetupTab('companion')">Companion<span class="stab-upd" id="upd-companion"></span></button>
+        <button class="stab" id="stab-network" onclick="showSetupTab('network')">Network</button>
+        <button class="stab" id="stab-system" onclick="showSetupTab('system')">System<span class="stab-upd" id="upd-system"></span></button>
+      </div>
+
+      <div class="tpane full-only" id="tpane-timer">
       <!-- Mode toggle -->
       <div class="section-label full-only">Server Mode</div>
       <div class="mode-toggle full-only">
@@ -904,6 +930,8 @@
         </div>
       </div>
 
+      </div><!-- /tpane-timer -->
+      <div class="tpane on" id="tpane-displays">
       <!-- HDMI source selector -->
       <div class="field">
         <div class="section-label">Display Sources</div>
@@ -1173,6 +1201,8 @@
         </div>
       </div>
 
+      </div><!-- /tpane-displays -->
+      <div class="tpane full-only" id="tpane-companion">
       <!-- Companion -->
       <div class="field full-only">
         <div class="section-label">Bitfocus Companion</div>
@@ -1201,6 +1231,8 @@
         </div>
       </div>
 
+      </div><!-- /tpane-companion -->
+      <div class="tpane full-only" id="tpane-network">
       <!-- Network (IP) -->
       <div class="field full-only">
         <div class="section-label">Network</div>
@@ -1278,6 +1310,8 @@
         </div>
       </div>
 
+      </div><!-- /tpane-network -->
+      <div class="tpane full-only" id="tpane-system">
       <!-- Timezone -->
       <div class="field full-only">
         <div class="section-label">Pi Timezone</div>
@@ -1357,6 +1391,7 @@
         </div>
       </div>
 
+      </div><!-- /tpane-system -->
       <!-- Save -->
       <div class="actions">
         <button class="btn-primary" id="save-btn" onclick="saveAndConnect()">
@@ -2358,6 +2393,15 @@
     try { localStorage.setItem('ds1-view-mode', m); } catch (e) {}
   }
   try { setViewMode(localStorage.getItem('ds1-view-mode') || 'full'); } catch (e) {}
+
+  function showSetupTab(t) {
+    for (const x of ['displays', 'timer', 'companion', 'network', 'system']) {
+      document.getElementById('tpane-' + x)?.classList.toggle('on', x === t);
+      document.getElementById('stab-' + x)?.classList.toggle('on', x === t);
+    }
+    try { localStorage.setItem('ds1-setup-tab', t); } catch (e) {}
+  }
+  try { showSetupTab(localStorage.getItem('ds1-setup-tab') || 'displays'); } catch (e) {}
   document.body.dataset.hdmi = activeHdmiTab;   // colour identity from first paint
 
   async function refreshDisplays() {
@@ -2866,6 +2910,10 @@
       renderRevertBtn('ontime',    d.ontime?.prev,    'revertOntimeServer()');
       renderRevertBtn('companion', d.companion?.prev, 'revertCompanion()');
       renderPatchesRow(d.patches);
+      const _dot = (id, on) => document.getElementById(id)?.classList.toggle('on', !!on);
+      _dot('upd-timer', d.ontime?.update_available);
+      _dot('upd-companion', d.companion?.update_available);
+      _dot('upd-system', d.os?.update_available || d.patches?.available);
       // OS update button + last-result note
       const osBtn = document.getElementById('os-update-btn');
       if (osBtn) osBtn.style.display = d.os?.update_available ? '' : 'none';
