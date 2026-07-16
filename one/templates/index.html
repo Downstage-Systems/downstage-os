@@ -772,6 +772,11 @@
       .stab { padding: 9px 2px 10px; font-size: 10.5px; letter-spacing: 0.02em;
               text-align: center; justify-content: center; min-width: 0; }
       .stab-upd { top: 4px; right: 1px; width: 6px; height: 6px; }
+      /* Show Mode tiles: all five across one row on a phone */
+      body.show-mode .show-quick.qb-live { grid-template-columns: repeat(5, 1fr); gap: 6px; }
+      .show-quick .btn-sm { border-radius: 12px; gap: 6px; padding: 6px 2px;
+                            font-size: 8.5px; letter-spacing: 0.02em; }
+      .show-quick .btn-sm svg { width: 20px; height: 20px; }
       .display-ctl-row { flex-wrap: wrap; }
       .display-ctl-row .btn-sm { flex: 1 1 auto; }
       .mode-btn, .hdmi-tab { font-size: 12px; padding: 9px 5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
