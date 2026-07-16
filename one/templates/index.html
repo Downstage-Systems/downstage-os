@@ -52,6 +52,9 @@
       --red:       #E5484D;   /* Over Red — overtime / errors only */
       --red-bg:    rgba(229,72,77,0.08);
       --red-bd:    rgba(229,72,77,0.2);
+      --violet:    #8E6FE6;   /* Cue Violet — control surfaces (Companion) */
+      --violet-bg: rgba(142,111,230,0.08);
+      --violet-bd: rgba(142,111,230,0.28);
       --blue:      #F5A524;   /* Standby Amber — checking / attention */
       --blue-bg:   rgba(245,165,36,0.08);
       --blue-bd:   rgba(245,165,36,0.2);
@@ -755,7 +758,10 @@
       white-space: normal; line-height: 1.25;
     }
     .show-quick .btn-sm svg { width: 26px; height: 26px; fill: var(--accent); }
-    .show-quick .btn-sm.blackout { border-color: var(--red-bd); }
+    .show-quick .btn-sm.qb-ontime { border-color: var(--green-bd); }
+    .show-quick .btn-sm.qb-companion { border-color: var(--violet-bd); background: var(--violet-bg); }
+    .show-quick .btn-sm.qb-companion svg { fill: var(--violet); }
+    .show-quick .btn-sm.blackout { border-color: var(--red-bd); background: var(--red-bg); }
     .show-quick .btn-sm.blackout svg { fill: var(--red); }
 
     /* ── Mobile (phones open this page constantly) ── */
