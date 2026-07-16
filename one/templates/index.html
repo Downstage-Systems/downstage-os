@@ -769,9 +769,10 @@
     /* ── Setup tabs — task-based panes; Displays is home ── */
     .setup-tabs { display:flex; gap:2px; border-bottom:1px solid var(--border2); margin:18px 0 20px; }
     .stab { position:relative; padding:10px 15px 11px; background:none; border:none;
-            border-bottom:2px solid transparent; font-family:var(--font-display);
-            font-weight:700; font-size:14px; letter-spacing:0.05em;
-            color:var(--muted); cursor:pointer; }
+            border-radius:0; border-bottom:2px solid transparent;
+            font-family:var(--font-display); font-weight:700; font-size:14px;
+            letter-spacing:0.05em; color:var(--muted); cursor:pointer; }
+    .stab:active { transform:none; }
     .stab:hover { color: var(--text); }
     .stab.on { color:var(--text); border-bottom-color:var(--accent); }
     .stab-upd { display:none; position:absolute; top:6px; right:3px; width:7px; height:7px;
