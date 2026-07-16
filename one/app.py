@@ -2565,12 +2565,47 @@ def companion_rescan_usb():
         return jsonify({"ok": False, "message": str(e)})
 
 
+# ── long-running job registry — one at a time, visible from anywhere ─────────
+# A slow updater used to block its HTTP request for minutes with zero feedback.
+# Jobs now run in a worker; the UI's persistent ribbon polls /jobs.
+
+_JOB = {"name": "", "label": "", "state": "idle", "started": 0.0, "detail": ""}
+_job_lock = threading.Lock()
+
+
+def _start_job(name, label, fn):
+    with _job_lock:
+        if _JOB["state"] == "running":
+            return False
+        _JOB.update(name=name, label=label, state="running",
+                    started=time.time(), detail="")
+
+    def run():
+        try:
+            fn()
+            _JOB["state"] = "done"
+        except subprocess.TimeoutExpired:
+            _JOB["state"] = "failed"
+            _JOB["detail"] = "timed out"
+        except Exception as e:
+            _JOB["state"] = "failed"
+            _JOB["detail"] = str(e)
+    threading.Thread(target=run, daemon=True).start()
+    return True
+
+
+@app.route("/jobs")
+def jobs_status():
+    return jsonify(_JOB)
+
+
 @app.route("/companion/update", methods=["POST"])
 def companion_update():
     channel = load_config().get("companion_channel", "stable")
     build   = "beta" if channel == "beta" else "stable"
     prev    = _companion_installed_version_str()
-    try:
+
+    def work():
         # companion-update is already installed and handles stable/beta correctly.
         # Calling it with one arg (channel only, no version) lets it pick the
         # latest from the bitfocus API — which also handles downgrades from beta.
@@ -2583,11 +2618,10 @@ def companion_update():
             save_config({"companion_prev": prev})   # enables one-click revert
         _audit("COMPANION", f"updated ({build})")
         threading.Thread(target=_check_updates_background, daemon=True).start()
-        return jsonify({"ok": True, "running": companion_is_running()})
-    except subprocess.TimeoutExpired:
-        return jsonify({"ok": False, "message": "Update timed out after 5 minutes"})
-    except Exception as e:
-        return jsonify({"ok": False, "message": str(e)})
+
+    if not _start_job("companion-update", f"Updating Companion ({build})", work):
+        return jsonify({"ok": False, "message": "Another update is already running — see the status bar"})
+    return jsonify({"ok": True, "job": True})
 
 
 @app.route("/companion/config-download")
@@ -2620,7 +2654,8 @@ def companion_revert():
     channel = config.get("companion_channel", "stable")
     build   = "beta" if channel == "beta" else "stable"
     came_from = _companion_installed_version_str()
-    try:
+
+    def work():
         subprocess.run(
             ["sudo", "companion-update", build, prev],
             timeout=600, check=True,
@@ -2630,11 +2665,10 @@ def companion_revert():
         save_config({"companion_prev": came_from or ""})
         _audit("COMPANION", f"reverted to {prev}")
         threading.Thread(target=_check_updates_background, daemon=True).start()
-        return jsonify({"ok": True, "message": prev, "running": companion_is_running()})
-    except subprocess.TimeoutExpired:
-        return jsonify({"ok": False, "message": "Revert timed out after 10 minutes"})
-    except Exception as e:
-        return jsonify({"ok": False, "message": str(e)})
+
+    if not _start_job("companion-revert", f"Reverting Companion to {prev}", work):
+        return jsonify({"ok": False, "message": "Another update is already running — see the status bar"})
+    return jsonify({"ok": True, "job": True, "message": prev})
 
 
 @app.route("/companion/set-channel", methods=["POST"])

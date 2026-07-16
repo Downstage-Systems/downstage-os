@@ -128,6 +128,21 @@
     .status-bar.checking     { background: var(--blue-bg);  border-color: var(--blue-bd);  color: var(--blue); }
     .status-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
     .status-bar.connected .status-dot { animation: pulse 2s infinite; }
+    #job-ribbon { position:fixed; top:0; left:0; right:0; z-index:900; display:none;
+      align-items:center; gap:12px; padding:10px 20px;
+      background:var(--surface); border-bottom:1px solid var(--amber);
+      font:600 13px/1 var(--font-body); color:var(--text); }
+    #job-ribbon.on { display:flex; }
+    #job-ribbon .jdot { width:9px; height:9px; border-radius:50%; background:var(--amber);
+      box-shadow:0 0 7px rgba(245,165,36,0.7); animation:pulse 1.6s infinite; flex-shrink:0; }
+    #job-ribbon.done .jdot { background:var(--green); box-shadow:0 0 7px rgba(47,217,123,0.7); animation:none; }
+    #job-ribbon.failed .jdot { background:var(--red); box-shadow:0 0 7px rgba(229,72,77,0.7); animation:none; }
+    #job-ribbon .jtime { font-family:var(--font-mono); font-size:12px; color:var(--amber); }
+    #job-ribbon.done .jtime { color:var(--green); } #job-ribbon.failed .jtime { color:var(--red); }
+    #job-ribbon .jx { margin-left:auto; background:none; border:1px solid var(--border2);
+      border-radius:6px; color:var(--muted); padding:4px 10px; cursor:pointer; font:inherit; display:none; }
+    #job-ribbon.done .jx, #job-ribbon.failed .jx { display:block; }
+    body.job-ribboned { padding-top:44px; }
     @keyframes pulse {
       0%   { box-shadow: 0 0 0 0 rgba(47,217,123,0.6); }
       70%  { box-shadow: 0 0 0 6px rgba(47,217,123,0); }
@@ -754,6 +769,12 @@
   </style>
 </head>
 <body>
+<div id="job-ribbon">
+  <span class="jdot"></span>
+  <span id="job-label"></span>
+  <span class="jtime" id="job-time"></span>
+  <button class="jx" onclick="dismissJobRibbon()">Dismiss</button>
+</div>
 <div class="wrap">
 
   <div class="logo-row">
@@ -2027,6 +2048,40 @@
     window.location.href = '/companion/config-download';
   }
 
+  // ── persistent job ribbon: any long updater shows progress across the page ──
+  let _jobDismissed = false, _lastJobKey = '';
+  function dismissJobRibbon() {
+    _jobDismissed = true;
+    document.getElementById('job-ribbon').className = '';
+    document.body.classList.remove('job-ribboned');
+  }
+  async function pollJobRibbon() {
+    let j;
+    try { j = await (await fetch('/jobs')).json(); } catch { return; }
+    const r = document.getElementById('job-ribbon');
+    if (!j || !j.name || j.state === 'idle') { r.className = ''; document.body.classList.remove('job-ribboned'); return; }
+    const key = j.name + j.started;
+    if (key !== _lastJobKey) { _jobDismissed = false; _lastJobKey = key; }
+    if (j.state !== 'running' && _jobDismissed) return;
+    const el = Math.max(0, Math.floor(Date.now() / 1000 - j.started));
+    const mm = Math.floor(el / 60), ss = String(el % 60).padStart(2, '0');
+    if (j.state === 'running') {
+      r.className = 'on';
+      document.getElementById('job-label').textContent = j.label + '…';
+      document.getElementById('job-time').textContent = `${mm}:${ss}`;
+    } else {
+      const wasShown = r.className.includes('on');
+      r.className = 'on ' + j.state;
+      document.getElementById('job-label').textContent =
+        j.label + (j.state === 'done' ? ' — finished' : ` — FAILED${j.detail ? ': ' + j.detail : ''}`);
+      document.getElementById('job-time').textContent = '';
+      if (wasShown && j.state === 'done') { loadUpdateStatus(); }
+    }
+    document.body.classList.add('job-ribboned');
+  }
+  setInterval(pollJobRibbon, 3000);
+  pollJobRibbon();
+
   async function updateCompanion() {
     const ch = companionChannel === 'beta' ? 'beta' : 'stable';
     if (confirm('Download a backup of the Companion config to this computer first?\n\nRecommended before any update — pages, connections and surfaces, restorable if a migration misbehaves.\n\nOK downloads the backup and continues; Cancel skips the backup.')) {
@@ -2039,10 +2094,13 @@
     try {
       const r = await fetch('/companion/update', { method: 'POST' });
       const d = await r.json();
-      companionRunning = d.running ?? companionRunning;
-      updateCompanionPanel();
-      showToast(d.ok ? 'Companion updated successfully.' : `Update failed: ${d.message}`, d.ok ? 'success' : 'error');
+      if (d.ok) { showToast('Update started — progress in the status bar at the top.', 'info'); pollJobRibbon(); }
+      else showToast(d.message || 'Update could not start.', 'error');
     } catch { showToast('Network error during update.', 'error'); }
+    finally {
+      const b = document.getElementById('companion-update-btn');
+      if (b) { b.disabled = false; b.textContent = 'Update'; }
+    }
   }
 
   async function restartCompanion() {
@@ -2996,10 +3054,8 @@
     try {
       const r = await fetch('/companion/revert', { method: 'POST' });
       const d = await r.json();
-      companionRunning = d.running ?? companionRunning;
-      updateCompanionPanel();
-      showToast(d.ok ? `Companion reverted to v${d.message}` : d.message, d.ok ? 'success' : 'error');
-      setTimeout(loadUpdateStatus, 2000);
+      if (d.ok) { showToast(`Revert to v${d.message} started — progress in the status bar.`, 'info'); pollJobRibbon(); }
+      else showToast(d.message || 'Revert could not start.', 'error');
     } catch { showToast('Network error during revert.', 'error'); }
   }
 
