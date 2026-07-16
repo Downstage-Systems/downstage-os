@@ -741,13 +741,22 @@
     #view-tab-show.active svg { fill: var(--accent); }
     body.show-mode .full-only { display: none !important; }
 
-    /* ── Show Mode quick bar: one-tap links to the tools used mid-show ── */
+    /* ── Show Mode quick bar: app-icon tiles — big targets for dark rooms ── */
     .show-quick { display: none; }
     body.show-mode .show-quick.qb-live {
-      display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px;
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+      gap: 10px; margin-bottom: 18px;
     }
-    .show-quick .btn-sm { flex: 1 1 auto; justify-content: center; }
-    .show-quick .btn-sm svg { fill: var(--accent); }
+    .show-quick .btn-sm {
+      flex-direction: column; justify-content: center; align-items: center;
+      aspect-ratio: 1 / 1; gap: 9px; padding: 8px 4px;
+      background: var(--surface2); border: 1px solid var(--border2); border-radius: 16px;
+      font-size: 11px; letter-spacing: 0.04em; text-align: center;
+      white-space: normal; line-height: 1.25;
+    }
+    .show-quick .btn-sm svg { width: 26px; height: 26px; fill: var(--accent); }
+    .show-quick .btn-sm.blackout { border-color: var(--red-bd); }
+    .show-quick .btn-sm.blackout svg { fill: var(--red); }
 
     /* ── Mobile (phones open this page constantly) ── */
     @media (max-width: 560px) {
