@@ -753,8 +753,15 @@
     @media (max-width: 560px) {
       body { padding: 14px 8px; }
       .card-body { padding: 18px 13px; }
-      .logo-row { flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
-      .addr-chip { margin-left: 0; width: 100%; align-items: flex-start; text-align: left; }
+      .logo-row { flex-wrap: wrap; gap: 8px 10px; margin-bottom: 16px; }
+      /* address becomes one compact line under the wordmark, not a dangling stack */
+      .addr-chip { margin-left: 0; width: 100%; flex-direction: row; align-items: center;
+                   gap: 10px; text-align: left; }
+      .addr-chip .addr-main { font-size: 11px; }
+      /* five tabs don't fit a phone: shrink and let the strip swipe */
+      .setup-tabs { overflow-x: auto; scrollbar-width: none; }
+      .setup-tabs::-webkit-scrollbar { display: none; }
+      .stab { padding: 9px 9px 10px; font-size: 12px; letter-spacing: 0.03em; flex-shrink: 0; }
       .display-ctl-row { flex-wrap: wrap; }
       .display-ctl-row .btn-sm { flex: 1 1 auto; }
       .mode-btn, .hdmi-tab { font-size: 12px; padding: 9px 5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
