@@ -705,8 +705,9 @@
     #preview-box-2 .preview-badge { color: var(--hdmi2); }
     #tab-hdmi1.active svg { fill: var(--hdmi1); }
     #tab-hdmi2.active svg { fill: var(--hdmi2); }
-    #hdmi1-label { color: var(--hdmi1); }
-    #hdmi2-label { color: var(--hdmi2); }
+    /* the source pill wears its output's identity end to end — no blue-on-green */
+    #hdmi1-label { color: var(--hdmi1); background: var(--hdmi1-lo); border-color: rgba(88,182,255,0.3); }
+    #hdmi2-label { color: var(--hdmi2); background: var(--hdmi2-lo); border-color: rgba(47,217,123,0.25); }
     /* selected source chip takes the active output's colour */
     body[data-hdmi="1"] .source-chip.selected { background: var(--hdmi1-lo); border-color: var(--hdmi1); }
     body[data-hdmi="1"] .source-chip.selected .source-chip-icon { background: rgba(88,182,255,0.22); }
