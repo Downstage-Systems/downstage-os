@@ -813,9 +813,9 @@
                 box-shadow:0 0 6px rgba(245,165,36,0.8); }
     .stab-upd.on { display:block; }
     .tpane { display:none; }
-    /* a floor height so short panes don't collapse the card — the chrome
-       above the tabs stays planted when you switch */
-    .tpane.on { display:block; min-height: 58vh; }
+    /* Save & Apply and the footer hug the pane's real content — no dead space.
+       The scroll pin in showSetupTab keeps the top chrome planted. */
+    .tpane.on { display:block; }
     /* Show Mode keeps its contract: displays content only, tabs hidden */
     body.show-mode #tpane-displays { display:block !important; }
   </style>
