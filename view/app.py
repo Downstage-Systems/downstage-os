@@ -1410,6 +1410,8 @@ class EPaperDisplay:
                 print(f"[epaper] sleep: {e}")
 
     def _render(self):
+        if getattr(self, "_final", False):
+            return   # shutdown screen is on the panel — nothing may overwrite it
         if not self._epd:
             return
         try:
@@ -1475,6 +1477,11 @@ class EPaperDisplay:
     def shutdown_screen(self):
         """Drawn just before poweroff — e-ink holds the image with no power,
         so a shut-down unit in a case reads as deliberately, safely off."""
+        # halt the periodic loop and refuse any late force_refresh FIRST —
+        # otherwise a status repaint races us and the powered-off panel
+        # ends up holding the normal page instead of "safe to unplug"
+        self._final = True
+        self._stop.set()
         if not self._epd:
             return
         try:
@@ -1490,11 +1497,14 @@ class EPaperDisplay:
             draw.text((tx, 46), socket.gethostname(), font=self._font_md, fill=0)
             draw.text((tx, 68), "Powered off", font=self._font_md, fill=0)
             draw.text((tx, 86), "Safe to unplug", font=self._font_sm, fill=0)
+            self._last_frame = None   # never skip this write
             self._flush(img)
         except Exception as e:
             print(f"[epaper] shutdown screen: {e}")
 
     def force_refresh(self):
+        if getattr(self, "_final", False):
+            return
         threading.Thread(target=self._render, daemon=True).start()
 
 
@@ -2073,7 +2083,55 @@ def system_shutdown():
 
 # ── Boot ──────────────────────────────────────────────────────────────────────
 
+def _enforce_network_priority():
+    """Wired always beats WiFi when both are up: give every ethernet profile
+    top autoconnect priority and a lower route metric than WiFi's default
+    600. WiFi stays connected in the background — routes just prefer copper."""
+    try:
+        out = subprocess.check_output(
+            ["nmcli", "-t", "-f", "NAME,TYPE", "con"], text=True, timeout=10)
+        for line in out.strip().splitlines():
+            name, _, ctype = line.rpartition(":")
+            if ctype == "802-3-ethernet":
+                subprocess.run(["sudo", "nmcli", "con", "mod", name,
+                                "connection.autoconnect", "yes",
+                                "connection.autoconnect-priority", "999",
+                                "ipv4.route-metric", "100",
+                                "ipv6.route-metric", "100"],
+                               timeout=10, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                print(f"[net] wired profile '{name}' pinned above WiFi")
+    except Exception as e:
+        print(f"[net] priority enforcement failed: {e}")
+
+
+def _usb_ethernet_retry():
+    """The USB ethernet adapter can fail cold-boot enumeration on the Zero 2 W
+    (marginal power timing). If no wired interface exists, cycle the USB bus
+    binding a few times before giving up — recovers the marginal case."""
+    for attempt in range(3):
+        time.sleep(10)
+        try:
+            eth = [i for i in os.listdir("/sys/class/net") if i.startswith(("eth", "enx"))]
+            if eth:
+                if attempt:
+                    print(f"[net] wired interface {eth[0]} recovered after USB rebind")
+                return
+            print(f"[net] no wired interface — USB rebind attempt {attempt + 1}")
+            subprocess.run(["sudo", "sh", "-c",
+                            "for d in /sys/bus/usb/drivers/usb/[0-9]-*; do b=$(basename $d); "
+                            "echo $b > /sys/bus/usb/drivers/usb/unbind; done; sleep 2; "
+                            "for d in /sys/bus/usb/devices/[0-9]-[0-9]; do b=$(basename $d); "
+                            "echo $b > /sys/bus/usb/drivers/usb/bind 2>/dev/null; done"],
+                           timeout=30, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception as e:
+            print(f"[net] usb retry error: {e}")
+            return
+    print("[net] wired interface absent after retries — check the adapter")
+
+
 def boot():
+    threading.Thread(target=_enforce_network_priority, daemon=True).start()
+    threading.Thread(target=_usb_ethernet_retry, daemon=True).start()
     try:
         subprocess.Popen(
             ["unclutter", "-idle", "2", "-root"],
