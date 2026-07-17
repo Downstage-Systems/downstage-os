@@ -70,8 +70,7 @@
       font-family: var(--font-body);
       background: var(--bg);
       color: var(--text);
-      height: 100vh; height: 100dvh;
-      overflow: hidden;
+      min-height: 100vh;
       display: flex; align-items: flex-start; justify-content: center;
       padding: 24px 16px;
     }
@@ -86,8 +85,7 @@
       opacity: 0.3; pointer-events: none;
     }
 
-    .wrap { width: 100%; max-width: 560px; position: relative; z-index: 1;
-            height: 100%; display: flex; flex-direction: column; }
+    .wrap { width: 100%; max-width: 560px; position: relative; z-index: 1; }
 
     /* ── Logo ── */
     .logo-row { display: flex; align-items: center; gap: 14px; margin-bottom: 18px;
@@ -119,14 +117,8 @@
 
 
     /* ── Card ── */
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden;
-            flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
-    .card-body { padding: 28px; flex: 1 1 auto; min-height: 0;
-                 display: flex; flex-direction: column; }
-    .card-body > * { flex-shrink: 0; }
-    /* the tab content scrolls INSIDE the window — the chrome never moves */
-    #tab-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto;
-                  margin: 0 -28px -28px; padding: 0 28px 20px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+    .card-body { padding: 28px; }
 
     /* ── Status bar ── */
     .status-bar {
@@ -778,7 +770,6 @@
     @media (max-width: 560px) {
       body { padding: 14px 8px; }
       .card-body { padding: 18px 13px; }
-      #tab-scroll { margin: 0 -13px -18px; padding: 0 13px 14px; }
       .logo-row { flex-wrap: wrap; gap: 8px 10px; margin-bottom: 16px; }
       /* address becomes one compact line under the wordmark, not a dangling stack */
       .addr-chip { margin-left: 0; width: 100%; flex-direction: row; align-items: center;
@@ -2456,9 +2447,8 @@
       document.getElementById('tpane-' + x)?.classList.toggle('on', x === t);
       document.getElementById('stab-' + x)?.classList.toggle('on', x === t);
     }
-    // the pane region is its own scroller — reset it; the chrome never moves
-    const sc = document.getElementById('tab-scroll');
-    if (sc) sc.scrollTop = 0;
+    // top-anchored page: a tab switch puts the chrome back at the top
+    if (window.scrollY > 0) window.scrollTo(0, 0);
     try { localStorage.setItem('ds1-setup-tab', t); } catch (e) {}
   }
   try { showSetupTab(localStorage.getItem('ds1-setup-tab') || 'displays'); } catch (e) {}
