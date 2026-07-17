@@ -88,7 +88,12 @@
     .wrap { width: 100%; max-width: 560px; position: relative; z-index: 1; }
 
     /* ── Logo ── */
-    .logo-row { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
+    .logo-row { display: flex; align-items: center; gap: 14px;
+                position: sticky; top: 0; z-index: 500;
+                background: var(--bg); padding: 12px 0 10px; margin-bottom: 14px;
+                border-bottom: 1px solid var(--border); }
+    /* the job ribbon is fixed above everything — tuck the sticky header below it */
+    body.job-ribboned .logo-row { top: 44px; }
 
     .logo-icon { width: 46px; height: 46px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .logo-icon svg { width: 46px; height: 46px; }
@@ -2445,8 +2450,7 @@
     }
     // keep the chrome planted: if the page is scrolled, snap back so the
     // header/status/tabs sit exactly where they always do
-    const tabs = document.getElementById('setup-tabs');
-    if (tabs && window.scrollY > 0) window.scrollTo({ top: 0, behavior: 'instant' });
+    if (window.scrollY > 0) window.scrollTo(0, 0);
     try { localStorage.setItem('ds1-setup-tab', t); } catch (e) {}
   }
   try { showSetupTab(localStorage.getItem('ds1-setup-tab') || 'displays'); } catch (e) {}
