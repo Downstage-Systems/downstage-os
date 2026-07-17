@@ -70,8 +70,9 @@
       font-family: var(--font-body);
       background: var(--bg);
       color: var(--text);
-      min-height: 100vh;
-      display: flex; align-items: center; justify-content: center;
+      height: 100vh; height: 100dvh;
+      overflow: hidden;
+      display: flex; align-items: flex-start; justify-content: center;
       padding: 24px 16px;
     }
 
@@ -85,15 +86,12 @@
       opacity: 0.3; pointer-events: none;
     }
 
-    .wrap { width: 100%; max-width: 560px; position: relative; z-index: 1; }
+    .wrap { width: 100%; max-width: 560px; position: relative; z-index: 1;
+            height: 100%; display: flex; flex-direction: column; }
 
     /* ── Logo ── */
-    .logo-row { display: flex; align-items: center; gap: 14px;
-                position: sticky; top: 0; z-index: 500;
-                background: var(--bg); padding: 12px 0 10px; margin-bottom: 14px;
-                border-bottom: 1px solid var(--border); }
-    /* the job ribbon is fixed above everything — tuck the sticky header below it */
-    body.job-ribboned .logo-row { top: 44px; }
+    .logo-row { display: flex; align-items: center; gap: 14px; margin-bottom: 18px;
+                flex-shrink: 0; }
 
     .logo-icon { width: 46px; height: 46px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .logo-icon svg { width: 46px; height: 46px; }
@@ -121,8 +119,14 @@
 
 
     /* ── Card ── */
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
-    .card-body { padding: 28px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden;
+            flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+    .card-body { padding: 28px; flex: 1 1 auto; min-height: 0;
+                 display: flex; flex-direction: column; }
+    .card-body > * { flex-shrink: 0; }
+    /* the tab content scrolls INSIDE the window — the chrome never moves */
+    #tab-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto;
+                  margin: 0 -28px -28px; padding: 0 28px 20px; }
 
     /* ── Status bar ── */
     .status-bar {
@@ -456,7 +460,7 @@
 
     /* ── Footer ── */
     .card-footer {
-      padding: 16px 28px; border-top: 1px solid var(--border);
+      padding: 16px 0 0; margin-top: 18px; border-top: 1px solid var(--border);
       display: flex; flex-direction: column; gap: 10px;
     }
     .footer-info { font-size: 12px; color: var(--muted); line-height: 1.6; }
@@ -774,6 +778,7 @@
     @media (max-width: 560px) {
       body { padding: 14px 8px; }
       .card-body { padding: 18px 13px; }
+      #tab-scroll { margin: 0 -13px -18px; padding: 0 13px 14px; }
       .logo-row { flex-wrap: wrap; gap: 8px 10px; margin-bottom: 16px; }
       /* address becomes one compact line under the wordmark, not a dangling stack */
       .addr-chip { margin-left: 0; width: 100%; flex-direction: row; align-items: center;
@@ -920,6 +925,7 @@
         <button class="stab" id="stab-system" onclick="showSetupTab('system')">System<span class="stab-upd" id="upd-system"></span></button>
       </div>
 
+      <div id="tab-scroll">
       <div class="tpane full-only" id="tpane-timer">
       <!-- Mode toggle -->
       <div class="section-label full-only">Server Mode</div>
@@ -1443,9 +1449,6 @@
         </button>
       </div>
 
-
-    </div>
-
     <div class="card-footer full-only">
 
       <div class="footer-btns">
@@ -1478,6 +1481,11 @@
         Built on <a href="https://www.getontime.no" target="_blank" rel="noopener">Ontime</a>, free open-source software (GPL v3) ·
         <a href="https://github.com/cpvalente/ontime" target="_blank" rel="noopener">source</a>
       </div>
+    </div>
+
+      </div><!-- /tab-scroll -->
+
+
     </div>
   </div>
 
@@ -2448,9 +2456,9 @@
       document.getElementById('tpane-' + x)?.classList.toggle('on', x === t);
       document.getElementById('stab-' + x)?.classList.toggle('on', x === t);
     }
-    // keep the chrome planted: if the page is scrolled, snap back so the
-    // header/status/tabs sit exactly where they always do
-    if (window.scrollY > 0) window.scrollTo(0, 0);
+    // the pane region is its own scroller — reset it; the chrome never moves
+    const sc = document.getElementById('tab-scroll');
+    if (sc) sc.scrollTop = 0;
     try { localStorage.setItem('ds1-setup-tab', t); } catch (e) {}
   }
   try { showSetupTab(localStorage.getItem('ds1-setup-tab') || 'displays'); } catch (e) {}
