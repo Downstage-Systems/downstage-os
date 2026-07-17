@@ -3159,7 +3159,8 @@ def wifi_status():
             for n in networks:
                 n["active"] = False
             current = None
-        return jsonify({"ok": True, "hotspot": hotspot, "current": current, "networks": networks})
+        return jsonify({"ok": True, "hotspot": hotspot, "current": current,
+                        "networks": networks, "saved": _saved_wifi_profiles()})
     except Exception as e:
         # scan can fail in AP mode on some chips — still report hotspot state
         return jsonify({"ok": hotspot, "hotspot": hotspot,
@@ -3185,7 +3186,8 @@ def wifi_scan():
             for n in networks:
                 n["active"] = False
             current = None
-        return jsonify({"ok": True, "hotspot": hotspot, "current": current, "networks": networks})
+        return jsonify({"ok": True, "hotspot": hotspot, "current": current,
+                        "networks": networks, "saved": _saved_wifi_profiles()})
     except Exception as e:
         return jsonify({"ok": False, "hotspot": hotspot, "current": None, "networks": [], "error": str(e)})
 
@@ -3331,6 +3333,24 @@ def wifi_connect():
             start_hotspot()
             return jsonify({"ok": False, "message": "Connection timed out — hotspot restarted"})
         return jsonify({"ok": False, "message": "Connection timed out after 45s"})
+    except Exception as e:
+        return jsonify({"ok": False, "message": str(e)})
+
+
+@app.route("/wifi/disconnect", methods=["POST"])
+def wifi_disconnect():
+    """Drop the current WiFi without deleting the profile. If the hotspot was
+    the only other way in, bring it back so the unit stays reachable."""
+    ssid = ((request.get_json() or {}).get("ssid") or "").strip()
+    try:
+        if ssid:
+            subprocess.run(["sudo", "nmcli", "con", "down", ssid],
+                           capture_output=True, timeout=20)
+        eth_up = any(open(f"/sys/class/net/{i}/operstate").read().strip() == "up"
+                     for i in os.listdir("/sys/class/net") if i.startswith(("eth", "enx")))
+        if not eth_up:
+            start_hotspot()
+        return jsonify({"ok": True})
     except Exception as e:
         return jsonify({"ok": False, "message": str(e)})
 
