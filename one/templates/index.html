@@ -813,7 +813,9 @@
                 box-shadow:0 0 6px rgba(245,165,36,0.8); }
     .stab-upd.on { display:block; }
     .tpane { display:none; }
-    .tpane.on { display:block; }
+    /* a floor height so short panes don't collapse the card — the chrome
+       above the tabs stays planted when you switch */
+    .tpane.on { display:block; min-height: 58vh; }
     /* Show Mode keeps its contract: displays content only, tabs hidden */
     body.show-mode #tpane-displays { display:block !important; }
   </style>
@@ -2441,6 +2443,10 @@
       document.getElementById('tpane-' + x)?.classList.toggle('on', x === t);
       document.getElementById('stab-' + x)?.classList.toggle('on', x === t);
     }
+    // keep the chrome planted: if the page is scrolled, snap back so the
+    // header/status/tabs sit exactly where they always do
+    const tabs = document.getElementById('setup-tabs');
+    if (tabs && window.scrollY > 0) window.scrollTo({ top: 0, behavior: 'instant' });
     try { localStorage.setItem('ds1-setup-tab', t); } catch (e) {}
   }
   try { showSetupTab(localStorage.getItem('ds1-setup-tab') || 'displays'); } catch (e) {}
