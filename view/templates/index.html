@@ -260,11 +260,25 @@
     .view-toggle { margin-bottom: 18px; }
     /* Show Mode quick bar: OnTime tools, shown only while the server answers */
     .show-quick { display: none; }
+    /* app-icon tiles, same design language as the One */
+    body.show-mode .show-quick.qb-live-tiles {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+      gap: 10px; margin-bottom: 18px;
+    }
+    .show-quick .btn-sm {
+      flex-direction: column; justify-content: center; align-items: center;
+      aspect-ratio: 1 / 1; gap: 9px; padding: 8px 4px;
+      background: var(--surface2); border: 1px solid var(--border2); border-radius: 16px;
+      font-size: 11px; letter-spacing: 0.04em; text-align: center;
+      white-space: normal; line-height: 1.25;
+    }
+    .show-quick .btn-sm.qb-ontime { border-color: var(--green-bd); }
+    .show-quick .btn-sm.qb-pattern { border-color: var(--amber-bd); }
+    .show-quick .btn-sm.qb-pattern svg { fill: var(--amber); }
     body.show-mode .show-quick.qb-live {
       display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px;
     }
-    .show-quick .btn-sm { flex: 1 1 auto; justify-content: center; }
-    .show-quick .btn-sm svg { fill: var(--accent); }
+    .show-quick .btn-sm svg { width: 26px; height: 26px; fill: var(--accent); }
     .view-toggle .mode-btn { padding: 9px 8px; font-size: 13px; }
     /* colour identity: setup reads amber (standby), show reads green (run) */
     #view-tab-full.active { color: var(--blue);   background: rgba(245,165,36,0.10); }
@@ -495,6 +509,11 @@
     @media (max-width: 560px) {
       body { padding: 14px 8px; }
       .card-body { padding: 18px 13px; }
+      /* four tiles across one row on phones, like the One's five */
+      body.show-mode .show-quick.qb-live-tiles { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+      .show-quick .btn-sm { border-radius: 12px; gap: 6px; padding: 6px 2px;
+                            font-size: 8.5px; letter-spacing: 0.02em; }
+      .show-quick .btn-sm svg { width: 20px; height: 20px; }
       .logo-row { flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
       .addr-chip { margin-left: 0; width: 100%; align-items: flex-start; text-align: left; }
       .display-ctl-row { flex-wrap: wrap; }
@@ -539,17 +558,22 @@
 
       <!-- Show Mode quick bar — OnTime tools on the connected server -->
       <div class="show-quick" id="show-quick">
-        <button class="btn-sm" onclick="quickOpen('/editor/')" title="Open the OnTime Editor in a new tab">
+        <button class="btn-sm qb-ontime" onclick="quickOpen('/editor/')" title="Open the OnTime Editor in a new tab">
           <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
           OnTime Editor
         </button>
-        <button class="btn-sm" onclick="quickOpen('/timercontrol')" title="Open OnTime Timer Control in a new tab — start, stop and roll cues">
+        <button class="btn-sm qb-ontime" onclick="quickOpen('/timercontrol')" title="Open OnTime Timer Control in a new tab — start, stop and roll cues">
           <svg viewBox="0 0 24 24"><path d="M15 1H9v2h6V1zm-4 13h2V8h-2v6zm8.03-6.61l1.42-1.42c-.43-.51-.9-.99-1.41-1.41l-1.42 1.42A8.962 8.962 0 0012 4c-4.97 0-9 4.03-9 9s4.02 9 9 9 9-4.03 9-9c0-2.12-.74-4.07-1.97-5.61zM12 20c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>
           Timer Control
         </button>
-        <button class="btn-sm" onclick="quickOpen('/messagecontrol')" title="Open OnTime Message Control in a new tab — send messages to stage displays">
+        <button class="btn-sm qb-ontime" onclick="quickOpen('/messagecontrol')" title="Open OnTime Message Control in a new tab — send messages to stage displays">
           <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>
           Messages
+        </button>
+        <button class="btn-sm qb-pattern" id="testpattern-btn" onclick="toggleTestPattern()"
+                title="Throw the test card on the display — press again to restore what was showing">
+          <svg viewBox="0 0 24 24"><path d="M3 3h7v7H3V3zm11 0h7v7h-7V3zM3 14h7v7H3v-7zm11 3.5c0-1.93 1.57-3.5 3.5-3.5s3.5 1.57 3.5 3.5S19.43 21 17.5 21 14 19.43 14 17.5z"/></svg>
+          Test Patterns
         </button>
       </div>
 
@@ -1183,7 +1207,11 @@
       document.getElementById('watchdog-toggle').className = 'toggle ' + (watchdogOn ? 'on' : '');
       lastServerIp = d.ip || '';
       const qb = document.getElementById('show-quick');
-      if (qb) qb.classList.toggle('qb-live', !!d.connected);
+      if (qb) {
+        qb.classList.add('qb-live-tiles');
+        document.querySelectorAll('.show-quick .qb-ontime')
+          .forEach(b => { b.style.display = d.connected ? '' : 'none'; });
+      }
       if (d.connected) {
         bar.className = 'status-bar connected';
         txt.textContent = `Connected — ${d.ip}:4001`;
@@ -1652,6 +1680,31 @@
   let _toastTimer = null;
   // ── Show Mode quick bar ──
   let lastServerIp = '';
+  let _prePatternSource = null;
+  async function toggleTestPattern() {
+    const btn = document.getElementById('testpattern-btn');
+    const goingToPattern = currentSource !== 'pattern-card';
+    if (goingToPattern) _prePatternSource = currentSource;
+    const target = goingToPattern ? 'pattern-card' : (_prePatternSource || 'cleantimer');
+    if (btn) btn.disabled = true;
+    try {
+      const r = await fetch('/save', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ ip: document.getElementById('ip').value.trim(),
+                               source: target, external_url: externalUrl, watchdog: watchdogOn }),
+      });
+      const d = await r.json();
+      if (d.ok) {
+        currentSource = target;
+        document.querySelectorAll('.source-chip').forEach(c =>
+          c.classList.toggle('selected', c.dataset.source === target));
+        showToast(goingToPattern ? 'Test card on the display — press again to restore.'
+                                 : 'Display restored.', 'success');
+      } else showToast(d.error || 'Could not switch.', 'error');
+    } catch { showToast('Network error.', 'error'); }
+    if (btn) btn.disabled = false;
+  }
+
   function quickOpen(path) {
     const host = lastServerIp || document.getElementById('ip').value.trim();
     if (!host) return;
