@@ -199,6 +199,31 @@ def _iface_ip(iface: str):
         return None
 
 
+def get_all_interfaces():
+    """Every wired/WiFi interface that currently has an IPv4, labeled."""
+    out = []
+    try:
+        names = sorted(os.listdir("/sys/class/net"))
+    except Exception:
+        names = ["eth0", "wlan0"]
+    for iface in names:
+        if iface == "lo" or iface.startswith(("p2p", "docker", "veth")):
+            continue
+        ip = _iface_ip(iface)
+        if not ip:
+            continue
+        if iface.startswith(("eth", "enx")):
+            kind = "Ethernet"
+        elif iface.startswith("wlan"):
+            kind = "WiFi"
+        else:
+            kind = iface
+        out.append({"iface": iface, "ip": ip, "kind": kind})
+    # wired first
+    out.sort(key=lambda x: 0 if x["kind"] == "Ethernet" else 1)
+    return out
+
+
 def get_network_info():
     """Return {ip, iface} preferring eth0 over wlan0."""
     for iface in ["eth0", "wlan0"]:
@@ -1721,6 +1746,7 @@ def status():
         "serial":               config.get("serial", ""),
         "local_ip":             net["ip"],
         "net_iface":            net["iface"],
+        "interfaces":           get_all_interfaces(),
         "ontime_installed":     ontime_installed(),
         "ontime_running":       ontime_is_running(),
         "companion_installed":  companion_is_installed(),

@@ -496,6 +496,17 @@
     .spin { animation: spin 1s linear infinite; }
 
     /* ── WiFi ── */
+    .iface-panel { display:flex; flex-direction:column; gap:8px; margin-bottom:16px; }
+    .iface-row { display:flex; align-items:center; gap:10px; padding:11px 14px;
+                 background:var(--surface2); border:1px solid var(--border2); border-radius:9px; }
+    .iface-row .idot { width:8px; height:8px; border-radius:50%; background:var(--accent);
+                       box-shadow:0 0 7px rgba(47,217,123,0.6); flex-shrink:0; }
+    .iface-row .ikind { font-family:var(--font-display); font-weight:700; font-size:13px;
+                        letter-spacing:0.04em; width:88px; }
+    .iface-row .iip { font-family:var(--font-mono); font-size:14px; color:var(--accent); }
+    .iface-row .idev { font-family:var(--font-mono); font-size:11px; color:var(--muted2); margin-left:auto; }
+    .iface-none { padding:11px 14px; font-size:12.5px; color:var(--muted);
+                  background:var(--surface2); border:1px solid var(--border2); border-radius:9px; }
     .wifi-saved-row { display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid var(--border); }
     .wifi-saved-row .wifi-name { flex:1; }
     .wifi-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; overflow: hidden; }
@@ -1287,6 +1298,7 @@
       <!-- Network (IP) -->
       <div class="field full-only">
         <div class="section-label">Network</div>
+        <div id="iface-panel" class="iface-panel"></div>
         <div class="local-panel">
           <div class="tz-current">
             <span id="net-current">Loading…</span>
@@ -1873,6 +1885,7 @@
       if (d.blackout !== blackoutActive) { blackoutActive = d.blackout; renderBlackoutBtn(); }
       const pn = document.getElementById('portal-note');
       if (pn) pn.style.display = d.portal?.detected ? '' : 'none';
+      renderInterfaces(d.interfaces);
 
       // Watchdog toggle
       watchdogOn = d.watchdog ?? true;
@@ -2735,6 +2748,17 @@
       </div>`).join('');
   }
 
+  function renderInterfaces(list) {
+    const box = document.getElementById('iface-panel');
+    if (!box) return;
+    if (!list || !list.length) { box.innerHTML = '<div class="iface-none">No network connection — check the cable or join WiFi below.</div>'; return; }
+    box.innerHTML = list.map(function(i){
+      return '<div class="iface-row"><span class="idot"></span>' +
+        '<span class="ikind">' + i.kind + '</span>' +
+        '<span class="iip">' + i.ip + '</span>' +
+        '<span class="idev">' + i.iface + '</span></div>';
+    }).join('');
+  }
   function renderSavedWifi(saved, current) {
     const box = document.getElementById('wifi-saved');
     if (!box) return;
