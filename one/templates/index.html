@@ -775,10 +775,10 @@
                    gap: 10px; text-align: left; }
       .addr-chip .addr-main { font-size: 11px; }
       /* five tabs share the width evenly — all visible, no hidden scrolling */
-      .setup-tabs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; }
-      .stab { padding: 9px 2px 10px; font-size: 10.5px; letter-spacing: 0.02em;
-              text-align: center; justify-content: center; min-width: 0; }
-      .stab-upd { top: 4px; right: 1px; width: 6px; height: 6px; }
+      .setup-tabs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; padding: 3px; }
+      .stab { padding: 9px 2px; font-size: 10px; letter-spacing: 0.02em;
+              text-align: center; min-width: 0; }
+      .stab-upd { top: 3px; right: 2px; width: 6px; height: 6px; }
       /* Show Mode tiles: all five across one row on a phone */
       body.show-mode .show-quick.qb-live { grid-template-columns: repeat(5, 1fr); gap: 6px; }
       .show-quick .btn-sm { border-radius: 12px; gap: 6px; padding: 6px 2px;
@@ -795,16 +795,19 @@
       .health-grid { grid-template-columns: repeat(2, 1fr); }
       .ctx-item { padding: 12px 12px; font-size: 14px; }
     }
-    /* ── Setup tabs — task-based panes; Displays is home ── */
-    .setup-tabs { display:flex; gap:2px; border-bottom:1px solid var(--border2); margin:18px 0 20px; }
-    .stab { position:relative; padding:10px 15px 11px; background:none; border:none;
-            border-radius:0; border-bottom:2px solid transparent;
-            font-family:var(--font-display); font-weight:700; font-size:14px;
-            letter-spacing:0.05em; color:var(--muted); cursor:pointer; }
+    /* ── Setup tabs — segmented control, same pattern as the view toggle ── */
+    .setup-tabs { display:flex; gap:4px; background:var(--surface2);
+                  border:1px solid var(--border2); border-radius:10px; padding:4px;
+                  margin:18px 0 20px; }
+    .stab { position:relative; flex:1; padding:10px 8px; background:transparent; border:none;
+            border-radius:7px; justify-content:center;
+            font-family:var(--font-display); font-weight:700; font-size:13.5px;
+            letter-spacing:0.05em; color:var(--muted); cursor:pointer; transition:all 0.15s; }
     .stab:active { transform:none; }
-    .stab:hover { color: var(--text); }
-    .stab.on { color:var(--text); border-bottom-color:var(--accent); }
-    .stab-upd { display:none; position:absolute; top:6px; right:3px; width:7px; height:7px;
+    .stab:hover { color:var(--text); }
+    .stab.on { background:var(--surface); color:var(--accent);
+               box-shadow:0 1px 6px rgba(0,0,0,0.4); }
+    .stab-upd { display:none; position:absolute; top:6px; right:6px; width:7px; height:7px;
                 border-radius:50%; background:var(--amber);
                 box-shadow:0 0 6px rgba(245,165,36,0.8); }
     .stab-upd.on { display:block; }
