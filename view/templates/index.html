@@ -262,9 +262,11 @@
     .show-quick { display: none; }
     /* app-icon tiles, same design language as the One */
     body.show-mode .show-quick.qb-live-tiles {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
-      gap: 10px; margin-bottom: 18px;
+      display: grid; grid-template-columns: repeat(auto-fit, 100px);
+      justify-content: center; gap: 10px; margin-bottom: 18px;
     }
+    .show-quick-label { display: none; }
+    body.show-mode .show-quick-label { display: block; text-align: center; margin-bottom: 10px; }
     .show-quick .btn-sm {
       flex-direction: column; justify-content: center; align-items: center;
       aspect-ratio: 1 / 1; gap: 9px; padding: 8px 4px;
@@ -557,6 +559,7 @@
       </div>
 
       <!-- Show Mode quick bar — OnTime tools on the connected server -->
+      <div class="section-label show-quick-label">Quick Actions</div>
       <div class="show-quick" id="show-quick">
         <button class="btn-sm qb-ontime" onclick="quickOpen('/editor/')" title="Open the OnTime Editor in a new tab">
           <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
