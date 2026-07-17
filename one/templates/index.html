@@ -147,6 +147,18 @@
       border-radius:6px; color:var(--muted); padding:4px 10px; cursor:pointer; font:inherit; display:none; }
     #job-ribbon.done .jx, #job-ribbon.failed .jx { display:block; }
     body.job-ribboned { padding-top:44px; }
+    /* connection ribbon — unit unreachable / shutting down, with auto-reconnect */
+    #conn-ribbon { position:fixed; top:0; left:0; right:0; z-index:950; display:none;
+      align-items:center; gap:12px; padding:10px 20px;
+      background:var(--surface); border-bottom:1px solid var(--red);
+      font:600 13px/1 var(--font-body); color:var(--text); }
+    #conn-ribbon.on { display:flex; }
+    #conn-ribbon .cdot { width:9px; height:9px; border-radius:50%; background:var(--red);
+      box-shadow:0 0 7px rgba(229,72,77,0.7); animation:pulse 1.4s infinite; flex-shrink:0; }
+    #conn-ribbon.shutdown { border-bottom-color:var(--amber); }
+    #conn-ribbon.shutdown .cdot { background:var(--amber); box-shadow:0 0 7px rgba(245,165,36,0.7); }
+    #conn-ribbon .csub { color:var(--muted); font-weight:400; font-size:12px; }
+    body.conn-ribboned { padding-top:44px; }
     @keyframes pulse {
       0%   { box-shadow: 0 0 0 0 rgba(47,217,123,0.6); }
       70%  { box-shadow: 0 0 0 6px rgba(47,217,123,0); }
@@ -848,6 +860,11 @@
   <span id="job-label"></span>
   <span class="jtime" id="job-time"></span>
   <button class="jx" onclick="dismissJobRibbon()">Dismiss</button>
+</div>
+<div id="conn-ribbon">
+  <span class="cdot"></span>
+  <span id="conn-label">Unit unreachable</span>
+  <span class="csub" id="conn-sub">powered off or off the network — reconnecting…</span>
 </div>
 <div class="wrap">
 
@@ -1826,6 +1843,26 @@
   }
 
   // ── Status poll ───────────────────────────────────────────────────────────────
+  // ── connection ribbon: unit unreachable / shutting down + auto-reconnect ──
+  let _connFails = 0;         // consecutive failed polls
+  let _expectDown = false;    // WE triggered a restart/shutdown (don't cry wolf)
+  let _wasOffline = false;    // ribbon has shown this outage → reload on recovery
+  const _CONN_COPY = {
+    shutdown: ['Device shutting down', 'safe to unplug once the activity light stops'],
+    restart:  ['Device restarting',    'the page reloads automatically when it returns'],
+    offline:  ['Unit unreachable',     'powered off or off the network — reconnecting…'],
+  };
+  function showConnRibbon(mode) {
+    const r = document.getElementById('conn-ribbon');
+    _wasOffline = true;
+    // amber for a deliberate shutdown (final, safe); red for restart/outage
+    r.className = 'on' + (mode === 'shutdown' ? ' shutdown' : '');
+    const [label, sub] = _CONN_COPY[mode] || _CONN_COPY.offline;
+    document.getElementById('conn-label').textContent = label;
+    document.getElementById('conn-sub').textContent = sub;
+    document.body.classList.add('conn-ribboned');
+  }
+
   async function fetchStatus(quiet = false) {
     const bar = document.getElementById('status-bar');
     const txt = document.getElementById('status-text');
@@ -1834,8 +1871,13 @@
       txt.textContent = 'Checking…';
     }
     try {
-      const r = await fetch('/status');
+      const r = await fetch('/status', { cache: 'no-store' });
+      if (!r.ok) throw new Error('bad status');
       const d = await r.json();
+      // recovered: if we'd shown the offline/shutdown ribbon, the unit is
+      // back — reload so the whole page reflects fresh state
+      if (_wasOffline) { location.reload(); return; }
+      _connFails = 0;
       ontimeInstalled    = d.ontime_installed;
       ontimeRunning      = d.ontime_running;
       companionInstalled = d.companion_installed;
@@ -1915,8 +1957,22 @@
     } catch {
       bar.className = 'status-bar disconnected';
       document.getElementById('status-text').textContent = 'Error checking status';
+      // a poll failed — if we triggered the shutdown, the ribbon's already up;
+      // otherwise wait for a couple of misses before crying wolf (a single
+      // dropped request during a service restart shouldn't alarm anyone)
+      _connFails++;
+      // if we triggered it, its ribbon is already up; otherwise wait for a
+      // couple of misses before alarming (a single dropped poll during a
+      // service restart shouldn't cry wolf)
+      if (!_expectDown && _connFails >= 2) {
+        showConnRibbon('offline');
+      }
+      // while offline, poll quickly so recovery reloads promptly
+      clearTimeout(_connRetry);
+      _connRetry = setTimeout(() => { if (!document.hidden) fetchStatus(true); }, 2500);
     }
   }
+  let _connRetry = null;
 
   // ── Test ─────────────────────────────────────────────────────────────────────
   async function testConnection() {
@@ -2318,13 +2374,15 @@
   // ── Pi system controls ────────────────────────────────────────────────────────
   async function restartPi() {
     if (!confirm('Restart the Pi? The kiosk will be offline for about 30 seconds.')) return;
-    showToast('Restarting Pi…', 'info');
+    _expectDown = true;
+    showConnRibbon('restart');
     await fetch('/system/restart', { method: 'POST' });
   }
 
   async function shutdownPi() {
     if (!confirm('Shut down the Pi? You will need to physically power it back on.')) return;
-    showToast('Shutting down…', 'warning');
+    _expectDown = true;
+    showConnRibbon('shutdown');
     await fetch('/system/shutdown', { method: 'POST' });
   }
 
