@@ -1330,6 +1330,13 @@
       <!-- WiFi -->
       <div class="field full-only">
         <div class="section-label">WiFi</div>
+        <div id="portal-note" style="display:none; margin-bottom:12px; padding:10px 13px;
+             background:var(--amber-bg); border:1px solid var(--amber-bd); border-radius:9px;
+             font-size:12.5px; color:var(--amber); line-height:1.5">
+          Captive portal detected on this network — show functions are unaffected, but
+          internet features (updates, time sync) are paused until the portal is cleared.
+          Portals can't be completed from a headless unit: use the built-in hotspot for
+          control, or a travel router for full networking.</div>
         <div class="local-panel">
           <div class="wifi-header">
             <div class="wifi-current">
@@ -1861,6 +1868,8 @@
       }
       document.getElementById('watchdog-bar').style.display  = d.watchdog_override  ? 'flex' : 'none';
       if (d.blackout !== blackoutActive) { blackoutActive = d.blackout; renderBlackoutBtn(); }
+      const pn = document.getElementById('portal-note');
+      if (pn) pn.style.display = d.portal?.detected ? '' : 'none';
 
       // Watchdog toggle
       watchdogOn = d.watchdog ?? true;
@@ -2765,7 +2774,7 @@
 
   async function wifiDoConnect(ssid, password) {
     if (hotspotActive) {
-      if (!confirm(`Joining "${ssid}" will stop the hotspot (one radio — it can't do both).\n\nIf you're connected through the hotspot right now, you'll lose this page and can rejoin the device on "${ssid}"'s network. If the join fails, the hotspot restarts automatically.`)) return;
+      if (!confirm(`Joining "${ssid}" will stop the hotspot (one radio — it can't do both).\n\nIf you're connected through the hotspot right now, you'll lose this page and can rejoin the device on "${ssid}"'s network.\n\nSafety net: if nothing reaches the setup page within 3 minutes — wrong password, captive portal, isolated network — the unit drops "${ssid}" and its hotspot comes back automatically.`)) return;
     }
     showToast(`Connecting to ${ssid}…${hotspotActive ? ' (stopping hotspot first)' : ''}`, 'info');
     try {

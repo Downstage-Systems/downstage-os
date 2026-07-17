@@ -1732,6 +1732,7 @@ def status():
         "watchdog_override":    _watchdog_override,
         "watchdog":             config.get("watchdog", True),
         "hotspot_active":       hotspot_is_active(),
+        "portal":               dict(_portal),
         "hotspot_ssid":         config.get("hotspot_ssid", ""),
         "cpu_temp":             _cpu_temp(),
         "power":                _power_state(),
@@ -3189,6 +3190,86 @@ def wifi_scan():
         return jsonify({"ok": False, "hotspot": hotspot, "current": None, "networks": [], "error": str(e)})
 
 
+# ── WiFi-join safety net + captive portal detection (born at a Hilton) ──────
+# The one-way-door trap: joining a venue network from hotspot mode kills the
+# hotspot (single radio). If the new network is portaled/isolated/wrong, the
+# unit is stranded. Cure: a dead-man timer — if nobody reaches this UI within
+# the window after a hotspot-initiated join, drop the join and restore the
+# hotspot.
+
+_last_request_ts = 0.0
+_wifi_deadman = {"armed": False, "since": 0.0, "ssid": ""}
+
+
+@app.before_request
+def _touch_request_ts():
+    global _last_request_ts
+    _last_request_ts = time.time()
+
+
+def _arm_wifi_deadman(ssid, window=180):
+    _wifi_deadman.update(armed=True, since=time.time(), ssid=ssid)
+
+    def watch():
+        time.sleep(window)
+        if not _wifi_deadman["armed"]:
+            return
+        _wifi_deadman["armed"] = False
+        # any UI request after the join completed proves someone can reach us
+        if _last_request_ts > _wifi_deadman["since"] + 5:
+            print(f"[wifi] deadman disarmed — UI reached after joining '{ssid}'")
+            return
+        print(f"[wifi] nobody reached the UI within {window}s of joining "
+              f"'{ssid}' — dropping it and restoring the hotspot")
+        try:
+            subprocess.run(["sudo", "nmcli", "con", "mod", ssid,
+                            "connection.autoconnect", "no"],
+                           timeout=10, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(["sudo", "nmcli", "con", "down", ssid],
+                           timeout=20, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception as e:
+            print(f"[wifi] deadman teardown error: {e}")
+        start_hotspot()
+    threading.Thread(target=watch, daemon=True).start()
+
+
+_portal = {"detected": False, "iface": "", "checked": 0}
+
+
+def _probe_portal():
+    """Portal signature (captured live at a Hilton/Meraki): plain-HTTP probe
+    that should 204 comes back as a redirect to an auth host instead."""
+    for iface in ("wlan0", "eth0"):
+        try:
+            if not os.path.isdir(f"/sys/class/net/{iface}"):
+                continue
+            if open(f"/sys/class/net/{iface}/operstate").read().strip() != "up":
+                continue
+            r = subprocess.run(
+                ["curl", "-s", "-m", "8", "--interface", iface,
+                 "-o", "/dev/null", "-w", "%{http_code} %{redirect_url}",
+                 "http://connectivitycheck.gstatic.com/generate_204"],
+                capture_output=True, text=True, timeout=12)
+            code, _, redirect = r.stdout.strip().partition(" ")
+            if code.startswith("3") and redirect:
+                _portal.update(detected=True, iface=iface)
+                _portal["checked"] = time.time()
+                return
+        except Exception:
+            continue
+    _portal.update(detected=False, iface="")
+    _portal["checked"] = time.time()
+
+
+def _portal_loop():
+    while True:
+        _probe_portal()
+        time.sleep(300)
+
+
+threading.Thread(target=_portal_loop, daemon=True).start()
+
+
 @app.route("/wifi/connect", methods=["POST"])
 def wifi_connect():
     data     = request.get_json() or {}
@@ -3233,6 +3314,15 @@ def wifi_connect():
             print(f"[wifi] join failed — restarting hotspot ({msg})")
             start_hotspot()
             msg += " — hotspot restarted so the device stays reachable"
+
+        if ok:
+            threading.Thread(target=_probe_portal, daemon=True).start()
+            if hotspot_was_active:
+                # the join killed the hotspot the user was connected through —
+                # if nobody reaches the UI on the new network, come back
+                _arm_wifi_deadman(ssid)
+                msg += (" — if nothing can reach the setup page within 3 minutes, "
+                        "the unit returns to its hotspot automatically")
 
         return jsonify({"ok": ok, "message": msg,
                         "hotspot_stopped": hotspot_was_active and ok})
