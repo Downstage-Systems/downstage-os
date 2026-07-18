@@ -1454,6 +1454,9 @@
       <div class="field full-only">
         <div class="section-label">Network</div>
         <div id="iface-panel" class="iface-panel"></div>
+        <div id="inet-note" style="display:none" class="portal-note">No internet access —
+          the network works locally, but updates and the Companion module store won't load.
+          Timers and local control are unaffected.</div>
         <div class="local-panel">
           <div class="tz-current">
             <span id="net-current">Loading…</span>
@@ -2095,6 +2098,9 @@
       if (d.blackout !== blackoutActive) { blackoutActive = d.blackout; renderBlackoutBtn(); }
       const pn = document.getElementById('portal-note');
       if (pn) pn.style.display = d.portal?.detected ? '' : 'none';
+      const inet = document.getElementById('inet-note');
+      if (inet) inet.style.display =
+        (d.portal && d.portal.internet === false && !d.portal.detected) ? '' : 'none';
       renderInterfaces(d.interfaces);
       if (window._clockSync) _clockSync(d.clock);
       wizMaybeShow(d);
