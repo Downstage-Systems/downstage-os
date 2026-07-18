@@ -132,9 +132,9 @@
     /* ── Status bar ── */
     .status-bar {
       display: inline-flex; align-items: center; gap: 8px;
-      padding: 7px 14px; border-radius: 999px; margin-bottom: 22px;
+      padding: 4px 10px; border-radius: 999px; margin-top: 2px;
       font-family: var(--font-mono); font-size: 11px; font-weight: 500;
-      text-transform: uppercase; letter-spacing: 0.09em;
+      text-transform: uppercase; letter-spacing: 0.09em; margin-bottom: 0;
       transition: all 0.25s ease; border: 1px solid transparent;
     }
     .status-bar.connected    { background: var(--green-bg); border-color: var(--green-bd); color: var(--green); }
@@ -942,6 +942,10 @@
       <span class="addr-sub">
         {% if net_iface == 'eth0' %}🔌 {{ local_ip }}{% elif net_iface == 'wlan0' %}📶 {{ local_ip }}{% else %}{{ local_ip }}{% endif %}
       </span>
+      <div class="status-bar disconnected" id="status-bar">
+        <div class="status-dot"></div>
+        <span id="status-text">Checking…</span>
+      </div>
     </div>
   </div>
 
@@ -999,12 +1003,6 @@
       <div class="alert-bar watchdog" id="watchdog-bar" style="display:none">
         <div class="alert-dot"></div>
         <span>OnTime offline — holding page active</span>
-      </div>
-
-      <!-- Status -->
-      <div class="status-bar disconnected" id="status-bar">
-        <div class="status-dot"></div>
-        <span id="status-text">Checking connection…</span>
       </div>
 
       <!-- Setup tabs: task-based — Displays is home; a dot = an update waits inside -->

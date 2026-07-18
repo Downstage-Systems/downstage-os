@@ -123,9 +123,9 @@
     /* ── Status bar ── */
     .status-bar {
       display: inline-flex; align-items: center; gap: 8px;
-      padding: 7px 14px; border-radius: 999px; margin-bottom: 22px;
+      padding: 4px 10px; border-radius: 999px; margin-top: 2px;
       font-family: var(--font-mono); font-size: 11px; font-weight: 500;
-      text-transform: uppercase; letter-spacing: 0.09em;
+      text-transform: uppercase; letter-spacing: 0.09em; margin-bottom: 0;
       transition: all 0.25s ease; border: 1px solid transparent;
     }
     .status-bar.connected    { background: var(--green-bg); border-color: var(--green-bd); color: var(--green); }
@@ -583,6 +583,10 @@
     <div class="addr-chip">
       <span class="addr-main">{{ hostname }}.local:8080</span>
       <span class="addr-sub">📶 {{ local_ip }}</span>
+      <div class="status-bar disconnected" id="status-bar">
+        <div class="status-dot"></div>
+        <span id="status-text">Checking…</span>
+      </div>
     </div>
   </div>
 
@@ -627,11 +631,6 @@
       <div class="watchdog-bar" id="watchdog-bar" style="display:none">
         <div class="status-dot"></div>
         <span>OnTime offline — holding page active. The view restores automatically when it returns.</span>
-      </div>
-
-      <div class="status-bar disconnected" id="status-bar">
-        <div class="status-dot"></div>
-        <span id="status-text">Checking connection…</span>
       </div>
 
       <!-- Server address -->
