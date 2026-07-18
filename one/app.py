@@ -3092,6 +3092,11 @@ def network_apply():
             dns = (data.get("dns") or "").strip().replace(" ", ",")
             if gw:
                 ipaddress.ip_address(gw)
+            # Static IP turns off DHCP-supplied DNS, so a blank DNS field would
+            # leave the unit with no name resolution. Default sensibly: the
+            # gateway (most routers forward DNS) then public resolvers as backup.
+            if not dns:
+                dns = ",".join(filter(None, [gw, "1.1.1.1", "8.8.8.8"]))
         except Exception:
             return jsonify({"ok": False, "message": "Invalid IP, prefix, or gateway"})
 
