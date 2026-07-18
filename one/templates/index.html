@@ -880,9 +880,23 @@
     .tpane.on { display:block; }
     /* Show Mode keeps its contract: displays content only, tabs hidden */
     body.show-mode #tpane-displays { display:block !important; }
+    /* pull-to-refresh (custom: iOS has no native PTR, and standalone
+       home-screen apps have no reload button at all) */
+    #ptr-spin { position:fixed; top:-54px; left:50%; z-index:1001;
+      width:38px; height:38px; margin-left:-19px; border-radius:50%;
+      background:var(--surface); border:1px solid var(--border2);
+      box-shadow:0 4px 16px rgba(0,0,0,0.5);
+      display:flex; align-items:center; justify-content:center;
+      pointer-events:none; }
+    #ptr-spin svg { width:20px; height:20px; fill:var(--muted); transition:transform 0.15s, fill 0.15s; }
+    #ptr-spin.armed svg { fill:var(--accent); transform:rotate(180deg); }
+    #ptr-spin.loading svg { fill:var(--accent); animation:ptr-rot 0.8s linear infinite; }
+    @keyframes ptr-rot { to { transform:rotate(360deg); } }
   </style>
 </head>
 <body>
+<div id="ptr-spin"><svg viewBox="0 0 24 24"><path d="M12 4l-6 6h4v6h4v-6h4l-6-6z"/></svg></div>
+
 <div id="job-ribbon">
   <span class="jdot"></span>
   <span id="job-label"></span>
@@ -3418,6 +3432,36 @@
       document.getElementById('a2hs-hint').style.display = 'none';
       try { localStorage.setItem('ds-a2hs-dismissed', '1'); } catch (e) {}
     };
+  })();
+</script>
+<script>
+  // pull-to-refresh: drag down from the very top, release past the arrow flip
+  (function () {
+    const spin = document.getElementById('ptr-spin');
+    const THRESH = 40;   // in damped pixels (raw pull ~80px)
+    let startY = null, d = 0;
+    document.addEventListener('touchstart', function (e) {
+      startY = (window.scrollY <= 0) ? e.touches[0].clientY : null;
+      d = 0;
+    }, { passive: true });
+    document.addEventListener('touchmove', function (e) {
+      if (startY === null) return;
+      const pull = e.touches[0].clientY - startY;
+      if (pull <= 0 || window.scrollY > 0) { d = 0; spin.style.top = '-54px'; spin.classList.remove('armed'); return; }
+      d = Math.min(pull * 0.5, 110);
+      spin.style.top = (d - 54) + 'px';
+      spin.classList.toggle('armed', d >= THRESH);
+    }, { passive: true });
+    document.addEventListener('touchend', function () {
+      if (startY !== null && d >= THRESH && window.scrollY <= 0) {
+        spin.classList.remove('armed'); spin.classList.add('loading');
+        spin.style.top = '14px';
+        location.reload();
+      } else {
+        spin.style.top = '-54px'; spin.classList.remove('armed');
+      }
+      startY = null; d = 0;
+    }, { passive: true });
   })();
 </script>
 </body>
