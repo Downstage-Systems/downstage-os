@@ -1304,6 +1304,9 @@ def _apply_timezone(tz):
         ["sudo", "ln", "-sf", f"/usr/share/zoneinfo/{tz}", "/etc/localtime"],
         check=True, timeout=5,
     )
+    # our own process cached the old zone at startup — re-read it, or any
+    # strftime (e-ink clock included) keeps rendering the previous timezone
+    time.tzset()
 
 
 # ── e-Paper display ───────────────────────────────────────────────────────────
