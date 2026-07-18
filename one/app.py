@@ -1775,6 +1775,7 @@ def status():
         "clock": {"epoch": time.time(),
                   "offset_min": int((datetime.datetime.now().astimezone().utcoffset() or datetime.timedelta()).total_seconds() // 60)},
         "hdmi_connected":       hdmi_connected(),
+        "setup_done":           bool(config.get("setup_done")),
         "ontime_installed":     ontime_installed(),
         "ontime_running":       ontime_is_running(),
         "companion_installed":  companion_is_installed(),
@@ -2443,6 +2444,15 @@ def os_update_file():
 
 
 # ── Local OnTime routes ───────────────────────────────────────────────────────
+
+@app.route("/setup/complete", methods=["POST"])
+def setup_complete():
+    """First-run wizard finished (or skipped) — never show it again."""
+    config = load_config()
+    config["setup_done"] = True
+    save_config(config)
+    return jsonify({"ok": True})
+
 
 @app.route("/ontime/install", methods=["POST"])
 def ontime_install():

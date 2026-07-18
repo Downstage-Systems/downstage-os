@@ -901,6 +901,30 @@
     .tpane.on { display:block; }
     /* Show Mode keeps its contract: displays content only, tabs hidden */
     body.show-mode #tpane-displays { display:block !important; }
+    /* ── first-run setup wizard ── */
+    #wiz-overlay { position:fixed; inset:0; z-index:980; background:rgba(5,6,8,0.88);
+      display:none; align-items:center; justify-content:center; padding:20px; overflow-y:auto; }
+    #wiz-overlay.on { display:flex; }
+    .wiz-card { background:var(--surface); border:1px solid var(--border2); border-radius:16px;
+      padding:26px 28px; max-width:520px; width:100%; }
+    .wiz-title { font-family:var(--font-display); font-weight:700; font-size:20px;
+      text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; }
+    .wiz-sub { font-size:13px; color:var(--muted); line-height:1.55; margin-bottom:20px; }
+    .wiz-row { display:flex; align-items:center; gap:12px; padding:13px 0;
+      border-top:1px solid var(--border); }
+    .wiz-row .wdot { width:10px; height:10px; border-radius:50%; flex-shrink:0;
+      background:var(--surface2); border:1px solid var(--border2); }
+    .wiz-row.done .wdot { background:var(--accent); border-color:var(--accent);
+      box-shadow:0 0 6px rgba(47,217,123,0.5); }
+    .wiz-row .winfo { flex:1; min-width:0; }
+    .wiz-row .wname { font-family:var(--font-display); font-weight:600; font-size:14px;
+      letter-spacing:0.03em; }
+    .wiz-row .wdesc { font-size:11.5px; color:var(--muted); margin-top:2px; line-height:1.4; }
+    .wiz-row.done .wdesc { color:var(--accent); }
+    .wiz-foot { display:flex; gap:10px; margin-top:22px; align-items:center; }
+    .wiz-skip { background:none; border:none; color:var(--muted); font-size:12.5px;
+      cursor:pointer; padding:8px; }
+    .wiz-finish { flex:1; }
     /* pull-to-refresh (custom: iOS has no native PTR, and standalone
        home-screen apps have no reload button at all) */
     #ptr-spin { position:fixed; top:-54px; left:50%; z-index:1001;
@@ -923,6 +947,35 @@
   <span id="job-label"></span>
   <span class="jtime" id="job-time"></span>
   <button class="jx" onclick="dismissJobRibbon()">Dismiss</button>
+</div>
+<div id="wiz-overlay">
+  <div class="wiz-card">
+    <div class="wiz-title">Welcome</div>
+    <div class="wiz-sub">Let's get this unit ready. Everything below downloads from the
+      official source onto your device — a few minutes total, one press each.</div>
+    <div class="wiz-row" id="wiz-os">
+      <span class="wdot"></span>
+      <div class="winfo"><div class="wname">Downstage OS</div>
+        <div class="wdesc" id="wiz-os-desc">Checking for updates…</div></div>
+      <button class="btn-sm success" id="wiz-os-btn" style="display:none" onclick="wizOsUpdate()">Update</button>
+    </div>
+    <div class="wiz-row" id="wiz-ontime">
+      <span class="wdot"></span>
+      <div class="winfo"><div class="wname">OnTime timer server</div>
+        <div class="wdesc" id="wiz-ontime-desc">The heart of the unit — free open-source software (GPL v3)</div></div>
+      <button class="btn-sm success" id="wiz-ontime-btn" onclick="wizInstallOntime()">Install</button>
+    </div>
+    <div class="wiz-row" id="wiz-companion">
+      <span class="wdot"></span>
+      <div class="winfo"><div class="wname">Bitfocus Companion <span style="color:var(--muted);font-weight:400">(optional)</span></div>
+        <div class="wdesc" id="wiz-companion-desc">Stream Deck control — skip it if you don't use one</div></div>
+      <button class="btn-sm" id="wiz-companion-btn" onclick="wizInstallCompanion()">Install</button>
+    </div>
+    <div class="wiz-foot">
+      <button class="wiz-skip" onclick="wizFinish()">Set up later</button>
+      <button class="btn-primary wiz-finish" id="wiz-finish-btn" onclick="wizFinish()">Start using the unit</button>
+    </div>
+  </div>
 </div>
 <div id="conn-ribbon">
   <span class="cdot"></span>
@@ -2023,6 +2076,7 @@
       if (pn) pn.style.display = d.portal?.detected ? '' : 'none';
       renderInterfaces(d.interfaces);
       if (window._clockSync) _clockSync(d.clock);
+      wizMaybeShow(d);
       if (d.hdmi_connected) for (const n of ['1','2']) {
         const on = d.hdmi_connected[n];
         const pb = document.getElementById('preview-nodisp-' + n);
@@ -3521,6 +3575,65 @@
       document.getElementById('header-clock').textContent = h + ':' + mm + ':' + ss + ' ' + ap;
     }, 1000);
   })();
+</script>
+<script>
+  // ── first-run wizard: fresh unit (no OnTime, setup never completed) ──
+  let _wizShown = false;
+  function wizMaybeShow(d) {
+    if (_wizShown || d.setup_done || d.ontime_installed) return;
+    _wizShown = true;
+    document.getElementById('wiz-overlay').classList.add('on');
+    wizRefresh();
+  }
+  async function wizRefresh() {
+    try {
+      const d = await (await fetch('/status')).json();
+      wizRow('ontime', d.ontime_installed, 'Installed and ready', null);
+      wizRow('companion', d.companion_installed, 'Installed and ready', null);
+      const u = await (await fetch('/update-status')).json();
+      const os = u.os || {};
+      if (os.update_available) {
+        document.getElementById('wiz-os-desc').textContent =
+          'Update available: v' + (os.latest || '');
+        document.getElementById('wiz-os-btn').style.display = '';
+      } else {
+        wizRow('os', true, 'v' + (os.installed || '') + ' — up to date', null);
+      }
+    } catch (e) {}
+  }
+  function wizRow(name, done, doneText) {
+    const row = document.getElementById('wiz-' + name);
+    if (!row) return;
+    row.classList.toggle('done', !!done);
+    if (done) {
+      document.getElementById('wiz-' + name + '-desc').textContent = doneText;
+      const b = document.getElementById('wiz-' + name + '-btn');
+      if (b) b.style.display = 'none';
+    }
+  }
+  async function wizInstallOntime() {
+    const b = document.getElementById('wiz-ontime-btn');
+    b.disabled = true; b.textContent = 'Downloading…';
+    await installOntime();
+    b.disabled = false; b.textContent = 'Install';
+    wizRefresh();
+  }
+  async function wizInstallCompanion() {
+    const b = document.getElementById('wiz-companion-btn');
+    b.disabled = true; b.textContent = 'Installing… (a few min)';
+    await installCompanion();
+    b.disabled = false; b.textContent = 'Install';
+    wizRefresh();
+  }
+  function wizOsUpdate() {
+    wizFinish();          // wizard shouldn't hold the page hostage through a restart
+    osUpdate();           // existing flow: ribbon + progress
+  }
+  async function wizFinish() {
+    document.getElementById('wiz-overlay').classList.remove('on');
+    try { await fetch('/setup/complete', { method: 'POST' }); } catch (e) {}
+    fetchStatus(true);
+  }
 </script>
 </body>
 </html>
