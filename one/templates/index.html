@@ -302,6 +302,17 @@
       color: var(--muted2); font-size: 12px; font-weight: 500;
     }
 
+    .preview-nodisp {
+      position: absolute; top: 6px; right: 6px;
+      font-family: var(--font-mono); font-size: 9.5px; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--amber);
+      background: rgba(11,13,16,0.75); border: 1px solid rgba(245,165,36,0.45);
+      border-radius: 5px; padding: 3px 7px;
+    }
+    .tab-nodisp {
+      font-family: var(--font-mono); font-size: 9px; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--amber); margin-left: 4px;
+    }
     /* ── Display controls (under previews) ── */
     .display-ctl-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 12px; }
     .display-ctl-row .btn-sm { flex: 1 1 auto; justify-content: center; }
@@ -1063,11 +1074,13 @@
             <img id="preview-img-1" alt="">
             <div class="preview-offline" id="preview-off-1" style="display:none">No signal</div>
             <div class="preview-badge">HDMI 1</div>
+            <div class="preview-nodisp" id="preview-nodisp-1" style="display:none">No display</div>
           </div>
           <div class="preview-box" id="preview-box-2" onclick="selectHdmiTab(2)" oncontextmenu="openPreviewMenu(event, 2)">
             <img id="preview-img-2" alt="">
             <div class="preview-offline" id="preview-off-2" style="display:none">No signal</div>
             <div class="preview-badge">HDMI 2</div>
+            <div class="preview-nodisp" id="preview-nodisp-2" style="display:none">No display</div>
           </div>
         </div>
 
@@ -1110,11 +1123,13 @@
             <svg viewBox="0 0 24 24"><path d="M21 2H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h7l-2 3v1h8v-1l-2-3h7c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 12H3V4h18v10z"/></svg>
             HDMI 1
             <span class="source-name" id="hdmi1-label">Config UI</span>
+            <span class="tab-nodisp" id="tab-nodisp-1" style="display:none">no display</span>
           </button>
           <button class="hdmi-tab" id="tab-hdmi2" onclick="selectHdmiTab(2)">
             <svg viewBox="0 0 24 24"><path d="M21 2H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h7l-2 3v1h8v-1l-2-3h7c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 12H3V4h18v10z"/></svg>
             HDMI 2
             <span class="source-name" id="hdmi2-label">Timer</span>
+            <span class="tab-nodisp" id="tab-nodisp-2" style="display:none">no display</span>
           </button>
         </div>
 
@@ -1993,6 +2008,13 @@
       const pn = document.getElementById('portal-note');
       if (pn) pn.style.display = d.portal?.detected ? '' : 'none';
       renderInterfaces(d.interfaces);
+      if (d.hdmi_connected) for (const n of ['1','2']) {
+        const on = d.hdmi_connected[n];
+        const pb = document.getElementById('preview-nodisp-' + n);
+        const tb = document.getElementById('tab-nodisp-' + n);
+        if (pb) pb.style.display = on ? 'none' : '';
+        if (tb) tb.style.display = on ? 'none' : '';
+      }
 
       // Watchdog toggle
       watchdogOn = d.watchdog ?? true;

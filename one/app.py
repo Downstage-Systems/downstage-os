@@ -717,6 +717,24 @@ def _ontime_runtime(ip, timeout=2):
 _XRANDR_TO_PORT = {"HDMI-1": 2, "HDMI-2": 1, "HDMI-A-1": 2, "HDMI-A-2": 1}
 
 
+def hdmi_connected():
+    """Physical cable state per CASE-LABEL port, from the kernel's DRM
+    connector status (works headless, no X needed)."""
+    out = {"1": False, "2": False}
+    import glob as _glob
+    for path in _glob.glob("/sys/class/drm/card*-HDMI-A-*"):
+        name = path.rsplit("card", 1)[1].split("-", 1)[1]   # e.g. HDMI-A-1
+        port = _XRANDR_TO_PORT.get(name)
+        if port is None:
+            continue
+        try:
+            connected = open(path + "/status").read().strip() == "connected"
+        except Exception:
+            connected = False
+        out[str(port)] = out[str(port)] or connected
+    return out
+
+
 def _port_num(output_name, fallback=1):
     """Product port number (case label) for an xrandr output name. The port
     is the unit's identity for an output — a lone display on the HDMI 1 jack
@@ -1747,6 +1765,7 @@ def status():
         "local_ip":             net["ip"],
         "net_iface":            net["iface"],
         "interfaces":           get_all_interfaces(),
+        "hdmi_connected":       hdmi_connected(),
         "ontime_installed":     ontime_installed(),
         "ontime_running":       ontime_is_running(),
         "companion_installed":  companion_is_installed(),
