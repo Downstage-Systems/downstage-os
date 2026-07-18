@@ -1794,6 +1794,7 @@
 
   // ── Mode ─────────────────────────────────────────────────────────────────────
   function setMode(mode) {
+    if (mode === currentMode) return;   // clicking the active tab changes nothing
     currentMode = mode;
     applyMode(mode);
     markDirty();
@@ -1870,6 +1871,8 @@
   }
 
   function selectSource(chip) {
+    const cur = activeHdmiTab === 1 ? hdmi1Source : hdmi2Source;
+    if (chip.dataset.source === cur) return;   // already selected — no change
     setCurrentSource(chip.dataset.source);
     refreshSourceGrid();
     markDirty();
