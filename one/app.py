@@ -1454,15 +1454,21 @@ class OLEDDisplay:
         net       = get_network_info()
 
         pw = _power_state()
+        # header corner: the clock — on a timer appliance, visibly-correct
+        # time IS a health indicator (RTC + NTP at a glance). Temp only
+        # earns the spot when it's actually a problem.
         temp = _cpu_temp() or ""
         m = re.match(r"(\d+)", temp)
-        temp = f"{m.group(1)}C" if m else ""   # "54.0°C" → "54C": tight OLED header
+        temp_c = int(m.group(1)) if m else 0
+        clock = time.strftime("%H:%M")
         if pw["undervolt_now"]:
-            title, right = "LOW POWER!", temp
+            title, right = "LOW POWER!", clock
+        elif temp_c >= 75:
+            title, right = f"HOT {temp_c}C!", clock
         elif hotspot:
             title, right = "DOWNSTAGE ONE", "HS ON"
         else:
-            title, right = "DOWNSTAGE ONE", temp
+            title, right = "DOWNSTAGE ONE", clock
         draw.text((0, 0 + j), title, fill=255)
         if right:
             draw.text((127 - draw.textlength(right), 0 + j), right, fill=255)
