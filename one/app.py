@@ -6,6 +6,7 @@ import socket
 import subprocess
 import signal
 import threading
+import datetime
 import time
 from pathlib import Path
 
@@ -1771,6 +1772,8 @@ def status():
         "local_ip":             net["ip"],
         "net_iface":            net["iface"],
         "interfaces":           get_all_interfaces(),
+        "clock": {"epoch": time.time(),
+                  "offset_min": int((datetime.datetime.now().astimezone().utcoffset() or datetime.timedelta()).total_seconds() // 60)},
         "hdmi_connected":       hdmi_connected(),
         "ontime_installed":     ontime_installed(),
         "ontime_running":       ontime_is_running(),

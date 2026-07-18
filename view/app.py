@@ -3,6 +3,7 @@ import os
 import re
 import subprocess
 import threading
+import datetime
 import time
 import socket
 from pathlib import Path
@@ -1539,6 +1540,8 @@ def status():
         "external_url": config.get("external_url", ""),
         "connected": connected,
         "local_ip":  get_local_ip(),
+        "clock": {"epoch": time.time(),
+                  "offset_min": int((datetime.datetime.now().astimezone().utcoffset() or datetime.timedelta()).total_seconds() // 60)},
         "os_version": OS_VERSION,
         "serial": config.get("serial", ""),
         "os_latest": _os_update["latest"],

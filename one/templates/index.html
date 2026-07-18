@@ -107,6 +107,12 @@
       font-size: 10px; color: var(--muted); margin-top: 4px;
       text-transform: uppercase; letter-spacing: 0.2em;
     }
+    .header-clock {
+      margin-left: auto; margin-right: 12px;
+      font-family: var(--font-mono); font-size: 15px; color: var(--muted);
+      font-variant-numeric: tabular-nums; white-space: nowrap;
+    }
+    .header-clock:empty { display: none; }
     .addr-chip {
       margin-left: auto; text-align: right; flex-shrink: 0;
       display: flex; flex-direction: column; gap: 3px; align-items: flex-end;
@@ -929,6 +935,7 @@
       <h1>Downstage <span class="product">One</span></h1>
       <p>Setup &amp; Control</p>
     </div>
+    <div class="header-clock" id="header-clock"></div>
     <div class="addr-chip">
       <span class="addr-main">{{ hostname }}.local:8080</span>
       <span class="addr-sub">
@@ -2008,6 +2015,7 @@
       const pn = document.getElementById('portal-note');
       if (pn) pn.style.display = d.portal?.detected ? '' : 'none';
       renderInterfaces(d.interfaces);
+      if (window._clockSync) _clockSync(d.clock);
       if (d.hdmi_connected) for (const n of ['1','2']) {
         const on = d.hdmi_connected[n];
         const pb = document.getElementById('preview-nodisp-' + n);
@@ -3484,6 +3492,27 @@
       }
       startY = null; d = 0;
     }, { passive: true });
+  })();
+</script>
+<script>
+  // unit-time header clock: synced from /status, ticked locally every second.
+  // Shows the UNIT's clock (matches the OLED/e-ink), not the browser's.
+  (function () {
+    let sync = null;   // { epoch, off, at }
+    window._clockSync = function (c) {
+      if (c && typeof c.epoch === 'number') sync = { epoch: c.epoch, off: c.offset_min || 0, at: performance.now() };
+    };
+    setInterval(function () {
+      if (!sync) return;
+      const now = sync.epoch + (performance.now() - sync.at) / 1000;
+      const d = new Date((now + sync.off * 60) * 1000);
+      let h = d.getUTCHours();
+      const ap = h >= 12 ? 'PM' : 'AM';
+      h = h % 12 || 12;
+      const mm = String(d.getUTCMinutes()).padStart(2, '0');
+      const ss = String(d.getUTCSeconds()).padStart(2, '0');
+      document.getElementById('header-clock').textContent = h + ':' + mm + ':' + ss + ' ' + ap;
+    }, 1000);
   })();
 </script>
 </body>
