@@ -113,15 +113,14 @@
       font-variant-numeric: tabular-nums; white-space: nowrap;
     }
     .header-clock:empty { display: none; }
+    /* one box, three aligned rows: name / address / liveness */
     .addr-chip {
-      margin-left: auto; text-align: right; flex-shrink: 0;
-      display: flex; flex-direction: column; gap: 3px; align-items: flex-end;
-    }
-    .addr-chip .addr-main {
-      font-family: var(--font-mono); font-size: 15px; color: var(--accent);
+      margin-left: auto; flex-shrink: 0;
+      display: flex; flex-direction: column; gap: 5px; align-items: flex-start;
       background: var(--surface); border: 1px solid var(--border2);
-      padding: 5px 11px; border-radius: 7px;
+      border-radius: 10px; padding: 10px 14px;
     }
+    .addr-chip .addr-main { font-family: var(--font-mono); font-size: 14px; color: var(--accent); }
     .addr-chip .addr-sub { font-family: var(--font-mono); font-size: 13px; color: var(--muted); }
 
 
@@ -132,14 +131,14 @@
     /* ── Status bar ── */
     .status-bar {
       display: inline-flex; align-items: center; gap: 8px;
-      padding: 4px 10px; border-radius: 999px; margin-top: 2px;
+      padding: 0; margin-top: 1px;
       font-family: var(--font-mono); font-size: 11px; font-weight: 500;
       text-transform: uppercase; letter-spacing: 0.09em; margin-bottom: 0;
       transition: all 0.25s ease; border: 1px solid transparent;
     }
-    .status-bar.connected    { background: var(--green-bg); border-color: var(--green-bd); color: var(--green); }
-    .status-bar.disconnected { background: var(--red-bg);   border-color: var(--red-bd);   color: var(--red); }
-    .status-bar.checking     { background: var(--blue-bg);  border-color: var(--blue-bd);  color: var(--blue); }
+    .status-bar.connected    { color: var(--green); }
+    .status-bar.disconnected { color: var(--red); }
+    .status-bar.checking     { color: var(--blue); }
     .status-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
     .status-bar.connected .status-dot { animation: pulse 2s infinite; }
     #job-ribbon { position:fixed; top:0; left:0; right:0; z-index:900; display:none;
