@@ -481,6 +481,24 @@
     }
     .oss-credit a { color: var(--muted); text-decoration: underline; text-underline-offset: 2px; }
     .oss-credit a:hover { color: var(--text); }
+    #a2hs-hint { display:flex; align-items:center; gap:6px; margin:18px auto 0; max-width:460px; }
+    .a2hs-open { flex:1; display:flex; align-items:center; justify-content:center; gap:8px;
+      background:var(--surface2); border:1px dashed var(--border2); border-radius:9px;
+      color:var(--muted); font:600 12px var(--font-body); padding:10px 12px; cursor:pointer; }
+    .a2hs-open svg { width:15px; height:15px; fill:var(--accent); flex-shrink:0; }
+    .a2hs-x { background:none; border:none; color:var(--muted2); font-size:18px;
+      padding:6px 8px; cursor:pointer; line-height:1; }
+    #a2hs-pop { position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,0.6);
+      display:flex; align-items:center; justify-content:center; padding:24px; }
+    .a2hs-card { background:var(--surface); border:1px solid var(--border2); border-radius:12px;
+      padding:20px 22px; max-width:340px; width:100%; }
+    .a2hs-title { font-family:var(--font-display); font-weight:700; font-size:16px;
+      letter-spacing:0.04em; text-transform:uppercase; margin-bottom:12px; }
+    .a2hs-steps { font-size:13.5px; line-height:1.7; color:var(--text); }
+    .a2hs-steps b { color:var(--accent); }
+    .a2hs-close { margin-top:16px; width:100%; background:var(--surface2);
+      border:1px solid var(--border2); border-radius:8px; color:var(--text);
+      font:600 13px var(--font-body); padding:9px; cursor:pointer; }
     .brand-footer {
       font-family: var(--font-mono);
       font-size: 9px; color: var(--muted2);
@@ -1534,6 +1552,20 @@
     </div>
   </div>
 
+  <div id="a2hs-hint" style="display:none">
+    <button class="a2hs-open" onclick="a2hsShow()">
+      <svg viewBox="0 0 24 24"><path d="M12 2l4 4h-3v9h-2V6H8l4-4zM5 10v10h14V10h-2v8H7v-8H5z"/></svg>
+      Add to your home screen for one-tap access
+    </button>
+    <button class="a2hs-x" onclick="a2hsDismiss()" title="Don't show again">&times;</button>
+  </div>
+  <div id="a2hs-pop" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+    <div class="a2hs-card">
+      <div class="a2hs-title">Add to Home Screen</div>
+      <div class="a2hs-steps" id="a2hs-steps"></div>
+      <button class="a2hs-close" onclick="document.getElementById('a2hs-pop').style.display='none'">Close</button>
+    </div>
+  </div>
   <div class="brand-footer">
     DOWNSTAGE.SYSTEMS · © 2026 DOWNSTAGE SYSTEMS LLC
   </div>
@@ -3347,6 +3379,33 @@
     } catch { showToast('Network error.', 'error'); }
     input.value = '';
   }
+</script>
+<script>
+  // ── add-to-home-screen hint (mobile, dismissible, hidden when installed) ──
+  (function () {
+    const ua = navigator.userAgent;
+    const isIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isAndroid = /Android/.test(ua);
+    const standalone = window.navigator.standalone === true ||
+      window.matchMedia('(display-mode: standalone)').matches;
+    let dismissed = false;
+    try { dismissed = localStorage.getItem('ds-a2hs-dismissed') === '1'; } catch (e) {}
+    if ((isIOS || isAndroid) && !standalone && !dismissed) {
+      document.getElementById('a2hs-hint').style.display = 'flex';
+    }
+    window.a2hsShow = function () {
+      const steps = isIOS
+        ? 'In Safari, tap the <b>Share</b> button (the square with an arrow), scroll down, and tap <b>Add to Home Screen</b>.'
+        : 'In Chrome, tap the <b>&#8942;</b> menu (top right), then tap <b>Add to Home screen</b>.';
+      document.getElementById('a2hs-steps').innerHTML =
+        steps + '<br><br>The page becomes an app icon — one tap from your home screen next time.';
+      document.getElementById('a2hs-pop').style.display = 'flex';
+    };
+    window.a2hsDismiss = function () {
+      document.getElementById('a2hs-hint').style.display = 'none';
+      try { localStorage.setItem('ds-a2hs-dismissed', '1'); } catch (e) {}
+    };
+  })();
 </script>
 </body>
 </html>
