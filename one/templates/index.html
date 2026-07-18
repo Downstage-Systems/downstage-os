@@ -916,6 +916,12 @@
       background:var(--surface2); border:1px solid var(--border2); }
     .wiz-row.done .wdot { background:var(--accent); border-color:var(--accent);
       box-shadow:0 0 6px rgba(47,217,123,0.5); }
+    .wiz-row.busy .wdot { background:var(--amber); border-color:var(--amber);
+      box-shadow:0 0 6px rgba(245,165,36,0.5); animation:pulse 1.4s infinite; }
+    .wiz-row.busy .wdesc { color:var(--amber); }
+    .wiz-warn { font-size:11.5px; color:var(--muted); line-height:1.5;
+      margin-top:16px; padding-top:14px; border-top:1px solid var(--border); }
+    .wiz-warn b { color:var(--amber); font-weight:600; }
     .wiz-row .winfo { flex:1; min-width:0; }
     .wiz-row .wname { font-family:var(--font-display); font-weight:600; font-size:14px;
       letter-spacing:0.03em; }
@@ -971,6 +977,8 @@
         <div class="wdesc" id="wiz-companion-desc">Stream Deck control — skip it if you don't use one</div></div>
       <button class="btn-sm" id="wiz-companion-btn" onclick="wizInstallCompanion()">Install</button>
     </div>
+    <div class="wiz-warn"><b>Keep power connected</b> while anything is installing —
+      each step takes a few minutes and finishes on its own.</div>
     <div class="wiz-foot">
       <button class="wiz-skip" onclick="wizFinish()">Set up later</button>
       <button class="btn-primary wiz-finish" id="wiz-finish-btn" onclick="wizFinish()">Start using the unit</button>
@@ -3620,17 +3628,26 @@
       if (b) b.style.display = 'none';
     }
   }
+  function wizBusy(name, on, workText) {
+    const row = document.getElementById('wiz-' + name);
+    row.classList.toggle('busy', on);
+    if (on) document.getElementById('wiz-' + name + '-desc').textContent = workText;
+  }
   async function wizInstallOntime() {
     const b = document.getElementById('wiz-ontime-btn');
     b.disabled = true; b.textContent = 'Downloading…';
+    wizBusy('ontime', true, 'Downloading the official release — 1–2 minutes…');
     await installOntime();
+    wizBusy('ontime', false);
     b.disabled = false; b.textContent = 'Install';
     wizRefresh();
   }
   async function wizInstallCompanion() {
     const b = document.getElementById('wiz-companion-btn');
-    b.disabled = true; b.textContent = 'Installing… (a few min)';
+    b.disabled = true; b.textContent = 'Installing…';
+    wizBusy('companion', true, 'Running the official installer — a few minutes…');
     await installCompanion();
+    wizBusy('companion', false);
     b.disabled = false; b.textContent = 'Install';
     wizRefresh();
   }
