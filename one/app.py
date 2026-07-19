@@ -1736,6 +1736,7 @@ def check():
 
 @app.route("/status")
 def status():
+    _probe_async_if_stale()   # keep the internet pill fresh while a page is open
     try:
         config = load_config()
     except Exception:
@@ -3343,7 +3344,23 @@ def _probe_portal():
 def _portal_loop():
     while True:
         _probe_portal()
-        time.sleep(300)
+        time.sleep(120)
+
+
+_probe_busy = threading.Lock()
+
+def _probe_async_if_stale(max_age=60):
+    """Status polls keep the internet indicator fresh while a page is open."""
+    if time.time() - _portal["checked"] < max_age:
+        return
+    if not _probe_busy.acquire(blocking=False):
+        return
+    def run():
+        try:
+            _probe_portal()
+        finally:
+            _probe_busy.release()
+    threading.Thread(target=run, daemon=True).start()
 
 
 threading.Thread(target=_portal_loop, daemon=True).start()
