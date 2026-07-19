@@ -153,6 +153,8 @@
     .status-bar.checking     { background: var(--blue-bg);  border-color: var(--blue-bd);  color: var(--blue); }
     .status-bar.warn         { background: var(--amber-bg); border-color: var(--amber-bd); color: var(--amber); }
     .pill-row { display: flex; gap: 7px; flex-wrap: wrap; justify-content: flex-end; }
+    .pill-row .status-bar { cursor: pointer; }
+    .pill-row .status-bar:hover { filter: brightness(1.25); }
     .status-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
     .status-bar.connected .status-dot { animation: pulse 2s infinite; }
     #job-ribbon { position:fixed; top:0; left:0; right:0; z-index:900; display:none;
@@ -1037,11 +1039,13 @@
       </div>
       </div>
       <div class="pill-row">
-        <div class="status-bar disconnected" id="status-bar">
+        <div class="status-bar disconnected" id="status-bar"
+             onclick="pillGo('timer')" title="Open the Timer tab">
           <div class="status-dot"></div>
           <span id="status-text">Checking…</span>
         </div>
-        <div class="status-bar" id="inet-pill" style="display:none">
+        <div class="status-bar" id="inet-pill" style="display:none"
+             onclick="pillGo('network')" title="Open the Network tab">
           <div class="status-dot"></div>
           <span id="inet-pill-text"></span>
         </div>
@@ -1877,6 +1881,10 @@
   });
 
   // ── Unsaved-changes bar ──────────────────────────────────────────────────────
+  function pillGo(tab) {
+    setViewMode('full');      // tabs live in Full Setup
+    showSetupTab(tab);
+  }
   function copyAddr() {
     const addr = 'http://' + window.location.host + '/';
     const done = () => showToast('Address copied — ' + addr, 'success');
@@ -2198,7 +2206,7 @@
         txt.textContent = d.mode === 'local' ? 'Local OnTime — running' : `Connected — ${d.ip}:4001`;
       } else if (d.ip || d.mode === 'local') {
         bar.className = 'status-bar disconnected';
-        txt.textContent = d.mode === 'local' ? 'Local OnTime — not reachable' : `Cannot reach ${d.ip}:4001`;
+        txt.textContent = d.mode === 'local' ? 'Local OnTime — Stopped' : `Cannot reach ${d.ip}:4001`;
       } else {
         bar.className = 'status-bar disconnected';
         txt.textContent = 'Not configured';
