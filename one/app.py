@@ -1399,6 +1399,8 @@ class OLEDDisplay:
         self._stop   = threading.Event()
         self._jitter = 0   # alternate 1px vertical shift — OLED burn-in relief
         self._hold_until = 0   # while set, the status loop must not paint over us
+        self._page = 0         # 0 status · 1 big clock · 2 setup QR
+        self._page_at = 0.0    # non-status pages revert to status after 60s
 
     def start(self):
         if not _OLED_LIB:
@@ -1462,6 +1464,15 @@ class OLEDDisplay:
             return   # power-button countdown owns the panel
         try:
             with luma_canvas(self._device) as draw:
+                if self._page and time.monotonic() - self._page_at > 60:
+                    self._page = 0   # wander back to status
+                if self._page == 1:
+                    self._page_bigclock(draw)
+                    return
+                if self._page == 2:
+                    if self._page_qr(draw):
+                        return
+                    self._page = 0   # QR unavailable — fall through to status
                 hs = hotspot_is_active()
                 # hotspot page only when it's the only way in — with ethernet
                 # up, techs need the real address, not the fallback
@@ -1558,6 +1569,64 @@ class OLEDDisplay:
         draw.text((0, 30 + j), config.get("hotspot_pass", ""), fill=255)
         draw.text((0, 44 + j), "10.42.0.1:8080", fill=255)
 
+    def cycle_page(self):
+        """Short press on the power button: status → big clock → setup QR."""
+        self._page = (self._page + 1) % 3
+        self._page_at = time.monotonic()
+        self._hold_until = 0
+        self._render()
+
+    def _page_bigclock(self, draw):
+        j = self._jitter
+        t = time.localtime()
+        hh = t.tm_hour % 12 or 12
+        big = f"{hh}:{t.tm_min:02d}"
+        ap  = "AM" if t.tm_hour < 12 else "PM"
+        try:
+            from PIL import ImageFont
+            font = ImageFont.truetype(
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 34)
+            bbox = draw.textbbox((0, 0), big, font=font)
+            w = bbox[2] - bbox[0]
+            draw.text(((110 - w) / 2 - bbox[0], 8 + j), big, font=font, fill=255)
+            draw.text((112, 14 + j), ap, fill=255)
+        except Exception:
+            draw.text((30, 20 + j), f"{big} {ap}", fill=255)
+        date = time.strftime("%a %b %-d")
+        draw.text(((128 - draw.textlength(date)) / 2, 52 + j), date, fill=255)
+
+    def _page_qr(self, draw):
+        """Setup-URL QR, white-on-black inverted to a lit quiet zone so
+        phone cameras read the glowing panel. Returns False if unavailable."""
+        try:
+            import qrcode
+            ip = _real_network_ip()
+            url = f"http://{ip}:8080" if ip else "http://10.42.0.1:8080"
+            qr = qrcode.QRCode(border=1, box_size=1,
+                               error_correction=qrcode.constants.ERROR_CORRECT_L)
+            qr.add_data(url)
+            qr.make(fit=True)
+            m = qr.get_matrix()          # includes the border
+            n = len(m)
+            scale = max(1, 64 // n)
+            side = n * scale
+            ox = 128 - side - (64 - side) // 2   # right-hand block
+            oy = (64 - side) // 2
+            # lit quiet zone behind the code
+            draw.rectangle([ox - 4, 0, 127, 63], fill=255)
+            for y, row in enumerate(m):
+                for x, dark in enumerate(row):
+                    if dark:
+                        draw.rectangle([ox + x*scale, oy + y*scale,
+                                        ox + x*scale + scale - 1,
+                                        oy + y*scale + scale - 1], fill=0)
+            for i, word in enumerate(("SCAN", "FOR", "SETUP")):
+                draw.text((2, 12 + i * 14), word, fill=255)
+            return True
+        except Exception as e:
+            print(f"[oled] qr page: {e}")
+            return False
+
     def countdown(self, n):
         """Full-screen digit while the power button is held — 3, 2, 1."""
         if not self._device:
@@ -1647,10 +1716,13 @@ def _power_button_monitor():
                 held = time.monotonic() - t0
                 if held >= 3.0:
                     break
-                n = 3 - int(held)
-                if n != shown:
-                    oled.countdown(n)
-                    shown = n
+                # grace window: a short press flips OLED pages; the countdown
+                # only starts once the hold is clearly deliberate
+                if held >= 0.45:
+                    n = 3 - int(held)
+                    if n != shown:
+                        oled.countdown(n)
+                        shown = n
                 r, _, _ = select.select([f], [], [], 0.05)
                 if r:
                     d2 = f.read(size)
@@ -1660,8 +1732,12 @@ def _power_button_monitor():
                             cancelled = True
                             break
             if cancelled:
-                print("[pwrbtn] released early — shutdown cancelled")
-                oled.resume()
+                if shown is None:
+                    print("[pwrbtn] short press — next OLED page")
+                    oled.cycle_page()
+                else:
+                    print("[pwrbtn] released early — shutdown cancelled")
+                    oled.resume()
                 continue
             print("[pwrbtn] 3 s hold — shutting down")
             _audit("SHUTDOWN", "front button 3 s hold")
