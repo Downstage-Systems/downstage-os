@@ -1477,9 +1477,17 @@ class OLEDDisplay:
             draw.text((127 - draw.textlength(right), 0 + j), right, fill=255)
         draw.line([(0, 12 + j), (127, 12 + j)], fill=255)
 
-        # setup address — the single most useful line on the box
+        # setup address — the single most useful line on the box.
+        # Right corner: how it's connected (full word if it fits, initial if not)
         addr = f"{net['ip']}:8080" if net["ip"] != "unknown" else "No network"
         draw.text((0, 16 + j), addr, fill=255)
+        tag = {"eth0": "ETH", "wlan0": "WIFI"}.get(net["iface"], "")
+        if tag:
+            aw = draw.textlength(addr)
+            if aw + 4 + draw.textlength(tag) > 128:
+                tag = tag[0]           # "E" / "W" when the address runs long
+            if aw + 4 + draw.textlength(tag) <= 128:
+                draw.text((127 - draw.textlength(tag), 16 + j), tag, fill=255)
 
         # OnTime state — dot shows link health at a glance
         ontime_ok = connected or (mode == "local" and ontime_is_running())
