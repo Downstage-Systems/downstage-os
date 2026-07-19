@@ -123,7 +123,9 @@
       background: var(--surface); border: 1px solid var(--border2);
       border-radius: 10px; padding: 10px 14px;
     }
-    .addr-box .addr-main { font-family: var(--font-mono); font-size: 14px; color: var(--accent); }
+    .addr-box .addr-main { font-family: var(--font-mono); font-size: 14px; color: var(--accent);
+      cursor: pointer; }
+    .addr-box .addr-main:hover { text-decoration: underline; text-underline-offset: 3px; }
     .addr-box .addr-sub { font-family: var(--font-mono); font-size: 13px; color: var(--muted); }
 
 
@@ -853,10 +855,7 @@
     @media (max-width: 560px) {
       body { padding: 14px 8px; }
       .card-body { padding: 18px 13px; }
-      .addr-box .addr-main { display: none; }  /* phone: you ARE at the address */
-      /* phone: no box around the IP — a bare dim line above the pills */
-      .addr-box { background: none; border: none; padding: 0; align-items: flex-end; }
-      .addr-box .addr-sub { font-size: 12px; color: var(--muted2); }
+      .addr-box { display: none; }  /* phone: you ARE at the address; Network tab has the IPs */
       /* phone: clock joins the title row (right edge); the vitals column
          (IP, then pills) sits directly beneath it */
       .header-clock { margin-left: auto; margin-right: 0; font-size: 14px; }
@@ -1021,10 +1020,7 @@
     <div class="header-clock" id="header-clock"></div>
     <div class="addr-chip">
       <div class="addr-box">
-      <span class="addr-main">{{ hostname }}.local:8080</span>
-      <span class="addr-sub">
-        {% if net_iface == 'eth0' %}🔌 {{ local_ip }}{% elif net_iface == 'wlan0' %}📶 {{ local_ip }}{% else %}{{ local_ip }}{% endif %}
-      </span>
+      <span class="addr-main" onclick="copyAddr()" title="Click to copy this unit's address">{{ hostname }}.local:8080</span>
       </div>
       <div class="pill-row">
         <div class="status-bar disconnected" id="status-bar">
@@ -1867,6 +1863,19 @@
   });
 
   // ── Unsaved-changes bar ──────────────────────────────────────────────────────
+  function copyAddr() {
+    const addr = 'http://' + window.location.host + '/';
+    const done = () => showToast('Address copied — ' + addr, 'success');
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(addr).then(done);
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = addr; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch (e) {}
+      ta.remove();
+    }
+  }
   function openExternal(url) {
     const a = document.createElement('a');
     a.href = url; a.target = '_blank'; a.rel = 'noopener';

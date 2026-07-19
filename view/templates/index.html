@@ -114,7 +114,9 @@
       background: var(--surface); border: 1px solid var(--border2);
       border-radius: 10px; padding: 10px 14px;
     }
-    .addr-box .addr-main { font-family: var(--font-mono); font-size: 14px; color: var(--accent); }
+    .addr-box .addr-main { font-family: var(--font-mono); font-size: 14px; color: var(--accent);
+      cursor: pointer; }
+    .addr-box .addr-main:hover { text-decoration: underline; text-underline-offset: 3px; }
     .addr-box .addr-sub { font-family: var(--font-mono); font-size: 13px; color: var(--muted); }
 
 
@@ -546,9 +548,7 @@
       .show-quick .btn-sm { border-radius: 12px; gap: 6px; padding: 6px 2px;
                             font-size: 8.5px; letter-spacing: 0.02em; }
       .show-quick .btn-sm svg { width: 20px; height: 20px; }
-      .addr-box .addr-main { display: none; }
-      .addr-box { background: none; border: none; padding: 0; align-items: flex-end; }
-      .addr-box .addr-sub { font-size: 12px; color: var(--muted2); }
+      .addr-box { display: none; }
       /* phone: clock joins the title row (right edge); the vitals column
          (IP, then pills) sits directly beneath it */
       .header-clock { margin-left: auto; margin-right: 0; font-size: 14px; }
@@ -591,8 +591,7 @@
     <div class="header-clock" id="header-clock"></div>
     <div class="addr-chip">
       <div class="addr-box">
-      <span class="addr-main">{{ hostname }}.local:8080</span>
-      <span class="addr-sub">📶 {{ local_ip }}</span>
+      <span class="addr-main" onclick="copyAddr()" title="Click to copy this unit's address">{{ hostname }}.local:8080</span>
       </div>
       <div class="status-bar disconnected" id="status-bar">
         <div class="status-dot"></div>
@@ -1834,6 +1833,19 @@
   })();
 </script>
 <script>
+  function copyAddr() {
+    const addr = 'http://' + window.location.host + '/';
+    const done = () => showToast('Address copied — ' + addr, 'success');
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(addr).then(done);
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = addr; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch (e) {}
+      ta.remove();
+    }
+  }
   function openExternal(url) {
     const a = document.createElement('a');
     a.href = url; a.target = '_blank'; a.rel = 'noopener';
