@@ -2585,7 +2585,11 @@ def qr_png():
         import qrcode
     except Exception:
         return ("QR support not installed", 404)
-    img = qrcode.make(f"http://{request.host}/", box_size=5, border=2)
+    # always encode the raw IP, never the .local name the browser happens to
+    # be using — the scanner is a phone, and Android's mDNS is unreliable
+    ip = _real_network_ip()
+    url = f"http://{ip}:8080/" if ip else f"http://{request.host}/"
+    img = qrcode.make(url, box_size=5, border=2)
     buf = _io.BytesIO()
     img.save(buf, format="PNG")
     buf.seek(0)

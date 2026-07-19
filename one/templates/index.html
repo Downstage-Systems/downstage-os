@@ -574,6 +574,9 @@
     .iface-row .ikind { font-family:var(--font-display); font-weight:700; font-size:13px;
                         letter-spacing:0.04em; width:88px; }
     .iface-row .iip { font-family:var(--font-mono); font-size:14px; color:var(--accent); }
+    .iface-row .iprim { font-family:var(--font-mono); font-size:9px; letter-spacing:0.1em;
+      color:var(--accent); border:1px solid var(--green-bd); border-radius:4px;
+      padding:2px 6px; }
     .iface-row .idev { font-family:var(--font-mono); font-size:11px; color:var(--muted2); margin-left:auto; }
     .iface-none { padding:11px 14px; font-size:12.5px; color:var(--muted);
                   background:var(--surface2); border:1px solid var(--border2); border-radius:9px; }
@@ -2164,7 +2167,7 @@
       const inet = document.getElementById('inet-note');
       if (inet) inet.style.display =
         (d.portal && d.portal.internet === false && !d.portal.detected) ? '' : 'none';
-      renderInterfaces(d.interfaces);
+      renderInterfaces(d.interfaces, d.net_iface);
       if (window._clockSync) _clockSync(d.clock);
       wizMaybeShow(d);
       if (d.hdmi_connected) for (const n of ['1','2']) {
@@ -3052,14 +3055,15 @@
       </div>`).join('');
   }
 
-  function renderInterfaces(list) {
+  function renderInterfaces(list, primary) {
     const box = document.getElementById('iface-panel');
     if (!box) return;
     if (!list || !list.length) { box.innerHTML = '<div class="iface-none">No network connection — check the cable or join WiFi below.</div>'; return; }
     box.innerHTML = list.map(function(i){
+      const prim = i.iface === primary ? '<span class="iprim">PRIMARY</span>' : '';
       return '<div class="iface-row"><span class="idot"></span>' +
         '<span class="ikind">' + i.kind + '</span>' +
-        '<span class="iip">' + i.ip + '</span>' +
+        '<span class="iip">' + i.ip + '</span>' + prim +
         '<span class="idev">' + i.iface + '</span></div>';
     }).join('');
   }
