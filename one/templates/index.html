@@ -1857,6 +1857,11 @@
   });
 
   // ── Unsaved-changes bar ──────────────────────────────────────────────────────
+  function openExternal(url) {
+    const a = document.createElement('a');
+    a.href = url; a.target = '_blank'; a.rel = 'noopener';
+    document.body.appendChild(a); a.click(); a.remove();
+  }
   function cancelChanges() {
     // the server holds the saved config — reloading is a guaranteed full
     // revert of every field, with no field-by-field drift risk
@@ -2486,7 +2491,7 @@
       updateCompanionPanel();
       if (d.ok) {
         showToast('USB rescanned. Opening Companion Surfaces…', 'success');
-        setTimeout(() => window.open(`http://${window.location.hostname}:8000/#/surfaces`, '_blank'), 1000);
+        setTimeout(() => openExternal(`http://${window.location.hostname}:8000/#/surfaces`), 1000);
       } else {
         showToast(`Rescan failed: ${d.message}`, 'error');
       }
@@ -2494,19 +2499,19 @@
   }
 
   function openCompanion() {
-    window.open(`http://${window.location.hostname}:8000`, '_blank');
+    openExternal(`http://${window.location.hostname}:8000`);
   }
   function openCompanionButtons() {
     // Companion's web button surface — the Stream Deck, but on this device.
     // Phones get a 3-column cap so buttons stay thumb-sized.
     const mobile = window.matchMedia('(max-width: 560px)').matches;
     const params = mobile ? '/?max_col=3&min_col=0' : '';
-    window.open(`http://${window.location.hostname}:8000/tablet${params}`, '_blank');
+    openExternal(`http://${window.location.hostname}:8000/tablet${params}`);
   }
 
   // ── OnTime Editor ─────────────────────────────────────────────────────────────
   function openEditor() {
-    window.open(`http://${window.location.hostname}:4001/editor/`, '_blank');
+    openExternal(`http://${window.location.hostname}:4001/editor/`);
   }
 
 
@@ -2720,7 +2725,7 @@
     const host = currentMode === 'remote'
       ? (document.getElementById('ip').value.trim() || window.location.hostname)
       : window.location.hostname;
-    window.open(`http://${host}:4001${path}`, '_blank');
+    openExternal(`http://${host}:4001${path}`);
   }
 
   // ── Show / Full view mode — persisted per browser ──

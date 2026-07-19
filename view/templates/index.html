@@ -1710,7 +1710,7 @@
     // OnTime runs on the remote server this node is pointed at, not on this device
     const ip = document.getElementById('ip').value.trim();
     if (!ip) { showToast('Set the OnTime server IP first.', 'error'); return; }
-    window.open(`http://${ip}:4001/editor/`, '_blank');
+    openExternal(`http://${ip}:4001/editor/`);
   }
 
   async function restartPi() {
@@ -1773,7 +1773,7 @@
   function quickOpen(path) {
     const host = lastServerIp || document.getElementById('ip').value.trim();
     if (!host) return;
-    window.open(`http://${host}:4001${path}`, '_blank');
+    openExternal(`http://${host}:4001${path}`);
   }
 
   // ── Show / Full view mode — persisted per browser ──
@@ -1828,6 +1828,11 @@
   })();
 </script>
 <script>
+  function openExternal(url) {
+    const a = document.createElement('a');
+    a.href = url; a.target = '_blank'; a.rel = 'noopener';
+    document.body.appendChild(a); a.click(); a.remove();
+  }
   // pull-to-refresh: drag down from the very top, release past the arrow flip
   (function () {
     const spin = document.getElementById('ptr-spin');
