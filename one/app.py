@@ -20,6 +20,15 @@ app = Flask(__name__)
 
 
 @app.after_request
+def _no_html_cache(resp):
+    """The UI must never be stale: after a self-update, a cached page in a
+    phone's home-screen web app would keep showing the old interface."""
+    if resp.mimetype == "text/html":
+        resp.headers["Cache-Control"] = "no-cache"
+    return resp
+
+
+@app.after_request
 def _no_store(resp):
     # the config UI must never be served stale from browser cache — the page
     # changes with every OS update, and a cached copy silently breaks controls
