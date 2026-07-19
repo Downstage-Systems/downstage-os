@@ -1461,7 +1461,9 @@ class OLEDDisplay:
         temp = _cpu_temp() or ""
         m = re.match(r"(\d+)", temp)
         temp_c = int(m.group(1)) if m else 0
-        clock = time.strftime("%H:%M")
+        # 12-hour with a compact A/P suffix — "7:46P" fits the OLED header
+        # beside the title where "12:46 PM" would risk a collision
+        clock = time.strftime("%-I:%M") + ("A" if time.localtime().tm_hour < 12 else "P")
         if pw["undervolt_now"]:
             title, right = "LOW POWER!", clock
         elif temp_c >= 75:
