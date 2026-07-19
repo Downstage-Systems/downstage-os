@@ -854,6 +854,10 @@
       body { padding: 14px 8px; }
       .card-body { padding: 18px 13px; }
       .addr-box .addr-main { display: none; }  /* phone: you ARE at the address */
+      /* phone: no box around the IP — a bare dim line above the pills */
+      .addr-box { background: none; border: none; padding: 0; align-items: flex-end; }
+      .addr-box .addr-sub { font-size: 12px; color: var(--muted2); }
+      .addr-chip { align-items: flex-end; gap: 6px; }
       .logo-row { flex-wrap: wrap; gap: 8px 10px; margin-bottom: 16px; }
       /* address becomes one compact line under the wordmark, not a dangling stack */
       .addr-chip { margin-left: 0; width: 100%; flex-direction: row; align-items: center;
