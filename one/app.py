@@ -272,6 +272,25 @@ def _power_state():
         return {"undervolt_now": False, "throttled_now": False, "undervolt_boot": False}
 
 
+_oled_timer_cache = {"at": 0.0, "val": None}
+
+def _ontime_timer():
+    """Timer state for the OLED: {"playback": str, "current_ms": int} or None.
+    Cached 2s; sub-second timeout so a wedged OnTime can't stall the panel."""
+    now = time.time()
+    if now - _oled_timer_cache["at"] < 2:
+        return _oled_timer_cache["val"]
+    val = None
+    try:
+        r = requests.get("http://127.0.0.1:4001/api/poll", timeout=0.8)
+        t = r.json()["payload"]["timer"]
+        val = {"playback": t.get("playback"), "current_ms": t.get("current")}
+    except Exception:
+        pass
+    _oled_timer_cache.update(at=now, val=val)
+    return val
+
+
 def _cpu_temp():
     try:
         raw = Path("/sys/class/thermal/thermal_zone0/temp").read_text().strip()
@@ -1500,10 +1519,25 @@ class OLEDDisplay:
             ot = "OnTime offline" if ip else "OnTime not set"
         draw.text((0, 30 + j), f"{mark} {ot}", fill=255)
 
-        # network type + companion, in words
-        link = {"eth0": "Wired", "wlan0": "WiFi"}.get(net["iface"], "No network")
+        # bottom line: the show, when there is one — live timer while
+        # playing/paused; otherwise Companion state (connection type moved
+        # up beside the address)
         comp = "Companion ON" if companion_is_running() else "Companion off"
-        draw.text((0, 44 + j), f"{link} + {comp}", fill=255)
+        line = comp
+        t = _ontime_timer()
+        if t and t["playback"] in ("play", "pause") and t["current_ms"] is not None:
+            ms = t["current_ms"]
+            over = ms < 0
+            secs = abs(ms) // 1000
+            hh, rem = divmod(secs, 3600)
+            mm, ss = divmod(rem, 60)
+            clock_s = f"{hh}:{mm:02d}:{ss:02d}" if hh else f"{mm}:{ss:02d}"
+            mark = ">" if t["playback"] == "play" else "||"
+            line = f"OVER {clock_s}" if over else f"{mark} {clock_s}"
+            short = "Comp ON" if companion_is_running() else "Comp off"
+            if draw.textlength(f"{line} · {short}") <= 128:
+                line = f"{line} · {short}"
+        draw.text((0, 44 + j), line, fill=255)
 
     # ── Hotspot page ──────────────────────────────────────────────────────────
     def _page_hotspot(self, draw):
