@@ -119,13 +119,14 @@
       display: flex; flex-direction: column; gap: 7px; align-items: flex-end;
     }
     .addr-box {
-      display: flex; flex-direction: column; gap: 5px; align-items: flex-start;
-      background: var(--surface); border: 1px solid var(--border2);
-      border-radius: 10px; padding: 10px 14px;
+      display: flex; flex-direction: column; gap: 5px; align-items: flex-end;
+      position: relative;
     }
     .addr-box .addr-main { font-family: var(--font-mono); font-size: 14px; color: var(--accent);
       cursor: pointer; }
     .addr-box .addr-main:hover { text-decoration: underline; text-underline-offset: 3px; }
+    .addr-copy-ic { width: 13px; height: 13px; fill: var(--muted2); vertical-align: -1px; margin-left: 2px; }
+    .addr-main:hover .addr-copy-ic { fill: var(--accent); }
     .addr-box { position: relative; }
     #qr-pop { position: absolute; top: calc(100% + 8px); right: 0; z-index: 500;
       background: #fff; border-radius: 10px; padding: 8px 8px 6px;
@@ -1032,7 +1033,8 @@
     <div class="header-clock" id="header-clock"></div>
     <div class="addr-chip">
       <div class="addr-box">
-      <span class="addr-main" onclick="copyAddr()" title="Click to copy this unit's address">{{ hostname }}.local:8080</span>
+      <span class="addr-main" onclick="copyAddr()" title="Click to copy this unit's address">{{ hostname }}.local:8080
+        <svg viewBox="0 0 24 24" class="addr-copy-ic"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg></span>
       <div id="qr-pop" style="display:none">
         <img id="qr-img" alt="QR code for this unit's address">
         <div class="qr-cap">Scan to open on a phone</div>
