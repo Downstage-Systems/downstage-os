@@ -126,6 +126,13 @@
     .addr-box .addr-main { font-family: var(--font-mono); font-size: 14px; color: var(--accent);
       cursor: pointer; }
     .addr-box .addr-main:hover { text-decoration: underline; text-underline-offset: 3px; }
+    .addr-box { position: relative; }
+    #qr-pop { position: absolute; top: calc(100% + 8px); right: 0; z-index: 500;
+      background: #fff; border-radius: 10px; padding: 8px 8px 6px;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.55); text-align: center; }
+    #qr-pop img { width: 148px; height: 148px; display: block; image-rendering: pixelated; }
+    #qr-pop .qr-cap { font-size: 10.5px; color: #444; margin-top: 3px;
+      font-family: var(--font-body); }
     .addr-box .addr-sub { font-family: var(--font-mono); font-size: 13px; color: var(--muted); }
 
 
@@ -1021,6 +1028,10 @@
     <div class="addr-chip">
       <div class="addr-box">
       <span class="addr-main" onclick="copyAddr()" title="Click to copy this unit's address">{{ hostname }}.local:8080</span>
+      <div id="qr-pop" style="display:none">
+        <img id="qr-img" alt="QR code for this unit's address">
+        <div class="qr-cap">Scan to open on a phone</div>
+      </div>
       </div>
       <div class="pill-row">
         <div class="status-bar disconnected" id="status-bar">
@@ -1866,6 +1877,19 @@
   function copyAddr() {
     const addr = 'http://' + window.location.host + '/';
     const done = () => showToast('Address copied — ' + addr, 'success');
+    // toggle the QR chip; hidden entirely if the unit lacks QR support
+    const pop = document.getElementById('qr-pop');
+    if (pop.style.display === 'none') {
+      const img = document.getElementById('qr-img');
+      img.onerror = () => { pop.style.display = 'none'; };
+      img.src = '/qr.png?' + Date.now();
+      pop.style.display = '';
+      setTimeout(() => document.addEventListener('click', function closeQr(e) {
+        if (!pop.contains(e.target)) { pop.style.display = 'none'; document.removeEventListener('click', closeQr); }
+      }), 0);
+    } else {
+      pop.style.display = 'none';
+    }
     if (navigator.clipboard && window.isSecureContext) {
       navigator.clipboard.writeText(addr).then(done);
     } else {

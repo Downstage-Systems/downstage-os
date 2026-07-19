@@ -2499,6 +2499,23 @@ def os_update_file():
 
 # ── Local OnTime routes ───────────────────────────────────────────────────────
 
+@app.route("/qr.png")
+def qr_png():
+    """QR of this unit's URL — scan from the desktop page to open on a phone.
+    Graceful when python3-qrcode is absent (self-updated 1.x units): 404,
+    and the UI simply doesn't show the chip."""
+    try:
+        import io as _io
+        import qrcode
+    except Exception:
+        return ("QR support not installed", 404)
+    img = qrcode.make(f"http://{request.host}/", box_size=5, border=2)
+    buf = _io.BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+    return send_file(buf, mimetype="image/png")
+
+
 @app.route("/setup/complete", methods=["POST"])
 def setup_complete():
     """First-run wizard finished (or skipped) — never show it again."""
