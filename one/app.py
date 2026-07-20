@@ -3079,11 +3079,17 @@ def _hotspot_fallback():
     rejoin WiFi on its own -- while nobody is connected to the hotspot,
     quietly retry the saved WiFi every 10 minutes and retire the hotspot if
     it succeeds. The OLED shows a live Searching screen for the whole hunt."""
+    def _real_ip():
+        ip = get_network_info()["ip"]
+        # link-local (direct cable) is a control path, not a network — the
+        # hotspot should still come up alongside it
+        return ip != "unknown" and not ip.startswith("169.254.")
+
     time.sleep(8)    # short ethernet-DHCP grace: a wired unit connects here
     config = load_config()
     if not config.get("hotspot_auto", True) or hotspot_is_active():
         return
-    if get_network_info()["ip"] != "unknown":
+    if _real_ip():
         return       # already on a network — nothing to do, no "searching" shown
 
     # genuinely no network — light the OLED "Searching" screen for the WHOLE
@@ -3094,7 +3100,7 @@ def _hotspot_fallback():
         # give WiFi autoconnect a moment while we visibly search (~12s)
         for _ in range(6):
             time.sleep(2)
-            if get_network_info()["ip"] != "unknown":
+            if _real_ip():
                 return
         saved = _saved_wifi_profiles()
         if saved:
@@ -3674,29 +3680,41 @@ def _updates_loop():
 threading.Thread(target=_updates_loop, daemon=True).start()
 
 
+LL_CON = "wired-fallback-ll"
+
 def _enforce_eth_linklocal():
-    """Direct-cable control: with no router (and no DHCP), fall back to a
-    self-assigned 169.254.x address so laptop-to-unit ethernet just works —
-    mDNS resolves downstage-XXXX.local over the link. 'fallback' only fires
-    when DHCP truly fails, so normal venue networks are unaffected."""
+    """Direct-cable control: with no router (and no DHCP), the unit must end
+    up on a self-assigned 169.254.x address so laptop-to-unit ethernet just
+    works (mDNS resolves downstage-XXXX.local over the link). ipv4.link-local
+    =fallback proved unreliable on this NM (activation still hard-fails after
+    the DHCP timeout), so use the classic two-profile pattern: the DHCP
+    profile gives up quickly, and a dedicated low-priority link-local profile
+    catches the interface. Normal venue networks always win on priority."""
     time.sleep(30)
     try:
         out = subprocess.check_output(
             ["nmcli", "-t", "-f", "NAME,TYPE", "connection", "show"],
             text=True, timeout=10)
-        for line in out.splitlines():
-            if not line.endswith(":802-3-ethernet"):
+        names = [l.rsplit(":", 1)[0] for l in out.splitlines()
+                 if l.endswith(":802-3-ethernet")]
+        for name in names:
+            if name == LL_CON:
                 continue
-            name = line.rsplit(":", 1)[0]
-            cur = subprocess.check_output(
-                ["nmcli", "-g", "ipv4.link-local", "connection", "show", name],
-                text=True, timeout=10).strip()
-            if cur not in ("fallback", "4"):   # nmcli -g prints the enum number
-                subprocess.run(["sudo", "nmcli", "connection", "modify", name,
-                                "ipv4.link-local", "fallback",
-                                "ipv4.dhcp-timeout", "20"],
-                               timeout=15)
-                print(f"[net] link-local fallback enabled on '{name}'")
+            subprocess.run(["sudo", "nmcli", "connection", "modify", name,
+                            "ipv4.dhcp-timeout", "20",
+                            "connection.autoconnect-retries", "2",
+                            "connection.autoconnect-priority", "900"],
+                           timeout=15)
+        if LL_CON not in names:
+            subprocess.run(["sudo", "nmcli", "connection", "add",
+                            "type", "ethernet", "ifname", "eth0",
+                            "con-name", LL_CON,
+                            "ipv4.method", "link-local",
+                            "ipv6.method", "disabled",
+                            "connection.autoconnect", "yes",
+                            "connection.autoconnect-priority", "-10"],
+                           timeout=15)
+            print(f"[net] created link-local fallback profile '{LL_CON}'")
     except Exception as e:
         print(f"[net] link-local enforcement: {e}")
 
