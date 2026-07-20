@@ -3580,16 +3580,27 @@ def _failsafe_sync_once():
 def _failsafe_loop():
     time.sleep(600)          # settle after boot
     while True:
-        r = _failsafe_sync_once()
-        print(f"[failsafe] daily sync: {r}")
+        def work():
+            r = _failsafe_sync_once()
+            if r != "ok":
+                raise RuntimeError(r)
+        if not _start_job("failsafe-sync", "Backing up show state to the failsafe SD", work):
+            print("[failsafe] daily sync deferred — another job running")
+            time.sleep(3600)
+            continue
         time.sleep(86400)
 
 
 @app.route("/failsafe/sync", methods=["POST"])
 def failsafe_sync_route():
-    r = _failsafe_sync_once()
-    return jsonify({"ok": r == "ok", "message": r,
-                    "last": _failsafe["last"]})
+    def work():
+        r = _failsafe_sync_once()
+        if r != "ok":
+            raise RuntimeError(r)
+    ok = _start_job("failsafe-sync", "Backing up show state to the failsafe SD", work)
+    if not ok:
+        return jsonify({"ok": False, "message": "Another job is already running"})
+    return jsonify({"ok": True, "message": "started"})
 
 
 threading.Thread(target=_failsafe_loop, daemon=True).start()
