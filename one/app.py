@@ -1540,11 +1540,14 @@ class OLEDDisplay:
         # setup address — the single most useful line on the box.
         # Right corner: how it's connected (full word if it fits, initial if not)
         addr = f"{net['ip']}:8080" if net["ip"] != "unknown" else "No network"
-        draw.text((0, 16 + j), addr, fill=255)
         tag = {"eth0": "ETH", "wlan0": "WIFI"}.get(net["iface"], "")
-        # a portaled WiFi address is a half-truth — say so right at the tag
+        # a portaled WiFi address is a half-truth — say so right at the tag.
+        # PORTAL is worth more than the port number: drop :8080 to fit the
+        # full word instead of degrading to a cryptic "P"
         if tag == "WIFI" and _portal.get("detected") and _portal.get("iface") == "wlan0":
             tag = "PORTAL"
+            addr = net["ip"] if net["ip"] != "unknown" else "No network"
+        draw.text((0, 16 + j), addr, fill=255)
         if tag:
             aw = draw.textlength(addr)
             if aw + 4 + draw.textlength(tag) > 128:
