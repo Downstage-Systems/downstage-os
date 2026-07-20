@@ -3050,16 +3050,22 @@ def _hotspot_fallback():
     is up it owns the radio, so NM can never rejoin WiFi on its own -- while
     nobody is connected to the hotspot, quietly retry the saved WiFi every
     10 minutes and retire the hotspot if it succeeds."""
-    time.sleep(20)   # brief settle: let ethernet DHCP + WiFi autoconnect try
+    time.sleep(8)    # short ethernet-DHCP grace: a wired unit connects here
     config = load_config()
     if not config.get("hotspot_auto", True) or hotspot_is_active():
         return
     if get_network_info()["ip"] != "unknown":
         return       # already on a network — nothing to do, no "searching" shown
 
-    # genuinely no network — light the OLED "Searching" screen and decide fast
+    # genuinely no network — light the OLED "Searching" screen for the WHOLE
+    # hunt so the wait is always visible, not just the brief scan
     oled._searching = True
     try:
+        # give WiFi autoconnect a moment while we visibly search (~12s)
+        for _ in range(6):
+            time.sleep(2)
+            if get_network_info()["ip"] != "unknown":
+                return
         saved = _saved_wifi_profiles()
         if saved:
             # Only spend time retrying WiFi that is ACTUALLY in range (the
