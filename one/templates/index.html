@@ -576,7 +576,8 @@
                        box-shadow:0 0 7px rgba(47,217,123,0.6); flex-shrink:0; }
     .iface-row .ikind { font-family:var(--font-display); font-weight:700; font-size:13px;
                         letter-spacing:0.04em; width:88px; }
-    .iface-row .iip { font-family:var(--font-mono); font-size:14px; color:var(--accent); }
+    .iface-row .iip { font-family:var(--font-mono); font-size:14px; color:var(--accent); cursor:pointer; }
+    .iface-row .iip:hover { text-decoration:underline; text-underline-offset:3px; }
     .iface-row .iprim { font-family:var(--font-mono); font-size:9px; letter-spacing:0.1em;
       color:var(--accent); border:1px solid var(--green-bd); border-radius:4px;
       padding:2px 6px; }
@@ -1898,6 +1899,19 @@
     if (!d.ok) { showToast(d.message, 'error'); return; }
     pollJobRibbon();   // amber ribbon + elapsed timer while it copies
   }
+  function copyIp(ip) {
+    const addr = 'http://' + ip + ':8080/';
+    const done = () => showToast('Address copied — ' + addr, 'success');
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(addr).then(done);
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = addr; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch (e) {}
+      ta.remove();
+    }
+  }
   function copyAddr() {
     const addr = 'http://' + window.location.host + '/';
     const done = () => showToast('Address copied — ' + addr, 'success');
@@ -3120,7 +3134,7 @@
       const prim = i.iface === primary ? '<span class="iprim">PRIMARY</span>' : '';
       return '<div class="iface-row"><span class="idot"></span>' +
         '<span class="ikind">' + i.kind + '</span>' +
-        '<span class="iip">' + i.ip + '</span>' + prim +
+        '<span class="iip" onclick="copyIp(\'' + i.ip + '\')" title="Click to copy http://' + i.ip + ':8080/">' + i.ip + '</span>' + prim +
         '<span class="idev">' + i.iface + '</span></div>';
     }).join('');
   }
