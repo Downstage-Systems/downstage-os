@@ -1401,6 +1401,7 @@ class OLEDDisplay:
         self._hold_until = 0   # while set, the status loop must not paint over us
         self._page = 0         # 0 status · 1 big clock · 2 setup QR
         self._page_at = 0.0    # non-status pages revert to status after 60s
+        self._searching = False  # boot-time network hunt — show a live screen
 
     def start(self):
         if not _OLED_LIB:
@@ -1420,7 +1421,7 @@ class OLEDDisplay:
         self._stop.wait(4)   # hold the mark while the box boots
         while not self._stop.is_set():
             self._render()
-            self._stop.wait(self.INTERVAL)
+            self._stop.wait(1 if self._searching else self.INTERVAL)
 
     # ── Boot splash — the Downstage One mark ─────────────────────────────────
     def _splash(self):
@@ -1481,6 +1482,9 @@ class OLEDDisplay:
             return   # power-button countdown owns the panel
         try:
             with luma_canvas(self._device) as draw:
+                if self._searching:
+                    self._page_searching(draw)
+                    return
                 if self._page and time.monotonic() - self._page_at > 60:
                     self._page = 0   # wander back to status
                 if self._page == 1:
@@ -1585,6 +1589,15 @@ class OLEDDisplay:
         draw.text((0, 16 + j), config.get("hotspot_ssid", ""), fill=255)
         draw.text((0, 30 + j), config.get("hotspot_pass", ""), fill=255)
         draw.text((0, 44 + j), "10.42.0.1:8080", fill=255)
+
+    def _page_searching(self, draw):
+        j = self._jitter
+        draw.text((0, 2 + j), "DOWNSTAGE ONE", fill=255)
+        draw.line([(0, 14 + j), (127, 14 + j)], fill=255)
+        dots = "." * (1 + int(time.monotonic()) % 3)
+        draw.text((0, 22 + j), "Searching for", fill=255)
+        draw.text((0, 36 + j), f"a network{dots}", fill=255)
+        draw.text((0, 52 + j), "Setup hotspot if none found", fill=255)
 
     def cycle_page(self):
         """Short press on the power button: status → big clock → setup QR."""
@@ -3037,24 +3050,43 @@ def _hotspot_fallback():
     is up it owns the radio, so NM can never rejoin WiFi on its own -- while
     nobody is connected to the hotspot, quietly retry the saved WiFi every
     10 minutes and retire the hotspot if it succeeds."""
-    time.sleep(90)
+    time.sleep(20)   # brief settle: let ethernet DHCP + WiFi autoconnect try
     config = load_config()
     if not config.get("hotspot_auto", True) or hotspot_is_active():
         return
     if get_network_info()["ip"] != "unknown":
-        return
-    for attempt in range(3):
-        if not _saved_wifi_profiles():
-            break
-        print(f"[hotspot] no network -- retrying saved WiFi ({attempt + 1}/3)")
-        if _try_saved_wifi():
-            return
-        time.sleep(20)
-        if get_network_info()["ip"] != "unknown":
-            return
-    print("[hotspot] no network found -- starting fallback hotspot")
-    ok, msg = start_hotspot()
-    print(f"[hotspot] fallback start: ok={ok} ({msg})")
+        return       # already on a network — nothing to do, no "searching" shown
+
+    # genuinely no network — light the OLED "Searching" screen and decide fast
+    oled._searching = True
+    try:
+        saved = _saved_wifi_profiles()
+        if saved:
+            # Only spend time retrying WiFi that is ACTUALLY in range (the
+            # radio-missed-first-association case). At a fresh venue none of
+            # the saved networks are present, so we skip straight to the
+            # hotspot instead of hunting for absent home networks for minutes.
+            try:
+                _, visible = _scan_wifi()
+                in_range = ({n["ssid"].lower() for n in visible}
+                            & {x.lower() for x in saved})
+            except Exception:
+                in_range = set()
+            if in_range:
+                for attempt in range(2):
+                    print(f"[hotspot] saved WiFi in range -- joining ({attempt + 1}/2)")
+                    if _try_saved_wifi():
+                        return
+                    time.sleep(10)
+                    if get_network_info()["ip"] != "unknown":
+                        return
+            else:
+                print("[hotspot] no saved network in range -- hotspot now")
+        print("[hotspot] no network found -- starting fallback hotspot")
+        ok, msg = start_hotspot()
+        print(f"[hotspot] fallback start: ok={ok} ({msg})")
+    finally:
+        oled._searching = False
     while ok and hotspot_is_active():
         time.sleep(600)
         if not hotspot_is_active():
