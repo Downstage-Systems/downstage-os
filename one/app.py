@@ -1906,6 +1906,7 @@ def status():
                   "offset_min": int((datetime.datetime.now().astimezone().utcoffset() or datetime.timedelta()).total_seconds() // 60)},
         "hdmi_connected":       hdmi_connected(),
         "setup_done":           bool(config.get("setup_done")),
+        "failsafe":             {"last": _failsafe["last"], "result": _failsafe["result"]},
         "ontime_installed":     ontime_installed(),
         "ontime_running":       ontime_is_running(),
         "companion_installed":  companion_is_installed(),
@@ -3514,6 +3515,85 @@ def _probe_async_if_stale(max_age=60):
 
 
 threading.Thread(target=_portal_loop, daemon=True).start()
+
+# ── Failsafe SD sync ──────────────────────────────────────────────────────────
+# The internal microSD is a dormant bootable copy of the golden image. Once a
+# day (and on demand) we copy the LIVE show state onto it — kiosk config,
+# OnTime projects, Companion config+modules, WiFi profiles — so an NVMe
+# failure at showtime boots into tonight's setup, not factory emptiness.
+# rsync --delete keeps only the most recent state; a sync never runs when the
+# unit is already running FROM the SD.
+
+_failsafe = {"last": 0.0, "result": None}
+_FAILSAFE_MNT = "/mnt/failsafe-sd"
+
+def _failsafe_sync_once():
+    try:
+        root = subprocess.run(["findmnt", "-n", "-o", "SOURCE", "/"],
+                              capture_output=True, text=True, timeout=10).stdout.strip()
+        if "nvme" not in root:
+            return "running from the failsafe SD — sync skipped"
+        if not os.path.exists("/dev/mmcblk0p2"):
+            return "no failsafe SD present"
+        subprocess.run(["sudo", "mkdir", "-p", _FAILSAFE_MNT], check=True, timeout=10)
+        m = subprocess.run(["sudo", "mount", "/dev/mmcblk0p2", _FAILSAFE_MNT],
+                           capture_output=True, text=True, timeout=30)
+        if m.returncode != 0 and "already mounted" not in (m.stderr or ""):
+            return f"mount failed: {(m.stderr or '').strip()}"
+        try:
+            pairs = [
+                ("/home/pi/ontime-kiosk/config.json",
+                 f"{_FAILSAFE_MNT}/home/pi/ontime-kiosk/config.json"),
+                ("/home/pi/.getontime/",
+                 f"{_FAILSAFE_MNT}/home/pi/.getontime/"),
+                ("/home/companion/.config/companion-nodejs/",
+                 f"{_FAILSAFE_MNT}/home/companion/.config/companion-nodejs/"),
+                ("/etc/NetworkManager/system-connections/",
+                 f"{_FAILSAFE_MNT}/etc/NetworkManager/system-connections/"),
+            ]
+            errs = []
+            for src, dst in pairs:
+                if not os.path.exists(src):
+                    continue
+                r = subprocess.run(["sudo", "rsync", "-a", "--delete", src, dst],
+                                   capture_output=True, text=True, timeout=600)
+                # 23/24 = some files vanished mid-copy (live system) — retry once
+                if r.returncode in (23, 24):
+                    r = subprocess.run(["sudo", "rsync", "-a", "--delete", src, dst],
+                                       capture_output=True, text=True, timeout=600)
+                if r.returncode not in (0, 23, 24):
+                    errs.append(f"{src}: rc{r.returncode} {(r.stderr or '')[:120]}")
+            subprocess.run(["sudo", "sync"], timeout=60)
+            if errs:
+                _failsafe["result"] = "partial: " + " | ".join(errs)
+                return _failsafe["result"]
+        finally:
+            subprocess.run(["sudo", "umount", _FAILSAFE_MNT], timeout=60)
+        _failsafe.update(last=time.time(), result="ok")
+        _audit("FAILSAFE-SYNC", "show state copied to failsafe SD")
+        return "ok"
+    except Exception as e:
+        _failsafe["result"] = f"error: {e}"
+        return f"error: {e}"
+
+
+def _failsafe_loop():
+    time.sleep(600)          # settle after boot
+    while True:
+        r = _failsafe_sync_once()
+        print(f"[failsafe] daily sync: {r}")
+        time.sleep(86400)
+
+
+@app.route("/failsafe/sync", methods=["POST"])
+def failsafe_sync_route():
+    r = _failsafe_sync_once()
+    return jsonify({"ok": r == "ok", "message": r,
+                    "last": _failsafe["last"]})
+
+
+threading.Thread(target=_failsafe_loop, daemon=True).start()
+
 
 
 @app.route("/wifi/connect", methods=["POST"])
