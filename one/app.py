@@ -3237,10 +3237,12 @@ def diagnostics():
                    sh("nmcli connection show") + "\n=== wifi ===\n" +
                    sh("nmcli -t -f active,ssid,signal dev wifi 2>/dev/null | head -20"))
         z.writestr("system.txt", sh("uptime") + sh("free -m") + sh("df -h /") +
-                   sh("vcgencmd measure_temp 2>/dev/null") +
-                   sh("vcgencmd measure_volts 2>/dev/null") +
+                   # vcgencmd needs root on this image (/dev/vcio perms) —
+                   # temp via sysfs, the rest via sudo, or support flies blind
+                   f"cpu_temp: {_cpu_temp() or 'unavailable'}\n" +
+                   sh("sudo vcgencmd measure_volts 2>/dev/null") +
                    "throttling (0x0 = never undervolted/throttled; bit0=UV now, "
-                   "bit16=UV since boot): " + sh("vcgencmd get_throttled 2>/dev/null") +
+                   "bit16=UV since boot): " + sh("sudo vcgencmd get_throttled 2>/dev/null") +
                    sh("cat /proc/device-tree/model 2>/dev/null; echo"))
         z.writestr("storage.txt",
                    sh("lsblk -o NAME,SIZE,TYPE,MOUNTPOINT") + "\n=== boot device errors ===\n" +
