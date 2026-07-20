@@ -1900,8 +1900,9 @@
     pollJobRibbon();   // amber ribbon + elapsed timer while it copies
   }
   function copyIp(ip) {
-    const addr = 'http://' + ip + ':8080/';
-    const done = () => showToast('Address copied — ' + addr, 'success');
+    const addr = ip;   // bare IP: it gets pasted into server fields, pings,
+                       // Companion configs — not just browsers
+    const done = () => showToast('Copied ' + addr, 'success');
     if (navigator.clipboard && window.isSecureContext) {
       navigator.clipboard.writeText(addr).then(done);
     } else {
@@ -3134,7 +3135,7 @@
       const prim = i.iface === primary ? '<span class="iprim">PRIMARY</span>' : '';
       return '<div class="iface-row"><span class="idot"></span>' +
         '<span class="ikind">' + i.kind + '</span>' +
-        '<span class="iip" onclick="copyIp(\'' + i.ip + '\')" title="Click to copy http://' + i.ip + ':8080/">' + i.ip + '</span>' + prim +
+        '<span class="iip" onclick="copyIp(\'' + i.ip + '\')" title="Click to copy this address">' + i.ip + '</span>' + prim +
         '<span class="idev">' + i.iface + '</span></div>';
     }).join('');
   }
