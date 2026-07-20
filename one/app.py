@@ -3688,7 +3688,7 @@ def _enforce_eth_linklocal():
             cur = subprocess.check_output(
                 ["nmcli", "-g", "ipv4.link-local", "connection", "show", name],
                 text=True, timeout=10).strip()
-            if cur != "fallback":
+            if cur not in ("fallback", "4"):   # nmcli -g prints the enum number
                 subprocess.run(["sudo", "nmcli", "connection", "modify", name,
                                 "ipv4.link-local", "fallback",
                                 "ipv4.dhcp-timeout", "20"],
