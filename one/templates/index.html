@@ -2625,10 +2625,8 @@
   }
   function openCompanionButtons() {
     // Companion's web button surface — the Stream Deck, but on this device.
-    // Phones get a 3-column cap so buttons stay thumb-sized.
-    const mobile = window.matchMedia('(max-width: 560px)').matches;
-    const params = mobile ? '/?max_col=3&min_col=0' : '';
-    openExternal(`http://${window.location.hostname}:8000/tablet${params}`);
+    // Same default address everywhere; Companion's own layout handles size.
+    openExternal(`http://${window.location.hostname}:8000/tablet`);
   }
 
   // ── OnTime Editor ─────────────────────────────────────────────────────────────
