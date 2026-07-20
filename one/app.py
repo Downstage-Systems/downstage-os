@@ -1657,8 +1657,8 @@ class OLEDDisplay:
             print(f"[oled] qr page: {e}")
             return False
 
-    def countdown(self, n):
-        """Full-screen digit while the power button is held — 3, 2, 1."""
+    def countdown(self, n, msg="Hold to shut down"):
+        """Full-screen text while the power button is held — 3, 2, 1, OFF."""
         if not self._device:
             return
         self._hold_until = time.monotonic() + 2   # keep the status loop away
@@ -1679,10 +1679,17 @@ class OLEDDisplay:
                               s, font=font, fill=255)
                 else:
                     draw.text((60, 20), s, fill=255)
-                msg = "Hold to shut down"
-                draw.text(((128 - draw.textlength(msg)) / 2, 52), msg, fill=255)
+                if msg:
+                    draw.text(((128 - draw.textlength(msg)) / 2, 52), msg, fill=255)
         except Exception as e:
             print(f"[oled] countdown: {e}")
+
+    def confirm_off(self):
+        """The hold registered — big OFF, hands can let go. The farewell
+        screen replaces this as the system actually powers down."""
+        self._hold_until = time.monotonic() + 30   # nothing paints over OFF
+        self.countdown("OFF", msg="Let go — shutting down")
+        self._hold_until = time.monotonic() + 30   # countdown() shortened it
 
     def resume(self):
         """Countdown cancelled — hand the panel back to the status loop."""
@@ -1770,6 +1777,7 @@ def _power_button_monitor():
                     oled.resume()
                 continue
             print("[pwrbtn] 3 s hold — shutting down")
+            oled.confirm_off()
             _audit("SHUTDOWN", "front button 3 s hold")
             close_all_windows()
             subprocess.Popen(["sudo", "poweroff"])
