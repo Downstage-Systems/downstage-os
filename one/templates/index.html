@@ -1924,6 +1924,13 @@
       ta.remove();
     }
   }
+  function downloadFile(url) {
+    // anchor-click download: never a page navigation, so it can't abort
+    // other in-flight requests (location.href downloads killed update POSTs)
+    const a = document.createElement('a');
+    a.href = url; a.download = '';
+    document.body.appendChild(a); a.click(); a.remove();
+  }
   function openExternal(url) {
     const a = document.createElement('a');
     a.href = url; a.target = '_blank'; a.rel = 'noopener';
@@ -2487,7 +2494,7 @@
 
   function downloadCompanionConfig() {
     showToast('Preparing Companion config backup…', 'info');
-    window.location.href = '/companion/config-download';
+    downloadFile('/companion/config-download');
   }
 
   // ── persistent job ribbon: any long updater shows progress across the page ──
@@ -3357,7 +3364,7 @@
 
   // ── Config backup / restore ───────────────────────────────────────────────────
   function downloadConfig() {
-    window.location = '/config/download';
+    downloadFile('/config/download');
   }
 
   // ── Update check ─────────────────────────────────────────────────────────────
