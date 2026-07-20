@@ -1514,6 +1514,13 @@ class OLEDDisplay:
         connected = check_ontime(ip, timeout=2) if ip else False
         net       = get_network_info()
 
+        # the panel notices a network change before anyone else — use that to
+        # re-probe portal/internet immediately instead of waiting the 2 min
+        cur_net = (net["iface"], net["ip"])
+        if cur_net != getattr(self, "_last_net", None):
+            self._last_net = cur_net
+            _probe_async_if_stale(max_age=0)
+
         pw = _power_state()
         # header corner: the clock — on a timer appliance, visibly-correct
         # time IS a health indicator (RTC + NTP at a glance). Temp only
