@@ -2509,6 +2509,12 @@
     try { j = await (await fetch('/jobs')).json(); } catch { return; }
     const r = document.getElementById('job-ribbon');
     if (!j || !j.name || j.state === 'idle') { r.className = ''; document.body.classList.remove('job-ribboned'); return; }
+    // a finished job is only news for a couple of minutes — after that a
+    // page load shouldn't resurrect the ribbon (daily backups made every
+    // refresh open with "finished")
+    if (j.state !== 'running' && j.finished && Date.now() / 1000 - j.finished > 120) {
+      r.className = ''; document.body.classList.remove('job-ribboned'); return;
+    }
     const key = j.name + j.started;
     if (key !== _lastJobKey) { _jobDismissed = false; _lastJobKey = key; }
     if (j.state !== 'running' && _jobDismissed) return;

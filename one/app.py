@@ -2845,7 +2845,8 @@ def companion_rescan_usb():
 # A slow updater used to block its HTTP request for minutes with zero feedback.
 # Jobs now run in a worker; the UI's persistent ribbon polls /jobs.
 
-_JOB = {"name": "", "label": "", "state": "idle", "started": 0.0, "detail": ""}
+_JOB = {"name": "", "label": "", "state": "idle", "started": 0.0, "detail": "",
+        "finished": 0.0}
 _job_lock = threading.Lock()
 
 
@@ -2866,6 +2867,8 @@ def _start_job(name, label, fn):
         except Exception as e:
             _JOB["state"] = "failed"
             _JOB["detail"] = str(e)
+        finally:
+            _JOB["finished"] = time.time()
     threading.Thread(target=run, daemon=True).start()
     return True
 
