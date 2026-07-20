@@ -1612,7 +1612,7 @@
             <button class="btn-sm" id="os-check-btn" onclick="osRecheck()" title="Check GitHub for a newer Downstage OS release">Check</button>
             <button class="btn-sm" onclick="osInstallFile()" title="Install a downloaded release archive — for venues with no internet">Install from file</button>
             <input type="file" id="os-file-input" accept=".tar.gz,.tgz,application/gzip" style="display:none" onchange="osUpdateFromFile(this)">
-            <button class="btn-sm" onclick="window.location='/diagnostics'" title="Download a support diagnostics bundle">Diagnostics</button>
+            <button class="btn-sm" onclick="diagDownload()" title="Download a support diagnostics bundle">Diagnostics</button>
           </div>
           <div class="external-url-hint" id="os-update-note" style="display:none"></div>
           <div id="patches-row" style="display:none; margin-top:12px; padding-top:12px; border-top:1px solid var(--border)">
@@ -1898,6 +1898,10 @@
     const d = await r.json();
     if (!d.ok) { showToast(d.message, 'error'); return; }
     pollJobRibbon();   // amber ribbon + elapsed timer while it copies
+  }
+  function diagDownload() {
+    if (!confirm('Download the diagnostics bundle?\n\nIt contains: system and network info, unit settings, app logs, and the hardware/access audit log (power events, hardware changes, SSH logins — not show content, and no passwords).\n\nIt goes only where you send it.')) return;
+    downloadFile('/diagnostics');
   }
   function copyIp(ip) {
     const addr = ip;   // bare IP: it gets pasted into server fields, pings,
