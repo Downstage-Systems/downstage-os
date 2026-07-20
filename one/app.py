@@ -3671,6 +3671,36 @@ def _updates_loop():
 threading.Thread(target=_updates_loop, daemon=True).start()
 
 
+def _enforce_eth_linklocal():
+    """Direct-cable control: with no router (and no DHCP), fall back to a
+    self-assigned 169.254.x address so laptop-to-unit ethernet just works —
+    mDNS resolves downstage-XXXX.local over the link. 'fallback' only fires
+    when DHCP truly fails, so normal venue networks are unaffected."""
+    time.sleep(30)
+    try:
+        out = subprocess.check_output(
+            ["nmcli", "-t", "-f", "NAME,TYPE", "connection", "show"],
+            text=True, timeout=10)
+        for line in out.splitlines():
+            if not line.endswith(":802-3-ethernet"):
+                continue
+            name = line.rsplit(":", 1)[0]
+            cur = subprocess.check_output(
+                ["nmcli", "-g", "ipv4.link-local", "connection", "show", name],
+                text=True, timeout=10).strip()
+            if cur != "fallback":
+                subprocess.run(["sudo", "nmcli", "connection", "modify", name,
+                                "ipv4.link-local", "fallback",
+                                "ipv4.dhcp-timeout", "20"],
+                               timeout=15)
+                print(f"[net] link-local fallback enabled on '{name}'")
+    except Exception as e:
+        print(f"[net] link-local enforcement: {e}")
+
+
+threading.Thread(target=_enforce_eth_linklocal, daemon=True).start()
+
+
 def _failsafe_loop():
     time.sleep(600)          # settle after boot
     while True:
