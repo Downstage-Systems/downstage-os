@@ -3533,6 +3533,9 @@ _portal = {"detected": False, "iface": "", "checked": 0, "internet": None}
 def _probe_portal():
     """Portal signature (captured live at a Hilton/Meraki): plain-HTTP probe
     that should 204 comes back as a redirect to an auth host instead."""
+    # judge EVERY up interface — a dual-homed unit can have a portal on the
+    # WiFi leg while ethernet has clean internet, and both facts matter
+    detected, piface, internet = False, "", False
     for iface in ("wlan0", "eth0"):
         try:
             if not os.path.isdir(f"/sys/class/net/{iface}"):
@@ -3546,17 +3549,13 @@ def _probe_portal():
                 capture_output=True, text=True, timeout=12)
             code, _, redirect = r.stdout.strip().partition(" ")
             if code == "204":
-                _portal.update(detected=False, iface="", internet=True)
-                _portal["checked"] = time.time()
-                return
-            if code.startswith("3") and redirect:
-                _portal.update(detected=True, iface=iface, internet=False)
-                _portal["checked"] = time.time()
-                return
+                internet = True
+            elif code.startswith("3") and redirect:
+                detected = True
+                piface = piface or iface
         except Exception:
             continue
-    # no interface produced a clean 204: LAN may be fine, internet is not
-    _portal.update(detected=False, iface="", internet=False)
+    _portal.update(detected=detected, iface=piface, internet=internet)
     _portal["checked"] = time.time()
 
 

@@ -2176,7 +2176,19 @@
       document.getElementById('watchdog-bar').style.display  = d.watchdog_override  ? 'flex' : 'none';
       if (d.blackout !== blackoutActive) { blackoutActive = d.blackout; renderBlackoutBtn(); }
       const pn = document.getElementById('portal-note');
-      if (pn) pn.style.display = d.portal?.detected ? '' : 'none';
+      if (pn) {
+        pn.style.display = d.portal?.detected ? '' : 'none';
+        if (d.portal?.detected) {
+          pn.textContent = d.portal.internet
+            ? 'Captive portal on the WiFi leg — internet is flowing over the other ' +
+              'connection, so nothing is affected. The WiFi only becomes useful for ' +
+              'internet once its portal is cleared (travel router or phone hotspot instead).'
+            : 'Captive portal detected on this network — show functions are unaffected, but ' +
+              'internet features (updates, time sync) are paused until the portal is cleared. ' +
+              "Portals can't be completed from a headless unit: use the built-in hotspot for " +
+              'control, or a travel router for full networking.';
+        }
+      }
       const pill = document.getElementById('inet-pill');
       if (pill && d.portal && d.portal.internet !== null && d.portal.internet !== undefined) {
         pill.style.display = '';
