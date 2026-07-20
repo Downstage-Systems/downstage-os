@@ -3044,12 +3044,13 @@ def _try_saved_wifi():
 
 def _hotspot_fallback():
     """Provisioning aid: no network after boot -> start the hotspot so the
-    setup UI is reachable. When saved WiFi credentials exist, keep nudging
-    NetworkManager at them first (the radio can miss its first association
-    after a reboot) and only give up after several tries. Once the hotspot
-    is up it owns the radio, so NM can never rejoin WiFi on its own -- while
-    nobody is connected to the hotspot, quietly retry the saved WiFi every
-    10 minutes and retire the hotspot if it succeeds."""
+    setup UI is reachable. Scan-first: saved WiFi is only retried when it is
+    actually in range (the radio can miss its first association after a
+    reboot); at a fresh venue with no known networks the hotspot comes up
+    within ~30s. Once the hotspot is up it owns the radio, so NM can never
+    rejoin WiFi on its own -- while nobody is connected to the hotspot,
+    quietly retry the saved WiFi every 10 minutes and retire the hotspot if
+    it succeeds. The OLED shows a live Searching screen for the whole hunt."""
     time.sleep(8)    # short ethernet-DHCP grace: a wired unit connects here
     config = load_config()
     if not config.get("hotspot_auto", True) or hotspot_is_active():
@@ -3060,6 +3061,7 @@ def _hotspot_fallback():
     # genuinely no network — light the OLED "Searching" screen for the WHOLE
     # hunt so the wait is always visible, not just the brief scan
     oled._searching = True
+    ok = False   # defined before the try: the idle-retry loop below reads it
     try:
         # give WiFi autoconnect a moment while we visibly search (~12s)
         for _ in range(6):
@@ -3074,6 +3076,8 @@ def _hotspot_fallback():
             # hotspot instead of hunting for absent home networks for minutes.
             try:
                 _, visible = _scan_wifi()
+                # NB: saved entries are NM connection NAMES — this match works
+                # because wifi_connect names every profile after its SSID
                 in_range = ({n["ssid"].lower() for n in visible}
                             & {x.lower() for x in saved})
             except Exception:
