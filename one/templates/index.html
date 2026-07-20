@@ -2538,7 +2538,18 @@
       const d = await r.json();
       if (d.ok) { showToast('Update started — progress in the status bar at the top.', 'info'); pollJobRibbon(); }
       else showToast(d.message || 'Update could not start.', 'error');
-    } catch { showToast('Network error during update.', 'error'); }
+    } catch {
+      // the click never reached the unit — nothing started. Say so plainly,
+      // then verify against the job registry once the unit answers again
+      showToast('Could not reach the unit — the update did NOT start. If the unit is restarting, wait a few seconds and try again.', 'error');
+      setTimeout(async () => {
+        try {
+          const j = await (await fetch('/jobs')).json();
+          if (j.state === 'running') { showToast('Actually — a job IS running. Watch the top bar.', 'info'); pollJobRibbon(); }
+          else showToast('Confirmed: nothing ran. The unit is untouched — try again when ready.', 'info');
+        } catch (e) {}
+      }, 5000);
+    }
     finally {
       const b = document.getElementById('companion-inline-update-btn');
       if (b) { b.disabled = false; b.textContent = 'Update'; }
@@ -3551,7 +3562,18 @@
       if (d.reverted) showToast(`Update failed — ${d.message}`, 'error');
       else showToast(d.ok ? `OnTime updated: ${d.message}` : `Update failed: ${d.message}`, d.ok ? 'success' : 'error');
       setTimeout(loadUpdateStatus, 2000);
-    } catch { showToast('Network error during update.', 'error'); }
+    } catch {
+      // the click never reached the unit — nothing started. Say so plainly,
+      // then verify against the job registry once the unit answers again
+      showToast('Could not reach the unit — the update did NOT start. If the unit is restarting, wait a few seconds and try again.', 'error');
+      setTimeout(async () => {
+        try {
+          const j = await (await fetch('/jobs')).json();
+          if (j.state === 'running') { showToast('Actually — a job IS running. Watch the top bar.', 'info'); pollJobRibbon(); }
+          else showToast('Confirmed: nothing ran. The unit is untouched — try again when ready.', 'info');
+        } catch (e) {}
+      }, 5000);
+    }
   }
 
   async function revertOntimeServer() {
