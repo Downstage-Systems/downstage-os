@@ -1457,6 +1457,23 @@ class OLEDDisplay:
         except Exception as e:
             print(f"[oled] shutdown screen: {e}")
 
+    def restart_screen(self):
+        """Held on the panel through the reboot (the OLED keeps its frame
+        while powered) until the fresh boot's splash replaces it."""
+        if not self._device:
+            return
+        try:
+            self._stop.set()   # status loop must not paint over this
+            with luma_canvas(self._device) as draw:
+                # circular-arrow motif
+                draw.arc([52, 4, 76, 28], 300, 210, fill=255, width=3)
+                draw.polygon([(72, 3), (80, 9), (70, 13)], fill=255)
+                for text, y in (("Restarting", 38), ("back in about 30 seconds", 52)):
+                    w = draw.textlength(text)
+                    draw.text(((128 - w) / 2, y), text, fill=255)
+        except Exception as e:
+            print(f"[oled] restart screen: {e}")
+
     def _render(self):
         if not self._device:
             return
@@ -2299,6 +2316,7 @@ def detect_timezone():
 @app.route("/system/restart", methods=["POST"])
 def system_restart():
     close_all_windows()
+    oled.restart_screen()
     def do_restart():
         time.sleep(1)
         subprocess.Popen(["sudo", "reboot"])
