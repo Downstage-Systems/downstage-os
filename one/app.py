@@ -3577,6 +3577,16 @@ def _failsafe_sync_once():
         return f"error: {e}"
 
 
+def _updates_loop():
+    """Boot fires the first check; this keeps long-running units current."""
+    while True:
+        time.sleep(86400)
+        _check_updates_background()
+
+
+threading.Thread(target=_updates_loop, daemon=True).start()
+
+
 def _failsafe_loop():
     time.sleep(600)          # settle after boot
     while True:

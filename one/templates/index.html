@@ -3363,6 +3363,12 @@
     try {
       const r = await fetch('/update-status');
       const d = await r.json();
+      // right after boot the background check may still be running — keep
+      // asking until every component has actually answered (the "stuck on
+      // checking until refresh" bug)
+      if (!(d.os?.checked && d.ontime?.checked && d.companion?.checked)) {
+        setTimeout(loadUpdateStatus, 5000);
+      }
       renderVersionRow('ontime',    d.ontime);
       renderVersionRow('companion', d.companion);
       renderVersionRow('os',        d.os);
