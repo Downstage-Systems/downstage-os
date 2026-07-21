@@ -1139,6 +1139,9 @@
       <!-- Remote: IP -->
       <div id="remote-section" class="field full-only">
         <div class="section-label">OnTime Server Address</div>
+        <div id="remote-local-note" class="tz-note" style="display:none; margin:0 0 12px">
+          The onboard OnTime server is still running in the background — your local rundown
+          stays ready for whenever you switch back. Displays follow the remote server below.</div>
         <div class="ip-row">
           <div class="ip-input-wrap">
             <input type="text" id="ip" placeholder="192.168.1.100"
@@ -2227,6 +2230,8 @@
       if (inet) inet.style.display =
         (d.portal && d.portal.internet === false && !d.portal.detected) ? '' : 'none';
       renderInterfaces(d.interfaces, d.net_iface);
+      const rln = document.getElementById('remote-local-note');
+      if (rln) rln.style.display = (d.mode === 'remote' && d.ontime_running) ? '' : 'none';
       if (window._clockSync) _clockSync(d.clock);
       wizMaybeShow(d);
       if (d.hdmi_connected) for (const n of ['1','2']) {
