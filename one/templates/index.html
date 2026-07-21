@@ -1825,7 +1825,6 @@
   function selectIpHistory(ip) {
     document.getElementById('ip').value = ip;
     document.getElementById('ip-history-dropdown').classList.remove('open');
-    markDirty();
   }
 
   // ── State ────────────────────────────────────────────────────────────────────
@@ -2947,9 +2946,10 @@
       document.getElementById('tpane-' + x)?.classList.toggle('on', x === t);
       document.getElementById('stab-' + x)?.classList.toggle('on', x === t);
     }
-    // the OnTime tab has no Save & Apply — its controls act instantly
+    // Save & Apply belongs to Displays alone — every other tab's controls
+    // act instantly through their own buttons
     const sa = document.getElementById('save-actions');
-    if (sa) sa.style.display = t === 'timer' ? 'none' : '';
+    if (sa) sa.style.display = t === 'displays' ? '' : 'none';
     // top-anchored page: a tab switch puts the chrome back at the top
     if (window.scrollY > 0) window.scrollTo(0, 0);
     try { localStorage.setItem('ds1-setup-tab', t); } catch (e) {}
