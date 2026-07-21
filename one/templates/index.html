@@ -213,8 +213,11 @@
     .mode-btn svg { width: 15px; height: 15px; fill: currentColor; }
     .mode-btn.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 6px rgba(0,0,0,0.4); }
     .mode-toggle:not(.view-toggle) .mode-btn.active {
-      background: var(--green-bg); color: var(--green);
-      box-shadow: inset 0 0 0 1px var(--green-bd); }
+      background: var(--surface); color: var(--amber);
+      box-shadow: 0 1px 6px rgba(0,0,0,0.4); }
+    .mode-active-tag { font-family: var(--font-mono); font-size: 10px;
+      letter-spacing: 0.1em; text-transform: uppercase; color: var(--green);
+      margin-left: 8px; }
 
     /* ── Fields ── */
     .field { margin-bottom: 22px; }
@@ -1131,11 +1134,11 @@
       <div class="mode-toggle full-only">
         <button class="mode-btn" id="btn-local" onclick="setMode('local')">
           <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-5 12H4v-2h11v2zm5-4H4v-2h16v2zm0-4H4V6h16v2z"/></svg>
-          On This One
+          Local Server<span class="mode-active-tag" id="active-tag-local" style="display:none">Active</span>
         </button>
         <button class="mode-btn" id="btn-remote" onclick="setMode('remote')">
           <svg viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3a4.237 4.237 0 00-6 0zm-4-4l2 2a7.074 7.074 0 0110 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
-          Remote Server
+          Remote Server<span class="mode-active-tag" id="active-tag-remote" style="display:none">Active</span>
         </button>
       </div>
 
@@ -1674,7 +1677,7 @@
 
       </div><!-- /tpane-system -->
       <!-- Save -->
-      <div class="actions">
+      <div class="actions" id="save-actions">
         <button class="btn-primary" id="save-btn" onclick="saveAndConnect()">
           <svg viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
           Save &amp; Apply
@@ -1995,9 +1998,16 @@
   // ── Mode ─────────────────────────────────────────────────────────────────────
   function setMode(mode) {
     // the toggle only navigates between the two sections — nothing changes
-    // until an explicit action (Start Server / Connect). Green pill = truth.
+    // until an explicit action (Start Server / Connect). Amber = where you're
+    // looking; the green Active tag = what's actually running.
+    setModeButtons(mode);
     showModeSection(mode);
     wizUpdateActivate();
+  }
+
+  function updateActiveTags() {
+    document.getElementById('active-tag-local').style.display  = currentMode === 'local'  ? '' : 'none';
+    document.getElementById('active-tag-remote').style.display = currentMode === 'remote' ? '' : 'none';
   }
 
   function wizUpdateActivate() {
@@ -2014,7 +2024,7 @@
       const d = await r.json();
       if (!d.ok) { showToast(d.error || 'Could not switch.', 'error'); return; }
       currentMode = 'local';
-      setModeButtons('local');
+      updateActiveTags();
       wizUpdateActivate();
       showToast(d.message, 'success');
       fetchStatus(true);
@@ -2035,7 +2045,7 @@
       const d = await r.json();
       if (!d.ok) { showToast(d.error || 'Could not connect.', 'error'); return; }
       currentMode = 'remote';
-      setModeButtons('remote');
+      updateActiveTags();
       wizUpdateActivate();
       showToast(d.message, 'success');
       fetchStatus(true);
@@ -2053,9 +2063,11 @@
     document.getElementById('local-section').style.display  = mode === 'local'  ? '' : 'none';
   }
 
-  function applyMode(mode) {   // load-time init: sections + buttons from truth
+  function applyMode(mode) {   // load-time init: look at the active side
     setModeButtons(mode);
     showModeSection(mode);
+    updateActiveTags();
+    wizUpdateActivate();
   }
 
   // ── HDMI tabs ────────────────────────────────────────────────────────────────
@@ -2297,7 +2309,7 @@
         (d.portal && d.portal.internet === false && !d.portal.detected) ? '' : 'none';
       renderInterfaces(d.interfaces, d.net_iface);
       _otHost = (d.mode === 'remote' && d.ip) ? d.ip : window.location.hostname;
-      if (d.mode && d.mode !== currentMode) { currentMode = d.mode; setModeButtons(d.mode); wizUpdateActivate(); }
+      if (d.mode && d.mode !== currentMode) { currentMode = d.mode; updateActiveTags(); wizUpdateActivate(); }
       const rln = document.getElementById('remote-local-note');
       if (rln) rln.style.display = (d.mode === 'remote' && d.ontime_installed) ? '' : 'none';
       if (window._clockSync) _clockSync(d.clock);
@@ -2935,6 +2947,9 @@
       document.getElementById('tpane-' + x)?.classList.toggle('on', x === t);
       document.getElementById('stab-' + x)?.classList.toggle('on', x === t);
     }
+    // the OnTime tab has no Save & Apply — its controls act instantly
+    const sa = document.getElementById('save-actions');
+    if (sa) sa.style.display = t === 'timer' ? 'none' : '';
     // top-anchored page: a tab switch puts the chrome back at the top
     if (window.scrollY > 0) window.scrollTo(0, 0);
     try { localStorage.setItem('ds1-setup-tab', t); } catch (e) {}
