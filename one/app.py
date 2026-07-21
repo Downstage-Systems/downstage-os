@@ -143,6 +143,7 @@ def load_config():
     data.setdefault("presets",           [])
     data.setdefault("watchdog",          True)
     data.setdefault("companion_channel", "stable")
+    data.setdefault("companion_emulator_id", "")
     data.setdefault("hdmi1_external_url", "")
     data.setdefault("hdmi2_external_url", "")
     # Per-unit identity from the build log (this unit: DS1-A-2607-0001)
@@ -2017,6 +2018,7 @@ def status():
         "hdmi_connected":       hdmi_connected(),
         "setup_done":           bool(config.get("setup_done")),
         "failsafe":             {"last": _failsafe["last"], "result": _failsafe["result"]},
+        "companion_emulator_id": config.get("companion_emulator_id", ""),
         "ontime_installed":     ontime_installed(),
         "ontime_running":       ontime_is_running(),
         "companion_installed":  companion_is_installed(),
@@ -2841,6 +2843,18 @@ def _companion_install_worker():
         _companion_install["state"] = "failed"
         _companion_install["message"] = str(e)
     print(f"[companion] install: {_companion_install['state']} {_companion_install['message'][:120]}")
+
+
+@app.route("/companion/emulator", methods=["POST"])
+def companion_emulator():
+    """Store the custom Companion emulator ID (Surfaces → Emulator). The
+    'emulator:' prefix Companion shows is accepted and stripped."""
+    data = request.get_json(silent=True) or {}
+    eid = (data.get("id") or "").strip()
+    if eid.lower().startswith("emulator:"):
+        eid = eid.split(":", 1)[1]
+    save_config({"companion_emulator_id": eid})
+    return jsonify({"ok": True, "id": eid})
 
 
 @app.route("/companion/install", methods=["POST"])

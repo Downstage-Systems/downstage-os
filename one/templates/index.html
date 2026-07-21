@@ -1094,6 +1094,9 @@
         <button class="btn-sm qb-companion" onclick="openCompanionButtons()" title="Open Companion's web button surface — your Stream Deck pages, tappable from this device" style="display:none">
           <svg viewBox="0 0 24 24"><path d="M4 4h4v4H4V4zm6 0h4v4h-4V4zm6 0h4v4h-4V4zM4 10h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4zM4 16h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4z"/></svg>
           Buttons</button>
+        <button class="btn-sm qb-companion qb-emulator" onclick="openEmulator()" title="Open your Companion emulator — the custom surface set on the Companion tab" style="display:none">
+          <svg viewBox="0 0 24 24"><path d="M20 5H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-1 2H5v-2h2v2zm0-3H5V8h2v2zm9 7H8v-2h8v2zm0-4h-2v-2h2v2zm0-3h-2V8h2v2zm3 3h-2v-2h2v2zm0-3h-2V8h2v2z"/></svg>
+          My Buttons</button>
         <button class="btn-sm qb-companion" onclick="openCompanion()" title="Open the Companion admin UI in a new tab — edit Stream Deck buttons and pages" style="display:none">
           <svg viewBox="0 0 24 24"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/></svg>
           Companion
@@ -1494,6 +1497,15 @@
             </div>
           </div>
           <div id="companion-channel-hint" style="display:none; margin-top:8px; font-size:12px; color:var(--muted)"></div>
+          <div class="channel-row" style="margin-top:12px">
+            <span class="channel-label">Emulator</span>
+            <input type="text" id="emulator-id" placeholder="emulator:XS82…  (Surfaces → Emulator ID)"
+                   style="flex:1; min-width:0" autocomplete="off" spellcheck="false">
+            <button class="btn-sm success" onclick="setEmulatorId()">Set</button>
+          </div>
+          <div class="external-url-hint" style="display:block; margin-top:6px">Paste a Companion
+            emulator ID and a My Buttons tile appears in Show Mode, opening that emulator
+            full-page. Clear the field and Set to remove it.</div>
           <div class="external-url-hint" style="display:block; margin-top:10px">Up to two 15-key Stream Decks can run from the USB ports (an XL counts as two — key backlights add up). For more, connect them through a powered USB hub.</div>
         </div>
       </div>
@@ -2250,6 +2262,13 @@
         .forEach(b => { b.style.display = d.connected ? '' : 'none'; });
       document.querySelectorAll('.show-quick .qb-companion')
         .forEach(b => { b.style.display = d.companion_running ? '' : 'none'; });
+      if (d.companion_emulator_id !== undefined) {
+        emulatorId = d.companion_emulator_id;
+        const ef = document.getElementById('emulator-id');
+        if (ef && document.activeElement !== ef) ef.value = emulatorId;
+      }
+      document.querySelectorAll('.show-quick .qb-emulator')
+        .forEach(b => { b.style.display = (d.companion_running && emulatorId) ? '' : 'none'; });
       const qb = document.getElementById('show-quick');
       if (qb) {
         qb.style.display = '';
@@ -2706,6 +2725,23 @@
 
   function openCompanion() {
     openExternal(`http://${window.location.hostname}:8000`);
+  }
+  let emulatorId = '';
+  async function setEmulatorId() {
+    const id = document.getElementById('emulator-id').value.trim();
+    const r = await fetch('/companion/emulator', { method: 'POST',
+      headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id }) });
+    const d = await r.json();
+    if (d.ok) {
+      emulatorId = d.id;
+      document.getElementById('emulator-id').value = d.id;
+      showToast(d.id ? 'Emulator set — My Buttons tile added to Show Mode.' : 'Emulator cleared.', 'success');
+      fetchStatus(true);
+    }
+  }
+  function openEmulator() {
+    if (!emulatorId) return;
+    openExternal(`http://${window.location.hostname}:8000/emulator/${emulatorId}`);
   }
   function openCompanionButtons() {
     // Companion's web button surface — the Stream Deck, but on this device.
