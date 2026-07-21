@@ -909,6 +909,8 @@
       #setup-tabs .stab-upd { top: 3px; right: 2px; width: 6px; height: 6px; }
       /* Show Mode tiles: all five across one row on a phone */
       body.show-mode .show-quick.qb-live { grid-template-columns: repeat(5, 1fr); gap: 6px; }
+      /* six tiles (My Buttons active): 3x2 reads better than a cramped 6-across */
+      body.show-mode .show-quick.qb-live.has-emu { grid-template-columns: repeat(3, 1fr); }
       .show-quick .btn-sm { border-radius: 12px; gap: 6px; padding: 6px 2px;
                             font-size: 8.5px; letter-spacing: 0.02em; }
       .show-quick .btn-sm svg { width: 20px; height: 20px; }
@@ -2295,8 +2297,10 @@
         const ef = document.getElementById('emulator-id');
         if (ef && document.activeElement !== ef) ef.value = emulatorId;
       }
+      const emuTileOn = !!(d.companion_running && emulatorId);
       document.querySelectorAll('.show-quick .qb-emulator')
-        .forEach(b => { b.style.display = (d.companion_running && emulatorId) ? '' : 'none'; });
+        .forEach(b => { b.style.display = emuTileOn ? '' : 'none'; });
+      document.getElementById('show-quick')?.classList.toggle('has-emu', emuTileOn);
       const qb = document.getElementById('show-quick');
       if (qb) {
         qb.style.display = '';
