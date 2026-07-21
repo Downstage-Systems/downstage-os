@@ -2749,7 +2749,7 @@
   }
 
   function openCompanion() {
-    openExternal(`http://${window.location.hostname}:8000`);
+    openPanel(`http://${window.location.hostname}:8000`, 'Companion');
   }
   let emulatorId = '';
   async function setEmulatorId() {
@@ -2764,12 +2764,13 @@
       fetchStatus(true);
     }
   }
-  function emulatorUrl() {
-    return `http://${window.location.hostname}:8000/emulator/${emulatorId}`;
-  }
-  function openEmulator() {
-    if (!emulatorId) return;
-    document.getElementById('emu-frame').src = emulatorUrl();
+  // in-UI panel: every quick-action tool opens inside Show Mode, with a
+  // pop-out for when it deserves its own tab
+  let _panelUrl = '';
+  function openPanel(url, title) {
+    _panelUrl = url;
+    document.querySelector('#emu-overlay .emu-title').textContent = title || 'Panel';
+    document.getElementById('emu-frame').src = url;
     document.getElementById('emu-overlay').classList.add('on');
   }
   function closeEmulator() {
@@ -2777,13 +2778,16 @@
     document.getElementById('emu-frame').src = 'about:blank';   // stop it cold
   }
   function emuPopOut() {
+    const u = _panelUrl;
     closeEmulator();
-    openExternal(emulatorUrl());
+    if (u) openExternal(u);
+  }
+  function openEmulator() {
+    if (!emulatorId) return;
+    openPanel(`http://${window.location.hostname}:8000/emulator/${emulatorId}`, 'My Buttons');
   }
   function openCompanionButtons() {
-    // Companion's web button surface — the Stream Deck, but on this device.
-    // Same default address everywhere; Companion's own layout handles size.
-    openExternal(`http://${window.location.hostname}:8000/tablet`);
+    openPanel(`http://${window.location.hostname}:8000/tablet`, 'Buttons');
   }
 
   // ── OnTime Editor ─────────────────────────────────────────────────────────────
@@ -3002,7 +3006,8 @@
     const host = currentMode === 'remote'
       ? (document.getElementById('ip').value.trim() || window.location.hostname)
       : window.location.hostname;
-    openExternal(`http://${host}:4001${path}`);
+    const titles = { '/editor/': 'OnTime Editor', '/timercontrol': 'Timer Control' };
+    openPanel(`http://${host}:4001${path}`, titles[path] || 'OnTime');
   }
 
   // ── Show / Full view mode — persisted per browser ──
