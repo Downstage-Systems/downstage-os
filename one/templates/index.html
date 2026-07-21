@@ -1906,6 +1906,9 @@
     if (!confirm('Download the diagnostics bundle?\n\nIt contains: system and network info, unit settings, app logs, and the hardware/access audit log (power events, hardware changes, SSH logins — not show content, and no passwords).\n\nIt goes only where you send it.')) return;
     downloadFile('/diagnostics');
   }
+  // the OnTime server the UI should open: the remote one when in remote
+  // mode (displays already follow it — the operator links must too)
+  let _otHost = window.location.hostname;
   function copyIp(ip) {
     const addr = ip;   // bare IP: it gets pasted into server fields, pings,
                        // Companion configs — not just browsers
@@ -2230,6 +2233,7 @@
       if (inet) inet.style.display =
         (d.portal && d.portal.internet === false && !d.portal.detected) ? '' : 'none';
       renderInterfaces(d.interfaces, d.net_iface);
+      _otHost = (d.mode === 'remote' && d.ip) ? d.ip : window.location.hostname;
       const rln = document.getElementById('remote-local-note');
       if (rln) rln.style.display = (d.mode === 'remote' && d.ontime_running) ? '' : 'none';
       if (window._clockSync) _clockSync(d.clock);
@@ -2636,7 +2640,7 @@
 
   // ── OnTime Editor ─────────────────────────────────────────────────────────────
   function openEditor() {
-    openExternal(`http://${window.location.hostname}:4001/editor/`);
+    openExternal(`http://${_otHost}:4001/editor/`);
   }
 
 
