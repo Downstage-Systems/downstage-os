@@ -1890,6 +1890,12 @@ def save():
             if not ok:
                 return jsonify({"ok": False, "error": msg})
             time.sleep(3)
+    elif ontime_is_running():
+        # the mode IS the truth: Remote means the onboard server stands down.
+        # ontime_autostart is untouched — switching back to Local (or booting
+        # in Local mode) brings it straight back; the rundown lives on disk.
+        stop_local_ontime()
+        print("[save] remote mode — onboard OnTime stopped")
 
     history = _update_ip_history(ip) if mode == "remote" else load_config().get("ip_history", [])
     save_config({
