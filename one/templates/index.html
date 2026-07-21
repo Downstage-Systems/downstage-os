@@ -909,8 +909,11 @@
       #setup-tabs .stab-upd { top: 3px; right: 2px; width: 6px; height: 6px; }
       /* Show Mode tiles: all five across one row on a phone */
       body.show-mode .show-quick.qb-live { grid-template-columns: repeat(5, 1fr); gap: 6px; }
-      /* six tiles (My Buttons active): 3x2 reads better than a cramped 6-across */
-      body.show-mode .show-quick.qb-live.has-emu { grid-template-columns: repeat(3, 1fr); }
+      /* six tiles (My Buttons active): 3x2 of fixed-size tiles, centered —
+         1fr columns blew the tiles up to a third of the screen each */
+      body.show-mode .show-quick.qb-live.has-emu {
+        grid-template-columns: repeat(3, minmax(0, 104px));
+        justify-content: center; gap: 8px; }
       .show-quick .btn-sm { border-radius: 12px; gap: 6px; padding: 6px 2px;
                             font-size: 8.5px; letter-spacing: 0.02em; }
       .show-quick .btn-sm svg { width: 20px; height: 20px; }
