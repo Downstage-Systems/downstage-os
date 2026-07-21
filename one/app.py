@@ -1576,25 +1576,32 @@ class OLEDDisplay:
         # bottom line: the show, when there is one — live timer while
         # playing/paused; otherwise Companion state (connection type moved
         # up beside the address)
-        comp = "Companion ON" if companion_is_running() else "Companion off"
-        line = comp
-        # portal with no internet outranks the Companion line — the person
-        # squinting at the panel in a hotel needs to know WHY nothing works
+        # bottom line: what each output is feeding — the one fact the box
+        # does that nothing else on the panel says. "—" = no display attached
+        def _src_label(key):
+            if not key:
+                return "?"
+            if key == "cleantimer":
+                return "Timer"
+            if key.startswith("pattern"):
+                return "Test"
+            if key == "external":
+                return "URL"
+            return {"off": "Off", "companion": "Comp", "config": "Setup",
+                    "/timer": "Timer", "/countdown": "Count", "/clock": "Clock",
+                    "/backstage": "Back", "/studio": "Studio", "/timeline": "TLine",
+                    "/info": "Info", "/op": "Oper", "/cuesheet": "Cues",
+                    "/editor": "Edit", "/timercontrol": "TCtrl",
+                    "/messagecontrol": "MCtrl", "/rundown": "Rundn",
+                    }.get(key, key.lstrip("/")[:6].capitalize())
+        hc = hdmi_connected()
+        l1 = _src_label(config.get("hdmi1_source")) if hc.get("1") else "—"
+        l2 = _src_label(config.get("hdmi2_source")) if hc.get("2") else "—"
+        line = f"1 {l1} · 2 {l2}"
+        # portal with no internet still outranks — the person squinting at
+        # the panel in a hotel needs to know WHY nothing works
         if _portal.get("detected") and not _portal.get("internet"):
             line = "Portal! No internet"
-        t = _ontime_timer()
-        if t and t["playback"] in ("play", "pause") and t["current_ms"] is not None:
-            ms = t["current_ms"]
-            over = ms < 0
-            secs = abs(ms) // 1000
-            hh, rem = divmod(secs, 3600)
-            mm, ss = divmod(rem, 60)
-            clock_s = f"{hh}:{mm:02d}:{ss:02d}" if hh else f"{mm}:{ss:02d}"
-            mark = ">" if t["playback"] == "play" else "||"
-            line = f"OVER {clock_s}" if over else f"{mark} {clock_s}"
-            short = "Comp ON" if companion_is_running() else "Comp off"
-            if draw.textlength(f"{line} · {short}") <= 128:
-                line = f"{line} · {short}"
         draw.text((0, 44 + j), line, fill=255)
 
     # ── Hotspot page ──────────────────────────────────────────────────────────
