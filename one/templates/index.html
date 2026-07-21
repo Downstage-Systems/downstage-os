@@ -173,6 +173,19 @@
       border-radius:6px; color:var(--muted); padding:4px 10px; cursor:pointer; font:inherit; display:none; }
     #job-ribbon.done .jx, #job-ribbon.failed .jx { display:block; }
     body.job-ribboned { padding-top:62px; }
+    /* in-UI Companion emulator panel */
+    #emu-overlay { position:fixed; inset:0; z-index:940; background:var(--bg, #0B0D10);
+      display:none; flex-direction:column; }
+    #emu-overlay.on { display:flex; }
+    .emu-head { display:flex; align-items:center; gap:6px; padding:8px 12px;
+      background:var(--surface); border-bottom:1px solid var(--violet-bd, var(--border2)); }
+    .emu-title { flex:1; font-family:var(--font-display); font-weight:700; font-size:14px;
+      letter-spacing:0.06em; text-transform:uppercase; color:var(--violet, var(--text)); }
+    .emu-act { background:none; border:1px solid var(--border2); border-radius:7px;
+      padding:6px 9px; cursor:pointer; }
+    .emu-act svg { width:16px; height:16px; fill:var(--muted); display:block; }
+    .emu-act:hover svg { fill:var(--text); }
+    #emu-frame { flex:1; width:100%; border:0; background:#000; }
     /* connection ribbon — unit unreachable / shutting down, with auto-reconnect */
     #conn-ribbon { position:fixed; top:0; left:0; right:0; z-index:950; display:none;
       align-items:center; gap:12px; padding:10px 20px;
@@ -1021,6 +1034,18 @@
       <button class="btn-primary wiz-finish" id="wiz-finish-btn" onclick="wizFinish()">Start using the unit</button>
     </div>
   </div>
+</div>
+<div id="emu-overlay">
+  <div class="emu-head">
+    <span class="emu-title">My Buttons</span>
+    <button class="emu-act" onclick="emuPopOut()" title="Open in its own tab">
+      <svg viewBox="0 0 24 24"><path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
+    </button>
+    <button class="emu-act" onclick="closeEmulator()" title="Close">
+      <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+    </button>
+  </div>
+  <iframe id="emu-frame" title="Companion emulator"></iframe>
 </div>
 <div id="conn-ribbon">
   <span class="cdot"></span>
@@ -2739,9 +2764,21 @@
       fetchStatus(true);
     }
   }
+  function emulatorUrl() {
+    return `http://${window.location.hostname}:8000/emulator/${emulatorId}`;
+  }
   function openEmulator() {
     if (!emulatorId) return;
-    openExternal(`http://${window.location.hostname}:8000/emulator/${emulatorId}`);
+    document.getElementById('emu-frame').src = emulatorUrl();
+    document.getElementById('emu-overlay').classList.add('on');
+  }
+  function closeEmulator() {
+    document.getElementById('emu-overlay').classList.remove('on');
+    document.getElementById('emu-frame').src = 'about:blank';   // stop it cold
+  }
+  function emuPopOut() {
+    closeEmulator();
+    openExternal(emulatorUrl());
   }
   function openCompanionButtons() {
     // Companion's web button surface — the Stream Deck, but on this device.
