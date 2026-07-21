@@ -1570,7 +1570,7 @@ class OLEDDisplay:
         else:
             ot = "OnTime offline" if ip else "OnTime not set"
         comp = "Comp ON" if companion_is_running() else "Comp off"
-        row = f"{ot}  {comp}"
+        row = f"{ot} | {comp}"
         if draw.textlength(row) > 128:
             row = ot          # long remote IPs keep the line readable
         draw.text((0, 30 + j), row, fill=255)
