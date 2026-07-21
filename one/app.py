@@ -1562,16 +1562,18 @@ class OLEDDisplay:
             if aw + 4 + draw.textlength(tag) <= 128:
                 draw.text((127 - draw.textlength(tag), 16 + j), tag, fill=255)
 
-        # OnTime state — dot shows link health at a glance
-        ontime_ok = connected or (mode == "local" and ontime_is_running())
-        mark = chr(9679) if ontime_ok else chr(9675)
+        # OnTime + Companion in words (dot retired in favor of Companion)
         if mode == "local":
-            ot = "OnTime local" if ontime_is_running() else "OnTime stopped"
+            ot = "OnTime ON" if ontime_is_running() else "OnTime off"
         elif connected:
             ot = f"OnTime {ip}"
         else:
             ot = "OnTime offline" if ip else "OnTime not set"
-        draw.text((0, 30 + j), f"{mark} {ot}", fill=255)
+        comp = "Comp ON" if companion_is_running() else "Comp off"
+        row = f"{ot}  {comp}"
+        if draw.textlength(row) > 128:
+            row = ot          # long remote IPs keep the line readable
+        draw.text((0, 30 + j), row, fill=255)
 
         # bottom line: the show, when there is one — live timer while
         # playing/paused; otherwise Companion state (connection type moved
