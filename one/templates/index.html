@@ -1131,7 +1131,7 @@
       <div class="mode-toggle full-only">
         <button class="mode-btn" id="btn-local" onclick="setMode('local')">
           <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-5 12H4v-2h11v2zm5-4H4v-2h16v2zm0-4H4V6h16v2z"/></svg>
-          Local (this Pi)
+          On This One
         </button>
         <button class="mode-btn" id="btn-remote" onclick="setMode('remote')">
           <svg viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3a4.237 4.237 0 00-6 0zm-4-4l2 2a7.074 7.074 0 0110 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
@@ -1165,6 +1165,14 @@
 
       <!-- Local: OnTime panel -->
       <div id="local-section" class="field full-only" style="display:none">
+        <div id="local-activate" style="display:none; margin-bottom:12px">
+          <div style="display:flex; align-items:center; gap:12px; padding:11px 14px;
+               background:var(--amber-bg); border:1px solid var(--amber-bd); border-radius:9px">
+            <span style="flex:1; font-size:12.5px; color:var(--amber); line-height:1.5">
+              Remote mode is active — this server is not driving the displays.</span>
+            <button class="btn-sm success" id="local-activate-btn" onclick="activateLocal()">Start Server</button>
+          </div>
+        </div>
         <div class="section-label">OnTime Server (Local)</div>
         <div class="local-panel">
           <div class="local-panel-header">
@@ -1985,27 +1993,33 @@
   }
 
   // ── Mode ─────────────────────────────────────────────────────────────────────
-  async function setMode(mode) {
-    // instant-apply toggle — no Save & Apply. The green pill always shows
-    // the APPLIED truth; picking Remote only opens the section until Connect.
-    if (mode === 'remote') {
-      showModeSection('remote');
-      if (currentMode !== 'remote') showToast('Enter the server address and press Connect.', 'info');
-      return;
-    }
-    showModeSection('local');
-    if (currentMode === 'local') { setModeButtons('local'); return; }
-    showToast('Switching to the onboard OnTime server…', 'info');
+  function setMode(mode) {
+    // the toggle only navigates between the two sections — nothing changes
+    // until an explicit action (Start Server / Connect). Green pill = truth.
+    showModeSection(mode);
+    wizUpdateActivate();
+  }
+
+  function wizUpdateActivate() {
+    const b = document.getElementById('local-activate');
+    if (b) b.style.display = currentMode === 'remote' ? '' : 'none';
+  }
+
+  async function activateLocal() {
+    const btn = document.getElementById('local-activate-btn');
+    btn.disabled = true; btn.textContent = 'Starting…';
     try {
       const r = await fetch('/mode', { method: 'POST',
         headers: {'Content-Type': 'application/json'}, body: JSON.stringify({mode: 'local'}) });
       const d = await r.json();
-      if (!d.ok) { showToast(d.error || 'Could not switch.', 'error'); showModeSection(currentMode); return; }
+      if (!d.ok) { showToast(d.error || 'Could not switch.', 'error'); return; }
       currentMode = 'local';
       setModeButtons('local');
+      wizUpdateActivate();
       showToast(d.message, 'success');
       fetchStatus(true);
     } catch { showToast('Could not reach the unit.', 'error'); }
+    finally { btn.disabled = false; btn.textContent = 'Start Server'; }
   }
 
   async function connectRemote() {
@@ -2022,6 +2036,7 @@
       if (!d.ok) { showToast(d.error || 'Could not connect.', 'error'); return; }
       currentMode = 'remote';
       setModeButtons('remote');
+      wizUpdateActivate();
       showToast(d.message, 'success');
       fetchStatus(true);
     } catch { showToast('Could not reach the unit.', 'error'); }
@@ -2282,6 +2297,7 @@
         (d.portal && d.portal.internet === false && !d.portal.detected) ? '' : 'none';
       renderInterfaces(d.interfaces, d.net_iface);
       _otHost = (d.mode === 'remote' && d.ip) ? d.ip : window.location.hostname;
+      if (d.mode && d.mode !== currentMode) { currentMode = d.mode; setModeButtons(d.mode); wizUpdateActivate(); }
       const rln = document.getElementById('remote-local-note');
       if (rln) rln.style.display = (d.mode === 'remote' && d.ontime_installed) ? '' : 'none';
       if (window._clockSync) _clockSync(d.clock);
