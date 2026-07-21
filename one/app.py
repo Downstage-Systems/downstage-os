@@ -1600,7 +1600,7 @@ class OLEDDisplay:
         # ASCII only: the panel font renders fancy punctuation as smudges
         l1 = _src_label(config.get("hdmi1_source")) if hc.get("1") else "no disp"
         l2 = _src_label(config.get("hdmi2_source")) if hc.get("2") else "no disp"
-        line = f"1:{l1}  2:{l2}"
+        line = f"1:{l1} | 2:{l2}"
         # portal with no internet still outranks — the person squinting at
         # the panel in a hotel needs to know WHY nothing works
         if _portal.get("detected") and not _portal.get("internet"):
