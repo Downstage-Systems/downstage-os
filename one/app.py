@@ -1926,6 +1926,45 @@ def save():
     return jsonify({"ok": True})
 
 
+@app.route("/mode", methods=["POST"])
+def mode_route():
+    """Instant OnTime mode switch — the toggle is live, no Save & Apply.
+    Local: start the onboard server and point everything at it.
+    Remote: verify the server answers, stand the onboard one down, connect."""
+    data = request.get_json() or {}
+    mode = data.get("mode")
+    if mode == "local":
+        if not ontime_installed():
+            return jsonify({"ok": False, "error": "OnTime is not installed yet"})
+        if not ontime_is_running():
+            ok, msg = start_local_ontime()
+            if not ok:
+                return jsonify({"ok": False, "error": msg})
+            time.sleep(3)
+        save_config({"mode": "local", "ip": "127.0.0.1"})
+        message = "Onboard OnTime active"
+    elif mode == "remote":
+        ip = (data.get("ip") or "").strip()
+        if not ip:
+            return jsonify({"ok": False, "error": "Enter the OnTime server address first"})
+        if not check_ontime(ip):
+            return jsonify({"ok": False, "error": f"Cannot reach OnTime at {ip}:4001"})
+        if ontime_is_running():
+            stop_local_ontime()
+        save_config({"mode": "remote", "ip": ip,
+                     "ip_history": _update_ip_history(ip)})
+        message = f"Connected to {ip} — onboard server stopped"
+    else:
+        return jsonify({"ok": False, "error": "bad mode"})
+    _audit("ONTIME-MODE", message)
+
+    def _relaunch():
+        time.sleep(0.3)
+        launch_all_windows(force=True)   # window URLs changed server
+    threading.Thread(target=_relaunch, daemon=True).start()
+    return jsonify({"ok": True, "message": message})
+
+
 @app.route("/check", methods=["POST"])
 def check():
     data = request.get_json()
