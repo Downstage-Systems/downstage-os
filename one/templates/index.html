@@ -3488,15 +3488,20 @@
       const d = await r.json();
       if (!d.ok) { showToast(d.message, 'error'); btn.disabled = false; btn.textContent = 'Update'; return; }
       showToast('Updating — this page will reload when the new version is up.', 'info');
-      // wait for the service to go down (restart) and come back, then reload
+      // reload when the reported version CHANGES — waiting to "see it go
+      // down" missed the 2s restart window between polls and left the page
+      // stale until a manual refresh
+      const startVer = d.from || null;
       let sawDown = false;
       const poll = setInterval(async () => {
         try {
           const s = await (await fetch('/status', { cache: 'no-store' })).json();
-          if (sawDown && s.os_version) { clearInterval(poll); location.reload(); }
+          if (s.os_version && (sawDown || (startVer && s.os_version !== startVer))) {
+            clearInterval(poll); location.reload();
+          }
         } catch { sawDown = true; }
       }, 3000);
-      setTimeout(() => location.reload(), 120000);   // give up waiting after 2 min
+      setTimeout(() => location.reload(), 90000);   // failed-update fallback
     } catch { showToast('Network error.', 'error'); btn.disabled = false; btn.textContent = 'Update'; }
   }
 

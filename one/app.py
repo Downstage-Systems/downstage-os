@@ -2627,7 +2627,8 @@ def os_update():
              "bash", str(script)],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         )
-        return jsonify({"ok": True, "message": f"Updating to {tag} — service will restart"})
+        return jsonify({"ok": True, "from": OS_VERSION,
+                        "message": f"Updating to {tag} — service will restart"})
     except py_compile.PyCompileError as e:
         return jsonify({"ok": False, "message": f"Release failed validation: {e}"})
     except Exception as e:
