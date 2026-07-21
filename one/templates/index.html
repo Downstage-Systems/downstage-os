@@ -186,6 +186,9 @@
     .emu-act svg { width:16px; height:16px; fill:var(--muted); display:block; }
     .emu-act:hover svg { fill:var(--text); }
     #emu-frame { flex:1; width:100%; border:0; background:#000; }
+    /* body freeze while a panel is open — iOS scrolls the page behind a
+       fixed overlay unless the body itself is pinned */
+    body.panel-open { position:fixed; left:0; right:0; overflow:hidden; }
     /* connection ribbon — unit unreachable / shutting down, with auto-reconnect */
     #conn-ribbon { position:fixed; top:0; left:0; right:0; z-index:950; display:none;
       align-items:center; gap:12px; padding:10px 20px;
@@ -2767,15 +2770,22 @@
   // in-UI panel: every quick-action tool opens inside Show Mode, with a
   // pop-out for when it deserves its own tab
   let _panelUrl = '';
+  let _panelScrollY = 0;
   function openPanel(url, title) {
     _panelUrl = url;
     document.querySelector('#emu-overlay .emu-title').textContent = title || 'Panel';
     document.getElementById('emu-frame').src = url;
     document.getElementById('emu-overlay').classList.add('on');
+    _panelScrollY = window.scrollY;
+    document.body.style.top = `-${_panelScrollY}px`;
+    document.body.classList.add('panel-open');
   }
   function closeEmulator() {
     document.getElementById('emu-overlay').classList.remove('on');
     document.getElementById('emu-frame').src = 'about:blank';   // stop it cold
+    document.body.classList.remove('panel-open');
+    document.body.style.top = '';
+    window.scrollTo(0, _panelScrollY);
   }
   function emuPopOut() {
     const u = _panelUrl;
@@ -3891,6 +3901,7 @@
     const THRESH = 40;   // in damped pixels (raw pull ~80px)
     let startY = null, d = 0;
     document.addEventListener('touchstart', function (e) {
+      if (document.body.classList.contains('panel-open')) { startY = null; return; }
       startY = (window.scrollY <= 0) ? e.touches[0].clientY : null;
       d = 0;
     }, { passive: true });
