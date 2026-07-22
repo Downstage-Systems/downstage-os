@@ -146,6 +146,101 @@ def get_local_ip():
         return "unknown"
 
 
+def _iface_ip(iface):
+    try:
+        import fcntl, struct
+        sk = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        r = fcntl.ioctl(sk.fileno(), 0x8915,
+                        struct.pack("256s", iface[:15].encode()))
+        sk.close()
+        return socket.inet_ntoa(r[20:24])
+    except Exception:
+        return None
+
+
+def _net_ifaces():
+    try:
+        return sorted(n for n in os.listdir("/sys/class/net")
+                      if n.startswith(("eth", "enx", "wlan")))
+    except Exception:
+        return ["eth0", "wlan0"]
+
+
+def get_all_interfaces():
+    out = []
+    for iface in _net_ifaces():
+        ip = _iface_ip(iface)
+        if not ip:
+            continue
+        kind = "WiFi" if iface.startswith("wlan") else "Ethernet"
+        out.append({"iface": iface, "ip": ip, "kind": kind})
+    out.sort(key=lambda x: 0 if x["kind"] == "Ethernet" else 1)
+    return out
+
+
+def primary_iface():
+    """The interface carrying the default route (wired-first by metric)."""
+    try:
+        out = subprocess.check_output(["ip", "route", "get", "8.8.8.8"],
+                                      text=True, timeout=5)
+        for tok in out.split():
+            if tok == "dev":
+                return out.split("dev")[1].split()[0]
+    except Exception:
+        pass
+    ifs = get_all_interfaces()
+    return ifs[0]["iface"] if ifs else "unknown"
+
+
+# ── captive portal / internet probe (ported from the One) ─────────────────────
+_portal = {"detected": False, "iface": "", "checked": 0, "internet": None}
+_probe_busy = threading.Lock()
+
+def _probe_portal():
+    detected, piface, internet = False, "", False
+    for iface in _net_ifaces():
+        try:
+            if open(f"/sys/class/net/{iface}/operstate").read().strip() != "up":
+                continue
+            r = subprocess.run(
+                ["curl", "-s", "-m", "8", "--interface", iface,
+                 "-o", "/dev/null", "-w", "%{http_code} %{redirect_url}",
+                 "http://connectivitycheck.gstatic.com/generate_204"],
+                capture_output=True, text=True, timeout=12)
+            code, _, redirect = r.stdout.strip().partition(" ")
+            if code == "204":
+                internet = True
+            elif code.startswith("3") and redirect:
+                detected = True
+                piface = piface or iface
+        except Exception:
+            continue
+    _portal.update(detected=detected, iface=piface, internet=internet)
+    _portal["checked"] = time.time()
+
+
+def _portal_loop():
+    while True:
+        _probe_portal()
+        time.sleep(120)
+
+
+def _probe_async_if_stale(max_age=60):
+    if time.time() - _portal["checked"] < max_age:
+        return
+    if not _probe_busy.acquire(blocking=False):
+        return
+    def run():
+        try:
+            _probe_portal()
+        finally:
+            _probe_busy.release()
+    threading.Thread(target=run, daemon=True).start()
+
+
+threading.Thread(target=_portal_loop, daemon=True).start()
+
+
 def check_ontime(ip, timeout=3):
     try:
         r = requests.get(f"http://{ip}:4001/api/version", timeout=timeout)
@@ -1279,7 +1374,8 @@ def os_update():
         subprocess.Popen(["setsid", "bash", str(script)],
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                          start_new_session=True)
-        return jsonify({"ok": True, "message": f"Updating to {tag} — service will restart"})
+        return jsonify({"ok": True, "from": OS_VERSION,
+                        "message": f"Updating to {tag} — service will restart"})
     except py_compile.PyCompileError as e:
         return jsonify({"ok": False, "message": f"Release failed validation: {e}"})
     except Exception as e:
@@ -1540,6 +1636,7 @@ def index():
 
 @app.route("/status")
 def status():
+    _probe_async_if_stale()
     config    = load_config()
     ip        = config.get("ip", "")
     connected = check_ontime(ip, timeout=2) if ip else False
@@ -1549,6 +1646,10 @@ def status():
         "external_url": config.get("external_url", ""),
         "connected": connected,
         "local_ip":  get_local_ip(),
+        "net_iface": primary_iface(),
+        "interfaces": get_all_interfaces(),
+        "portal": {"detected": _portal["detected"], "iface": _portal["iface"],
+                   "internet": _portal["internet"], "checked": _portal["checked"]},
         "clock": {"epoch": time.time(),
                   "offset_min": int((datetime.datetime.now().astimezone().utcoffset() or datetime.timedelta()).total_seconds() // 60)},
         "os_version": OS_VERSION,
@@ -1876,6 +1977,22 @@ def wifi_connect():
         return jsonify({"ok": False, "message": "Connection timed out after 45s"})
     except Exception as e:
         return jsonify({"ok": False, "message": str(e)})
+
+
+@app.route("/qr.png")
+def qr_png():
+    try:
+        import io as _io
+        import qrcode
+    except Exception:
+        return ("QR support not installed", 404)
+    ip = get_local_ip()
+    url = f"http://{ip}:8080/" if ip != "unknown" else f"http://{request.host}/"
+    img = qrcode.make(url, box_size=5, border=2)
+    buf = _io.BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+    return send_file(buf, mimetype="image/png")
 
 
 @app.route("/wifi/forget", methods=["POST"])

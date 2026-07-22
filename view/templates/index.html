@@ -546,6 +546,8 @@
       .card-body { padding: 18px 13px; }
       /* four tiles across one row on phones, like the One's five */
       body.show-mode .show-quick.qb-live-tiles { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+      #setup-tabs { display:grid; grid-template-columns:repeat(4, 1fr); gap:3px; padding:3px; }
+      #setup-tabs .stab { font-size:12px; padding:9px 4px; overflow:hidden; white-space:nowrap; }
       .show-quick .btn-sm { border-radius: 12px; gap: 6px; padding: 6px 2px;
                             font-size: 8.5px; letter-spacing: 0.02em; }
       .show-quick .btn-sm svg { width: 20px; height: 20px; }
@@ -562,6 +564,73 @@
       .source-chip.chip-wide { grid-column: auto; }
       .chip-opt-item { min-width: 0; flex: 1 1 100%; }
     }
+    /* ── setup tabs (ported from the One) ── */
+    #setup-tabs { display:flex; background:var(--surface2); border:1px solid var(--border);
+      border-radius:11px; padding:4px; gap:4px; margin-bottom:20px; }
+    #setup-tabs .stab { flex:1; position:relative; background:none; border:none; border-radius:8px;
+      font-family:var(--font-display); font-weight:600; font-size:14px; letter-spacing:0.05em;
+      text-transform:uppercase; color:var(--muted); padding:10px 6px; cursor:pointer; }
+    #setup-tabs .stab.on { background:var(--surface); color:var(--accent);
+      box-shadow:0 1px 6px rgba(0,0,0,0.4); }
+    .stab-upd { position:absolute; top:7px; right:9px; width:7px; height:7px; border-radius:50%;
+      background:var(--amber); display:none; }
+    .stab-upd.on { display:block; }
+    .tpane { display:none; }
+    .tpane.on { display:block; }
+    body.show-mode #tpane-display { display:block !important; }
+    body.show-mode #setup-tabs { display:none; }
+    /* ── interfaces panel ── */
+    .iface-panel { display:flex; flex-direction:column; gap:8px; margin-bottom:16px; }
+    .iface-row { display:flex; align-items:center; gap:10px; padding:11px 14px;
+      background:var(--surface2); border:1px solid var(--border2); border-radius:9px; }
+    .iface-row .idot { width:8px; height:8px; border-radius:50%; background:var(--accent);
+      box-shadow:0 0 7px rgba(47,217,123,0.6); flex-shrink:0; }
+    .iface-row .ikind { font-family:var(--font-display); font-weight:700; font-size:13px;
+      letter-spacing:0.04em; width:88px; }
+    .iface-row .iip { font-family:var(--font-mono); font-size:14px; color:var(--accent); cursor:pointer; }
+    .iface-row .iip:hover { text-decoration:underline; text-underline-offset:3px; }
+    .iface-row .iprim { font-family:var(--font-mono); font-size:9px; letter-spacing:0.1em;
+      color:var(--accent); border:1px solid var(--green-bd); border-radius:4px; padding:2px 6px; }
+    .iface-row .idev { font-family:var(--font-mono); font-size:11px; color:var(--muted2); margin-left:auto; }
+    .iface-none { padding:11px 14px; font-size:12.5px; color:var(--muted);
+      background:var(--surface2); border:1px solid var(--border2); border-radius:9px; }
+    /* ── pills side by side + warn state ── */
+    .pill-row { display:flex; gap:7px; flex-wrap:wrap; justify-content:flex-end; }
+    .pill-row .status-bar { cursor:pointer; }
+    .pill-row .status-bar:hover { filter:brightness(1.25); }
+    .status-bar.warn { background:var(--amber-bg); border-color:var(--amber-bd); color:var(--amber); }
+    /* ── QR chip ── */
+    .addr-box { position:relative; }
+    #qr-pop { position:absolute; top:calc(100% + 8px); right:0; z-index:500;
+      background:#fff; border-radius:10px; padding:8px 8px 6px;
+      box-shadow:0 8px 28px rgba(0,0,0,0.55); text-align:center; }
+    #qr-pop img { width:148px; height:148px; display:block; image-rendering:pixelated; }
+    #qr-pop .qr-cap { font-size:10.5px; color:#444; margin-top:3px; }
+    /* ── connection ribbon ── */
+    #conn-ribbon { position:fixed; top:0; left:0; right:0; z-index:950; display:none;
+      align-items:center; gap:12px; padding:10px 20px;
+      background:var(--surface); border-bottom:1px solid var(--red);
+      font:600 13px/1 var(--font-body); color:var(--text); }
+    #conn-ribbon.on { display:flex; }
+    #conn-ribbon .cdot { width:9px; height:9px; border-radius:50%; background:var(--red);
+      box-shadow:0 0 7px rgba(229,72,77,0.7); animation:pulse 1.4s infinite; }
+    #conn-ribbon.shutdown { border-bottom-color:var(--amber); }
+    #conn-ribbon.shutdown .cdot { background:var(--amber); box-shadow:0 0 7px rgba(245,165,36,0.7); }
+    #conn-ribbon .csub { color:var(--muted); font-weight:400; font-size:12px; }
+    body.conn-ribboned { padding-top:62px; }
+    /* ── in-UI tool panel ── */
+    #emu-overlay { position:fixed; inset:0; z-index:940; background:#0B0D10;
+      display:none; flex-direction:column; }
+    #emu-overlay.on { display:flex; }
+    .emu-head { display:flex; align-items:center; gap:6px; padding:8px 12px;
+      background:var(--surface); border-bottom:1px solid var(--border2); }
+    .emu-title { flex:1; font-family:var(--font-display); font-weight:700; font-size:14px;
+      letter-spacing:0.06em; text-transform:uppercase; }
+    .emu-act { background:none; border:1px solid var(--border2); border-radius:7px;
+      padding:6px 9px; cursor:pointer; }
+    .emu-act svg { width:16px; height:16px; fill:var(--muted); display:block; }
+    #emu-frame { flex:1; width:100%; border:0; background:#000; }
+    body.panel-open { position:fixed; left:0; right:0; overflow:hidden; }
     /* pull-to-refresh (custom: iOS has no native PTR, and standalone
        home-screen apps have no reload button at all) */
     #ptr-spin { position:fixed; top:-54px; left:50%; z-index:1001;
@@ -579,6 +648,23 @@
 <body>
 <div id="ptr-spin"><svg viewBox="0 0 24 24"><path d="M12 4l-6 6h4v6h4v-6h4l-6-6z"/></svg></div>
 
+<div id="conn-ribbon">
+  <span class="cdot"></span>
+  <span id="conn-label">Unit unreachable</span>
+  <span class="csub" id="conn-sub">powered off or off the network — reconnecting…</span>
+</div>
+<div id="emu-overlay">
+  <div class="emu-head">
+    <span class="emu-title">Panel</span>
+    <button class="emu-act" onclick="emuPopOut()" title="Open in its own tab">
+      <svg viewBox="0 0 24 24"><path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
+    </button>
+    <button class="emu-act" onclick="closePanel()" title="Close">
+      <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+    </button>
+  </div>
+  <iframe id="emu-frame" title="Tool panel"></iframe>
+</div>
 <div class="wrap">
 
   <div class="logo-row">
@@ -594,10 +680,22 @@
       <div class="addr-box">
       <span class="addr-main" onclick="copyAddr()" title="Click to copy this unit's address">{{ hostname }}.local:8080
         <svg viewBox="0 0 24 24" class="addr-copy-ic"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg></span>
+      <div id="qr-pop" style="display:none">
+        <img id="qr-img" alt="QR code for this unit's address">
+        <div class="qr-cap">Scan to open on a phone</div>
       </div>
-      <div class="status-bar disconnected" id="status-bar">
-        <div class="status-dot"></div>
-        <span id="status-text">Checking…</span>
+      </div>
+      <div class="pill-row">
+        <div class="status-bar disconnected" id="status-bar"
+             onclick="pillGo('ontime')" title="Open the OnTime tab">
+          <div class="status-dot"></div>
+          <span id="status-text">Checking…</span>
+        </div>
+        <div class="status-bar" id="inet-pill" style="display:none"
+             onclick="pillGo('network')" title="Open the Network tab">
+          <div class="status-dot"></div>
+          <span id="inet-pill-text"></span>
+        </div>
       </div>
     </div>
   </div>
@@ -646,7 +744,16 @@
       </div>
 
       <!-- Server address -->
-      <div class="field full-only">
+      <!-- Setup tabs: task-based — Display is home -->
+      <div id="setup-tabs" class="full-only">
+        <button class="stab" id="stab-display" onclick="showSetupTab('display')">Display</button>
+        <button class="stab" id="stab-ontime" onclick="showSetupTab('ontime')">OnTime</button>
+        <button class="stab" id="stab-network" onclick="showSetupTab('network')">Network</button>
+        <button class="stab" id="stab-system" onclick="showSetupTab('system')">System<span class="stab-upd" id="upd-system"></span></button>
+      </div>
+
+      <div id="tpane-ontime" class="tpane">
+      <div class="field">
         <div class="section-label">OnTime Server Address</div>
         <div class="ip-row">
           <div class="ip-input-wrap">
@@ -666,6 +773,9 @@
 
       <!-- Source selection -->
 
+      </div>
+
+      <div id="tpane-display" class="tpane">
       <div class="field">
         <div class="section-label">Display Source</div>
         <div class="source-grid" id="source-grid">
@@ -817,9 +927,20 @@
 
 
 
+      </div>
+
+      <div id="tpane-network" class="tpane">
       <!-- Network (IP) -->
-      <div class="field full-only" style="margin-top:22px">
+      <div class="field" style="margin-top:0">
         <div class="section-label">Network</div>
+        <div id="iface-panel" class="iface-panel"></div>
+        <div id="inet-note" style="display:none; margin-bottom:12px; padding:10px 13px;
+             background:var(--amber-bg); border:1px solid var(--amber-bd); border-radius:9px;
+             font-size:12.5px; color:var(--amber); line-height:1.5">No internet access —
+          the network works locally, but updates won't load. The display and timers are unaffected.</div>
+        <div id="portal-note" style="display:none; margin-bottom:12px; padding:10px 13px;
+             background:var(--amber-bg); border:1px solid var(--amber-bd); border-radius:9px;
+             font-size:12.5px; color:var(--amber); line-height:1.5"></div>
         <div class="local-panel">
           <div class="tz-current"><span id="net-current">Loading…</span></div>
           <div class="mode-toggle" style="margin:10px 0">
@@ -892,8 +1013,11 @@
         </div>
       </div>
 
+      </div>
+
+      <div id="tpane-system" class="tpane">
       <!-- Timezone -->
-      <div class="field full-only" style="margin-top:22px; margin-bottom:0">
+      <div class="field" style="margin-top:0; margin-bottom:0">
         <div class="section-label">Pi Timezone</div>
         <div class="local-panel">
           <div class="tz-current">Current: <span id="tz-current">Loading…</span></div>
@@ -937,6 +1061,7 @@
             <div class="external-url-hint" id="patches-note" style="display:block; margin-top:6px">Tested by Downstage before they're offered. The display stays live; installs take a while on this hardware. Restart when convenient.</div>
           </div>
         </div>
+      </div>
       </div>
 
     </div>
@@ -1240,14 +1365,17 @@
       const d = await r.json();
       if (!d.ok) { showToast(d.message, 'error'); return; }
       showToast('Updating — this page will reload when the new version is up.', 'info');
+      const startVer = d.from || null;
       let sawDown = false;
       const poll = setInterval(async () => {
         try {
           const s = await (await fetch('/status', { cache: 'no-store' })).json();
-          if (sawDown && s.os_version) { clearInterval(poll); location.reload(); }
+          if (s.os_version && (sawDown || (startVer && s.os_version !== startVer))) {
+            clearInterval(poll); location.reload();
+          }
         } catch { sawDown = true; }
       }, 3000);
-      setTimeout(() => location.reload(), 120000);
+      setTimeout(() => location.reload(), 90000);
     } catch { showToast('Network error.', 'error'); }
   }
 
@@ -1271,6 +1399,27 @@
       const d = await r.json();
       document.getElementById('watchdog-bar').style.display = d.watchdog_override ? 'flex' : 'none';
       if (window._clockSync) _clockSync(d.clock);
+      if (_wasOffline) { location.reload(); return; }
+      _connFails = 0;
+      renderInterfaces(d.interfaces, d.net_iface);
+      const pill = document.getElementById('inet-pill');
+      if (pill && d.portal && d.portal.internet !== null && d.portal.internet !== undefined) {
+        pill.style.display = '';
+        const ok = d.portal.internet === true;
+        pill.className = 'status-bar ' + (ok ? 'connected' : 'warn');
+        document.getElementById('inet-pill-text').textContent =
+          ok ? 'Internet — OK' : (d.portal.detected ? 'Internet — portal' : 'No internet');
+      }
+      const pn = document.getElementById('portal-note');
+      if (pn) {
+        pn.style.display = d.portal?.detected ? '' : 'none';
+        if (d.portal?.detected) pn.textContent = d.portal.internet
+          ? 'Captive portal on the WiFi leg — internet flows over the other connection; nothing is affected.'
+          : 'Captive portal detected — the display works, but internet features are paused until the portal is cleared (use a travel router or phone hotspot).';
+      }
+      const inet = document.getElementById('inet-note');
+      if (inet) inet.style.display = (d.portal && d.portal.internet === false && !d.portal.detected) ? '' : 'none';
+      document.getElementById('upd-system')?.classList.toggle('on', !!d.os_update_available);
       const osEl = document.getElementById('os-version-label');
       if (osEl && d.os_version) osEl.textContent = `Downstage OS v${d.os_version}`;
       renderOsPanel(d);
@@ -1297,6 +1446,10 @@
     } catch {
       bar.className = 'status-bar disconnected';
       document.getElementById('status-text').textContent = 'Error checking status';
+      _connFails++;
+      if (!_expectDown && _connFails >= 2) showConnRibbon('offline');
+      clearTimeout(_connRetry);
+      _connRetry = setTimeout(() => { if (!document.hidden) fetchStatus(true); }, 2500);
     }
   }
 
@@ -1722,13 +1875,15 @@
 
   async function restartPi() {
     if (!confirm('Restart the Pi? The kiosk will be offline for ~30 seconds.')) return;
-    showToast('Restarting Pi…', 'info');
+    _expectDown = true;
+    showConnRibbon('restart');
     await fetch('/system/restart', { method: 'POST' });
   }
 
   async function shutdownPi() {
     if (!confirm('Shut down the Pi? You will need to physically power it back on.')) return;
-    showToast('Shutting down…', 'warning');
+    _expectDown = true;
+    showConnRibbon('shutdown');
     await fetch('/system/shutdown', { method: 'POST' });
   }
 
@@ -1780,7 +1935,9 @@
   function quickOpen(path) {
     const host = lastServerIp || document.getElementById('ip').value.trim();
     if (!host) return;
-    openExternal(`http://${host}:4001${path}`);
+    const titles = { '/editor/': 'OnTime Editor', '/timercontrol': 'Timer Control',
+                     '/messagecontrol': 'Message Control' };
+    openPanel(`http://${host}:4001${path}`, titles[path] || 'OnTime');
   }
 
   // ── Show / Full view mode — persisted per browser ──
@@ -1838,6 +1995,18 @@
   function copyAddr() {
     const addr = 'http://' + window.location.host + '/';
     const done = () => showToast('Address copied — ' + addr, 'success');
+    const pop = document.getElementById('qr-pop');
+    if (pop.style.display === 'none') {
+      const img = document.getElementById('qr-img');
+      img.onerror = () => { pop.style.display = 'none'; };
+      img.src = '/qr.png?' + Date.now();
+      pop.style.display = '';
+      setTimeout(() => document.addEventListener('click', function closeQr(e) {
+        if (!pop.contains(e.target)) { pop.style.display = 'none'; document.removeEventListener('click', closeQr); }
+      }), 0);
+    } else {
+      pop.style.display = 'none';
+    }
     if (navigator.clipboard && window.isSecureContext) {
       navigator.clipboard.writeText(addr).then(done);
     } else {
@@ -1847,6 +2016,74 @@
       try { document.execCommand('copy'); done(); } catch (e) {}
       ta.remove();
     }
+  }
+  function showSetupTab(t) {
+    for (const x of ['display', 'ontime', 'network', 'system']) {
+      document.getElementById('tpane-' + x)?.classList.toggle('on', x === t);
+      document.getElementById('stab-' + x)?.classList.toggle('on', x === t);
+    }
+    if (window.scrollY > 0) window.scrollTo(0, 0);
+    try { localStorage.setItem('dsv-setup-tab', t); } catch (e) {}
+  }
+  function pillGo(tab) { setViewMode('full'); showSetupTab(tab); }
+  try { showSetupTab(localStorage.getItem('dsv-setup-tab') || 'display'); } catch (e) { showSetupTab('display'); }
+  function renderInterfaces(list, primary) {
+    const box = document.getElementById('iface-panel');
+    if (!box) return;
+    if (!list || !list.length) { box.innerHTML = '<div class="iface-none">No network connection — check the cable or join WiFi below.</div>'; return; }
+    box.innerHTML = list.map(function(i){
+      const prim = i.iface === primary ? '<span class="iprim">PRIMARY</span>' : '';
+      return '<div class="iface-row"><span class="idot"></span>' +
+        '<span class="ikind">' + i.kind + '</span>' +
+        '<span class="iip" onclick="copyIp(\'' + i.ip + '\')" title="Click to copy this address">' + i.ip + '</span>' + prim +
+        '<span class="idev">' + i.iface + '</span></div>';
+    }).join('');
+  }
+  function copyIp(ip) {
+    const ta = document.createElement('textarea');
+    ta.value = ip; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); showToast('Copied ' + ip, 'success'); } catch (e) {}
+    ta.remove();
+  }
+  let _panelUrl = '';
+  let _panelScrollY = 0;
+  function openPanel(url, title) {
+    _panelUrl = url;
+    document.querySelector('#emu-overlay .emu-title').textContent = title || 'Panel';
+    document.getElementById('emu-frame').src = url;
+    document.getElementById('emu-overlay').classList.add('on');
+    _panelScrollY = window.scrollY;
+    document.body.style.top = `-${_panelScrollY}px`;
+    document.body.classList.add('panel-open');
+  }
+  function closePanel() {
+    document.getElementById('emu-overlay').classList.remove('on');
+    document.getElementById('emu-frame').src = 'about:blank';
+    document.body.classList.remove('panel-open');
+    document.body.style.top = '';
+    window.scrollTo(0, _panelScrollY);
+  }
+  function emuPopOut() {
+    const u = _panelUrl;
+    closePanel();
+    if (u) openExternal(u);
+  }
+  // connection ribbon state
+  let _connFails = 0, _expectDown = false, _wasOffline = false, _connRetry = null;
+  const _CONN_COPY = {
+    shutdown: ['Device shutting down', 'safe to unplug once the panel shows the farewell screen'],
+    restart:  ['Device restarting',    'the page reloads automatically when it returns'],
+    offline:  ['Unit unreachable',     'powered off or off the network — reconnecting…'],
+  };
+  function showConnRibbon(mode) {
+    const r = document.getElementById('conn-ribbon');
+    _wasOffline = true;
+    r.className = 'on' + (mode === 'shutdown' ? ' shutdown' : '');
+    const [label, sub] = _CONN_COPY[mode] || _CONN_COPY.offline;
+    document.getElementById('conn-label').textContent = label;
+    document.getElementById('conn-sub').textContent = sub;
+    document.body.classList.add('conn-ribboned');
   }
   function openExternal(url) {
     const a = document.createElement('a');
@@ -1859,6 +2096,7 @@
     const THRESH = 40;   // in damped pixels (raw pull ~80px)
     let startY = null, d = 0;
     document.addEventListener('touchstart', function (e) {
+      if (document.body.classList.contains('panel-open')) { startY = null; return; }
       startY = (window.scrollY <= 0) ? e.touches[0].clientY : null;
       d = 0;
     }, { passive: true });
