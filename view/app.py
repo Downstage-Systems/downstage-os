@@ -1603,9 +1603,7 @@ class EPaperDisplay:
         marker = chr(9679) if connected else chr(9675)   # filled / hollow dot
         draw.text((5, 86), f"{marker} {status}", font=self._font_md, fill=0)
         view_lbl = self.SOURCE_LABELS.get(source, source)
-        w = draw.textlength(view_lbl, font=self._font_sm)
-        draw.text((max(5, col - w - 5), 88), view_lbl, font=self._font_sm, fill=0)
-        self._row(draw, 106, "Name", socket.gethostname()[:16])
+        self._row(draw, 106, "Shows", view_lbl[:18])
 
     # ── Hotspot page: everything a tech needs to get in ──────────────────────
     def _page_hotspot(self, draw):
