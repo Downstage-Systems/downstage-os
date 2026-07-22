@@ -1526,6 +1526,7 @@ class EPaperDisplay:
         try:
             img  = self._new_image()
             draw = ImageDraw.Draw(img)
+            draw._image = img   # pages paste QR codes onto the frame
             hs = hotspot_is_active()
             if hs and not _real_network_ip():
                 self._page_hotspot(draw)
@@ -1546,6 +1547,33 @@ class EPaperDisplay:
         draw.text((5, y), label, font=self._font_sm, fill=0)
         draw.text((58, y - 2), value, font=font or self._font_md, fill=0)
 
+    def _qr(self, data, scale=3):
+        """1-bit QR image for the panel, or None if unavailable."""
+        try:
+            import qrcode
+            q = qrcode.QRCode(border=1, box_size=scale,
+                              error_correction=qrcode.constants.ERROR_CORRECT_L)
+            q.add_data(data)
+            q.make(fit=True)
+            return q.make_image().convert("1")
+        except Exception as e:
+            print(f"[epaper] qr: {e}")
+            return None
+
+    def _paste_qr(self, img, draw, data, caption, scale=3):
+        """QR pinned to the right edge under the header; returns the x where
+        the text column must stop (or panel width if no QR)."""
+        qr = self._qr(data, scale)
+        if qr is None or qr.width > 100:
+            return self.W
+        x = self.W - 4 - qr.width
+        img.paste(qr, (x, 24))
+        cy = 24 + qr.height
+        if caption and cy <= 112:
+            w = draw.textlength(caption, font=self._font_sm)
+            draw.text((x + (qr.width - w) / 2, cy), caption, font=self._font_sm, fill=0)
+        return x - 6
+
     # ── Normal page: network + OnTime status ─────────────────────────────────
     def _page_status(self, draw, hotspot=False):
         config    = load_config()
@@ -1558,17 +1586,25 @@ class EPaperDisplay:
 
         self._header(draw, "DOWNSTAGE VIEW", "HOTSPOT ON" if hotspot else temp)
 
-        self._row(draw, 26, "Net",    _active_link()[:24])
-        self._row(draw, 44, "Setup",  f"{local_ip}:8080" if local_ip != "unknown" else "No network")
-        draw.line([(5, 62), (self.W - 5, 62)], fill=0)
-        self._row(draw, 68, "OnTime", ip if ip else "Not configured")
+        # image handle for the QR paste (draw only wraps it)
+        img = draw._image if hasattr(draw, "_image") else None
+        col = self.W
+        if img is not None and local_ip != "unknown":
+            col = self._paste_qr(img, draw, f"http://{local_ip}:8080", "SETUP")
+
+        self._row(draw, 26, "Net",    _active_link()[:14 if col < self.W else 24])
+        setup_v = f"{local_ip}:8080" if local_ip != "unknown" else "No network"
+        draw.text((5, 44), "Setup", font=self._font_sm, fill=0)
+        draw.text((50, 42), setup_v, font=self._font_sm, fill=0)
+        draw.line([(5, 62), (col - 5, 62)], fill=0)
+        self._row(draw, 68, "OnTime", (ip if ip else "Not configured")[:15])
         status = "CONNECTED" if connected else "OFFLINE"
         marker = chr(9679) if connected else chr(9675)   # filled / hollow dot
         draw.text((5, 86), f"{marker} {status}", font=self._font_md, fill=0)
         view_lbl = self.SOURCE_LABELS.get(source, source)
         w = draw.textlength(view_lbl, font=self._font_sm)
-        draw.text((self.W - w - 5, 88), view_lbl, font=self._font_sm, fill=0)
-        self._row(draw, 106, "Name", socket.gethostname())
+        draw.text((max(5, col - w - 5), 88), view_lbl, font=self._font_sm, fill=0)
+        self._row(draw, 106, "Name", socket.gethostname()[:16])
 
     # ── Hotspot page: everything a tech needs to get in ──────────────────────
     def _page_hotspot(self, draw):
@@ -1577,11 +1613,16 @@ class EPaperDisplay:
         pw     = config.get("hotspot_pass", "")
 
         self._header(draw, "HOTSPOT MODE")
-        self._row(draw, 28, "WiFi",  ssid, font=self._font_lg)
-        self._row(draw, 52, "Pass",  pw,   font=self._font_lg)
-        draw.line([(5, 78), (self.W - 5, 78)], fill=0)
-        draw.text((5, 84), "Join the WiFi above, then open:", font=self._font_sm, fill=0)
-        draw.text((5, 99), "http://10.42.0.1:8080", font=self._font_md, fill=0)
+        img = draw._image if hasattr(draw, "_image") else None
+        col = self.W
+        if img is not None and ssid and pw:
+            wifi_qr = f"WIFI:T:WPA;S:{ssid};P:{pw};;"
+            col = self._paste_qr(img, draw, wifi_qr, "JOIN", scale=2)
+        self._row(draw, 28, "WiFi",  ssid, font=self._font_md)
+        self._row(draw, 52, "Pass",  pw,   font=self._font_md)
+        draw.line([(5, 78), (col - 5, 78)], fill=0)
+        draw.text((5, 84), "Scan to join, then open:", font=self._font_sm, fill=0)
+        draw.text((5, 99), "10.42.0.1:8080", font=self._font_md, fill=0)
 
     def shutdown_screen(self):
         """Drawn just before poweroff — e-ink holds the image with no power,
