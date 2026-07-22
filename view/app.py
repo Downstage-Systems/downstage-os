@@ -1547,11 +1547,11 @@ class EPaperDisplay:
         draw.text((5, y), label, font=self._font_sm, fill=0)
         draw.text((58, y - 2), value, font=font or self._font_md, fill=0)
 
-    def _qr(self, data, scale=3):
+    def _qr(self, data, scale=2):
         """1-bit QR image for the panel, or None if unavailable."""
         try:
             import qrcode
-            q = qrcode.QRCode(border=1, box_size=scale,
+            q = qrcode.QRCode(border=2, box_size=scale,
                               error_correction=qrcode.constants.ERROR_CORRECT_L)
             q.add_data(data)
             q.make(fit=True)
@@ -1560,7 +1560,7 @@ class EPaperDisplay:
             print(f"[epaper] qr: {e}")
             return None
 
-    def _paste_qr(self, img, draw, data, caption, scale=3):
+    def _paste_qr(self, img, draw, data, caption, scale=2):
         """QR pinned to the right edge under the header; returns the x where
         the text column must stop (or panel width if no QR)."""
         qr = self._qr(data, scale)
@@ -1572,7 +1572,7 @@ class EPaperDisplay:
         if caption and cy <= 112:
             w = draw.textlength(caption, font=self._font_sm)
             draw.text((x + (qr.width - w) / 2, cy), caption, font=self._font_sm, fill=0)
-        return x - 6
+        return x - 14   # generous gap to the text column
 
     # ── Normal page: network + OnTime status ─────────────────────────────────
     def _page_status(self, draw, hotspot=False):
@@ -1582,9 +1582,10 @@ class EPaperDisplay:
         connected = check_ontime(ip, timeout=2) if ip else False
         ssid      = _active_ssid()
         source    = config.get("source", "/timer")
-        temp      = _cpu_temp() or ""
+        pif       = primary_iface()
+        tag       = "WIFI" if pif.startswith("wlan") else ("ETH" if pif != "unknown" else "")
 
-        self._header(draw, "DOWNSTAGE VIEW", "HOTSPOT ON" if hotspot else temp)
+        self._header(draw, "DOWNSTAGE VIEW", "HOTSPOT ON" if hotspot else tag)
 
         # image handle for the QR paste (draw only wraps it)
         img = draw._image if hasattr(draw, "_image") else None
