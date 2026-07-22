@@ -1582,10 +1582,12 @@ class EPaperDisplay:
         connected = check_ontime(ip, timeout=2) if ip else False
         ssid      = _active_ssid()
         source    = config.get("source", "/timer")
-        pif       = primary_iface()
-        tag       = "WIFI" if pif.startswith("wlan") else ("ETH" if pif != "unknown" else "")
+        # header corner: the unit's short identity — "V001" from
+        # downstage-v001 — so a rack of Views reads at a glance
+        host = socket.gethostname()
+        unit = host.rsplit("-", 1)[-1].upper() if "-" in host else host.upper()
 
-        self._header(draw, "DOWNSTAGE VIEW", "HOTSPOT ON" if hotspot else tag)
+        self._header(draw, "DOWNSTAGE VIEW", "HOTSPOT ON" if hotspot else unit)
 
         # image handle for the QR paste (draw only wraps it)
         img = draw._image if hasattr(draw, "_image") else None
