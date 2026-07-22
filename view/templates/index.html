@@ -568,6 +568,7 @@
     #setup-tabs { display:flex; background:var(--surface2); border:1px solid var(--border);
       border-radius:11px; padding:4px; gap:4px; margin-bottom:20px; }
     #setup-tabs .stab { flex:1; position:relative; background:none; border:none; border-radius:8px;
+      justify-content:center; text-align:center;
       font-family:var(--font-display); font-weight:600; font-size:14px; letter-spacing:0.05em;
       text-transform:uppercase; color:var(--muted); padding:10px 6px; cursor:pointer; }
     #setup-tabs .stab.on { background:var(--surface); color:var(--accent);
@@ -768,6 +769,7 @@
             <svg viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3a4.237 4.237 0 00-6 0zm-4-4l2 2a7.074 7.074 0 0110 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
             Test
           </button>
+          <button class="btn-sm success" id="connect-btn" onclick="connectServer()">Connect</button>
         </div>
       </div>
 
@@ -1466,6 +1468,26 @@
   }
 
   // ── Save ──────────────────────────────────────────────────────────────────────
+  async function connectServer() {
+    const ip = document.getElementById('ip').value.trim();
+    if (!ip) { showToast('Enter the OnTime server address first.', 'error'); return; }
+    const btn = document.getElementById('connect-btn');
+    btn.disabled = true; btn.textContent = 'Connecting…';
+    try {
+      const c = await (await fetch('/check', { method: 'POST',
+        headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ip }) })).json();
+      if (!c.ok) { showToast(`Cannot reach OnTime at ${ip}:4001`, 'error'); return; }
+      const r = await fetch('/save', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ ip, source: currentSource, external_url: externalUrl, watchdog: watchdogOn }),
+      });
+      const d = await r.json();
+      if (d.ok) { showToast(`Connected to ${ip} — display updating.`, 'success'); setTimeout(fetchStatus, 2500); }
+      else showToast(d.error || 'Could not connect.', 'error');
+    } catch { showToast('Could not reach the unit.', 'error'); }
+    finally { btn.disabled = false; btn.textContent = 'Connect'; }
+  }
+
   async function saveAndConnect() {
     const ip = document.getElementById('ip').value.trim();
     const needsOntime = !['config', 'off', 'external'].includes(currentSource);
