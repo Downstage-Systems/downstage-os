@@ -995,6 +995,64 @@ def stop_hotspot():
     return True, "stopped"
 
 
+
+
+# ── portal-stranded rescue ────────────────────────────────────────────────────
+# A unit that auto-joined a remembered hotel SSID can end up wifi-only behind
+# a captive portal: no internet, and (with client isolation) no reachable UI.
+# If that state holds and nobody is using the UI, drop the portal network and
+# raise the hotspot — control beats a dead network. The SSID is blocked from
+# auto-rejoin until ethernet returns or a human picks a network.
+_last_request_ts = 0.0
+_portal_blocked_ssids = set()
+
+
+@app.before_request
+def _touch_request_ts():
+    global _last_request_ts
+    _last_request_ts = time.time()
+
+
+def _stranded_watch():
+    strikes = 0
+    while True:
+        time.sleep(60)
+        try:
+            config = load_config()
+            if not config.get("hotspot_auto", True) or hotspot_is_active():
+                strikes = 0
+                continue
+            if any(i["kind"] == "Ethernet" for i in get_all_interfaces()):
+                if _portal_blocked_ssids:
+                    print("[stranded] ethernet back — portal SSID block cleared")
+                _portal_blocked_ssids.clear()
+                strikes = 0
+                continue
+            stranded = (_portal.get("detected") and _portal.get("internet") is False
+                        and time.time() - _last_request_ts > 180)
+            if not stranded:
+                strikes = 0
+                continue
+            strikes += 1
+            if strikes < 2:
+                continue
+            strikes = 0
+            ssid = _active_ssid() or ""
+            print(f"[stranded] portal-only, UI unreached -- dropping '{ssid}', hotspot up")
+            if ssid:
+                _portal_blocked_ssids.add(ssid)
+                subprocess.run(["sudo", "nmcli", "connection", "down", ssid],
+                               capture_output=True, timeout=15)
+                time.sleep(3)
+            ok, msg = start_hotspot()
+            print(f"[stranded] hotspot: ok={ok} ({msg})")
+        except Exception as e:
+            print(f"[stranded] watch error: {e}")
+
+
+threading.Thread(target=_stranded_watch, daemon=True).start()
+
+
 def _saved_wifi_profiles():
     """Names of saved infrastructure WiFi profiles (excludes the hotspot)."""
     try:
@@ -1020,6 +1078,8 @@ def _hotspot_has_clients():
 def _try_saved_wifi():
     """Ask NM to bring up each saved WiFi profile; True on first success."""
     for name in _saved_wifi_profiles():
+        if name in _portal_blocked_ssids:
+            continue
         try:
             r = subprocess.run(["sudo", "nmcli", "connection", "up", name],
                                capture_output=True, text=True, timeout=75)
@@ -1595,7 +1655,10 @@ class EPaperDisplay:
         if img is not None and local_ip != "unknown":
             col = self._paste_qr(img, draw, f"http://{local_ip}:8080", "SETUP")
 
-        self._row(draw, 26, "Net",    _active_link()[:14 if col < self.W else 24])
+        netv = _active_link()
+        if _portal.get("detected") and _portal.get("iface", "").startswith("wlan"):
+            netv = "PORTAL " + (_active_ssid() or "")
+        self._row(draw, 26, "Net", netv[:14 if col < self.W else 24])
         setup_v = f"{local_ip}:8080" if local_ip != "unknown" else "No network"
         draw.text((5, 44), "Setup", font=self._font_sm, fill=0)
         draw.text((50, 42), setup_v, font=self._font_sm, fill=0)
@@ -1604,8 +1667,11 @@ class EPaperDisplay:
         status = "CONNECTED" if connected else "OFFLINE"
         marker = chr(9679) if connected else chr(9675)   # filled / hollow dot
         draw.text((5, 86), f"{marker} {status}", font=self._font_md, fill=0)
-        view_lbl = self.SOURCE_LABELS.get(source, source)
-        self._row(draw, 106, "Shows", view_lbl[:18])
+        if _portal.get("detected") and _portal.get("internet") is False:
+            draw.text((5, 104), "PORTAL! No internet", font=self._font_md, fill=0)
+        else:
+            view_lbl = self.SOURCE_LABELS.get(source, source)
+            self._row(draw, 106, "Shows", view_lbl[:18])
 
     # ── Hotspot page: everything a tech needs to get in ──────────────────────
     def _page_hotspot(self, draw):
@@ -1974,6 +2040,7 @@ def wifi_scan():
 
 @app.route("/wifi/connect", methods=["POST"])
 def wifi_connect():
+    _portal_blocked_ssids.clear()   # a human picked a network — trust them
     data     = request.get_json() or {}
     ssid     = data.get("ssid", "").strip()
     password = data.get("password", "").strip()

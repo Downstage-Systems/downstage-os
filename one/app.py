@@ -3129,6 +3129,8 @@ def _hotspot_has_clients():
 def _try_saved_wifi():
     """Ask NM to bring up each saved WiFi profile; True on first success."""
     for name in _saved_wifi_profiles():
+        if name in _portal_blocked_ssids:
+            continue
         try:
             r = subprocess.run(["sudo", "nmcli", "connection", "up", name],
                                capture_output=True, text=True, timeout=75)
@@ -3680,6 +3682,68 @@ def _probe_async_if_stale(max_age=60):
 
 
 threading.Thread(target=_portal_loop, daemon=True).start()
+
+def _one_active_ssid():
+    try:
+        out = subprocess.check_output(
+            ["nmcli", "-t", "-f", "NAME,TYPE", "connection", "show", "--active"],
+            text=True, timeout=10)
+        for l in out.splitlines():
+            if l.endswith(":802-11-wireless") and l.rsplit(":", 1)[0] != HOTSPOT_CON:
+                return l.rsplit(":", 1)[0]
+    except Exception:
+        pass
+    return ""
+
+
+# ── portal-stranded rescue ────────────────────────────────────────────────────
+# A unit that auto-joined a remembered hotel SSID can end up wifi-only behind
+# a captive portal: no internet, and (with client isolation) no reachable UI.
+# If that state holds and nobody is using the UI, drop the portal network and
+# raise the hotspot — control beats a dead network. The SSID is blocked from
+# auto-rejoin until ethernet returns or a human picks a network.
+_portal_blocked_ssids = set()
+
+
+def _stranded_watch():
+    strikes = 0
+    while True:
+        time.sleep(60)
+        try:
+            config = load_config()
+            if not config.get("hotspot_auto", True) or hotspot_is_active():
+                strikes = 0
+                continue
+            if any(i["kind"] == "Ethernet" for i in get_all_interfaces()):
+                if _portal_blocked_ssids:
+                    print("[stranded] ethernet back — portal SSID block cleared")
+                _portal_blocked_ssids.clear()
+                strikes = 0
+                continue
+            stranded = (_portal.get("detected") and _portal.get("internet") is False
+                        and time.time() - _last_request_ts > 180)
+            if not stranded:
+                strikes = 0
+                continue
+            strikes += 1
+            if strikes < 2:
+                continue
+            strikes = 0
+            ssid = _one_active_ssid()
+            _audit("PORTAL-RESCUE", f"portal-only and unreached — dropping '{ssid}'")
+            if ssid:
+                _portal_blocked_ssids.add(ssid)
+                subprocess.run(["sudo", "nmcli", "connection", "down", ssid],
+                               capture_output=True, timeout=15)
+                time.sleep(3)
+            ok, msg = start_hotspot()
+            print(f"[stranded] hotspot: ok={ok} ({msg})")
+        except Exception as e:
+            print(f"[stranded] watch error: {e}")
+
+
+threading.Thread(target=_stranded_watch, daemon=True).start()
+
 
 # ── Failsafe SD sync ──────────────────────────────────────────────────────────
 # The internal microSD is a dormant bootable copy of the golden image. Once a
