@@ -1430,7 +1430,7 @@
         pn.style.display = d.portal?.detected ? '' : 'none';
         if (d.portal?.detected) pn.textContent = d.portal.internet
           ? 'Captive portal on the WiFi leg — internet flows over the other connection; nothing is affected.'
-          : 'Captive portal detected — the display works, but internet features are paused until the portal is cleared (use a travel router or phone hotspot).';
+          : 'Captive portal detected — the display works, but internet features are paused. If the unit ends up stranded here, it drops this network and starts its setup hotspot automatically within a few minutes.';
       }
       const inet = document.getElementById('inet-note');
       if (inet) inet.style.display = (d.portal && d.portal.internet === false && !d.portal.detected) ? '' : 'none';

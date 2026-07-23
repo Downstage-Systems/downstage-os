@@ -1671,7 +1671,9 @@ class EPaperDisplay:
         marker = chr(9679) if connected else chr(9675)   # filled / hollow dot
         draw.text((5, 86), f"{marker} {status}", font=self._font_md, fill=0)
         if _portal.get("detected") and _portal.get("internet") is False:
-            draw.text((5, 104), "PORTAL! No internet", font=self._font_md, fill=0)
+            eth_up = any(i["kind"] == "Ethernet" for i in get_all_interfaces())
+            msg = "PORTAL! No internet" if eth_up else "PORTAL! Hotspot soon..."
+            draw.text((5, 104), msg, font=self._font_md, fill=0)
         else:
             view_lbl = self.SOURCE_LABELS.get(source, source)
             self._row(draw, 106, "Shows", view_lbl[:18])

@@ -1605,7 +1605,8 @@ class OLEDDisplay:
         # portal with no internet still outranks — the person squinting at
         # the panel in a hotel needs to know WHY nothing works
         if _portal.get("detected") and not _portal.get("internet"):
-            line = "Portal! No internet"
+            eth_up = any(i["kind"] == "Ethernet" for i in get_all_interfaces())
+            line = "Portal! No internet" if eth_up else "Portal! Hotspot soon..."
         draw.text((0, 44 + j), line, fill=255)
 
     # ── Hotspot page ──────────────────────────────────────────────────────────
