@@ -595,6 +595,18 @@
     .iface-row .idev { font-family:var(--font-mono); font-size:11px; color:var(--muted2); margin-left:auto; }
     .iface-none { padding:11px 14px; font-size:12.5px; color:var(--muted);
       background:var(--surface2); border:1px solid var(--border2); border-radius:9px; }
+    .wifi-saved-row { display:flex; align-items:center; gap:10px; padding:9px 12px;
+      background:var(--surface2); border:1px solid var(--border2); border-radius:8px;
+      margin-top:7px; font-size:13px; }
+    .wifi-saved-row .wsname { flex:1; font-family:var(--font-mono); overflow:hidden;
+      text-overflow:ellipsis; white-space:nowrap; }
+    .wifi-saved-row .btn-mini { background:none; border:1px solid var(--border2);
+      border-radius:6px; color:var(--muted); font:600 11px var(--font-body);
+      padding:5px 10px; cursor:pointer; text-transform:none; letter-spacing:0; }
+    .wifi-saved-row .btn-mini:hover { color:var(--text); border-color:var(--muted2); }
+    .wifi-saved-row .btn-mini.danger:hover { color:var(--red); border-color:var(--red-bd); }
+    .wifi-saved-label { font-size:11px; color:var(--muted2); text-transform:uppercase;
+      letter-spacing:0.08em; margin-top:14px; }
     /* ── pills side by side + warn state ── */
     .pill-row { display:flex; gap:7px; flex-wrap:wrap; justify-content:flex-end; }
     .pill-row .status-bar { cursor:pointer; }
@@ -999,6 +1011,7 @@
           </div>
           <div class="wifi-network-list" id="wifi-network-list">
             <div class="wifi-empty">Press Scan to find networks</div>
+        <div id="wifi-saved"></div>
           </div>
 
           <!-- Hotspot -->
@@ -1550,6 +1563,34 @@
       </div>`).join('');
   }
 
+  function renderSavedWifi(saved, current) {
+    const box = document.getElementById('wifi-saved');
+    if (!box) return;
+    if (!saved || !saved.length) { box.innerHTML = ''; return; }
+    box.innerHTML = '<div class="wifi-saved-label">Saved networks</div>' +
+      saved.map(function(n){
+        const isCur = n === current;
+        return '<div class="wifi-saved-row"><span class="wsname">' + n +
+          (isCur ? ' <span style="color:var(--accent)">· connected</span>' : '') + '</span>' +
+          (isCur ? '<button class="btn-mini" onclick="wifiDisconnect(\'' + n + '\')">Disconnect</button>' : '') +
+          '<button class="btn-mini danger" onclick="wifiForget(\'' + n + '\')">Forget</button></div>';
+      }).join('');
+  }
+  async function wifiForget(ssid) {
+    if (!confirm('Forget "' + ssid + '"?\n\nThe saved password is deleted — the unit will no longer auto-join this network.')) return;
+    const d = await (await fetch('/wifi/forget', { method: 'POST',
+      headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ssid }) })).json();
+    showToast(d.ok ? 'Forgotten.' : (d.message || 'Could not forget.'), d.ok ? 'success' : 'error');
+    loadWifiStatus();
+  }
+  async function wifiDisconnect(ssid) {
+    if (!confirm('Disconnect from "' + ssid + '"?\n\nThe network stays saved. If this leaves no other connection, the setup hotspot comes up so the unit stays reachable.')) return;
+    const d = await (await fetch('/wifi/disconnect', { method: 'POST',
+      headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ssid }) })).json();
+    showToast(d.ok ? (d.hotspot_raised ? 'Disconnected — hotspot is up.' : 'Disconnected.')
+                   : (d.message || 'Could not disconnect.'), d.ok ? 'success' : 'error');
+    setTimeout(loadWifiStatus, 2500);
+  }
   async function wifiScan() {
     const btn = document.getElementById('wifi-scan-btn');
     btn.disabled = true;
@@ -1558,7 +1599,7 @@
     try {
       const r = await fetch('/wifi/scan', { method: 'POST' });
       const d = await r.json();
-      if (d.ok) renderWifiList(d.current, d.networks, d.hotspot);
+      if (d.ok) { renderWifiList(d.current, d.networks, d.hotspot); renderSavedWifi(d.saved, d.current); }
       else document.getElementById('wifi-network-list').innerHTML = `<div class="wifi-empty">Error: ${d.error || 'scan failed'}</div>`;
     } catch {
       document.getElementById('wifi-network-list').innerHTML = '<div class="wifi-empty">Network error</div>';
@@ -1682,7 +1723,7 @@
     try {
       const r = await fetch('/wifi/status');
       const d = await r.json();
-      if (d.ok) renderWifiList(d.current, d.networks, d.hotspot);
+      if (d.ok) { renderWifiList(d.current, d.networks, d.hotspot); renderSavedWifi(d.saved, d.current); }
     } catch {}
   }
 

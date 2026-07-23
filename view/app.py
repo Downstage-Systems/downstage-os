@@ -1940,7 +1940,8 @@ def wifi_status():
             for n in networks:
                 n["active"] = False
             current = None
-        return jsonify({"ok": True, "hotspot": hotspot, "current": current, "networks": networks})
+        return jsonify({"ok": True, "hotspot": hotspot, "current": current, "networks": networks,
+                        "saved": _saved_wifi_profiles()})
     except Exception as e:
         return jsonify({"ok": hotspot, "hotspot": hotspot, "current": None, "networks": [], "error": str(e)})
 
@@ -1965,7 +1966,8 @@ def wifi_scan():
             for n in networks:
                 n["active"] = False
             current = None
-        return jsonify({"ok": True, "hotspot": hotspot, "current": current, "networks": networks})
+        return jsonify({"ok": True, "hotspot": hotspot, "current": current, "networks": networks,
+                        "saved": _saved_wifi_profiles()})
     except Exception as e:
         return jsonify({"ok": False, "hotspot": hotspot, "current": None, "networks": [], "error": str(e)})
 
@@ -2046,6 +2048,27 @@ def wifi_forget():
         subprocess.run(["sudo", "nmcli", "connection", "delete", ssid],
                        capture_output=True, timeout=10)
         return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"ok": False, "message": str(e)})
+
+
+@app.route("/wifi/disconnect", methods=["POST"])
+def wifi_disconnect():
+    """Drop the current WiFi but keep the profile. If that leaves no path to
+    the unit at all, raise the hotspot so it stays reachable."""
+    name = ((request.get_json() or {}).get("ssid") or "").strip()
+    if not name:
+        return jsonify({"ok": False, "message": "SSID required"})
+    try:
+        subprocess.run(["sudo", "nmcli", "connection", "down", name],
+                       capture_output=True, timeout=15)
+        time.sleep(2)
+        eth_up = any(i["kind"] == "Ethernet" for i in get_all_interfaces())
+        raised = False
+        if not eth_up and not hotspot_is_active():
+            ok, _ = start_hotspot()
+            raised = bool(ok)
+        return jsonify({"ok": True, "hotspot_raised": raised})
     except Exception as e:
         return jsonify({"ok": False, "message": str(e)})
 
