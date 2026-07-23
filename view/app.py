@@ -1099,24 +1099,51 @@ def _hotspot_fallback():
     is up it owns the radio, so NM can never rejoin WiFi on its own -- while
     nobody is connected to the hotspot, quietly retry the saved WiFi every
     10 minutes and retire the hotspot if it succeeds."""
-    time.sleep(90)
+    def _real_ip():
+        ip = get_local_ip()
+        return ip != "unknown" and not ip.startswith("169.254.")
+
+    time.sleep(8)    # short ethernet-DHCP grace
     config = load_config()
     if not config.get("hotspot_auto", True) or hotspot_is_active():
         return
-    if get_local_ip() != "unknown":
+    if _real_ip():
         return
-    for attempt in range(3):
-        if not _saved_wifi_profiles():
-            break
-        print(f"[hotspot] no network -- retrying saved WiFi ({attempt + 1}/3)")
-        if _try_saved_wifi():
-            return
-        time.sleep(20)
-        if get_local_ip() != "unknown":
-            return
-    print("[hotspot] no network found -- starting fallback hotspot")
-    ok, msg = start_hotspot()
-    print(f"[hotspot] fallback start: ok={ok} ({msg})")
+
+    # genuinely no network — flag the e-ink and decide fast (scan-first,
+    # ported from the One: only retry saved WiFi that's actually in range)
+    epaper._searching = True
+    epaper.force_refresh()
+    ok = False
+    try:
+        for _ in range(6):
+            time.sleep(2)
+            if _real_ip():
+                return
+        saved = _saved_wifi_profiles()
+        if saved:
+            try:
+                _, visible = _scan_wifi()
+                in_range = ({n["ssid"].lower() for n in visible}
+                            & {x.lower() for x in saved})
+            except Exception:
+                in_range = set()
+            if in_range:
+                for attempt in range(2):
+                    print(f"[hotspot] saved WiFi in range -- joining ({attempt + 1}/2)")
+                    if _try_saved_wifi():
+                        return
+                    time.sleep(10)
+                    if _real_ip():
+                        return
+            else:
+                print("[hotspot] no saved network in range -- hotspot now")
+        print("[hotspot] no network found -- starting fallback hotspot")
+        ok, msg = start_hotspot()
+        print(f"[hotspot] fallback start: ok={ok} ({msg})")
+    finally:
+        epaper._searching = False
+        epaper.force_refresh()
     while ok and hotspot_is_active():
         time.sleep(600)
         if not hotspot_is_active():
@@ -1587,6 +1614,13 @@ class EPaperDisplay:
             img  = self._new_image()
             draw = ImageDraw.Draw(img)
             draw._image = img   # pages paste QR codes onto the frame
+            if getattr(self, "_searching", False):
+                self._header(draw, "DOWNSTAGE VIEW")
+                draw.text((5, 34), "Searching for a network...", font=self._font_md, fill=0)
+                draw.text((5, 58), "Setup hotspot starts if", font=self._font_sm, fill=0)
+                draw.text((5, 73), "none is found (about 30s).", font=self._font_sm, fill=0)
+                self._flush(img)
+                return
             hs = hotspot_is_active()
             if hs and not _real_network_ip():
                 self._page_hotspot(draw)
