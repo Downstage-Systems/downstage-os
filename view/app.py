@@ -1656,7 +1656,10 @@ class EPaperDisplay:
             col = self._paste_qr(img, draw, f"http://{local_ip}:8080", "SETUP")
 
         netv = _active_link()
-        if _portal.get("detected") and _portal.get("iface", "").startswith("wlan"):
+        # flag the portal only when the portaled wifi IS the path — a
+        # dual-homed unit with working ethernet stays calm (no-false-alarm)
+        if (_portal.get("detected") and _portal.get("iface", "").startswith("wlan")
+                and primary_iface().startswith("wlan")):
             netv = "PORTAL " + (_active_ssid() or "")
         self._row(draw, 26, "Net", netv[:14 if col < self.W else 24])
         setup_v = f"{local_ip}:8080" if local_ip != "unknown" else "No network"
