@@ -578,7 +578,8 @@
     .stab-upd.on { display:block; }
     .tpane { display:none; }
     .tpane.on { display:block; }
-    body.show-mode #tpane-display { display:block !important; }
+    body.show-mode .tpane { display:none !important; }   /* Show Mode: no setup panes… */
+    body.show-mode #tpane-display { display:block !important; }   /* …except the display one */
     body.show-mode #setup-tabs { display:none; }
     /* ── interfaces panel ── */
     .iface-panel { display:flex; flex-direction:column; gap:8px; margin-bottom:16px; }
