@@ -1067,9 +1067,9 @@
         <div class="section-label">Keep Screen Awake</div>
         <div class="local-panel" style="margin-bottom:22px">
           <div style="display:flex; align-items:center; gap:12px">
-            <span style="flex:1; font-size:13.5px; color:var(--text)">Stop this device from sleeping
-              while this page is open<br><span style="font-size:11.5px; color:var(--muted)">Per-device
-              setting — ideal for a phone taped to the desk. Tool panels always keep the screen awake.</span></span>
+            <span style="flex:1; font-size:13.5px; color:var(--text)">Keep Downstage OS windows
+              active — this device won't sleep while the UI is open<br><span style="font-size:11.5px; color:var(--muted)">Per-device
+              setting. Tool panels always keep the screen awake.</span></span>
             <button class="toggle" id="awake-toggle" onclick="toggleAwakeGlobal()"></button>
           </div>
         </div>
@@ -2194,7 +2194,7 @@
       document.addEventListener('pointerdown', arm);
     }
   });
-  let _wakeLock = null, _wakeVideo = null;
+  let _wakeLock = null, _wakeVideo = null, _wakeArmed = false;
   function keepAwake(on) {
     // MUST run synchronously inside the user's tap — iOS only honors
     // video.play() during a real gesture (async recording burned it before)
@@ -2202,16 +2202,30 @@
       if (navigator.wakeLock && window.isSecureContext) {
         navigator.wakeLock.request('screen').then(l => { _wakeLock = l; }).catch(() => {});
       }
+      _wakeArmed = true;
       if (!_wakeVideo) {
         _wakeVideo = document.createElement('video');
         _wakeVideo.setAttribute('playsinline', '');
-        _wakeVideo.muted = true; _wakeVideo.loop = true;
+        _wakeVideo.setAttribute('webkit-playsinline', '');
+        _wakeVideo.muted = true;
+        // NO native loop: iOS lets the device sleep through looping micro-
+        // videos. NoSleep pattern: rewind on timeupdate, resurrect on pause.
+        _wakeVideo.addEventListener('timeupdate', function () {
+          if (this.currentTime > 1) this.currentTime = 0.05;
+        });
+        _wakeVideo.addEventListener('pause', function () {
+          if (_wakeArmed) this.play().catch(() => {});
+        });
+        _wakeVideo.addEventListener('ended', function () {
+          if (_wakeArmed) { this.currentTime = 0.05; this.play().catch(() => {}); }
+        });
         _wakeVideo.style.cssText = 'position:fixed;left:-10px;top:-10px;width:2px;height:2px;opacity:0.01;pointer-events:none';
         _wakeVideo.src = '/static/nosleep.mp4';
         document.body.appendChild(_wakeVideo);
       }
       _wakeVideo.play().catch(() => {});
     } else {
+      _wakeArmed = false;
       try { _wakeLock && _wakeLock.release(); } catch (e) {}
       _wakeLock = null;
       if (_wakeVideo) _wakeVideo.pause();
