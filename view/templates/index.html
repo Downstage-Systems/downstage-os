@@ -2163,6 +2163,58 @@
     try { document.execCommand('copy'); showToast('Copied ' + ip, 'success'); } catch (e) {}
     ta.remove();
   }
+  // ── keep-awake while a tool panel is open ──
+  // Wake Lock API needs a secure context (our units speak HTTP), so fall
+  // back to the classic trick: an invisible looping video the page records
+  // for itself (each browser produces a format it can play).
+  let _wakeLock = null, _wakeVideo = null, _wakeBlobUrl = null;
+  async function _makeWakeVideo() {
+    if (_wakeBlobUrl) return _wakeBlobUrl;
+    try {
+      const cv = document.createElement('canvas'); cv.width = 2; cv.height = 2;
+      const x = cv.getContext('2d');
+      const stream = cv.captureStream(5);
+      const rec = new MediaRecorder(stream);
+      const chunks = [];
+      rec.ondataavailable = e => chunks.push(e.data);
+      const done = new Promise(r => rec.onstop = r);
+      rec.start();
+      const iv = setInterval(() => { x.fillStyle = '#000'; x.fillRect(0, 0, 2, 2); }, 100);
+      await new Promise(r => setTimeout(r, 700));
+      clearInterval(iv); rec.stop(); await done;
+      _wakeBlobUrl = URL.createObjectURL(new Blob(chunks, { type: rec.mimeType }));
+      return _wakeBlobUrl;
+    } catch (e) { return null; }
+  }
+  async function keepAwake(on) {
+    if (on) {
+      try {
+        if (navigator.wakeLock && window.isSecureContext) {
+          _wakeLock = await navigator.wakeLock.request('screen');
+          return;
+        }
+      } catch (e) {}
+      const url = await _makeWakeVideo();
+      if (!url) return;
+      if (!_wakeVideo) {
+        _wakeVideo = document.createElement('video');
+        _wakeVideo.setAttribute('playsinline', '');
+        _wakeVideo.muted = true; _wakeVideo.loop = true;
+        _wakeVideo.style.cssText = 'position:fixed;left:-10px;top:-10px;width:2px;height:2px;opacity:0.01;pointer-events:none';
+        _wakeVideo.src = url;
+        document.body.appendChild(_wakeVideo);
+      }
+      _wakeVideo.play().catch(() => {});
+    } else {
+      try { _wakeLock && _wakeLock.release(); } catch (e) {}
+      _wakeLock = null;
+      if (_wakeVideo) _wakeVideo.pause();
+    }
+  }
+  document.addEventListener('visibilitychange', () => {
+    // returning to a page with an open panel re-arms the lock
+    if (!document.hidden && document.getElementById('emu-overlay')?.classList.contains('on')) keepAwake(true);
+  });
   let _panelUrl = '';
   let _panelScrollY = 0;
   function openPanel(url, title) {
@@ -2173,8 +2225,10 @@
     _panelScrollY = window.scrollY;
     document.body.style.top = `-${_panelScrollY}px`;
     document.body.classList.add('panel-open');
+    keepAwake(true);   // buttons/timer pages shouldn't die with the screen
   }
   function closePanel() {
+    keepAwake(false);
     document.getElementById('emu-overlay').classList.remove('on');
     document.getElementById('emu-frame').src = 'about:blank';
     document.body.classList.remove('panel-open');
