@@ -664,6 +664,16 @@
       background:var(--surface); border-bottom:1px solid var(--border2); }
     .emu-title { flex:1; font-family:var(--font-display); font-weight:700; font-size:14px;
       letter-spacing:0.06em; text-transform:uppercase; }
+    .emu-tabs { flex:1; display:flex; gap:5px; overflow-x:auto; min-width:0; }
+    .emu-tab { display:flex; align-items:center; gap:7px; padding:6px 10px;
+      background:var(--surface2); border:1px solid var(--border2); border-radius:8px;
+      font-family:var(--font-display); font-weight:600; font-size:12px;
+      letter-spacing:0.04em; text-transform:uppercase; color:var(--muted);
+      cursor:pointer; white-space:nowrap; }
+    .emu-tab.on { color:var(--text); border-color:var(--muted2); background:var(--surface); }
+    .emu-tab .etx { font-size:14px; line-height:1; color:var(--muted2); padding:0 1px; }
+    .emu-tab .etx:hover { color:var(--red); }
+    #emu-frames iframe { position:absolute; inset:0; width:100%; height:100%; border:0; background:#000; }
     .emu-act { background:none; border:1px solid var(--border2); border-radius:7px;
       padding:6px 9px; cursor:pointer; }
     .emu-act svg { width:16px; height:16px; fill:var(--muted); display:block; }
@@ -693,16 +703,15 @@
 </div>
 <div id="emu-overlay">
   <div class="emu-head">
-    <span class="emu-title">Panel</span>
-    <button class="emu-act" onclick="emuPopOut()" title="Open in its own tab">
+    <div class="emu-tabs" id="emu-tabs"></div>
+    <button class="emu-act" onclick="emuPopOut()" title="Open this tool in its own tab">
       <svg viewBox="0 0 24 24"><path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
     </button>
-    <button class="emu-act" onclick="closePanel()" title="Close">
-      <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+    <button class="emu-act" onclick="hidePanel()" title="Back to the UI — tools stay open">
+      <svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
     </button>
   </div>
-  <iframe id="emu-frame" title="Tool panel"></iframe>
-</div>
+  <div id="emu-frames" style="flex:1; position:relative; background:#000"></div>
 <div class="wrap">
 
   <div class="logo-row">
@@ -2041,6 +2050,203 @@
     const lbl = document.getElementById('blackout-label-quick');
     if (lbl) lbl.textContent = blackoutActive ? 'Resume' : 'Blackout';
   }
+  function quickOpen(path) {
+    const host = lastServerIp || document.getElementById('ip').value.trim();
+    if (!host) return;
+    const titles = { '/editor/': 'OnTime Editor', '/timercontrol': 'Timer Control',
+                     '/messagecontrol': 'Message Control' };
+    openPanel(`http://${host}:4001${path}`, titles[path] || 'OnTime');
+  }
+
+  // ── Show / Full view mode — persisted per browser ──
+  function setViewMode(m) {
+    document.body.classList.toggle('show-mode', m === 'show');
+    document.getElementById('view-tab-show').classList.toggle('active', m === 'show');
+    document.getElementById('view-tab-full').classList.toggle('active', m !== 'show');
+    try { localStorage.setItem('dsv-view-mode', m); } catch (e) {}
+  }
+  try { setViewMode(localStorage.getItem('dsv-view-mode') || 'full'); } catch (e) {}
+
+  function showToast(msg, type) {
+    const el = document.getElementById('toast');
+    el.innerHTML = (ICONS[type] || '') + `<span>${msg}</span>`;
+    el.className = `toast ${type}`;
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(clearToast, (type === 'error' || type === 'warning') ? 6000 : 3500);
+  }
+  function clearToast() {
+    clearTimeout(_toastTimer);
+    document.getElementById('toast').className = 'toast';
+  }
+  function spinnerHTML(label) {
+    return `<svg class="spin" viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 14.96 20 13.54 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 9.04 4 10.46 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>${label}`;
+  }
+</script>
+<script>
+  // ── add-to-home-screen hint (mobile, dismissible, hidden when installed) ──
+  (function () {
+    const ua = navigator.userAgent;
+    const isIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isAndroid = /Android/.test(ua);
+    const standalone = window.navigator.standalone === true ||
+      window.matchMedia('(display-mode: standalone)').matches;
+    let dismissed = false;
+    try { dismissed = localStorage.getItem('ds-a2hs-dismissed') === '1'; } catch (e) {}
+    if ((isIOS || isAndroid) && !standalone && !dismissed) {
+      document.getElementById('a2hs-hint').style.display = 'flex';
+    }
+    window.a2hsShow = function () {
+      const steps = isIOS
+        ? 'In Safari, tap the <b>Share</b> button (the square with an arrow), scroll down, and tap <b>Add to Home Screen</b>.'
+        : 'In Chrome, tap the <b>&#8942;</b> menu (top right), then tap <b>Add to Home screen</b>.';
+      document.getElementById('a2hs-steps').innerHTML =
+        steps + '<br><br>The page becomes an app icon — one tap from your home screen next time.';
+      document.getElementById('a2hs-pop').style.display = 'flex';
+    };
+    window.a2hsDismiss = function () {
+      document.getElementById('a2hs-hint').style.display = 'none';
+      try { localStorage.setItem('ds-a2hs-dismissed', '1'); } catch (e) {}
+    };
+  })();
+</script>
+<script>
+  function copyAddr() {
+    const addr = 'http://' + window.location.host + '/';
+    const done = () => showToast('Address copied — ' + addr, 'success');
+    const pop = document.getElementById('qr-pop');
+    if (pop.style.display === 'none') {
+      const img = document.getElementById('qr-img');
+      img.onerror = () => { pop.style.display = 'none'; };
+      img.src = '/qr.png?' + Date.now();
+      pop.style.display = '';
+      setTimeout(() => document.addEventListener('click', function closeQr(e) {
+        if (!pop.contains(e.target)) { pop.style.display = 'none'; document.removeEventListener('click', closeQr); }
+      }), 0);
+    } else {
+      pop.style.display = 'none';
+    }
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(addr).then(done);
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = addr; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch (e) {}
+      ta.remove();
+    }
+  }
+  function showSetupTab(t) {
+    for (const x of ['display', 'ontime', 'network', 'system']) {
+      document.getElementById('tpane-' + x)?.classList.toggle('on', x === t);
+      document.getElementById('stab-' + x)?.classList.toggle('on', x === t);
+    }
+    if (window.scrollY > 0) window.scrollTo(0, 0);
+    try { localStorage.setItem('dsv-setup-tab', t); } catch (e) {}
+  }
+  function pillGo(tab) { setViewMode('full'); showSetupTab(tab); }
+  try { showSetupTab(localStorage.getItem('dsv-setup-tab') || 'display'); } catch (e) { showSetupTab('display'); }
+  function renderInterfaces(list, primary) {
+    const box = document.getElementById('iface-panel');
+    if (!box) return;
+    if (!list || !list.length) { box.innerHTML = '<div class="iface-none">No network connection — check the cable or join WiFi below.</div>'; return; }
+    box.innerHTML = list.map(function(i){
+      const prim = i.iface === primary ? '<span class="iprim">PRIMARY</span>' : '';
+      return '<div class="iface-row"><span class="idot"></span>' +
+        '<span class="ikind">' + i.kind + '</span>' +
+        '<span class="iip" onclick="copyIp(\'' + i.ip + '\')" title="Click to copy this address">' + i.ip + '</span>' + prim +
+        '<span class="idev">' + i.iface + '</span></div>';
+    }).join('');
+  }
+  function cleanServerAddr(v) {
+    // paste-friendly: "http://192.168.2.109:4001/editor/" → "192.168.2.109"
+    v = v.trim();
+    v = v.replace(/^[a-z]+:\/\//i, '');   // scheme
+    v = v.split('/')[0];                    // path
+    v = v.split(':')[0];                    // port
+    return v;
+  }
+  function copyIp(ip) {
+    const ta = document.createElement('textarea');
+    ta.value = ip; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); showToast('Copied ' + ip, 'success'); } catch (e) {}
+    ta.remove();
+  }
+  // ── keep-awake while a tool panel is open ──
+  // Wake Lock API needs a secure context (our units speak HTTP), so fall
+  // back to the classic trick: an invisible looping video the page records
+  // for itself (each browser produces a format it can play).
+  // ── multi-panel manager: tools stay ALIVE in the background (state kept —
+  // the editor reopens where you left it); multiple open tools become tabs ──
+  const _panels = {};      // title -> { frame, url }
+  let _activePanel = null;
+  let _panelScrollY = 0;
+
+  function openPanel(url, title) {
+    title = title || 'Panel';
+    let pn = _panels[title];
+    if (!pn) {
+      const f = document.createElement('iframe');
+      f.title = title;
+      f.src = url;
+      document.getElementById('emu-frames').appendChild(f);
+      pn = _panels[title] = { frame: f, url };
+    } else if (pn.url !== url) {
+      pn.url = url;
+      pn.frame.src = url;   // same tool pointed somewhere new
+    }
+    _activePanel = title;
+    renderPanelTabs();
+    const ov = document.getElementById('emu-overlay');
+    if (!ov.classList.contains('on')) {
+      ov.classList.add('on');
+      _panelScrollY = window.scrollY;
+      document.body.style.top = `-${_panelScrollY}px`;
+      document.body.classList.add('panel-open');
+    }
+  }
+
+  function renderPanelTabs() {
+    const bar = document.getElementById('emu-tabs');
+    bar.innerHTML = '';
+    for (const k of Object.keys(_panels)) {
+      const t = document.createElement('div');
+      t.className = 'emu-tab' + (k === _activePanel ? ' on' : '');
+      t.onclick = () => { _activePanel = k; renderPanelTabs(); };
+      t.append(k);
+      const x = document.createElement('span');
+      x.className = 'etx'; x.textContent = '\u00d7';
+      x.title = 'Close this tool (its state is lost)';
+      x.onclick = (e) => { e.stopPropagation(); closePanelTab(k); };
+      t.appendChild(x);
+      bar.appendChild(t);
+      _panels[k].frame.style.display = (k === _activePanel) ? '' : 'none';
+    }
+  }
+
+  function closePanelTab(k) {
+    const pn = _panels[k];
+    if (pn) { pn.frame.remove(); delete _panels[k]; }
+    if (_activePanel === k) _activePanel = Object.keys(_panels)[0] || null;
+    if (!_activePanel) hidePanel();
+    else renderPanelTabs();
+  }
+
+  function hidePanel() {
+    document.getElementById('emu-overlay').classList.remove('on');
+    document.body.classList.remove('panel-open');
+    document.body.style.top = '';
+    window.scrollTo(0, _panelScrollY);
+  }
+  const CLOSER_ALIAS = hidePanel;   // legacy name kept below
+
+  function emuPopOut() {
+    if (!_activePanel) return;
+    const u = _panels[_activePanel].url;
+    closePanelTab(_activePanel);
+    openExternal(u);
+  }
+  function closePanel() { hidePanel(); }
   function quickOpen(path) {
     const host = lastServerIp || document.getElementById('ip').value.trim();
     if (!host) return;
