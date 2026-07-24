@@ -1572,7 +1572,7 @@ class EPaperDisplay:
     def _loop(self):
         while not self._stop.is_set():
             self._render()
-            self._stop.wait(self.INTERVAL)
+            self._stop.wait(2 if getattr(self, "_searching", False) else self.INTERVAL)
 
     def _new_image(self):
         return Image.new('1', (self.W, self.H), 255)
@@ -1616,9 +1616,20 @@ class EPaperDisplay:
             draw._image = img   # pages paste QR codes onto the frame
             if getattr(self, "_searching", False):
                 self._header(draw, "DOWNSTAGE VIEW")
-                draw.text((5, 34), "Searching for a network...", font=self._font_md, fill=0)
+                self._spin = (getattr(self, "_spin", 0) + 1) % 8
+                dots = "." * (1 + self._spin % 3)
+                draw.text((5, 34), f"Searching for a network{dots}", font=self._font_md, fill=0)
                 draw.text((5, 58), "Setup hotspot starts if", font=self._font_sm, fill=0)
                 draw.text((5, 73), "none is found (about 30s).", font=self._font_sm, fill=0)
+                # segmented wheel, one segment advancing per refresh — visible
+                # motion so the wait never reads as a hang
+                cx, cy, r = 215, 72, 24
+                for i in range(8):
+                    a0 = i * 45 - 90 + self._spin * 45
+                    lead = (8 + i) % 8   # 0 = leading segment
+                    width = 7 if i < 3 else 2   # 3 bold leading segments
+                    draw.arc([cx - r, cy - r, cx + r, cy + r],
+                             a0 + 4, a0 + 41, fill=0, width=width)
                 self._flush(img)
                 return
             hs = hotspot_is_active()
