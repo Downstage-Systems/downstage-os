@@ -2396,6 +2396,12 @@
       if (rln) rln.style.display = (d.mode === 'remote' && d.ontime_installed) ? '' : 'none';
       if (window._clockSync) _clockSync(d.clock);
       wizMaybeShow(d);
+      const fb = document.getElementById('failsafe-btn');
+      if (fb && d.failsafe && d.failsafe.last) {
+        const t = new Date(d.failsafe.last * 1000);
+        fb.title = 'Copy the current show state to the failsafe SD now — last backed up ' +
+          t.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+      }
       if (d.hdmi_connected) for (const n of ['1','2']) {
         const on = d.hdmi_connected[n];
         const pb = document.getElementById('preview-nodisp-' + n);

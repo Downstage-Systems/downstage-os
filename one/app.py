@@ -3756,6 +3756,13 @@ threading.Thread(target=_stranded_watch, daemon=True).start()
 
 _failsafe = {"last": 0.0, "result": None}
 _FAILSAFE_MNT = "/mnt/failsafe-sd"
+_FAILSAFE_STAMP = BASE_DIR / ".failsafe-last"
+
+try:   # survive app restarts — the sync record is truth, not session state
+    _failsafe["last"] = float(_FAILSAFE_STAMP.read_text().strip())
+    _failsafe["result"] = "ok"
+except Exception:
+    pass
 
 def _failsafe_sync_once():
     try:
@@ -3800,6 +3807,10 @@ def _failsafe_sync_once():
         finally:
             subprocess.run(["sudo", "umount", _FAILSAFE_MNT], timeout=60)
         _failsafe.update(last=time.time(), result="ok")
+        try:
+            _FAILSAFE_STAMP.write_text(str(_failsafe["last"]))
+        except Exception:
+            pass
         _audit("FAILSAFE-SYNC", "show state copied to failsafe SD")
         return "ok"
     except Exception as e:
