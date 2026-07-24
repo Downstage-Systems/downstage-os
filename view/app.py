@@ -1135,10 +1135,6 @@ def _hotspot_fallback(grace=8):
     is up it owns the radio, so NM can never rejoin WiFi on its own -- while
     nobody is connected to the hotspot, quietly retry the saved WiFi every
     10 minutes and retire the hotspot if it succeeds."""
-    def _real_ip():
-        ip = get_local_ip()
-        return ip != "unknown" and not ip.startswith("169.254.")
-
     if not _hunt_lock.acquire(blocking=False):
         return          # a hunt is already running
     try:
@@ -1148,6 +1144,10 @@ def _hotspot_fallback(grace=8):
 
 
 def _hotspot_fallback_inner(grace):
+    def _real_ip():
+        ip = get_local_ip()
+        return ip != "unknown" and not ip.startswith("169.254.")
+
     time.sleep(grace)    # short ethernet-DHCP grace
     config = load_config()
     if not config.get("hotspot_auto", True) or hotspot_is_active():
