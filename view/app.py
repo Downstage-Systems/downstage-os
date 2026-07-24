@@ -442,13 +442,20 @@ def _navigate(url):
         return False
 
 
-def _show(url):
+_blackout_active = False
+
+
+def _show(url, force=False):
     """Show a URL on the output: reuse the live window when possible,
+    A live blackout overrides every navigation except its own (force=True) —
+    the watchdog can swap pages underneath without lifting the black.
     cold-start chromium only when there isn't one. A freshly cold-started
     chromium needs ~20s before its DevTools port answers on this hardware,
     so navigation retries patiently rather than triggering cascading
     cold starts."""
     global _win
+    if _blackout_active and not force:
+        url = "http://localhost:8080/blackout-page"
     with _wlock:
         if _win and _win.poll() is None:
             deadline = time.time() + 75
@@ -1723,6 +1730,8 @@ class EPaperDisplay:
             eth_up = any(i["kind"] == "Ethernet" for i in get_all_interfaces())
             msg = "PORTAL! No internet" if eth_up else "PORTAL! Hotspot soon..."
             draw.text((5, 104), msg, font=self._font_md, fill=0)
+        elif _blackout_active:
+            draw.text((5, 104), "BLACKOUT - resume in UI", font=self._font_md, fill=0)
         else:
             view_lbl = self.SOURCE_LABELS.get(source, source)
             self._row(draw, 106, "Shows", view_lbl[:18])
@@ -1808,6 +1817,7 @@ def status():
         "external_url": config.get("external_url", ""),
         "connected": connected,
         "local_ip":  get_local_ip(),
+        "blackout": _blackout_active,
         "net_iface": primary_iface(),
         "interfaces": get_all_interfaces(),
         "portal": {"detected": _portal["detected"], "iface": _portal["iface"],
@@ -2171,6 +2181,25 @@ def wifi_forget():
         return jsonify({"ok": True})
     except Exception as e:
         return jsonify({"ok": False, "message": str(e)})
+
+
+@app.route("/blackout", methods=["POST"])
+def blackout_toggle():
+    """Show-safety blackout: instant black, source untouched; press again to
+    resume exactly where the display was."""
+    global _blackout_active
+    body = request.get_json(silent=True) or {}
+    on = bool(body.get("on", not _blackout_active))
+    _blackout_active = on
+    if on:
+        _show("http://localhost:8080/blackout-page", force=True)
+    else:
+        config = load_config()
+        _show(_source_url(config.get("source", "/timer") if config.get("ip") else "welcome"),
+              force=True)
+    print(f"[blackout] {'ON' if on else 'off — resumed'}")
+    epaper.force_refresh()
+    return jsonify({"ok": True, "blackout": _blackout_active})
 
 
 @app.route("/wifi/disconnect", methods=["POST"])
