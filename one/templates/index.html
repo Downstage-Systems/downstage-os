@@ -2825,6 +2825,12 @@
     try { localStorage.setItem('ds-keepawake', awakeGlobal ? '1' : '0'); } catch (e) {}
     document.getElementById('awake-toggle').className = 'toggle ' + (awakeGlobal ? 'on' : '');
     keepAwake(awakeGlobal);   // the toggle tap IS the gesture — arms instantly
+    if (awakeGlobal) setTimeout(() => {
+      const v = _wakeVideo;
+      if (_wakeLock) showToast('Awake: system wake lock active ✓', 'success');
+      else if (v && !v.paused && v.currentTime > 0) showToast('Awake: wake video rolling ✓', 'success');
+      else showToast('Awake FAILED: ' + (v ? (v.error ? 'video error ' + v.error.code : 'video not playing (paused=' + v.paused + ', t=' + v.currentTime.toFixed(2) + ')') : 'no video element'), 'error');
+    }, 2000);
     showToast(awakeGlobal ? 'This device will stay awake on this page.' : 'Normal sleep restored.', 'info');
   }
   document.addEventListener('DOMContentLoaded', () => {
