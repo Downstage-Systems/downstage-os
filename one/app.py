@@ -3143,7 +3143,36 @@ def _try_saved_wifi():
     return False
 
 
-def _hotspot_fallback():
+_hunt_lock = threading.Lock()
+
+
+def _network_supervisor():
+    """Boot handles the first hunt; this catches connectivity LOST at
+    runtime — two 20s strikes with no real network and no hotspot re-runs
+    the searching -> scan -> hotspot flow."""
+    strikes = 0
+    while True:
+        time.sleep(20)
+        try:
+            ip = get_network_info()["ip"]
+            have = ip != "unknown" and not ip.startswith("169.254.")
+            if have or hotspot_is_active() or not load_config().get("hotspot_auto", True):
+                strikes = 0
+                continue
+            strikes += 1
+            if strikes < 2:
+                continue
+            strikes = 0
+            print("[supervisor] network lost at runtime -- hunting")
+            _hotspot_fallback(grace=2)
+        except Exception as e:
+            print(f"[supervisor] {e}")
+
+
+threading.Thread(target=_network_supervisor, daemon=True).start()
+
+
+def _hotspot_fallback(grace=8):
     """Provisioning aid: no network after boot -> start the hotspot so the
     setup UI is reachable. Scan-first: saved WiFi is only retried when it is
     actually in range (the radio can miss its first association after a
@@ -3152,13 +3181,22 @@ def _hotspot_fallback():
     rejoin WiFi on its own -- while nobody is connected to the hotspot,
     quietly retry the saved WiFi every 10 minutes and retire the hotspot if
     it succeeds. The OLED shows a live Searching screen for the whole hunt."""
+    if not _hunt_lock.acquire(blocking=False):
+        return          # a hunt is already running
+    try:
+        _hotspot_fallback_inner(grace)
+    finally:
+        _hunt_lock.release()
+
+
+def _hotspot_fallback_inner(grace):
     def _real_ip():
         ip = get_network_info()["ip"]
         # link-local (direct cable) is a control path, not a network — the
         # hotspot should still come up alongside it
         return ip != "unknown" and not ip.startswith("169.254.")
 
-    time.sleep(8)    # short ethernet-DHCP grace: a wired unit connects here
+    time.sleep(grace)    # short ethernet-DHCP grace: a wired unit connects here
     config = load_config()
     if not config.get("hotspot_auto", True) or hotspot_is_active():
         return

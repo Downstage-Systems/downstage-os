@@ -1098,7 +1098,36 @@ def _try_saved_wifi():
     return False
 
 
-def _hotspot_fallback():
+_hunt_lock = threading.Lock()
+
+
+def _network_supervisor():
+    """Boot handles the first hunt; this catches connectivity LOST at
+    runtime (cable pulled mid-show) — two 20s strikes with no real network
+    and no hotspot re-runs the same searching -> scan -> hotspot flow."""
+    strikes = 0
+    while True:
+        time.sleep(20)
+        try:
+            ip = get_local_ip()
+            have = ip != "unknown" and not ip.startswith("169.254.")
+            if have or hotspot_is_active() or not load_config().get("hotspot_auto", True):
+                strikes = 0
+                continue
+            strikes += 1
+            if strikes < 2:
+                continue
+            strikes = 0
+            print("[supervisor] network lost at runtime -- hunting")
+            _hotspot_fallback(grace=2)
+        except Exception as e:
+            print(f"[supervisor] {e}")
+
+
+threading.Thread(target=_network_supervisor, daemon=True).start()
+
+
+def _hotspot_fallback(grace=8):
     """Provisioning aid: no network after boot -> start the hotspot so the
     setup UI is reachable. When saved WiFi credentials exist, keep nudging
     NetworkManager at them first (the radio can miss its first association
@@ -1110,7 +1139,16 @@ def _hotspot_fallback():
         ip = get_local_ip()
         return ip != "unknown" and not ip.startswith("169.254.")
 
-    time.sleep(8)    # short ethernet-DHCP grace
+    if not _hunt_lock.acquire(blocking=False):
+        return          # a hunt is already running
+    try:
+        _hotspot_fallback_inner(grace)
+    finally:
+        _hunt_lock.release()
+
+
+def _hotspot_fallback_inner(grace):
+    time.sleep(grace)    # short ethernet-DHCP grace
     config = load_config()
     if not config.get("hotspot_auto", True) or hotspot_is_active():
         return
