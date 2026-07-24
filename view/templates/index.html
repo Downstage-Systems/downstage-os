@@ -241,7 +241,7 @@
     .source-chip-icon svg { width: 13px; height: 13px; fill: var(--muted); }
     .source-chip.selected .source-chip-icon svg     { fill: var(--accent); }
     .source-chip.selected-off .source-chip-icon svg { fill: var(--red); }
-    .source-chip-label { font-size: 12px; font-weight: 500; color: var(--text); line-height: 1.2; }
+    .source-chip-label { font-size: 13.5px; font-weight: 500; color: var(--text); line-height: 1.2; }
     .source-chip.selected .source-chip-label     { color: var(--accent); }
     .source-chip.selected-off .source-chip-label { color: var(--red); }
 
@@ -553,7 +553,8 @@
     @media (max-width: 560px) {
       body { padding: 14px 8px; }
       /* bigger reading text on phones — chips, labels, values, hints */
-      .source-chip { font-size: 15px; padding: 11px 13px; }
+      .source-chip { padding: 11px 13px; }
+      .source-chip-label { font-size: 15px; }
       .section-label { font-size: 14px; }
       .external-url-hint, .tz-note, .tz-current { font-size: 13.5px; }
       input[type="text"], input[type="password"], .setting-select { font-size: 16px; }
