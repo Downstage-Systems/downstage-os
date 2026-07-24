@@ -2308,6 +2308,13 @@
     document.body.classList.add('conn-ribboned');
   }
 
+  function fetchT(url, ms = 4000) {
+    // a dead LAN IP HANGS fetches (no host to refuse) — fail fast instead,
+    // so the offline ribbon and hostname rescue appear in seconds
+    const c = new AbortController();
+    const t = setTimeout(() => c.abort(), ms);
+    return fetch(url, { cache: 'no-store', signal: c.signal }).finally(() => clearTimeout(t));
+  }
   async function fetchStatus(quiet = false) {
     const bar = document.getElementById('status-bar');
     const txt = document.getElementById('status-text');
@@ -2316,7 +2323,7 @@
       txt.textContent = 'Checking…';
     }
     try {
-      const r = await fetch('/status', { cache: 'no-store' });
+      const r = await fetchT('/status');
       if (!r.ok) throw new Error('bad status');
       const d = await r.json();
       // recovered: if we'd shown the offline/shutdown ribbon, the unit is

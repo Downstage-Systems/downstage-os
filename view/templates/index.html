@@ -1448,6 +1448,13 @@
     document.getElementById('watchdog-toggle').className = 'toggle ' + (watchdogOn ? 'on' : '');
   }
 
+  function fetchT(url, ms = 4000) {
+    // a dead LAN IP HANGS fetches (no host to refuse) — fail fast instead,
+    // so the offline ribbon and hostname rescue appear in seconds
+    const c = new AbortController();
+    const t = setTimeout(() => c.abort(), ms);
+    return fetch(url, { cache: 'no-store', signal: c.signal }).finally(() => clearTimeout(t));
+  }
   async function fetchStatus(quiet = false) {
     const bar = document.getElementById('status-bar');
     const txt = document.getElementById('status-text');
@@ -1456,7 +1463,7 @@
       txt.textContent = 'Checking…';
     }
     try {
-      const r = await fetch('/status');
+      const r = await fetchT('/status');
       const d = await r.json();
       document.getElementById('watchdog-bar').style.display = d.watchdog_override ? 'flex' : 'none';
       if (window._clockSync) _clockSync(d.clock);
