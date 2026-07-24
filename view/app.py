@@ -1584,7 +1584,7 @@ class EPaperDisplay:
     def _new_image(self):
         return Image.new('1', (self.W, self.H), 255)
 
-    def _flush(self, image):
+    def _flush(self, image, partial=False):
         image = image.rotate(180)   # panel is mounted upside-down in the enclosure
         with self._lock:
             # e-ink refreshes flash the panel — skip if nothing changed
@@ -1592,6 +1592,30 @@ class EPaperDisplay:
             if frame == self._last_frame:
                 return
             self._last_frame = frame
+
+            # partial mode (searching spinner): panel stays AWAKE for the
+            # burst — displayPartial updates without the flash. First partial
+            # sets the base image; the next normal flush ends the burst with
+            # a ghost-clearing full refresh and returns to the sleep cycle.
+            if partial and hasattr(self._epd, "displayPartial"):
+                try:
+                    buf = self._epd.getbuffer(image)
+                    if not getattr(self, "_part_awake", False):
+                        self._epd.init()
+                        self._epd.displayPartBaseImage(buf)
+                        self._part_awake = True
+                    else:
+                        self._epd.displayPartial(buf)
+                    return
+                except Exception as e:
+                    print(f"[epaper] partial: {e}")
+                    self._part_awake = False
+            if getattr(self, "_part_awake", False):
+                self._part_awake = False
+                # end of a partial burst: land on the full-refresh branch to
+                # clear accumulated ghosting
+                self._update_count = self.FULL_REFRESH_EVERY - 1
+
             self._update_count += 1
             if self._update_count % self.FULL_REFRESH_EVERY == 0:
                 self._epd.init()
@@ -1637,7 +1661,7 @@ class EPaperDisplay:
                     width = 7 if i < 3 else 2   # 3 bold leading segments
                     draw.arc([cx - r, cy - r, cx + r, cy + r],
                              a0 + 4, a0 + 41, fill=0, width=width)
-                self._flush(img)
+                self._flush(img, partial=True)   # no flash while the wheel turns
                 return
             hs = hotspot_is_active()
             if hs and not _real_network_ip():
