@@ -2167,41 +2167,20 @@
   // Wake Lock API needs a secure context (our units speak HTTP), so fall
   // back to the classic trick: an invisible looping video the page records
   // for itself (each browser produces a format it can play).
-  let _wakeLock = null, _wakeVideo = null, _wakeBlobUrl = null;
-  async function _makeWakeVideo() {
-    if (_wakeBlobUrl) return _wakeBlobUrl;
-    try {
-      const cv = document.createElement('canvas'); cv.width = 2; cv.height = 2;
-      const x = cv.getContext('2d');
-      const stream = cv.captureStream(5);
-      const rec = new MediaRecorder(stream);
-      const chunks = [];
-      rec.ondataavailable = e => chunks.push(e.data);
-      const done = new Promise(r => rec.onstop = r);
-      rec.start();
-      const iv = setInterval(() => { x.fillStyle = '#000'; x.fillRect(0, 0, 2, 2); }, 100);
-      await new Promise(r => setTimeout(r, 700));
-      clearInterval(iv); rec.stop(); await done;
-      _wakeBlobUrl = URL.createObjectURL(new Blob(chunks, { type: rec.mimeType }));
-      return _wakeBlobUrl;
-    } catch (e) { return null; }
-  }
-  async function keepAwake(on) {
+  let _wakeLock = null, _wakeVideo = null;
+  function keepAwake(on) {
+    // MUST run synchronously inside the user's tap — iOS only honors
+    // video.play() during a real gesture (async recording burned it before)
     if (on) {
-      try {
-        if (navigator.wakeLock && window.isSecureContext) {
-          _wakeLock = await navigator.wakeLock.request('screen');
-          return;
-        }
-      } catch (e) {}
-      const url = await _makeWakeVideo();
-      if (!url) return;
+      if (navigator.wakeLock && window.isSecureContext) {
+        navigator.wakeLock.request('screen').then(l => { _wakeLock = l; }).catch(() => {});
+      }
       if (!_wakeVideo) {
         _wakeVideo = document.createElement('video');
         _wakeVideo.setAttribute('playsinline', '');
         _wakeVideo.muted = true; _wakeVideo.loop = true;
         _wakeVideo.style.cssText = 'position:fixed;left:-10px;top:-10px;width:2px;height:2px;opacity:0.01;pointer-events:none';
-        _wakeVideo.src = url;
+        _wakeVideo.src = '/static/nosleep.mp4';
         document.body.appendChild(_wakeVideo);
       }
       _wakeVideo.play().catch(() => {});
