@@ -1672,11 +1672,15 @@ class EPaperDisplay:
         if qr is None or qr.width > 100:
             return self.W
         x = self.W - 4 - qr.width
-        img.paste(qr, (x, 24))
-        cy = 24 + qr.height
-        if caption and cy <= 112:
+        # vertically centered in the content area below the header,
+        # caption included in the centered block
+        cap_h = 14 if caption else 0
+        block = qr.height + cap_h
+        y = max(22, 20 + (self.H - 20 - block) // 2)
+        img.paste(qr, (x, y))
+        if caption and y + qr.height + cap_h <= self.H:
             w = draw.textlength(caption, font=self._font_sm)
-            draw.text((x + (qr.width - w) / 2, cy), caption, font=self._font_sm, fill=0)
+            draw.text((x + (qr.width - w) / 2, y + qr.height), caption, font=self._font_sm, fill=0)
         return x - 14   # generous gap to the text column
 
     # ── Normal page: network + OnTime status ─────────────────────────────────
