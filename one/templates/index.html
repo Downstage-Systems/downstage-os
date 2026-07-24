@@ -91,8 +91,26 @@
     .wrap { width: 100%; max-width: 880px; position: relative; z-index: 1; }
 
     /* ── Logo ── */
+    .power-corner { position:absolute; top:0; right:0; width:32px; height:32px;
+      display:flex; align-items:center; justify-content:center; padding:0;
+      background:var(--surface); border:1px solid var(--border2); border-radius:50%;
+      cursor:pointer; z-index:5; }
+    .power-corner svg { width:15px; height:15px; fill:var(--muted); }
+    .power-corner:hover { border-color: var(--red-bd); }
+    .power-corner:hover svg { fill: var(--red); }
+    #power-menu { position:fixed; inset:0; z-index:990; background:rgba(0,0,0,0.6);
+      display:flex; align-items:center; justify-content:center; padding:24px; }
+    .pm-card { background:var(--surface); border:1px solid var(--border2); border-radius:14px;
+      padding:20px; width:100%; max-width:300px; display:flex; flex-direction:column; gap:9px; }
+    .pm-title { font-family:var(--font-display); font-weight:700; font-size:15px;
+      letter-spacing:0.06em; text-transform:uppercase; margin-bottom:4px; }
+    .pm-btn { width:100%; justify-content:center; padding:12px; border-radius:9px;
+      background:var(--surface2); border:1px solid var(--border2); color:var(--text);
+      font-size:14px; }
+    .pm-btn.pm-off { border-color:var(--red-bd); color:var(--red); background:var(--red-bg); }
+    .pm-btn.pm-cancel { color:var(--muted); }
     .logo-row { display: flex; align-items: center; gap: 14px; margin-bottom: 14px;
-                flex-shrink: 0; }
+                flex-shrink: 0;  position: relative; }
 
     .logo-icon { width: 46px; height: 46px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .logo-icon svg { width: 46px; height: 46px; }
@@ -1083,6 +1101,14 @@
   </div>
   <div id="emu-frames" style="flex:1; position:relative; background:#000"></div>
 </div>
+<div id="power-menu" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+  <div class="pm-card">
+    <div class="pm-title">Power</div>
+    <button class="pm-btn pm-off" onclick="pmShutdown()">Shut Down the One</button>
+    <button class="pm-btn" onclick="pmRestart()">Restart</button>
+    <button class="pm-btn pm-cancel" onclick="document.getElementById('power-menu').style.display='none'">Cancel</button>
+  </div>
+</div>
 <div id="conn-ribbon">
   <span class="cdot"></span>
   <span id="conn-label">Unit unreachable</span>
@@ -1096,6 +1122,9 @@
 <div class="wrap">
 
   <div class="logo-row">
+    <button class="power-corner" onclick="powerMenu()" title="Power options">
+      <svg viewBox="0 0 24 24"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg>
+    </button>
     <div class="logo-icon">
       <svg viewBox="0 0 96 96" role="img" aria-label="Downstage One mark"><rect x="6" y="10" width="84" height="66" rx="10" fill="none" stroke="#e8ecef" stroke-width="7"/><rect x="20" y="54" width="40" height="9" rx="4.5" fill="#2fd97b"/><rect x="64" y="54" width="12" height="9" rx="4.5" fill="#e8ecef" opacity="0.28"/><rect x="20" y="83" width="26" height="7" rx="3.5" fill="#2fd97b"/><rect x="50" y="83" width="26" height="7" rx="3.5" fill="#2fd97b"/></svg>
     </div>
@@ -2025,6 +2054,21 @@
       try { document.execCommand('copy'); done(); } catch (e) {}
       ta.remove();
     }
+  }
+  function powerMenu() {
+    document.getElementById('power-menu').style.display = 'flex';
+  }
+  function pmShutdown() {
+    document.getElementById('power-menu').style.display = 'none';
+    _expectDown = true;
+    showConnRibbon('shutdown');
+    fetch('/system/shutdown', { method: 'POST' });
+  }
+  function pmRestart() {
+    document.getElementById('power-menu').style.display = 'none';
+    _expectDown = true;
+    showConnRibbon('restart');
+    fetch('/system/restart', { method: 'POST' });
   }
   function copyAddr() {
     const addr = 'http://' + window.location.host + '/';
