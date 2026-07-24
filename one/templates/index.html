@@ -886,8 +886,12 @@
     .show-quick .btn-sm.qb-power { border-color: var(--red-bd); order: -1; }  /* always the first tile */
     .show-quick .btn-sm.qb-power svg { fill: var(--red); }
     .show-quick .btn-sm.qb-companion svg { fill: var(--violet); }
-    .show-quick .btn-sm.blackout { border-color: var(--red-bd); background: var(--red-bg); }
-    .show-quick .btn-sm.blackout svg { fill: var(--red); }
+    .show-quick .btn-sm.blackout { border-color: var(--border2); background: #000;
+      color: var(--muted); order: 98; }   /* far right — opposite Power Off */
+    .show-quick .btn-sm.blackout svg { fill: var(--text); }
+    .show-quick .btn-sm.blackout.flashing { border-color: var(--red-bd); background: var(--red-bg);
+      color: var(--red); }
+    .show-quick .btn-sm.blackout.flashing svg { fill: var(--red); }
 
     /* ── Mobile (phones open this page constantly) ── */
     @media (max-width: 560px) {
