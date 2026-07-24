@@ -1661,6 +1661,15 @@
       <div class="tpane full-only" id="tpane-system">
       <!-- Timezone -->
       <div class="field full-only">
+        <div class="section-label">Keep Screen Awake</div>
+        <div class="local-panel" style="margin-bottom:22px">
+          <div style="display:flex; align-items:center; gap:12px">
+            <span style="flex:1; font-size:13.5px; color:var(--text)">Stop this device from sleeping
+              while this page is open<br><span style="font-size:11.5px; color:var(--muted)">Per-device
+              setting — ideal for a phone taped to the desk. Tool panels always keep the screen awake.</span></span>
+            <button class="toggle" id="awake-toggle" onclick="toggleAwakeGlobal()"></button>
+          </div>
+        </div>
         <div class="section-label">Pi Timezone</div>
         <div class="local-panel">
           <div class="tz-current">Current: <span id="tz-current">Loading…</span></div>
@@ -2809,6 +2818,24 @@
   // Wake Lock API needs a secure context (our units speak HTTP), so fall
   // back to the classic trick: an invisible looping video the page records
   // for itself (each browser produces a format it can play).
+  let awakeGlobal = false;
+  try { awakeGlobal = localStorage.getItem('ds-keepawake') === '1'; } catch (e) {}
+  function toggleAwakeGlobal() {
+    awakeGlobal = !awakeGlobal;
+    try { localStorage.setItem('ds-keepawake', awakeGlobal ? '1' : '0'); } catch (e) {}
+    document.getElementById('awake-toggle').className = 'toggle ' + (awakeGlobal ? 'on' : '');
+    keepAwake(awakeGlobal);   // the toggle tap IS the gesture — arms instantly
+    showToast(awakeGlobal ? 'This device will stay awake on this page.' : 'Normal sleep restored.', 'info');
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    const t = document.getElementById('awake-toggle');
+    if (t) t.className = 'toggle ' + (awakeGlobal ? 'on' : '');
+    if (awakeGlobal) {
+      // autoplay rules: the wake video needs one real touch — arm on it
+      const arm = () => { keepAwake(true); document.removeEventListener('pointerdown', arm); };
+      document.addEventListener('pointerdown', arm);
+    }
+  });
   let _wakeLock = null, _wakeVideo = null;
   function keepAwake(on) {
     // MUST run synchronously inside the user's tap — iOS only honors
@@ -2834,7 +2861,7 @@
   }
   document.addEventListener('visibilitychange', () => {
     // returning to a page with an open panel re-arms the lock
-    if (!document.hidden && document.getElementById('emu-overlay')?.classList.contains('on')) keepAwake(true);
+    if (!document.hidden && (awakeGlobal || document.getElementById('emu-overlay')?.classList.contains('on'))) keepAwake(true);
   });
   let _panelUrl = '';
   let _panelScrollY = 0;
@@ -2849,7 +2876,7 @@
     keepAwake(true);   // buttons/timer pages shouldn't die with the screen
   }
   function closeEmulator() {
-    keepAwake(false);
+    if (!awakeGlobal) keepAwake(false);
     document.getElementById('emu-overlay').classList.remove('on');
     document.getElementById('emu-frame').src = 'about:blank';   // stop it cold
     document.body.classList.remove('panel-open');
