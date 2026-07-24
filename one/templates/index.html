@@ -1989,6 +1989,14 @@
   // the OnTime server the UI should open: the remote one when in remote
   // mode (displays already follow it — the operator links must too)
   let _otHost = window.location.hostname;
+  function cleanServerAddr(v) {
+    // paste-friendly: "http://192.168.2.109:4001/editor/" → "192.168.2.109"
+    v = v.trim();
+    v = v.replace(/^[a-z]+:\/\//i, '');   // scheme
+    v = v.split('/')[0];                    // path
+    v = v.split(':')[0];                    // port
+    return v;
+  }
   function copyIp(ip) {
     const addr = ip;   // bare IP: it gets pasted into server fields, pings,
                        // Companion configs — not just browsers
@@ -3954,6 +3962,13 @@
   })();
 </script>
 <script>
+  (function () {
+    const f = document.getElementById('ip');
+    if (f) f.addEventListener('input', () => {
+      const c = cleanServerAddr(f.value);
+      if (c !== f.value.trim() && (f.value.includes('/') || f.value.includes(':'))) f.value = c;
+    });
+  })();
   // unit-time header clock: synced from /status, ticked locally every second.
   // Shows the UNIT's clock (matches the OLED/e-ink), not the browser's.
   (function () {

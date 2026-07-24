@@ -2148,6 +2148,14 @@
         '<span class="idev">' + i.iface + '</span></div>';
     }).join('');
   }
+  function cleanServerAddr(v) {
+    // paste-friendly: "http://192.168.2.109:4001/editor/" → "192.168.2.109"
+    v = v.trim();
+    v = v.replace(/^[a-z]+:\/\//i, '');   // scheme
+    v = v.split('/')[0];                    // path
+    v = v.split(':')[0];                    // port
+    return v;
+  }
   function copyIp(ip) {
     const ta = document.createElement('textarea');
     ta.value = ip; ta.style.position = 'fixed'; ta.style.opacity = '0';
@@ -2230,6 +2238,13 @@
   })();
 </script>
 <script>
+  (function () {
+    const f = document.getElementById('ip');
+    if (f) f.addEventListener('input', () => {
+      const c = cleanServerAddr(f.value);
+      if (c !== f.value.trim() && (f.value.includes('/') || f.value.includes(':'))) f.value = c;
+    });
+  })();
   // unit-time header clock: synced from /status, ticked locally every second.
   // Shows the UNIT's clock (matches the OLED/e-ink), not the browser's.
   (function () {
