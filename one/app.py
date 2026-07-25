@@ -2830,8 +2830,7 @@ def ontime_status():
     return jsonify({"installed": ontime_installed(), "running": ontime_is_running()})
 
 
-@app.route("/ontime/update", methods=["POST"])
-def ontime_update():
+def _do_ontime_update():
     was_running = ontime_is_running()
     if was_running:
         stop_local_ontime()
@@ -2842,7 +2841,7 @@ def ontime_update():
         # nothing was touched — the old version is still live
         if was_running:
             start_local_ontime()
-        return jsonify({"ok": False, "message": msg, "running": ontime_is_running()})
+        raise RuntimeError(msg)
     _audit("ONTIME", f"updated to {msg}")
     if was_running:
         start_local_ontime()
@@ -2855,11 +2854,16 @@ def ontime_update():
             healthy = _wait_ontime_up(30)
             _audit("ONTIME", "update failed health check — auto-reverted")
             note = "" if healthy else " (still not answering — check the log)"
-            return jsonify({"ok": False, "reverted": True,
-                            "running": ontime_is_running(),
-                            "message": f"{msg} did not start — previous version restored{note}"})
+            raise RuntimeError(f"{msg} did not start — previous version restored{note}")
     threading.Thread(target=_check_updates_background, daemon=True).start()
-    return jsonify({"ok": True, "message": msg, "running": ontime_is_running()})
+
+
+@app.route("/ontime/update", methods=["POST"])
+def ontime_update():
+    ok = _start_job("ontime-update", "Updating OnTime", _do_ontime_update)
+    if not ok:
+        return jsonify({"ok": False, "message": "Another job is already running"})
+    return jsonify({"ok": True, "message": "started"})
 
 
 @app.route("/ontime/revert", methods=["POST"])

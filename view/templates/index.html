@@ -679,6 +679,19 @@
     .emu-act svg { width:16px; height:16px; fill:var(--muted); display:block; }
     #emu-frame { flex:1; width:100%; border:0; background:#000; }
     body.panel-open { position:fixed; left:0; right:0; overflow:hidden; }
+    .pm-card { background:var(--surface); border:1px solid var(--border2); border-radius:14px;
+      padding:20px; width:100%; display:flex; flex-direction:column; gap:9px; }
+    .pm-title { font-family:var(--font-display); font-weight:700; font-size:15px;
+      letter-spacing:0.06em; text-transform:uppercase; margin-bottom:4px; }
+    .pm-btn { width:100%; justify-content:center; padding:12px; border-radius:9px;
+      background:var(--surface2); border:1px solid var(--border2); color:var(--text); font-size:14px; }
+    .pm-btn.pm-cancel { color:var(--muted); }
+    #upd-pop { position:fixed; inset:0; z-index:985; background:rgba(0,0,0,0.6);
+      display:flex; align-items:center; justify-content:center; padding:24px; }
+    .upd-pop-row { display:flex; align-items:center; gap:10px; padding:10px 12px;
+      background:var(--surface2); border:1px solid var(--border2); border-radius:9px; }
+    .upd-pop-row .upname { flex:1; font-size:13px; }
+    .upd-pop-row .upver { font-family:var(--font-mono); font-size:11.5px; color:var(--amber); }
     /* pull-to-refresh (custom: iOS has no native PTR, and standalone
        home-screen apps have no reload button at all) */
     #ptr-spin { position:fixed; top:-54px; left:50%; z-index:1001;
@@ -696,6 +709,17 @@
 <body>
 <div id="ptr-spin"><svg viewBox="0 0 24 24"><path d="M12 4l-6 6h4v6h4v-6h4l-6-6z"/></svg></div>
 
+<div id="upd-pop" style="display:none" onclick="if(event.target===this)closeUpdPop()">
+  <div class="pm-card" style="max-width:340px">
+    <div class="pm-title">Updates Available</div>
+    <div id="upd-pop-rows" style="display:flex; flex-direction:column; gap:8px"></div>
+    <label style="display:flex; align-items:center; gap:8px; margin-top:10px; font-size:11.5px; color:var(--muted); cursor:pointer">
+      <input type="checkbox" id="upd-pop-never" onchange="updPopNever(this.checked)" style="accent-color:var(--accent)">
+      Don't show this again on this device
+    </label>
+    <button class="pm-btn pm-cancel" onclick="closeUpdPop()">Close</button>
+  </div>
+</div>
 <div id="conn-ribbon">
   <span class="cdot"></span>
   <span id="conn-label">Unit unreachable</span>
@@ -1085,6 +1109,15 @@
       <div id="tpane-system" class="tpane">
       <!-- Timezone -->
       <div class="field" style="margin-top:0; margin-bottom:0">
+        <div class="section-label">Update Popup</div>
+        <div class="local-panel" style="margin-bottom:22px">
+          <div style="display:flex; align-items:center; gap:12px">
+            <span style="flex:1; font-size:13.5px; color:var(--text)">Show a popup at startup when
+              updates are available<br><span style="font-size:11.5px; color:var(--muted)">Per-device
+              setting — updates always remain available from their tabs.</span></span>
+            <button class="toggle on" id="updpop-toggle" onclick="toggleUpdPopup()"></button>
+          </div>
+        </div>
         <div class="section-label">Pi Timezone</div>
         <div class="local-panel">
           <div class="tz-current">Current: <span id="tz-current">Loading…</span></div>
@@ -1482,6 +1515,43 @@
     } catch (e) { showToast('Scan failed.', 'error'); }
     finally { btn.disabled = false; btn.textContent = 'Scan for Units'; }
   }
+  let _updPopShown = false;
+  function updPopEnabled() {
+    try { return localStorage.getItem('ds-upd-pop') !== 'off'; } catch (e) { return true; }
+  }
+  function updPopNever(off) {
+    try { localStorage.setItem('ds-upd-pop', off ? 'off' : 'on'); } catch (e) {}
+    const t = document.getElementById('updpop-toggle');
+    if (t) t.className = 'toggle ' + (off ? '' : 'on');
+  }
+  function toggleUpdPopup() {
+    updPopNever(updPopEnabled());   // flip
+    showToast(updPopEnabled() ? 'Update popup enabled.' : 'Update popup disabled.', 'info');
+  }
+  function closeUpdPop() { document.getElementById('upd-pop').style.display = 'none'; }
+  function maybeShowUpdatePopup(avail) {
+    // avail: [{name, ver, fn}]
+    if (_updPopShown || !updPopEnabled() || !avail.length) return;
+    _updPopShown = true;
+    const rows = document.getElementById('upd-pop-rows');
+    rows.innerHTML = '';
+    for (const a of avail) {
+      const r = document.createElement('div');
+      r.className = 'upd-pop-row';
+      r.innerHTML = '<span class="upname">' + a.name + '</span><span class="upver">' + a.ver + '</span>';
+      const b = document.createElement('button');
+      b.className = 'btn-sm success'; b.textContent = 'Update';
+      b.onclick = () => { closeUpdPop(); a.fn(); };
+      r.appendChild(b);
+      rows.appendChild(r);
+    }
+    document.getElementById('upd-pop-never').checked = false;
+    document.getElementById('upd-pop').style.display = 'flex';
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    const t = document.getElementById('updpop-toggle');
+    if (t) t.className = 'toggle ' + (updPopEnabled() ? 'on' : '');
+  });
   async function fetchStatus(quiet = false) {
     const bar = document.getElementById('status-bar');
     const txt = document.getElementById('status-text');
@@ -1516,6 +1586,8 @@
       const inet = document.getElementById('inet-note');
       if (inet) inet.style.display = (d.portal && d.portal.internet === false && !d.portal.detected) ? '' : 'none';
       document.getElementById('upd-system')?.classList.toggle('on', !!d.os_update_available);
+      if (d.os_checked && d.os_update_available)
+        maybeShowUpdatePopup([{ name: 'Downstage OS', ver: 'v' + (d.os_latest || ''), fn: osUpdate }]);
       const osEl = document.getElementById('os-version-label');
       if (osEl && d.os_version) osEl.textContent = `Downstage OS v${d.os_version}`;
       renderOsPanel(d);
