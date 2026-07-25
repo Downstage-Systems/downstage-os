@@ -1549,6 +1549,96 @@ def _apply_timezone(tz):
 
 # ── e-Paper display ───────────────────────────────────────────────────────────
 
+# ── e-ink touch (GT1151 on the Touch e-Paper HAT) ────────────────────────────
+_touch = {"raw": None, "mapped": None, "at": 0.0, "mode": "idle"}
+_TOUCH_MAP = "portrait-180"   # first guess — calibrated from field taps
+
+
+def _touch_map(rx, ry):
+    if _TOUCH_MAP == "portrait-180":
+        return (249 - min(ry, 249), min(rx, 121))
+    if _TOUCH_MAP == "portrait":
+        return (min(ry, 249), 121 - min(rx, 121))
+    if _TOUCH_MAP == "landscape-180":
+        return (249 - min(rx, 249), 121 - min(ry, 121))
+    return (min(rx, 249), min(ry, 121))
+
+
+def _touch_loop():
+    try:
+        from smbus2 import SMBus, i2c_msg
+    except ImportError:
+        print("[touch] smbus2 missing — touch disabled")
+        return
+    ADDR = 0x14
+
+    def rd(bus, reg, n):
+        w = i2c_msg.write(ADDR, [reg >> 8, reg & 0xFF])
+        r = i2c_msg.read(ADDR, n)
+        bus.i2c_rdwr(w, r)
+        return list(r)
+
+    def wr(bus, reg, vals):
+        bus.i2c_rdwr(i2c_msg.write(ADDR, [reg >> 8, reg & 0xFF] + vals))
+
+    last_tap = 0.0
+    print("[touch] GT1151 poller up")
+    while True:
+        time.sleep(0.08)
+        try:
+            n = 0
+            rx = ry = 0
+            with SMBus(1) as bus:
+                st = rd(bus, 0x814E, 1)[0]
+                if not (st & 0x80):
+                    continue
+                n = st & 0x0F
+                if n:
+                    d = rd(bus, 0x8150, 4)
+                    rx = d[0] | (d[1] << 8)
+                    ry = d[2] | (d[3] << 8)
+                wr(bus, 0x814E, [0])
+            if not n:
+                continue
+            now = time.time()
+            if now - last_tap < 0.35:
+                continue
+            last_tap = now
+            px, py = _touch_map(rx, ry)
+            _touch.update(raw=(rx, ry), mapped=(px, py), at=now)
+            print(f"[touch] raw=({rx},{ry}) mapped=({px},{py}) mode={_touch['mode']}")
+            _touch_dispatch(px, py)
+        except Exception:
+            time.sleep(1)
+
+
+def _touch_dispatch(px, py):
+    now = time.time()
+    if _touch["mode"] == "confirm":
+        if now > getattr(epaper, "_confirm_until", 0):
+            _touch["mode"] = "idle"
+            return
+        if py > 60:
+            if px < 125:
+                _touch["mode"] = "idle"
+                epaper._confirm_until = 0
+                epaper.force_refresh()
+            else:
+                print("[touch] shutdown confirmed by touch")
+                _touch["mode"] = "idle"
+                epaper._confirm_until = 0
+                epaper.shutdown_screen()
+                subprocess.Popen(["sudo", "poweroff"])
+        return
+    if px > 218 and py > 92:
+        _touch["mode"] = "confirm"
+        epaper._confirm_until = now + 8
+        epaper.force_refresh()
+
+
+threading.Thread(target=_touch_loop, daemon=True).start()
+
+
 class EPaperDisplay:
     """Single status page on the 250x122 e-ink panel. No touch, no paging —
     the display adapts: hotspot credentials when the hotspot is up, otherwise
@@ -1683,6 +1773,10 @@ class EPaperDisplay:
             img  = self._new_image()
             draw = ImageDraw.Draw(img)
             draw._image = img   # pages paste QR codes onto the frame
+            if getattr(self, "_confirm_until", 0) > time.time():
+                self._page_confirm(draw)
+                self._flush(img)
+                return
             if getattr(self, "_searching", False):
                 self._header(draw, "DOWNSTAGE VIEW")
                 self._spin = (getattr(self, "_spin", 0) + 1) % 8
@@ -1745,7 +1839,7 @@ class EPaperDisplay:
         # caption included in the centered block
         cap_h = 14 if caption else 0
         block = qr.height + cap_h
-        y = max(22, 20 + (self.H - 20 - block) // 2)
+        y = 24   # top-anchored: bottom-right corner belongs to the power button
         img.paste(qr, (x, y))
         if caption and y + qr.height + cap_h <= self.H:
             w = draw.textlength(caption, font=self._font_sm)
@@ -1797,6 +1891,23 @@ class EPaperDisplay:
         else:
             view_lbl = self.SOURCE_LABELS.get(source, source)
             self._row(draw, 106, "Shows", view_lbl[:18])
+        self._draw_power_glyph(draw)
+
+    def _draw_power_glyph(self, draw):
+        cx, cy, r = 236, 107, 9
+        draw.ellipse([cx - r, cy - r, cx + r, cy + r], outline=0, width=2)
+        draw.line([(cx, cy - r + 2), (cx, cy - 2)], fill=0, width=2)
+
+    def _page_confirm(self, draw):
+        self._header(draw, "POWER OFF?")
+        draw.text((5, 28), "Shut down this View?", font=self._font_md, fill=0)
+        draw.text((5, 44), "Safe to unplug after the farewell screen.", font=self._font_sm, fill=0)
+        draw.rectangle([8, 66, 118, 114], outline=0, width=2)
+        w = draw.textlength("NO", font=self._font_lg)
+        draw.text((8 + (110 - w) / 2, 80), "NO", font=self._font_lg, fill=0)
+        draw.rectangle([132, 66, 242, 114], fill=0)
+        w = draw.textlength("YES", font=self._font_lg)
+        draw.text((132 + (110 - w) / 2, 80), "YES", font=self._font_lg, fill=255)
 
     # ── Hotspot page: everything a tech needs to get in ──────────────────────
     def _page_hotspot(self, draw):
@@ -1880,6 +1991,7 @@ def status():
         "connected": connected,
         "local_ip":  get_local_ip(),
         "blackout": _blackout_active,
+        "touch": {"raw": _touch["raw"], "mapped": _touch["mapped"], "at": _touch["at"]},
         "net_iface": primary_iface(),
         "interfaces": get_all_interfaces(),
         "portal": {"detected": _portal["detected"], "iface": _portal["iface"],
