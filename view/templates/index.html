@@ -679,6 +679,12 @@
     .emu-act svg { width:16px; height:16px; fill:var(--muted); display:block; }
     #emu-frame { flex:1; width:100%; border:0; background:#000; }
     body.panel-open { position:fixed; left:0; right:0; overflow:hidden; }
+    .setting-box { display:flex; align-items:center; gap:14px; padding:13px 16px;
+      background:var(--surface2); border:1px solid var(--border2); border-radius:10px;
+      margin-bottom:22px; }
+    .setting-box-text { flex:1; min-width:0; }
+    .setting-box-title { font-size:13.5px; color:var(--text); font-weight:600; }
+    .setting-box-sub { font-size:11.5px; color:var(--muted); line-height:1.5; margin-top:3px; }
     .pm-card { background:var(--surface); border:1px solid var(--border2); border-radius:14px;
       padding:20px; width:100%; display:flex; flex-direction:column; gap:9px; }
     .pm-title { font-family:var(--font-display); font-weight:700; font-size:15px;
@@ -1156,13 +1162,13 @@
 
       <div class="field">
         <div class="section-label">Update Popup</div>
-        <div class="local-panel" style="margin-bottom:22px">
-          <div style="display:flex; align-items:center; gap:12px">
-            <span style="flex:1; font-size:13.5px; color:var(--text)">Show a popup at startup when
-              updates are available<br><span style="font-size:11.5px; color:var(--muted)">Per-device
-              setting — updates always remain available from their tabs.</span></span>
-            <button class="toggle on" id="updpop-toggle" onclick="toggleUpdPopup()"></button>
+        <div class="setting-box">
+          <div class="setting-box-text">
+            <div class="setting-box-title">Show updates at startup</div>
+            <div class="setting-box-sub">A popup lists available updates when the page opens.
+              Per-device setting — updates always remain available from their tabs.</div>
           </div>
+          <button class="toggle on" id="updpop-toggle" onclick="toggleUpdPopup()"></button>
         </div>
       </div>
       </div>
