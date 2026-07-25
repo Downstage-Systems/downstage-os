@@ -1706,15 +1706,6 @@
       <div class="tpane full-only" id="tpane-system">
       <!-- Timezone -->
       <div class="field full-only">
-        <div class="section-label">Update Popup</div>
-        <div class="local-panel" style="margin-bottom:22px">
-          <div style="display:flex; align-items:center; gap:12px">
-            <span style="flex:1; font-size:13.5px; color:var(--text)">Show a popup at startup when
-              updates are available<br><span style="font-size:11.5px; color:var(--muted)">Per-device
-              setting — updates always remain available from their tabs.</span></span>
-            <button class="toggle on" id="updpop-toggle" onclick="toggleUpdPopup()"></button>
-          </div>
-        </div>
         <div class="section-label">Pi Timezone</div>
         <div class="local-panel">
           <div class="tz-current">Current: <span id="tz-current">Loading…</span></div>
@@ -1773,6 +1764,18 @@
             <div class="health-tile"><div class="val" id="h-gpu">—</div><div class="lbl">GPU Clock</div></div>
             <div class="health-tile"><div class="val" id="h-ram">—</div><div class="lbl">RAM Used</div></div>
             <div class="health-tile"><div class="val" id="h-uptime">—</div><div class="lbl">Uptime</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="field full-only">
+        <div class="section-label">Update Popup</div>
+        <div class="local-panel" style="margin-bottom:22px">
+          <div style="display:flex; align-items:center; gap:12px">
+            <span style="flex:1; font-size:13.5px; color:var(--text)">Show a popup at startup when
+              updates are available<br><span style="font-size:11.5px; color:var(--muted)">Per-device
+              setting — updates always remain available from their tabs.</span></span>
+            <button class="toggle on" id="updpop-toggle" onclick="toggleUpdPopup()"></button>
           </div>
         </div>
       </div>

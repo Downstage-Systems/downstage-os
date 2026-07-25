@@ -1109,15 +1109,6 @@
       <div id="tpane-system" class="tpane">
       <!-- Timezone -->
       <div class="field" style="margin-top:0; margin-bottom:0">
-        <div class="section-label">Update Popup</div>
-        <div class="local-panel" style="margin-bottom:22px">
-          <div style="display:flex; align-items:center; gap:12px">
-            <span style="flex:1; font-size:13.5px; color:var(--text)">Show a popup at startup when
-              updates are available<br><span style="font-size:11.5px; color:var(--muted)">Per-device
-              setting — updates always remain available from their tabs.</span></span>
-            <button class="toggle on" id="updpop-toggle" onclick="toggleUpdPopup()"></button>
-          </div>
-        </div>
         <div class="section-label">Pi Timezone</div>
         <div class="local-panel">
           <div class="tz-current">Current: <span id="tz-current">Loading…</span></div>
@@ -1159,6 +1150,18 @@
               <button class="btn-sm" id="patches-apply-btn" onclick="applyPatches()" style="margin-left:auto">Install patches</button>
             </div>
             <div class="external-url-hint" id="patches-note" style="display:block; margin-top:6px">Tested by Downstage before they're offered. The display stays live; installs take a while on this hardware. Restart when convenient.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="section-label">Update Popup</div>
+        <div class="local-panel" style="margin-bottom:22px">
+          <div style="display:flex; align-items:center; gap:12px">
+            <span style="flex:1; font-size:13.5px; color:var(--text)">Show a popup at startup when
+              updates are available<br><span style="font-size:11.5px; color:var(--muted)">Per-device
+              setting — updates always remain available from their tabs.</span></span>
+            <button class="toggle on" id="updpop-toggle" onclick="toggleUpdPopup()"></button>
           </div>
         </div>
       </div>
