@@ -1618,17 +1618,19 @@ def _touch_dispatch(px, py):
         if now > getattr(epaper, "_confirm_until", 0):
             _touch["mode"] = "idle"
             return
-        if py > 60:
-            if px < 125:
-                _touch["mode"] = "idle"
-                epaper._confirm_until = 0
-                epaper.force_refresh()
-            else:
+        if py > 45:
+            _touch["mode"] = "idle"
+            epaper._confirm_until = 0
+            if px < 87:                    # RESTART
+                print("[touch] restart confirmed by touch")
+                epaper.restart_screen()
+                subprocess.Popen(["sudo", "reboot"])
+            elif px < 171:                 # SHUT DOWN
                 print("[touch] shutdown confirmed by touch")
-                _touch["mode"] = "idle"
-                epaper._confirm_until = 0
                 epaper.shutdown_screen()
                 subprocess.Popen(["sudo", "poweroff"])
+            else:                          # CANCEL
+                epaper.force_refresh()
         return
     if px > 218 and py > 92:
         _touch["mode"] = "confirm"
@@ -1894,20 +1896,41 @@ class EPaperDisplay:
         self._draw_power_glyph(draw)
 
     def _draw_power_glyph(self, draw):
-        cx, cy, r = 236, 107, 9
-        draw.ellipse([cx - r, cy - r, cx + r, cy + r], outline=0, width=2)
-        draw.line([(cx, cy - r + 2), (cx, cy - 2)], fill=0, width=2)
+        # corner box: top + left lines run off the right and bottom edges
+        x0, y0 = 216, 88
+        draw.line([(x0, y0), (self.W, y0)], fill=0, width=1)
+        draw.line([(x0, y0), (x0, self.H)], fill=0, width=1)
+        # classic power symbol: arc with a gap at the top, line through the gap
+        cx, cy, r = 233, 105, 9
+        draw.arc([cx - r, cy - r, cx + r, cy + r], -60, 240, fill=0, width=2)
+        draw.line([(cx, cy - r - 2), (cx, cy - 1)], fill=0, width=3)
 
     def _page_confirm(self, draw):
-        self._header(draw, "POWER OFF?")
-        draw.text((5, 28), "Shut down this View?", font=self._font_md, fill=0)
-        draw.text((5, 44), "Safe to unplug after the farewell screen.", font=self._font_sm, fill=0)
-        draw.rectangle([8, 66, 118, 114], outline=0, width=2)
-        w = draw.textlength("NO", font=self._font_lg)
-        draw.text((8 + (110 - w) / 2, 80), "NO", font=self._font_lg, fill=0)
-        draw.rectangle([132, 66, 242, 114], fill=0)
-        w = draw.textlength("YES", font=self._font_lg)
-        draw.text((132 + (110 - w) / 2, 80), "YES", font=self._font_lg, fill=255)
+        self._header(draw, "POWER")
+        draw.text((5, 26), "Restart or shut down this View?", font=self._font_sm, fill=0)
+        boxes = [("RESTART", 6, 84, False), ("SHUT DOWN", 90, 168, True), ("CANCEL", 174, 244, False)]
+        for label, x1, x2, solid in boxes:
+            if solid:
+                draw.rectangle([x1, 48, x2, 114], fill=0)
+            else:
+                draw.rectangle([x1, 48, x2, 114], outline=0, width=2)
+            w = draw.textlength(label, font=self._font_sm)
+            draw.text((x1 + (x2 - x1 - w) / 2, 74), label, font=self._font_sm,
+                      fill=255 if solid else 0)
+
+    def restart_screen(self):
+        if not self._epd:
+            return
+        try:
+            self._final = True
+            self._stop.set()
+            img = self._new_image()
+            draw = ImageDraw.Draw(img)
+            self._header(draw, "RESTARTING")
+            draw.text((5, 40), "Back in about a minute...", font=self._font_md, fill=0)
+            self._flush(img)
+        except Exception as e:
+            print(f"[epaper] restart screen: {e}")
 
     # ── Hotspot page: everything a tech needs to get in ──────────────────────
     def _page_hotspot(self, draw):
