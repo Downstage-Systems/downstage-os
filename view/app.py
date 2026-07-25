@@ -1632,7 +1632,8 @@ def _touch_dispatch(px, py):
             else:                          # CANCEL
                 epaper.force_refresh()
         return
-    if px > 218 and py > 92:
+    zx, zy = getattr(epaper, "_power_zone", (218, 92))
+    if px > zx - 6 and py > zy - 6:
         _touch["mode"] = "confirm"
         epaper._confirm_until = now + 8
         epaper.force_refresh()
@@ -1837,11 +1838,10 @@ class EPaperDisplay:
         if qr is None or qr.width > 100:
             return self.W
         x = self.W - 4 - qr.width
-        # vertically centered in the content area below the header,
-        # caption included in the centered block
         cap_h = 14 if caption else 0
         block = qr.height + cap_h
-        y = 24   # top-anchored: bottom-right corner belongs to the power button
+        y = 24   # top-anchored: the power box sits beneath
+        self._qr_geom = (x, y, qr.width, block)
         img.paste(qr, (x, y))
         if caption and y + qr.height + cap_h <= self.H:
             w = draw.textlength(caption, font=self._font_sm)
@@ -1896,14 +1896,19 @@ class EPaperDisplay:
         self._draw_power_glyph(draw)
 
     def _draw_power_glyph(self, draw):
-        # corner box: top + left lines run off the right and bottom edges
-        x0, y0 = 216, 88
-        draw.line([(x0, y0), (self.W, y0)], fill=0, width=1)
-        draw.line([(x0, y0), (x0, self.H)], fill=0, width=1)
-        # classic power symbol: arc with a gap at the top, line through the gap
-        cx, cy, r = 233, 105, 9
+        # boxed power button, centered under the QR block above it
+        qx, qy, qw, qh = getattr(self, "_qr_geom", (188, 24, 58, 72))
+        cx = qx + qw // 2
+        top = min(qy + qh + 3, 100)
+        box_w = 40
+        draw.rectangle([cx - box_w // 2, top, cx + box_w // 2, self.H - 3],
+                       outline=0, width=1)
+        # classic power symbol: gap-top arc with a line through the gap
+        cy = (top + self.H - 3) // 2 + 1
+        r = min(8, (self.H - 3 - top) // 2 - 2)
         draw.arc([cx - r, cy - r, cx + r, cy + r], -60, 240, fill=0, width=2)
         draw.line([(cx, cy - r - 2), (cx, cy - 1)], fill=0, width=3)
+        self._power_zone = (cx - box_w // 2, top)   # tap zone follows the box
 
     def _page_confirm(self, draw):
         self._header(draw, "POWER")
