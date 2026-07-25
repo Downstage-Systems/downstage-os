@@ -994,6 +994,12 @@
       <div class="field" style="margin-top:0">
         <div class="section-label">Network</div>
         <div id="iface-panel" class="iface-panel"></div>
+        <div class="section-label" style="margin-top:18px">Downstage Units on This Network</div>
+        <div id="fleet-panel" class="iface-panel">
+          <div class="iface-none">Press Scan to look for other Downstage units.</div>
+        </div>
+        <button class="btn-sm" id="fleet-scan-btn" onclick="fleetScan()">Scan for Units</button>
+
         <div id="inet-note" style="display:none; margin-bottom:12px; padding:10px 13px;
              background:var(--amber-bg); border:1px solid var(--amber-bd); border-radius:9px;
              font-size:12.5px; color:var(--amber); line-height:1.5">No internet access —
@@ -1454,6 +1460,27 @@
     const c = new AbortController();
     const t = setTimeout(() => c.abort(), ms);
     return fetch(url, { cache: 'no-store', signal: c.signal }).finally(() => clearTimeout(t));
+  }
+  async function fleetScan() {
+    const btn = document.getElementById('fleet-scan-btn');
+    const box = document.getElementById('fleet-panel');
+    btn.disabled = true; btn.textContent = 'Scanning… (~10s)';
+    try {
+      const d = await (await fetch('/discover', { method: 'POST' })).json();
+      if (!d.units.length) {
+        box.innerHTML = '<div class="iface-none">No other Downstage units found on this network.</div>';
+      } else {
+        box.innerHTML = d.units.map(u =>
+          '<div class="iface-row"><span class="idot"></span>' +
+          '<span class="ikind">' + u.product + '</span>' +
+          '<span class="iip" onclick="copyIp(\'' + u.ip + '\')" title="Click to copy">' + u.ip + '</span>' +
+          '<span class="idev">' + u.serial + ' · v' + u.version + '</span>' +
+          '<button class="btn-mini" style="margin-left:8px; background:none; border:1px solid var(--border2); border-radius:6px; color:var(--text); font:600 11px var(--font-body); padding:5px 10px; cursor:pointer" ' +
+          'onclick="openExternal(\'http://' + u.ip + ':8080\')">Open</button></div>'
+        ).join('');
+      }
+    } catch (e) { showToast('Scan failed.', 'error'); }
+    finally { btn.disabled = false; btn.textContent = 'Scan for Units'; }
   }
   async function fetchStatus(quiet = false) {
     const bar = document.getElementById('status-bar');

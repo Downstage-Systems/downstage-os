@@ -2372,6 +2372,71 @@ def qr_png():
     return send_file(buf, mimetype="image/png")
 
 
+# ── fleet discovery: find other Downstage units on the LAN ───────────────────
+def _avahi_advertise():
+    """Publish _downstage._tcp via an avahi service file (the daemon
+    auto-loads /etc/avahi/services — no avahi-utils needed)."""
+    time.sleep(15)
+    try:
+        config = load_config()
+        xml = ('<?xml version="1.0" standalone="no"?><!DOCTYPE service-group '
+               'SYSTEM "avahi-service.dtd">\n<service-group>\n'
+               '  <name replace-wildcards="yes">%h</name>\n'
+               '  <service><type>_downstage._tcp</type><port>8080</port>\n'
+               f'    <txt-record>serial={config.get("serial", "")}</txt-record>\n'
+               '  </service>\n</service-group>\n')
+        cur = ""
+        try:
+            cur = open("/etc/avahi/services/downstage.service").read()
+        except Exception:
+            pass
+        if cur != xml:
+            subprocess.run(["sudo", "tee", "/etc/avahi/services/downstage.service"],
+                           input=xml, text=True, timeout=10,
+                           stdout=subprocess.DEVNULL)
+            print("[discover] avahi service published")
+    except Exception as e:
+        print(f"[discover] advertise: {e}")
+
+
+threading.Thread(target=_avahi_advertise, daemon=True).start()
+
+
+@app.route("/discover", methods=["POST"])
+def discover_units():
+    """Sweep this unit's /24s for other Downstage units (identified by their
+    /status signature — works across firmware generations)."""
+    import concurrent.futures
+    mine = {i["ip"] for i in get_all_interfaces()}
+    ips = set()
+    for i in get_all_interfaces():
+        if i["ip"].startswith("169.254."):
+            continue
+        base = i["ip"].rsplit(".", 1)[0]
+        ips |= {f"{base}.{n}" for n in range(1, 255)}
+    ips -= mine
+
+    def probe(ip):
+        try:
+            r = requests.get(f"http://{ip}:8080/status", timeout=0.6)
+            d = r.json()
+            serial = str(d.get("serial", ""))
+            if serial.startswith("DS"):
+                return {"ip": ip, "serial": serial,
+                        "product": "View" if serial.startswith("DSV") else "One",
+                        "version": d.get("os_version", "")}
+        except Exception:
+            pass
+        return None
+
+    found = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=32) as ex:
+        for res in ex.map(probe, sorted(ips)):
+            if res:
+                found.append(res)
+    return jsonify({"ok": True, "units": found})
+
+
 @app.route("/wifi/forget", methods=["POST"])
 def wifi_forget():
     ssid = ((request.get_json() or {}).get("ssid") or "").strip()
