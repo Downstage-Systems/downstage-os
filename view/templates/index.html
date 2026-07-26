@@ -98,17 +98,16 @@
       font-size: 10px; color: var(--muted); margin-top: 4px;
       text-transform: uppercase; letter-spacing: 0.2em;
     }
+    .head-center { flex:1; display:flex; flex-direction:column;
+      align-items:center; gap:5px; min-width:0; }
+    .head-center .addr-box { align-items:center; }
     .header-clock {
-      margin-left: auto; margin-right: 12px;
       font-family: var(--font-mono); font-size: 15px; color: var(--muted);
       font-variant-numeric: tabular-nums; white-space: nowrap;
     }
     .header-clock:empty { display: none; }
     /* vitals: boxed name+address, with the status pill separate below */
-    .addr-chip {
-      margin-left: auto; flex-shrink: 0;
-      display: flex; flex-direction: column; gap: 7px; align-items: flex-end;
-    }
+    .addr-chip { margin-left: auto; flex-shrink: 0; }
     .addr-box {
       display: flex; flex-direction: column; gap: 5px; align-items: flex-end;
       position: relative;
@@ -709,7 +708,9 @@
     .wifi-saved-label { font-size:11px; color:var(--muted2); text-transform:uppercase;
       letter-spacing:0.08em; margin-top:14px; }
     /* ── pills side by side + warn state ── */
-    .pill-row { display:flex; gap:7px; flex-wrap:wrap; justify-content:flex-end; }
+    .pill-row { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+    .status-bar.idle { background:var(--surface2); border-color:var(--border2); color:var(--muted); }
+    .pill-row .status-bar { justify-content:flex-start; }
     .pill-row .status-bar { cursor:pointer; }
     .pill-row .status-bar:hover { filter:brightness(1.25); }
     .status-bar.warn { background:var(--amber-bg); border-color:var(--amber-bd); color:var(--amber); }
@@ -823,8 +824,8 @@
       <h1>Downstage <span class="product">View</span></h1>
       <p>Setup &amp; Control</p>
     </div>
-    <div class="header-clock" id="header-clock"></div>
-    <div class="addr-chip">
+    <div class="head-center">
+      <div class="header-clock" id="header-clock"></div>
       <div class="addr-box">
       <span class="addr-main" onclick="copyAddr()" title="Click to copy this unit's address">{{ hostname }}.local:8080
         <svg viewBox="0 0 24 24" class="addr-copy-ic"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg></span>
@@ -832,6 +833,8 @@
         <img id="qr-img" alt="QR code for this unit's address">
         <div class="qr-cap">Scan to open on a phone</div>
       </div>
+    </div>
+    <div class="addr-chip">
       </div>
       <div class="pill-row">
         <div class="status-bar disconnected" id="status-bar"
@@ -848,6 +851,11 @@
              onclick="pillGo('display')" title="Open the Display tab">
           <div class="status-dot"></div>
           <span id="hdmi-pill-text"></span>
+        </div>
+        <div class="status-bar" id="wifi-pill" style="display:none"
+             onclick="pillGo('network')" title="Open the Network tab">
+          <div class="status-dot"></div>
+          <span id="wifi-pill-text"></span>
         </div>
       </div>
     </div>
@@ -1740,10 +1748,21 @@
       if (inet) inet.style.display = (d.portal && d.portal.internet === false && !d.portal.detected) ? '' : 'none';
       document.getElementById('upd-system')?.classList.toggle('on', !!d.os_update_available);
       renderOutputChain(d);
+      const wp = document.getElementById('wifi-pill');
+      if (wp && d.wifi) {
+        wp.style.display = '';
+        wp.classList.remove('connected', 'warn', 'disconnected', 'idle');
+        if (!d.wifi.up) { wp.classList.add('idle'); document.getElementById('wifi-pill-text').textContent = 'WIFI \u2014 OFF'; }
+        else {
+          wp.classList.add(d.wifi.concern ? 'warn' : 'connected');
+          document.getElementById('wifi-pill-text').textContent = 'WIFI \u2014 ' + d.wifi.dbm + ' dBm';
+        }
+      }
       const hp = document.getElementById('hdmi-pill');
       if (hp && d.output) {
         const ok = d.output.hdmi.connected;
         hp.style.display = '';
+        hp.classList.toggle('connected', ok);
         hp.classList.toggle('disconnected', !ok);
         document.getElementById('hdmi-pill-text').textContent =
           ok ? 'HDMI \u2014 OK' : 'HDMI \u2014 NO DISPLAY';

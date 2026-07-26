@@ -107,17 +107,16 @@
       font-size: 10px; color: var(--muted); margin-top: 4px;
       text-transform: uppercase; letter-spacing: 0.2em;
     }
+    .head-center { flex:1; display:flex; flex-direction:column;
+      align-items:center; gap:5px; min-width:0; }
+    .head-center .addr-box { align-items:center; }
     .header-clock {
-      margin-left: auto; margin-right: 12px;
       font-family: var(--font-mono); font-size: 15px; color: var(--muted);
       font-variant-numeric: tabular-nums; white-space: nowrap;
     }
     .header-clock:empty { display: none; }
     /* vitals: boxed name+address, with the status pill separate below */
-    .addr-chip {
-      margin-left: auto; flex-shrink: 0;
-      display: flex; flex-direction: column; gap: 7px; align-items: flex-end;
-    }
+    .addr-chip { margin-left: auto; flex-shrink: 0; }
     .addr-box {
       display: flex; flex-direction: column; gap: 5px; align-items: flex-end;
       position: relative;
@@ -160,7 +159,8 @@
     .status-bar.disconnected { background: var(--red-bg);   border-color: var(--red-bd);   color: var(--red); }
     .status-bar.checking     { background: var(--blue-bg);  border-color: var(--blue-bd);  color: var(--blue); }
     .status-bar.warn         { background: var(--amber-bg); border-color: var(--amber-bd); color: var(--amber); }
-    .pill-row { display: flex; gap: 7px; flex-wrap: wrap; justify-content: flex-end; }
+    .pill-row { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+    .pill-row .status-bar { justify-content:flex-start; }
     .pill-row .status-bar { cursor: pointer; }
     .pill-row .status-bar:hover { filter: brightness(1.25); }
     .status-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
@@ -1163,8 +1163,8 @@
       <h1>Downstage <span class="product">One</span></h1>
       <p>Setup &amp; Control</p>
     </div>
-    <div class="header-clock" id="header-clock"></div>
-    <div class="addr-chip">
+    <div class="head-center">
+      <div class="header-clock" id="header-clock"></div>
       <div class="addr-box">
       <span class="addr-main" onclick="copyAddr()" title="Click to copy this unit's address">{{ hostname }}.local:8080
         <svg viewBox="0 0 24 24" class="addr-copy-ic"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg></span>
@@ -1172,6 +1172,8 @@
         <img id="qr-img" alt="QR code for this unit's address">
         <div class="qr-cap">Scan to open on a phone</div>
       </div>
+    </div>
+    <div class="addr-chip">
       </div>
       <div class="pill-row">
         <div class="status-bar disconnected" id="status-bar"
@@ -1184,10 +1186,15 @@
           <div class="status-dot"></div>
           <span id="inet-pill-text"></span>
         </div>
-        <div class="status-bar" id="hdmi-pill" style="display:none"
-             onclick="pillGo('displays')" title="Open the Display tab">
+        <div class="status-bar" id="hdmi-pill-1" style="display:none"
+             onclick="pillGo('displays')" title="Open the Displays tab">
           <div class="status-dot"></div>
-          <span id="hdmi-pill-text"></span>
+          <span id="hdmi-pill-1-text"></span>
+        </div>
+        <div class="status-bar" id="hdmi-pill-2" style="display:none"
+             onclick="pillGo('displays')" title="Open the Displays tab">
+          <div class="status-dot"></div>
+          <span id="hdmi-pill-2-text"></span>
         </div>
       </div>
     </div>
@@ -2572,15 +2579,14 @@
           if (pb) pb.style.display = on ? 'none' : '';
           if (tb) tb.style.display = on ? 'none' : '';
         }
-        const hp = document.getElementById('hdmi-pill');
-        if (hp) {
-          const missing = ['1','2'].filter(n => !d.hdmi_connected[n]);
+        for (const n of ['1','2']) {
+          const hp = document.getElementById('hdmi-pill-' + n);
+          if (!hp) continue;
           hp.style.display = '';
-          hp.classList.toggle('disconnected', missing.length > 0);
-          document.getElementById('hdmi-pill-text').textContent =
-            missing.length === 0 ? 'HDMI \u2014 OK'
-            : missing.length === 2 ? 'HDMI \u2014 NO DISPLAYS'
-            : 'HDMI ' + missing[0] + ' \u2014 NO DISPLAY';
+          hp.classList.toggle('connected', !!d.hdmi_connected[n]);
+          hp.classList.toggle('disconnected', !d.hdmi_connected[n]);
+          document.getElementById('hdmi-pill-' + n + '-text').textContent =
+            'HDMI ' + n + ' \u2014 ' + (d.hdmi_connected[n] ? 'OK' : 'NO DISPLAY');
         }
       }
 
