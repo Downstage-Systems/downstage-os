@@ -612,8 +612,7 @@
     .iface-row .ithumb { height:36px; width:auto; flex-shrink:0; }
     .fleet-ts { font-size:11px; color:var(--muted); padding-left:2px; }
     /* ── HDMI output confidence card (Show Mode), One-style tiles ── */
-    .out-card { display:none; margin:18px 0 6px; }
-    body.show-mode .out-card { display:block; }
+    .out-card { margin:2px 0 26px; }
     .preview-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
     .preview-box { border-radius:10px; overflow:hidden; background:#000;
       border:1px solid var(--border2); aspect-ratio:16/9; position:relative; }
@@ -861,33 +860,6 @@
 
       <!-- Server address -->
       <!-- Setup tabs: task-based — Display is home -->
-      <!-- HDMI output confidence — the "is it actually up on the screen" card -->
-      <div class="out-card" id="out-card">
-        <div class="section-label" style="text-align:center">HDMI Output</div>
-        <div class="preview-row">
-          <div class="preview-box" id="oc-prev-box">
-            <img id="oc-snap-img" style="display:none" alt="">
-            <div class="oc-nodisp" id="oc-nodisp" style="display:none">
-              <svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/><line x1="4" y1="4" x2="20" y2="16.5" stroke="currentColor" stroke-width="1.8"/></svg>
-              <div>No display connected</div>
-            </div>
-            <div class="preview-offline" id="oc-prompt">Check Output shows a live frame</div>
-            <div class="preview-badge">OUTPUT</div>
-          </div>
-          <div class="oc-grid">
-            <div class="oc-node" id="ocn-content"><div class="n-tick">·</div><div class="n-lbl">Content</div><div class="n-val">—</div></div>
-            <div class="oc-node" id="ocn-render"><div class="n-tick">·</div><div class="n-lbl">Render</div><div class="n-val">—</div></div>
-            <div class="oc-node" id="ocn-hdmi"><div class="n-tick">·</div><div class="n-lbl">HDMI Port</div><div class="n-val">—</div></div>
-            <div class="oc-node" id="ocn-display"><div class="n-tick">·</div><div class="n-lbl">Display</div><div class="n-val">—</div></div>
-          </div>
-        </div>
-        <div class="oc-actions">
-          <button class="btn-sm" id="oc-snap-btn" onclick="checkOutput()">Check Output</button>
-          <button class="btn-sm" onclick="identifyOutput()">Identify</button>
-          <span class="oc-snap-ts" id="oc-snap-ts"></span>
-        </div>
-      </div>
-
       <div id="setup-tabs" class="full-only">
         <button class="stab" id="stab-display" onclick="showSetupTab('display')">Display</button>
         <button class="stab" id="stab-ontime" onclick="showSetupTab('ontime')">OnTime</button>
@@ -921,6 +893,33 @@
       </div>
 
       <div id="tpane-display" class="tpane">
+      <!-- HDMI output confidence — the "is it actually up on the screen" card -->
+      <div class="out-card" id="out-card">
+        <div class="section-label" style="text-align:center">HDMI Output</div>
+        <div class="preview-row">
+          <div class="preview-box" id="oc-prev-box">
+            <img id="oc-snap-img" style="display:none" alt="">
+            <div class="oc-nodisp" id="oc-nodisp" style="display:none">
+              <svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/><line x1="4" y1="4" x2="20" y2="16.5" stroke="currentColor" stroke-width="1.8"/></svg>
+              <div>No display connected</div>
+            </div>
+            <div class="preview-offline" id="oc-prompt">Check Output shows a live frame</div>
+            <div class="preview-badge">OUTPUT</div>
+          </div>
+          <div class="oc-grid">
+            <div class="oc-node" id="ocn-content"><div class="n-tick">·</div><div class="n-lbl">Content</div><div class="n-val">—</div></div>
+            <div class="oc-node" id="ocn-render"><div class="n-tick">·</div><div class="n-lbl">Render</div><div class="n-val">—</div></div>
+            <div class="oc-node" id="ocn-hdmi"><div class="n-tick">·</div><div class="n-lbl">HDMI Port</div><div class="n-val">—</div></div>
+            <div class="oc-node" id="ocn-display"><div class="n-tick">·</div><div class="n-lbl">Display</div><div class="n-val">—</div></div>
+          </div>
+        </div>
+        <div class="oc-actions">
+          <button class="btn-sm" id="oc-snap-btn" onclick="checkOutput()">Check Output</button>
+          <button class="btn-sm" onclick="identifyOutput()">Identify</button>
+          <span class="oc-snap-ts" id="oc-snap-ts"></span>
+        </div>
+      </div>
+
       <div class="field">
         <div class="section-label">Display Source</div>
         <div class="source-grid" id="source-grid">
