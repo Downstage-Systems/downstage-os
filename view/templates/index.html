@@ -1603,7 +1603,7 @@
     if (d.source === 'off') ocNode('ocn-content', '', 'Off');
     else ocNode('ocn-content', 'ok', srcLabel);
     ocNode('ocn-render', o.render.up ? 'ok' : 'bad',
-           o.render.up ? 'Kiosk running' : 'Kiosk not responding');
+           o.render.up ? 'Success' : 'Not responding');
     ocNode('ocn-hdmi', o.hdmi.connected ? 'ok' : 'bad',
            o.hdmi.connected ? 'Live' + (o.hdmi.mode ? ' \u00b7 ' + o.hdmi.mode : '')
                             : 'No display \u2014 check cable');

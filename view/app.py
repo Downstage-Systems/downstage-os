@@ -2281,6 +2281,7 @@ def status():
         "source":    config.get("source", "/timer"),
         "output":    _output_chain(),
         "wifi":      _wifi_health(),
+        "primary_ip": get_local_ip(),
         "external_url": config.get("external_url", ""),
         "connected": connected,
         "local_ip":  get_local_ip(),
@@ -2691,7 +2692,8 @@ def discover_units():
             if serial.startswith("DS"):
                 return {"ip": ip, "serial": serial,
                         "product": "View" if serial.startswith("DSV") else "One",
-                        "version": d.get("os_version", "")}
+                        "version": d.get("os_version", ""),
+                        "primary": d.get("primary_ip", "") in ("", ip)}
         except Exception:
             pass
         return None
@@ -2701,6 +2703,13 @@ def discover_units():
         for res in ex.map(probe, sorted(ips)):
             if res:
                 found.append(res)
+    best = {}
+    for u in found:
+        key = u["serial"] or u["ip"]
+        if key not in best or (u["primary"] and not best[key]["primary"]):
+            best[key] = u
+    found = [{k: v for k, v in u.items() if k != "primary"}
+             for u in best.values()]
     cache = {"units": found, "ts": time.time()}
     try:
         _FLEET_CACHE.write_text(json.dumps(cache))
