@@ -663,6 +663,9 @@
     .iface-row .iprim { font-family:var(--font-mono); font-size:9px; letter-spacing:0.1em;
       color:var(--accent); border:1px solid var(--green-bd); border-radius:4px; padding:2px 6px; }
     .iface-row .idev { font-family:var(--font-mono); font-size:11px; color:var(--muted2); margin-left:auto; }
+    .iface-row.isec { opacity:0.62; }
+    .iface-row .idot.warn { background:var(--amber); box-shadow:0 0 7px rgba(245,165,36,0.5); }
+    .iface-row .inote { font-size:11px; color:var(--muted); }
     .iface-none { padding:11px 14px; font-size:12.5px; color:var(--muted);
       background:var(--surface2); border:1px solid var(--border2); border-radius:9px; }
     .wifi-saved-row { display:flex; align-items:center; gap:10px; padding:9px 12px;
@@ -1092,7 +1095,10 @@
         <div id="iface-panel" class="iface-panel"></div>
         <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin:18px 0 12px">
           <div class="section-label" style="margin:0">Downstage Units on This Network</div>
-          <button class="btn-sm" id="fleet-scan-btn" onclick="fleetScan()">Scan for Units</button>
+          <div style="display:flex; align-items:center; gap:12px">
+            <span class="fleet-ts" id="fleet-ts"></span>
+            <button class="btn-sm" id="fleet-scan-btn" onclick="fleetScan()">Scan for Units</button>
+          </div>
         </div>
         <div id="fleet-panel" class="iface-panel">
           <div class="iface-none">Press Scan to look for other Downstage units.</div>
@@ -1106,7 +1112,6 @@
              background:var(--amber-bg); border:1px solid var(--amber-bd); border-radius:9px;
              font-size:12.5px; color:var(--amber); line-height:1.5"></div>
         <div class="local-panel">
-          <div class="tz-current"><span id="net-current">Loading…</span></div>
           <div class="mode-toggle" style="margin:10px 0">
             <button class="mode-btn" id="net-dhcp-btn" onclick="setNetMode('auto')">DHCP (Automatic)</button>
             <button class="mode-btn" id="net-static-btn" onclick="setNetMode('manual')">Static IP</button>
@@ -1580,13 +1585,15 @@
         'onclick="openPanel(\'http://' + u.ip + ':8080\', \'' + u.product + ' ' + u.serial.slice(-4) + '\')">Open</button></div>'
       ).join('');
     }
-    if (d.ts) {
-      const age = Math.max(0, Date.now() / 1000 - d.ts);
-      const when = age < 90 ? 'just now'
-        : age < 5400 ? Math.round(age / 60) + ' min ago'
-        : age < 129600 ? Math.round(age / 3600) + ' h ago'
-        : Math.round(age / 86400) + ' days ago';
-      box.innerHTML += '<div class="fleet-ts">Last scanned ' + when + '</div>';
+    const fts = document.getElementById('fleet-ts');
+    if (fts) {
+      if (d.ts) {
+        const age = Math.max(0, Date.now() / 1000 - d.ts);
+        fts.textContent = 'Last scanned ' + (age < 90 ? 'just now'
+          : age < 5400 ? Math.round(age / 60) + ' min ago'
+          : age < 129600 ? Math.round(age / 3600) + ' h ago'
+          : Math.round(age / 86400) + ' days ago');
+      } else fts.textContent = '';
     }
   }
   async function fleetScan() {
@@ -2084,15 +2091,6 @@
       const d = await (await fetch('/network/info')).json();
       netMode = d.method === 'manual' ? 'manual' : 'auto';
       const ifaceName = { eth0: 'Ethernet', wlan0: 'Wi-Fi' }[d.iface] || d.iface || '—';
-      document.getElementById('net-current').innerHTML =
-        `Current: <span style="font-family:var(--font-mono);color:var(--text)">${d.current_ip}</span> ` +
-        `<span style="color:var(--muted)">${ifaceName} · ${netMode === 'manual' ? 'Static' : 'DHCP'}</span>`;
-      const wf = window._wifiNow;
-      if (d.iface === 'wlan0' && wf && wf.up) {
-        const grade = wf.dbm >= -60 ? 'Strong' : wf.dbm >= -70 ? 'OK' : 'Weak';
-        document.getElementById('net-current').innerHTML +=
-          ` <span style="color:${wf.dbm >= -70 ? 'var(--muted)' : 'var(--amber)'}">\u00b7 ${wf.dbm} dBm (${grade})</span>`;
-      }
       if (d.method === 'manual' && d.address) {
         const [ip, prefix] = d.address.split('/');
         document.getElementById('net-ip').value = ip || '';
@@ -2389,10 +2387,17 @@
     if (!box) return;
     if (!list || !list.length) { box.innerHTML = '<div class="iface-none">No network connection — check the cable or join WiFi below.</div>'; return; }
     box.innerHTML = list.map(function(i){
-      const prim = i.iface === primary ? '<span class="iprim">PRIMARY</span>' : '';
-      return '<div class="iface-row"><span class="idot"></span>' +
+      const ll = i.ip.indexOf('169.254.') === 0;   // self-assigned: no DHCP behind this port
+      const isPrim = i.iface === primary && !ll;
+      const tag = isPrim ? '<span class="iprim">PRIMARY</span>'
+                : ll ? '<span class="inote">self-assigned \u00b7 no DHCP</span>' : '';
+      let sig = '';
+      if (i.kind === 'WiFi' && window._wifiNow && window._wifiNow.up)
+        sig = '<span class="inote">' + window._wifiNow.dbm + ' dBm</span>';
+      return '<div class="iface-row' + (isPrim ? '' : ' isec') + '">' +
+        '<span class="idot' + (ll ? ' warn' : '') + '"></span>' +
         '<span class="ikind">' + i.kind + '</span>' +
-        '<span class="iip" onclick="copyIp(\'' + i.ip + '\')" title="Click to copy this address">' + i.ip + '</span>' + prim +
+        '<span class="iip" onclick="copyIp(\'' + i.ip + '\')" title="Click to copy this address">' + i.ip + '</span>' + tag + sig +
         '<span class="idev">' + i.iface + '</span></div>';
     }).join('');
   }
