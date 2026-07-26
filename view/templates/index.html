@@ -616,6 +616,22 @@
       background:var(--surface2); border:1px solid var(--border2); border-radius:9px; }
     .iface-row .ithumb { height:36px; width:auto; flex-shrink:0; }
     .fleet-ts { font-size:11px; color:var(--muted); padding-left:2px; }
+    .fleet-hdr-right { display:flex; align-items:center; gap:12px; }
+    #fleet-panel .ivia { font-size:11px; color:var(--muted); }
+    #fleet-panel .ibrk { display:none; }
+    @media (max-width: 620px) {
+      #fleet-panel .iface-row { flex-wrap:wrap; row-gap:8px; padding:13px 14px; }
+      #fleet-panel .ibrk { display:block; flex-basis:100%; height:0; order:4; }
+      #fleet-panel .idot { order:0; }
+      #fleet-panel .ithumb { order:1; }
+      #fleet-panel .ikind { order:2; width:auto; }
+      #fleet-panel .btn-mini { order:3; margin-left:auto !important; }
+      #fleet-panel .iip { order:5; }
+      #fleet-panel .ivia { order:6; }
+      #fleet-panel .idev { order:7; margin-left:auto; }
+      .fleet-hdr-right { flex-wrap:wrap; justify-content:flex-end; }
+      .fleet-hdr-right .fleet-ts { flex-basis:100%; text-align:right; white-space:nowrap; order:2; }
+    }
     /* ── HDMI output confidence card (Show Mode), One-style tiles ── */
     .out-card { margin:2px 0 26px; }
     .preview-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
@@ -1095,7 +1111,7 @@
         <div id="iface-panel" class="iface-panel"></div>
         <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin:18px 0 12px">
           <div class="section-label" style="margin:0">Downstage Units on This Network</div>
-          <div style="display:flex; align-items:center; gap:12px">
+          <div class="fleet-hdr-right">
             <span class="fleet-ts" id="fleet-ts"></span>
             <button class="btn-sm" id="fleet-scan-btn" onclick="fleetScan()">Scan for Units</button>
           </div>
@@ -1578,8 +1594,9 @@
           ((u.product || '').toLowerCase() === 'view' ? 'view' : 'one') +
           '.png" alt="">' +
         '<span class="ikind">' + u.product + '</span>' +
+        '<i class="ibrk"></i>' +
         '<span class="iip" onclick="copyIp(\'' + u.ip + '\')" title="Click to copy">' + u.ip + '</span>' +
-        (u.kind ? '<span style="font-size:11px; color:var(--muted)">via ' + u.kind + '</span>' : '') +
+        (u.kind ? '<span class="ivia">via ' + u.kind + '</span>' : '') +
         '<span class="idev">' + u.serial + ' · v' + u.version + '</span>' +
         '<button class="btn-mini" style="margin-left:8px; background:none; border:1px solid var(--border2); border-radius:6px; color:var(--text); font:600 11px var(--font-body); padding:5px 10px; cursor:pointer" ' +
         'onclick="openPanel(\'http://' + u.ip + ':8080\', \'' + u.product + ' ' + u.serial.slice(-4) + '\')">Open</button></div>'
