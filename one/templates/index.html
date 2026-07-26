@@ -2356,6 +2356,7 @@
           '.png" alt="">' +
         '<span class="ikind">' + u.product + '</span>' +
         '<span class="iip" onclick="copyIp(\'' + u.ip + '\')" title="Click to copy">' + u.ip + '</span>' +
+        (u.kind ? '<span style="font-size:11px; color:var(--muted)">via ' + u.kind + '</span>' : '') +
         '<span class="idev">' + u.serial + ' · v' + u.version + '</span>' +
         '<button class="btn-mini" style="margin-left:8px; background:none; border:1px solid var(--border2); border-radius:6px; color:var(--text); font:600 11px var(--font-body); padding:5px 10px; cursor:pointer" ' +
         'onclick="openExternal(\'http://' + u.ip + ':8080\')">Open</button></div>'

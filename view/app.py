@@ -2282,6 +2282,8 @@ def status():
         "output":    _output_chain(),
         "wifi":      _wifi_health(),
         "primary_ip": get_local_ip(),
+        "primary_kind": next((i["kind"] for i in get_all_interfaces()
+                              if i["ip"] == get_local_ip()), ""),
         "external_url": config.get("external_url", ""),
         "connected": connected,
         "local_ip":  get_local_ip(),
@@ -2693,6 +2695,7 @@ def discover_units():
                 return {"ip": ip, "serial": serial,
                         "product": "View" if serial.startswith("DSV") else "One",
                         "version": d.get("os_version", ""),
+                        "kind": d.get("primary_kind", ""),
                         "primary": d.get("primary_ip", "") in ("", ip)}
         except Exception:
             pass
