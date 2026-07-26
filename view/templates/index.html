@@ -612,6 +612,11 @@
     body.show-mode #setup-tabs { display:none; }
     /* ── interfaces panel ── */
     .iface-panel { display:flex; flex-direction:column; gap:8px; margin-bottom:16px; }
+    /* this unit's interfaces: two-up — same content, half the height */
+    #iface-panel { display:grid; grid-template-columns:1fr 1fr; }
+    #iface-panel .iface-row { padding:10px 13px; }
+    #iface-panel .iface-row:only-child, #iface-panel .iface-none { grid-column:1 / -1; }
+    @media (max-width: 700px) { #iface-panel { grid-template-columns:1fr; } }
     .iface-row { display:flex; align-items:center; gap:10px; padding:11px 14px;
       background:var(--surface2); border:1px solid var(--border2); border-radius:9px; }
     .iface-row .ithumb { height:36px; width:auto; flex-shrink:0; }
@@ -2432,7 +2437,7 @@
       const ll = i.ip.indexOf('169.254.') === 0;   // self-assigned: no DHCP behind this port
       const isPrim = i.iface === primary && !ll;
       const tag = isPrim ? '<span class="iprim">PRIMARY</span>'
-                : ll ? '<span class="inote">self-assigned \u00b7 no DHCP</span>' : '';
+                : ll ? '<span class="inote" title="Self-assigned address \u2014 nothing answered DHCP on this port">no DHCP</span>' : '';
       let sig = '';
       if (i.kind === 'WiFi' && window._wifiNow && window._wifiNow.up)
         sig = '<span class="inote">' + window._wifiNow.dbm + ' dBm</span>';
