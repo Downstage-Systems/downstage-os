@@ -605,6 +605,7 @@
     .iface-row { display:flex; align-items:center; gap:10px; padding:11px 14px;
                  background:var(--surface2); border:1px solid var(--border2); border-radius:9px; }
     .iface-row .ithumb { height:36px; width:auto; flex-shrink:0; }
+    .fleet-ts { font-size:11px; color:var(--muted); padding-left:2px; }
     .iface-row .idot { width:8px; height:8px; border-radius:50%; background:var(--accent);
                        box-shadow:0 0 7px rgba(47,217,123,0.6); flex-shrink:0; }
     .iface-row .ikind { font-family:var(--font-display); font-weight:700; font-size:13px;
@@ -1603,8 +1604,8 @@
       <div class="field full-only">
         <div class="section-label">Network</div>
         <div id="iface-panel" class="iface-panel"></div>
-        <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-top:18px">
-          <div class="section-label" style="margin:0 0 10px">Downstage Units on This Network</div>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin:18px 0 12px">
+          <div class="section-label" style="margin:0">Downstage Units on This Network</div>
           <button class="btn-sm" id="fleet-scan-btn" onclick="fleetScan()">Scan for Units</button>
         </div>
         <div id="fleet-panel" class="iface-panel">
@@ -2341,30 +2342,44 @@
     const t = setTimeout(() => c.abort(), ms);
     return fetch(url, { cache: 'no-store', signal: c.signal }).finally(() => clearTimeout(t));
   }
+  function renderFleet(d) {
+    const box = document.getElementById('fleet-panel');
+    if (!d.units || !d.units.length) {
+      box.innerHTML = '<div class="iface-none">' + (d.ts
+        ? 'No other Downstage units found on this network.'
+        : 'Press Scan to look for other Downstage units.') + '</div>';
+    } else {
+      box.innerHTML = d.units.map(u =>
+        '<div class="iface-row"><span class="idot"></span>' +
+        '<img class="ithumb" src="/static/unit-' +
+          ((u.product || '').toLowerCase() === 'view' ? 'view' : 'one') +
+          '.png" alt="">' +
+        '<span class="ikind">' + u.product + '</span>' +
+        '<span class="iip" onclick="copyIp(\'' + u.ip + '\')" title="Click to copy">' + u.ip + '</span>' +
+        '<span class="idev">' + u.serial + ' · v' + u.version + '</span>' +
+        '<button class="btn-mini" style="margin-left:8px; background:none; border:1px solid var(--border2); border-radius:6px; color:var(--text); font:600 11px var(--font-body); padding:5px 10px; cursor:pointer" ' +
+        'onclick="openExternal(\'http://' + u.ip + ':8080\')">Open</button></div>'
+      ).join('');
+    }
+    if (d.ts) {
+      const age = Math.max(0, Date.now() / 1000 - d.ts);
+      const when = age < 90 ? 'just now'
+        : age < 5400 ? Math.round(age / 60) + ' min ago'
+        : age < 129600 ? Math.round(age / 3600) + ' h ago'
+        : Math.round(age / 86400) + ' days ago';
+      box.innerHTML += '<div class="fleet-ts">Last scanned ' + when + '</div>';
+    }
+  }
   async function fleetScan() {
     const btn = document.getElementById('fleet-scan-btn');
-    const box = document.getElementById('fleet-panel');
-    btn.disabled = true; btn.textContent = 'Scanning… (~10s)';
-    try {
-      const d = await (await fetch('/discover', { method: 'POST' })).json();
-      if (!d.units.length) {
-        box.innerHTML = '<div class="iface-none">No other Downstage units found on this network.</div>';
-      } else {
-        box.innerHTML = d.units.map(u =>
-          '<div class="iface-row"><span class="idot"></span>' +
-          '<img class="ithumb" src="/static/unit-' +
-            ((u.product || '').toLowerCase() === 'view' ? 'view' : 'one') +
-            '.png" alt="">' +
-          '<span class="ikind">' + u.product + '</span>' +
-          '<span class="iip" onclick="copyIp(\'' + u.ip + '\')" title="Click to copy">' + u.ip + '</span>' +
-          '<span class="idev">' + u.serial + ' · v' + u.version + '</span>' +
-          '<button class="btn-mini" style="margin-left:8px; background:none; border:1px solid var(--border2); border-radius:6px; color:var(--text); font:600 11px var(--font-body); padding:5px 10px; cursor:pointer" ' +
-          'onclick="openExternal(\'http://' + u.ip + ':8080\')">Open</button></div>'
-        ).join('');
-      }
-    } catch (e) { showToast('Scan failed.', 'error'); }
+    btn.disabled = true; btn.textContent = 'Scanning\u2026 (~10s)';
+    try { renderFleet(await (await fetch('/discover', { method: 'POST' })).json()); }
+    catch (e) { showToast('Scan failed.', 'error'); }
     finally { btn.disabled = false; btn.textContent = 'Scan for Units'; }
   }
+  (async () => {   // last scan is remembered on the unit — show it on load
+    try { renderFleet(await (await fetch('/discover/last')).json()); } catch (e) {}
+  })();
   function renderUpdateStrip(items) {
     const el = document.getElementById('upd-strip');
     if (!el) return;

@@ -2521,7 +2521,25 @@ def discover_units():
         for res in ex.map(probe, sorted(ips)):
             if res:
                 found.append(res)
-    return jsonify({"ok": True, "units": found})
+    cache = {"units": found, "ts": time.time()}
+    try:
+        _FLEET_CACHE.write_text(json.dumps(cache))
+    except Exception:
+        pass
+    return jsonify({"ok": True, **cache})
+
+
+# Last scan is remembered on the unit, so every browser sees the same list
+# after a refresh. A scan is always a manual, explicit sweep — no background
+# probing of customer networks.
+_FLEET_CACHE = BASE_DIR / ".fleet-cache"
+
+@app.route("/discover/last")
+def discover_last():
+    try:
+        return jsonify({"ok": True, **json.loads(_FLEET_CACHE.read_text())})
+    except Exception:
+        return jsonify({"ok": True, "units": [], "ts": None})
 
 
 @app.route("/wifi/forget", methods=["POST"])
