@@ -442,6 +442,126 @@ def _navigate(url):
         return False
 
 
+def _cdp_cmd(method, params=None, timeout=15):
+    """One CDP command against the kiosk page; None when the kiosk is down."""
+    try:
+        import websocket
+        pages = [t for t in requests.get(f"http://127.0.0.1:{_DEBUG_PORT}/json",
+                                         timeout=2).json() if t.get("type") == "page"]
+        if not pages:
+            return None
+        ws = websocket.create_connection(pages[0]["webSocketDebuggerUrl"],
+                                         timeout=timeout, suppress_origin=True)
+        ws.send(json.dumps({"id": 1, "method": method, "params": params or {}}))
+        while True:
+            m = json.loads(ws.recv())
+            if m.get("id") == 1:
+                break
+        ws.close()
+        return m.get("result")
+    except Exception as e:
+        print(f"[cdp] {method}: {type(e).__name__}: {e}")
+        return None
+
+
+# ── HDMI output confidence chain ──────────────────────────────────────────────
+# Everything here is read, never guessed: port state from the kernel's DRM
+# connector, display identity from the monitor's own EDID handshake, render
+# truth from the kiosk browser over CDP.
+
+def _edid_identity():
+    """(mfr, name) from the connected display's EDID, '' when not offered."""
+    import glob
+    try:
+        raw = open(glob.glob("/sys/class/drm/card*-HDMI*/edid")[0], "rb").read()
+        if len(raw) < 128:
+            return "", ""
+        w = (raw[8] << 8) | raw[9]
+        mfr = "".join(chr(64 + ((w >> sh) & 31)) for sh in (10, 5, 0))
+        name = ""
+        for i in range(54, 126, 18):
+            if raw[i:i + 5] == bytes([0, 0, 0, 0xFC, 0]):
+                name = raw[i + 5:i + 18].decode("ascii", "ignore").strip()
+        return mfr, name
+    except Exception:
+        return "", ""
+
+
+_output_cache = {"ts": 0.0, "data": None}
+
+def _output_chain():
+    """Live state of the output path; cached briefly — /status polls often.
+
+    The golden image sets hdmi_force_hotplug=1 so the kiosk renders headless,
+    which pins the DRM connector to "connected" forever — useless for cable
+    truth. A real display is detected by its EDID answering on DDC, and we
+    force a reprobe each refresh so a cable pulled mid-show goes red on the
+    next poll instead of lingering as a stale cached handshake."""
+    if time.time() - _output_cache["ts"] < 8 and _output_cache["data"]:
+        return _output_cache["data"]
+    import glob
+    hdmi = {"connected": False, "enabled": False, "mode": ""}
+    try:
+        c = glob.glob("/sys/class/drm/card*-HDMI*")[0]
+        subprocess.run(["sudo", "sh", "-c", f"echo detect > {c}/status"],
+                       timeout=3, capture_output=True)
+        edid_len = len(open(f"{c}/edid", "rb").read())
+        hdmi["connected"] = edid_len > 0          # a live display answered DDC
+        hdmi["enabled"]  = open(f"{c}/enabled").read().strip() == "enabled"
+        modes = open(f"{c}/modes").read().split()
+        hdmi["mode"] = modes[0] if modes else ""
+    except Exception:
+        pass
+    render = {"up": False, "url": ""}
+    try:
+        pages = [t for t in requests.get(f"http://127.0.0.1:{_DEBUG_PORT}/json",
+                                         timeout=2).json() if t.get("type") == "page"]
+        if pages:
+            render = {"up": True, "url": pages[0].get("url", "")}
+    except Exception:
+        pass
+    mfr, name = _edid_identity()
+    data = {"hdmi": hdmi, "render": render,
+            "display": {"mfr": mfr, "name": name}}
+    _output_cache.update(ts=time.time(), data=data)
+    return data
+
+
+@app.route("/output/snapshot")
+def output_snapshot():
+    """One frame of what the kiosk is rendering right now (~2-3s on this
+    hardware). On demand only — never polled."""
+    import base64
+    r = _cdp_cmd("Page.captureScreenshot",
+                 {"format": "jpeg", "quality": 60}, timeout=20)
+    if not r or "data" not in r:
+        return jsonify({"ok": False, "error": "kiosk not responding"}), 503
+    from flask import Response
+    return Response(base64.b64decode(r["data"]), mimetype="image/jpeg",
+                    headers={"Cache-Control": "no-store"})
+
+
+@app.route("/output/identify", methods=["POST"])
+def output_identify():
+    """Flash the unit's name on the physical output for 5 seconds."""
+    config = load_config()
+    label = socket.gethostname()
+    serial = config.get("serial", "")
+    js = (
+        "(() => { const o=document.createElement('div');"
+        "o.style.cssText='position:fixed;inset:0;z-index:2147483647;"
+        "background:#0b0d10;color:#e8ecef;display:flex;flex-direction:column;"
+        "align-items:center;justify-content:center;font-family:sans-serif';"
+        "o.innerHTML='<div style=\"font-size:9vw;font-weight:700;"
+        "letter-spacing:0.06em\">DOWNSTAGE VIEW</div>"
+        f"<div style=\"font-size:4vw;color:#2fd97b;margin-top:3vh\">{label}"
+        f"{' &middot; ' + serial if serial else ''}</div>';"
+        "document.body.appendChild(o); setTimeout(() => o.remove(), 5000); })()"
+    )
+    r = _cdp_cmd("Runtime.evaluate", {"expression": js}, timeout=8)
+    return jsonify({"ok": r is not None})
+
+
 _blackout_active = False
 
 
@@ -2109,6 +2229,7 @@ def status():
     return jsonify({
         "ip":        ip,
         "source":    config.get("source", "/timer"),
+        "output":    _output_chain(),
         "external_url": config.get("external_url", ""),
         "connected": connected,
         "local_ip":  get_local_ip(),

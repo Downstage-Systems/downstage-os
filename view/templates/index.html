@@ -611,6 +611,30 @@
       background:var(--surface2); border:1px solid var(--border2); border-radius:9px; }
     .iface-row .ithumb { height:36px; width:auto; flex-shrink:0; }
     .fleet-ts { font-size:11px; color:var(--muted); padding-left:2px; }
+    /* ── HDMI output confidence card (Show Mode) ── */
+    .out-card { display:none; margin:18px 0 6px; }
+    body.show-mode .out-card { display:block; }
+    .oc-chain { display:flex; align-items:stretch; margin-bottom:12px; }
+    .oc-node { flex:1; background:var(--surface2); border:1px solid var(--border2);
+      border-radius:9px; padding:9px 5px 8px; text-align:center; transition:border-color 0.3s; }
+    .oc-node .n-tick { width:16px; height:16px; margin:0 auto 5px; border-radius:50%;
+      background:var(--border2); color:#06130b; font:700 11px/16px var(--font-body); }
+    .oc-node.ok { border-color:rgba(47,217,123,0.45); }
+    .oc-node.ok .n-tick { background:var(--accent); }
+    .oc-node.bad { border-color:rgba(240,90,90,0.55); }
+    .oc-node.bad .n-tick { background:#f05a5a; color:#fff; }
+    .oc-node .n-lbl { font:600 10px var(--font-display); letter-spacing:0.07em;
+      color:var(--muted); text-transform:uppercase; }
+    .oc-node .n-val { font-size:11px; color:var(--text); margin-top:2px; line-height:1.35; }
+    .oc-link { width:18px; align-self:center; height:2px; background:var(--border2); flex-shrink:0; }
+    .oc-actions { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+    .oc-snap-ts { font-size:11px; color:var(--muted); }
+    #oc-snap-img { width:100%; max-width:480px; border-radius:8px;
+      border:1px solid var(--border2); display:block; }
+    @media (max-width: 620px) {
+      .oc-node .n-val { font-size:10px; }
+      .oc-link { width:10px; }
+    }
     .iface-row .idot { width:8px; height:8px; border-radius:50%; background:var(--accent);
       box-shadow:0 0 7px rgba(47,217,123,0.6); flex-shrink:0; }
     .iface-row .ikind { font-family:var(--font-display); font-weight:700; font-size:13px;
@@ -822,6 +846,26 @@
 
       <!-- Server address -->
       <!-- Setup tabs: task-based — Display is home -->
+      <!-- HDMI output confidence — the "is it actually up on the screen" card -->
+      <div class="out-card" id="out-card">
+        <div class="section-label" style="text-align:center">HDMI Output</div>
+        <div class="oc-chain" id="oc-chain">
+          <div class="oc-node" id="ocn-content"><div class="n-tick">·</div><div class="n-lbl">Content</div><div class="n-val">—</div></div>
+          <div class="oc-link"></div>
+          <div class="oc-node" id="ocn-render"><div class="n-tick">·</div><div class="n-lbl">Render</div><div class="n-val">—</div></div>
+          <div class="oc-link"></div>
+          <div class="oc-node" id="ocn-hdmi"><div class="n-tick">·</div><div class="n-lbl">HDMI Port</div><div class="n-val">—</div></div>
+          <div class="oc-link"></div>
+          <div class="oc-node" id="ocn-display"><div class="n-tick">·</div><div class="n-lbl">Display</div><div class="n-val">—</div></div>
+        </div>
+        <div class="oc-actions">
+          <button class="btn-sm" id="oc-snap-btn" onclick="checkOutput()">Check Output</button>
+          <button class="btn-sm" onclick="identifyOutput()">Identify</button>
+          <span class="oc-snap-ts" id="oc-snap-ts"></span>
+        </div>
+        <img id="oc-snap-img" style="display:none" alt="">
+      </div>
+
       <div id="setup-tabs" class="full-only">
         <button class="stab" id="stab-display" onclick="showSetupTab('display')">Display</button>
         <button class="stab" id="stab-ontime" onclick="showSetupTab('ontime')">OnTime</button>
@@ -1521,6 +1565,48 @@
   (async () => {   // last scan is remembered on the unit — show it on load
     try { renderFleet(await (await fetch('/discover/last')).json()); } catch (e) {}
   })();
+  function ocNode(id, state, val) {
+    const el = document.getElementById(id);
+    el.className = 'oc-node' + (state ? ' ' + state : '');
+    el.querySelector('.n-tick').textContent = state === 'ok' ? '\u2713' : state === 'bad' ? '!' : '\u00b7';
+    el.querySelector('.n-val').textContent = val;
+  }
+  function renderOutputChain(d) {
+    if (!d.output || !document.getElementById('oc-chain')) return;
+    const o = d.output;
+    const srcLabel = (typeof SOURCE_LABELS !== 'undefined' && SOURCE_LABELS[d.source]) || d.source || '\u2014';
+    if (d.source === 'off') ocNode('ocn-content', '', 'Off');
+    else ocNode('ocn-content', 'ok', srcLabel);
+    ocNode('ocn-render', o.render.up ? 'ok' : 'bad',
+           o.render.up ? 'Kiosk running' : 'Kiosk not responding');
+    ocNode('ocn-hdmi', o.hdmi.connected ? 'ok' : 'bad',
+           o.hdmi.connected ? 'Live' + (o.hdmi.mode ? ' \u00b7 ' + o.hdmi.mode : '')
+                            : 'No display \u2014 check cable');
+    const dn = o.display.name || o.display.mfr;
+    ocNode('ocn-display', o.hdmi.connected ? 'ok' : '',
+           o.hdmi.connected ? (dn ? dn + ' detected' : 'Display detected') : '\u2014');
+  }
+  async function checkOutput() {
+    const btn = document.getElementById('oc-snap-btn');
+    const img = document.getElementById('oc-snap-img');
+    const ts  = document.getElementById('oc-snap-ts');
+    btn.disabled = true; btn.textContent = 'Capturing\u2026';
+    try {
+      const r = await fetch('/output/snapshot?t=' + Date.now());
+      if (!r.ok) throw new Error();
+      img.src = URL.createObjectURL(await r.blob());
+      img.style.display = '';
+      ts.textContent = 'Captured ' + new Date().toLocaleTimeString();
+    } catch (e) { showToast('Could not capture \u2014 kiosk not responding.', 'error'); }
+    finally { btn.disabled = false; btn.textContent = 'Check Output'; }
+  }
+  async function identifyOutput() {
+    try {
+      const d = await (await fetch('/output/identify', { method: 'POST' })).json();
+      showToast(d.ok ? 'Unit name is on the output for 5 seconds.'
+                     : 'Kiosk not responding.', d.ok ? 'info' : 'error');
+    } catch (e) { showToast('Identify failed.', 'error'); }
+  }
   async function dismissUpdStrip() {
     document.getElementById('upd-strip').style.display = 'none';
     try { await fetch('/updates/dismiss', { method: 'POST' }); } catch (e) {}
@@ -1559,6 +1645,7 @@
       const inet = document.getElementById('inet-note');
       if (inet) inet.style.display = (d.portal && d.portal.internet === false && !d.portal.detected) ? '' : 'none';
       document.getElementById('upd-system')?.classList.toggle('on', !!d.os_update_available);
+      renderOutputChain(d);
       const us = document.getElementById('upd-strip');
       if (us) {
         if (d.os_checked && d.os_update_available && d.os_dismissed !== d.os_latest) {
