@@ -98,8 +98,12 @@
       font-size: 10px; color: var(--muted); margin-top: 4px;
       text-transform: uppercase; letter-spacing: 0.2em;
     }
-    .head-center { flex:1; display:flex; flex-direction:column;
-      align-items:center; gap:5px; min-width:0; }
+    .logo-left { display:flex; align-items:center; gap:14px; min-width:0; }
+    .head-center { display:flex; flex-direction:column; align-items:center; gap:4px; }
+    @media (min-width: 901px) {
+      .logo-row { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; }
+      .addr-chip { justify-self:end; }
+    }
     .head-center .addr-box { align-items:center; }
     .header-clock {
       font-family: var(--font-mono); font-size: 15px; color: var(--muted);
@@ -107,7 +111,9 @@
     }
     .header-clock:empty { display: none; }
     /* vitals: boxed name+address, with the status pill separate below */
-    .addr-chip { margin-left: auto; flex-shrink: 0; }
+    .addr-chip { margin-left:auto; flex-shrink:0;
+      background:var(--surface2); border:1px solid var(--border);
+      border-radius:11px; padding:6px; }
     .addr-box {
       display: flex; flex-direction: column; gap: 5px; align-items: flex-end;
       position: relative;
@@ -708,7 +714,10 @@
     .wifi-saved-label { font-size:11px; color:var(--muted2); text-transform:uppercase;
       letter-spacing:0.08em; margin-top:14px; }
     /* ── pills side by side + warn state ── */
-    .pill-row { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+    .pill-row { display:grid; grid-template-columns:1fr 1fr; gap:5px; }
+    .pill-row .status-bar { justify-content:flex-start; font-size:10px;
+      padding:4px 9px; gap:6px; letter-spacing:0.04em; }
+    .pill-row .status-dot { width:6px; height:6px; }
     .status-bar.idle { background:var(--surface2); border-color:var(--border2); color:var(--muted); }
     .pill-row .status-bar { justify-content:flex-start; }
     .pill-row .status-bar { cursor:pointer; }
@@ -817,12 +826,14 @@
 <div class="wrap">
 
   <div class="logo-row">
+    <div class="logo-left">
     <div class="logo-icon">
       <svg viewBox="0 0 96 96" role="img" aria-label="Downstage View mark"><rect x="6" y="10" width="84" height="66" rx="10" fill="none" stroke="#e8ecef" stroke-width="7"/><rect x="20" y="54" width="30" height="9" rx="4.5" fill="#2fd97b"/><circle cx="64" cy="58" r="4" fill="#2fd97b"/><path d="M 64 46 A 12 12 0 0 1 76 58" fill="none" stroke="#2fd97b" stroke-width="5.5" stroke-linecap="round"/><path d="M 64 33 A 25 25 0 0 1 82 40" fill="none" stroke="#e8ecef" stroke-width="5.5" stroke-linecap="round" opacity="0.4"/><rect x="20" y="83" width="56" height="7" rx="3.5" fill="#2fd97b"/></svg>
     </div>
     <div class="logo-text">
       <h1>Downstage <span class="product">View</span></h1>
       <p>Setup &amp; Control</p>
+    </div>
     </div>
     <div class="head-center">
       <div class="header-clock" id="header-clock"></div>
@@ -833,9 +844,9 @@
         <img id="qr-img" alt="QR code for this unit's address">
         <div class="qr-cap">Scan to open on a phone</div>
       </div>
+      </div>
     </div>
     <div class="addr-chip">
-      </div>
       <div class="pill-row">
         <div class="status-bar disconnected" id="status-bar"
              onclick="pillGo('ontime')" title="Open the OnTime tab">
