@@ -236,11 +236,20 @@ def get_all_interfaces():
 
 
 def get_network_info():
-    """Return {ip, iface} preferring eth0 over wlan0."""
+    """Return {ip, iface} preferring eth0 over wlan0 — but a REAL address on
+    either interface beats a link-local one. A direct-cable 169.254 on eth
+    must never mask working WiFi (it made the OLED search forever and the
+    supervisor hunt a network the unit already had)."""
+    found = []
     for iface in ["eth0", "wlan0"]:
         ip = _iface_ip(iface)
         if ip:
-            return {"ip": ip, "iface": iface}
+            found.append({"ip": ip, "iface": iface})
+    for f in found:
+        if not f["ip"].startswith("169.254."):
+            return f
+    if found:
+        return found[0]
     # routing fallback
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -1626,7 +1635,7 @@ class OLEDDisplay:
         dots = "." * (1 + int(time.monotonic()) % 3)
         draw.text((0, 22 + j), "Searching for", fill=255)
         draw.text((0, 36 + j), f"a network{dots}", fill=255)
-        draw.text((0, 52 + j), "Setup hotspot if none found", fill=255)
+        draw.text((0, 52 + j), "Hotspot if none found", fill=255)
 
     def cycle_page(self):
         """Short press on the power button: status → big clock → setup QR."""
