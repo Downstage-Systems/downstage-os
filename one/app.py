@@ -2514,13 +2514,38 @@ def system_shutdown():
 
 # ── Update check ──────────────────────────────────────────────────────────────
 
+# Strip dismissal: stored on the unit so it holds across every browser/device.
+# Keyed to version numbers — a newer release un-dismisses itself.
+_UPD_DISMISS_FILE = BASE_DIR / ".upd-dismissed"
+
+def _upd_dismissed():
+    try:
+        return json.loads(_UPD_DISMISS_FILE.read_text())
+    except Exception:
+        return {}
+
+
 @app.route("/update-status")
 def update_status_route():
     d = dict(_update_status)
     d["os"] = dict(d["os"], last_result=_os_update_result())
     d["ontime"]    = dict(d["ontime"],    prev=_ontime_prev_version_str())
     d["companion"] = dict(d["companion"], prev=load_config().get("companion_prev") or None)
+    d["dismissed"] = _upd_dismissed()
     return jsonify(d)
+
+
+@app.route("/updates/dismiss", methods=["POST"])
+def updates_dismiss():
+    snap = _upd_dismissed()
+    for name, info in _update_status.items():
+        if info.get("update_available") and info.get("latest"):
+            snap[name] = info["latest"]
+    try:
+        _UPD_DISMISS_FILE.write_text(json.dumps(snap))
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+    return jsonify({"ok": True, "dismissed": snap})
 
 
 @app.route("/updates/recheck", methods=["POST"])

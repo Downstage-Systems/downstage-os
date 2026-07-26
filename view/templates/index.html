@@ -685,6 +685,9 @@
       border-radius:9px; color:var(--amber); }
     #upd-strip .us-link { color:var(--amber); font-weight:600; cursor:pointer;
       text-decoration:underline; text-underline-offset:3px; }
+    #upd-strip .us-hide { margin-left:auto; cursor:pointer; color:var(--muted);
+      font-size:17px; line-height:1; padding:0 3px; }
+    #upd-strip .us-hide:hover { color:var(--text); }
     .pm-card { background:var(--surface); border:1px solid var(--border2); border-radius:14px;
       padding:20px; width:100%; display:flex; flex-direction:column; gap:9px; }
     .pm-title { font-family:var(--font-display); font-weight:700; font-size:15px;
@@ -1008,11 +1011,13 @@
       <div class="field" style="margin-top:0">
         <div class="section-label">Network</div>
         <div id="iface-panel" class="iface-panel"></div>
-        <div class="section-label" style="margin-top:18px">Downstage Units on This Network</div>
+        <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-top:18px">
+          <div class="section-label" style="margin:0 0 10px">Downstage Units on This Network</div>
+          <button class="btn-sm" id="fleet-scan-btn" onclick="fleetScan()">Scan for Units</button>
+        </div>
         <div id="fleet-panel" class="iface-panel">
           <div class="iface-none">Press Scan to look for other Downstage units.</div>
         </div>
-        <button class="btn-sm" id="fleet-scan-btn" onclick="fleetScan()">Scan for Units</button>
 
         <div id="inet-note" style="display:none; margin-bottom:12px; padding:10px 13px;
              background:var(--amber-bg); border:1px solid var(--amber-bd); border-radius:9px;
@@ -1497,6 +1502,10 @@
     } catch (e) { showToast('Scan failed.', 'error'); }
     finally { btn.disabled = false; btn.textContent = 'Scan for Units'; }
   }
+  async function dismissUpdStrip() {
+    document.getElementById('upd-strip').style.display = 'none';
+    try { await fetch('/updates/dismiss', { method: 'POST' }); } catch (e) {}
+  }
   async function fetchStatus(quiet = false) {
     const bar = document.getElementById('status-bar');
     const txt = document.getElementById('status-text');
@@ -1533,9 +1542,10 @@
       document.getElementById('upd-system')?.classList.toggle('on', !!d.os_update_available);
       const us = document.getElementById('upd-strip');
       if (us) {
-        if (d.os_checked && d.os_update_available) {
+        if (d.os_checked && d.os_update_available && d.os_dismissed !== d.os_latest) {
           us.style.display = '';
-          us.innerHTML = 'Update available: <span class="us-link" onclick="showSetupTab(\'system\')">Downstage OS</span>';
+          us.innerHTML = 'Update available: <span class="us-link" onclick="showSetupTab(\'system\')">Downstage OS</span>' +
+            '<span class="us-hide" onclick="dismissUpdStrip()" title="Hide until the next update">&times;</span>';
         } else us.style.display = 'none';
       }
       const osEl = document.getElementById('os-version-label');

@@ -1438,6 +1438,29 @@ echo "rolled-back {tag} $(date -Is)" > "$LOG"
 _OS_RESTART_CMD = "pkill -f 'python3 -u /home/pi/ontime-kiosk-lite/app.py'"
 
 
+# Strip dismissal: stored on the unit so it holds across every browser/device.
+# Keyed to version numbers — a newer release un-dismisses itself.
+_UPD_DISMISS_FILE = BASE_DIR / ".upd-dismissed"
+
+def _upd_dismissed():
+    try:
+        return json.loads(_UPD_DISMISS_FILE.read_text())
+    except Exception:
+        return {}
+
+
+@app.route("/updates/dismiss", methods=["POST"])
+def updates_dismiss():
+    snap = _upd_dismissed()
+    if _os_update.get("update_available") and _os_update.get("latest"):
+        snap["os"] = _os_update["latest"]
+    try:
+        _UPD_DISMISS_FILE.write_text(json.dumps(snap))
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+    return jsonify({"ok": True, "dismissed": snap})
+
+
 def _os_update_result():
     try:
         return (Path(_OS_APPDIR) / ".update-result").read_text().strip()
@@ -2030,6 +2053,7 @@ def status():
         "serial": config.get("serial", ""),
         "os_latest": _os_update["latest"],
         "os_update_available": _os_update["update_available"],
+        "os_dismissed": _upd_dismissed().get("os"),
         "os_checked": _os_update.get("checked", False),
         "os_update_result": _os_update_result(),
         "watchdog":  config.get("watchdog", True),
