@@ -617,6 +617,8 @@
     .iface-row .ithumb { height:36px; width:auto; flex-shrink:0; }
     .fleet-ts { font-size:11px; color:var(--muted); padding-left:2px; }
     .fleet-hdr-right { display:flex; align-items:center; gap:12px; }
+    .fleet-card { background:#0e141d; border:1px solid rgba(88,140,255,0.16);
+      border-radius:14px; padding:18px 18px 15px; margin:26px 0 4px; }
     .if-mini { display:flex; background:var(--surface2); border:1px solid var(--border2);
       border-radius:7px; padding:2px; gap:2px; }
     .if-mini button { background:none; border:none; border-radius:5px; color:var(--muted);
@@ -1115,16 +1117,6 @@
       <div class="field" style="margin-top:0">
         <div class="section-label">Network</div>
         <div id="iface-panel" class="iface-panel"></div>
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin:18px 0 12px">
-          <div class="section-label" style="margin:0">Downstage Units on This Network</div>
-          <div class="fleet-hdr-right">
-            <span class="fleet-ts" id="fleet-ts"></span>
-            <button class="btn-sm" id="fleet-scan-btn" onclick="fleetScan()">Scan for Units</button>
-          </div>
-        </div>
-        <div id="fleet-panel" class="iface-panel">
-          <div class="iface-none">Press Scan to look for other Downstage units.</div>
-        </div>
 
         <div id="inet-note" style="display:none; margin-bottom:12px; padding:10px 13px;
              background:var(--amber-bg); border:1px solid var(--amber-bd); border-radius:9px;
@@ -1209,6 +1201,20 @@
             <button class="btn-sm" id="hotspot-btn" onclick="toggleHotspot()">Start</button>
           </div>
           <div class="hotspot-hint" id="hotspot-hint" style="display:none"></div>
+        </div>
+      </div>
+
+      <!-- Fleet: other units — its own island, apart from this unit's settings -->
+      <div class="fleet-card full-only">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0 0 12px">
+          <div class="section-label" style="margin:0">Downstage Units on This Network</div>
+          <div class="fleet-hdr-right">
+            <span class="fleet-ts" id="fleet-ts"></span>
+            <button class="btn-sm" id="fleet-scan-btn" onclick="fleetScan()">Scan for Units</button>
+          </div>
+        </div>
+        <div id="fleet-panel" class="iface-panel" style="margin-bottom:0">
+          <div class="iface-none">Press Scan to look for other Downstage units.</div>
         </div>
       </div>
 
