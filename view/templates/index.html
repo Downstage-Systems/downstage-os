@@ -844,6 +844,11 @@
           <div class="status-dot"></div>
           <span id="inet-pill-text"></span>
         </div>
+        <div class="status-bar" id="hdmi-pill" style="display:none"
+             onclick="pillGo('display')" title="Open the Display tab">
+          <div class="status-dot"></div>
+          <span id="hdmi-pill-text"></span>
+        </div>
       </div>
     </div>
   </div>
@@ -1735,6 +1740,14 @@
       if (inet) inet.style.display = (d.portal && d.portal.internet === false && !d.portal.detected) ? '' : 'none';
       document.getElementById('upd-system')?.classList.toggle('on', !!d.os_update_available);
       renderOutputChain(d);
+      const hp = document.getElementById('hdmi-pill');
+      if (hp && d.output) {
+        const ok = d.output.hdmi.connected;
+        hp.style.display = '';
+        hp.classList.toggle('disconnected', !ok);
+        document.getElementById('hdmi-pill-text').textContent =
+          ok ? 'HDMI \u2014 OK' : 'HDMI \u2014 NO DISPLAY';
+      }
       window._wifiNow = d.wifi;
       const wn = document.getElementById('wifi-note');
       if (wn) {

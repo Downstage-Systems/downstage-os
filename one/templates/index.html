@@ -1184,6 +1184,11 @@
           <div class="status-dot"></div>
           <span id="inet-pill-text"></span>
         </div>
+        <div class="status-bar" id="hdmi-pill" style="display:none"
+             onclick="pillGo('displays')" title="Open the Display tab">
+          <div class="status-dot"></div>
+          <span id="hdmi-pill-text"></span>
+        </div>
       </div>
     </div>
   </div>
@@ -2559,12 +2564,24 @@
         fb.title = 'Copy the current show state to the failsafe SD now — last backed up ' +
           t.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
       }
-      if (d.hdmi_connected) for (const n of ['1','2']) {
-        const on = d.hdmi_connected[n];
-        const pb = document.getElementById('preview-nodisp-' + n);
-        const tb = document.getElementById('tab-nodisp-' + n);
-        if (pb) pb.style.display = on ? 'none' : '';
-        if (tb) tb.style.display = on ? 'none' : '';
+      if (d.hdmi_connected) {
+        for (const n of ['1','2']) {
+          const on = d.hdmi_connected[n];
+          const pb = document.getElementById('preview-nodisp-' + n);
+          const tb = document.getElementById('tab-nodisp-' + n);
+          if (pb) pb.style.display = on ? 'none' : '';
+          if (tb) tb.style.display = on ? 'none' : '';
+        }
+        const hp = document.getElementById('hdmi-pill');
+        if (hp) {
+          const missing = ['1','2'].filter(n => !d.hdmi_connected[n]);
+          hp.style.display = '';
+          hp.classList.toggle('disconnected', missing.length > 0);
+          document.getElementById('hdmi-pill-text').textContent =
+            missing.length === 0 ? 'HDMI \u2014 OK'
+            : missing.length === 2 ? 'HDMI \u2014 NO DISPLAYS'
+            : 'HDMI ' + missing[0] + ' \u2014 NO DISPLAY';
+        }
       }
 
       // Watchdog toggle
