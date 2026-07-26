@@ -615,6 +615,12 @@
     .iface-row .ithumb { height:36px; width:auto; flex-shrink:0; }
     .fleet-ts { font-size:11px; color:var(--muted); padding-left:2px; }
     .fleet-hdr-right { display:flex; align-items:center; gap:12px; }
+    .if-mini { display:flex; background:var(--surface2); border:1px solid var(--border2);
+      border-radius:7px; padding:2px; gap:2px; }
+    .if-mini button { background:none; border:none; border-radius:5px; color:var(--muted);
+      font:600 10px var(--font-display); letter-spacing:0.07em; padding:4px 11px;
+      cursor:pointer; text-transform:uppercase; }
+    .if-mini button.active { background:var(--surface); color:var(--accent); }
     #fleet-panel .ivia { font-size:11px; color:var(--muted); }
     #fleet-panel .ibrk { display:none; }
     @media (max-width: 620px) {
@@ -1651,9 +1657,12 @@
           the network works locally, but updates and the Companion module store won't load.
           Timers and local control are unaffected.</div>
         <div class="local-panel">
-          <div class="mode-toggle" style="margin:0 0 10px">
-            <button class="mode-btn" id="net-if-eth" onclick="setNetIface('eth0')">Ethernet</button>
-            <button class="mode-btn" id="net-if-wifi" onclick="setNetIface('wlan0')">Wi-Fi</button>
+          <div style="display:flex; align-items:center; justify-content:space-between; margin:0 0 12px">
+            <div class="section-label" style="margin:0">IP Settings</div>
+            <div class="if-mini">
+              <button id="net-if-eth" onclick="setNetIface('eth0')">Ethernet</button>
+              <button id="net-if-wifi" onclick="setNetIface('wlan0')">Wi-Fi</button>
+            </div>
           </div>
           <div class="mode-toggle" style="margin:10px 0">
             <button class="mode-btn" id="net-dhcp-btn" onclick="setNetMode('auto')">DHCP (Automatic)</button>
