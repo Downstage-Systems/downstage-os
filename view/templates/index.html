@@ -611,13 +611,30 @@
       background:var(--surface2); border:1px solid var(--border2); border-radius:9px; }
     .iface-row .ithumb { height:36px; width:auto; flex-shrink:0; }
     .fleet-ts { font-size:11px; color:var(--muted); padding-left:2px; }
-    /* ── HDMI output confidence card (Show Mode) ── */
+    /* ── HDMI output confidence card (Show Mode), One-style tiles ── */
     .out-card { display:none; margin:18px 0 6px; }
     body.show-mode .out-card { display:block; }
-    .oc-chain { display:flex; align-items:stretch; margin-bottom:12px; }
-    .oc-node { flex:1; background:var(--surface2); border:1px solid var(--border2);
-      border-radius:9px; padding:9px 5px 8px; text-align:center; transition:border-color 0.3s; }
-    .oc-node .n-tick { width:16px; height:16px; margin:0 auto 5px; border-radius:50%;
+    .preview-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+    .preview-box { border-radius:10px; overflow:hidden; background:#000;
+      border:1px solid var(--border2); aspect-ratio:16/9; position:relative; }
+    .preview-box img { width:100%; height:100%; object-fit:cover; display:block; }
+    .preview-badge { position:absolute; top:7px; left:8px; font-size:10px; font-weight:700;
+      color:#fff; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px);
+      padding:2px 7px; border-radius:4px; letter-spacing:0.06em; }
+    .preview-offline { position:absolute; inset:0; display:flex; align-items:center;
+      justify-content:center; color:var(--muted2); font-size:12px; font-weight:500;
+      text-align:center; padding:0 14px; }
+    .oc-nodisp { position:absolute; inset:0; display:flex; flex-direction:column;
+      align-items:center; justify-content:center; gap:8px; color:var(--muted);
+      font-size:12px; font-weight:600; letter-spacing:0.04em; }
+    .oc-nodisp svg { width:34px; height:34px; fill:none; stroke:var(--muted2);
+      stroke-width:1.6; opacity:0.9; }
+    .oc-grid { display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr;
+      gap:8px; }
+    .oc-node { background:var(--surface2); border:1px solid var(--border2);
+      border-radius:9px; padding:6px 5px; text-align:center; transition:border-color 0.3s;
+      display:flex; flex-direction:column; align-items:center; justify-content:center; }
+    .oc-node .n-tick { width:16px; height:16px; margin-bottom:4px; border-radius:50%;
       background:var(--border2); color:#06130b; font:700 11px/16px var(--font-body); }
     .oc-node.ok { border-color:rgba(47,217,123,0.45); }
     .oc-node.ok .n-tick { background:var(--accent); }
@@ -625,15 +642,13 @@
     .oc-node.bad .n-tick { background:#f05a5a; color:#fff; }
     .oc-node .n-lbl { font:600 10px var(--font-display); letter-spacing:0.07em;
       color:var(--muted); text-transform:uppercase; }
-    .oc-node .n-val { font-size:11px; color:var(--text); margin-top:2px; line-height:1.35; }
-    .oc-link { width:18px; align-self:center; height:2px; background:var(--border2); flex-shrink:0; }
-    .oc-actions { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+    .oc-node .n-val { font-size:11px; color:var(--text); margin-top:1px; line-height:1.3; }
+    .oc-actions { display:flex; align-items:center; gap:10px; }
     .oc-snap-ts { font-size:11px; color:var(--muted); }
-    #oc-snap-img { width:100%; max-width:480px; border-radius:8px;
-      border:1px solid var(--border2); display:block; }
     @media (max-width: 620px) {
-      .oc-node .n-val { font-size:10px; }
-      .oc-link { width:10px; }
+      .preview-row { grid-template-columns:1fr; }
+      .oc-grid { aspect-ratio:auto; }
+      .oc-node { padding:9px 5px; }
     }
     .iface-row .idot { width:8px; height:8px; border-radius:50%; background:var(--accent);
       box-shadow:0 0 7px rgba(47,217,123,0.6); flex-shrink:0; }
@@ -849,21 +864,28 @@
       <!-- HDMI output confidence — the "is it actually up on the screen" card -->
       <div class="out-card" id="out-card">
         <div class="section-label" style="text-align:center">HDMI Output</div>
-        <div class="oc-chain" id="oc-chain">
-          <div class="oc-node" id="ocn-content"><div class="n-tick">·</div><div class="n-lbl">Content</div><div class="n-val">—</div></div>
-          <div class="oc-link"></div>
-          <div class="oc-node" id="ocn-render"><div class="n-tick">·</div><div class="n-lbl">Render</div><div class="n-val">—</div></div>
-          <div class="oc-link"></div>
-          <div class="oc-node" id="ocn-hdmi"><div class="n-tick">·</div><div class="n-lbl">HDMI Port</div><div class="n-val">—</div></div>
-          <div class="oc-link"></div>
-          <div class="oc-node" id="ocn-display"><div class="n-tick">·</div><div class="n-lbl">Display</div><div class="n-val">—</div></div>
+        <div class="preview-row">
+          <div class="preview-box" id="oc-prev-box">
+            <img id="oc-snap-img" style="display:none" alt="">
+            <div class="oc-nodisp" id="oc-nodisp" style="display:none">
+              <svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/><line x1="4" y1="4" x2="20" y2="16.5" stroke="currentColor" stroke-width="1.8"/></svg>
+              <div>No display connected</div>
+            </div>
+            <div class="preview-offline" id="oc-prompt">Check Output shows a live frame</div>
+            <div class="preview-badge">OUTPUT</div>
+          </div>
+          <div class="oc-grid">
+            <div class="oc-node" id="ocn-content"><div class="n-tick">·</div><div class="n-lbl">Content</div><div class="n-val">—</div></div>
+            <div class="oc-node" id="ocn-render"><div class="n-tick">·</div><div class="n-lbl">Render</div><div class="n-val">—</div></div>
+            <div class="oc-node" id="ocn-hdmi"><div class="n-tick">·</div><div class="n-lbl">HDMI Port</div><div class="n-val">—</div></div>
+            <div class="oc-node" id="ocn-display"><div class="n-tick">·</div><div class="n-lbl">Display</div><div class="n-val">—</div></div>
+          </div>
         </div>
         <div class="oc-actions">
           <button class="btn-sm" id="oc-snap-btn" onclick="checkOutput()">Check Output</button>
           <button class="btn-sm" onclick="identifyOutput()">Identify</button>
           <span class="oc-snap-ts" id="oc-snap-ts"></span>
         </div>
-        <img id="oc-snap-img" style="display:none" alt="">
       </div>
 
       <div id="setup-tabs" class="full-only">
@@ -1572,7 +1594,7 @@
     el.querySelector('.n-val').textContent = val;
   }
   function renderOutputChain(d) {
-    if (!d.output || !document.getElementById('oc-chain')) return;
+    if (!d.output || !document.getElementById('ocn-hdmi')) return;
     const o = d.output;
     const srcLabel = (typeof SOURCE_LABELS !== 'undefined' && SOURCE_LABELS[d.source]) || d.source || '\u2014';
     if (d.source === 'off') ocNode('ocn-content', '', 'Off');
@@ -1585,6 +1607,14 @@
     const dn = o.display.name || o.display.mfr;
     ocNode('ocn-display', o.hdmi.connected ? 'ok' : '',
            o.hdmi.connected ? (dn ? dn + ' detected' : 'Display detected') : '\u2014');
+    // preview window: no-display graphic beats everything; else snapshot or prompt
+    const img = document.getElementById('oc-snap-img');
+    const nod = document.getElementById('oc-nodisp');
+    const pro = document.getElementById('oc-prompt');
+    const noDisp = !o.hdmi.connected;
+    nod.style.display = noDisp ? '' : 'none';
+    img.style.display = (!noDisp && img.src) ? '' : 'none';
+    pro.style.display = (!noDisp && !img.src) ? '' : 'none';
   }
   async function checkOutput() {
     const btn = document.getElementById('oc-snap-btn');
@@ -1596,6 +1626,7 @@
       if (!r.ok) throw new Error();
       img.src = URL.createObjectURL(await r.blob());
       img.style.display = '';
+      document.getElementById('oc-prompt').style.display = 'none';
       ts.textContent = 'Captured ' + new Date().toLocaleTimeString();
     } catch (e) { showToast('Could not capture \u2014 kiosk not responding.', 'error'); }
     finally { btn.disabled = false; btn.textContent = 'Check Output'; }
