@@ -123,6 +123,11 @@
 
     /* ── Card ── */
     .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+    /* Per-page surface tint — same doctrine as the One: subtle, Show Mode neutral */
+    .card { transition: background-color 0.35s; }
+    body:not(.show-mode)[data-page="ontime"]  .card { background: #121915; }
+    body:not(.show-mode)[data-page="network"] .card { background: #121822; }
+    body:not(.show-mode)[data-page="system"]  .card { background: #1a1613; }
     .card-body { padding: 28px; }
 
     /* ── Status bar ── */
@@ -2369,6 +2374,7 @@
     }
   }
   function showSetupTab(t) {
+    document.body.dataset.page = t;   // per-page surface tint
     for (const x of ['display', 'ontime', 'network', 'system']) {
       document.getElementById('tpane-' + x)?.classList.toggle('on', x === t);
       document.getElementById('stab-' + x)?.classList.toggle('on', x === t);
