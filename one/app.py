@@ -3559,9 +3559,39 @@ def _conn_ipv4(conn):
         return {}
 
 
+def _conn_for_iface(iface):
+    """Connection to configure for a chosen interface. The active connection
+    wins, except ethernet's link-local fallback profile — a static belongs on
+    the REAL wired profile, and targeting the saved profile also covers the
+    no-DHCP venue where the port never came up on its own."""
+    try:
+        out = subprocess.check_output(
+            ["nmcli", "-t", "-f", "NAME,DEVICE", "connection", "show", "--active"],
+            text=True, timeout=5)
+        for line in out.splitlines():
+            name, _, dev = line.rpartition(":")
+            if dev == iface and name != "wired-fallback-ll":
+                return name
+        if iface == "eth0":
+            out = subprocess.check_output(
+                ["nmcli", "-t", "-f", "NAME,TYPE", "connection", "show"],
+                text=True, timeout=5)
+            for line in out.splitlines():
+                name, _, typ = line.rpartition(":")
+                if typ in ("802-3-ethernet", "ethernet") and name != "wired-fallback-ll":
+                    return name
+    except Exception:
+        pass
+    return None
+
+
 @app.route("/network/info")
 def network_info():
-    conn, iface = _default_conn()
+    iface_q = request.args.get("iface")
+    if iface_q in ("eth0", "wlan0"):
+        conn, iface = _conn_for_iface(iface_q), iface_q
+    else:
+        conn, iface = _default_conn()
     info = _conn_ipv4(conn) if conn else {}
     net = get_network_info()
     return jsonify({
@@ -3572,6 +3602,7 @@ def network_info():
         "gateway": info.get("ipv4.gateway", ""),
         "dns":     info.get("ipv4.dns", ""),
         "current_ip": net["ip"],
+        "available": conn is not None,
         "reverting": _net_revert["event"] is not None,
     })
 
@@ -3608,9 +3639,13 @@ def _revert_worker(conn, snapshot, event):
 def network_apply():
     data   = request.get_json() or {}
     method = data.get("method", "auto")
-    conn, iface = _default_conn()
+    iface_q = data.get("iface")
+    if iface_q in ("eth0", "wlan0"):
+        conn, iface = _conn_for_iface(iface_q), iface_q
+    else:
+        conn, iface = _default_conn()
     if not conn:
-        return jsonify({"ok": False, "message": "No active connection found"})
+        return jsonify({"ok": False, "message": "No profile found for that interface"})
 
     addr = gw = dns = None
     if method == "manual":

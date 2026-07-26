@@ -617,8 +617,6 @@
     .iface-row .ithumb { height:36px; width:auto; flex-shrink:0; }
     .fleet-ts { font-size:11px; color:var(--muted); padding-left:2px; }
     .fleet-hdr-right { display:flex; align-items:center; gap:12px; }
-    .ipcfg-target { font-size:12px; color:var(--muted); margin-bottom:10px; }
-    .ipcfg-target b { color:var(--text); font-weight:600; }
     #fleet-panel .ivia { font-size:11px; color:var(--muted); }
     #fleet-panel .ibrk { display:none; }
     @media (max-width: 620px) {
@@ -1130,7 +1128,10 @@
              background:var(--amber-bg); border:1px solid var(--amber-bd); border-radius:9px;
              font-size:12.5px; color:var(--amber); line-height:1.5"></div>
         <div class="local-panel">
-          <div class="ipcfg-target" id="ipcfg-target">IP settings</div>
+          <div class="mode-toggle" style="margin:0 0 10px">
+            <button class="mode-btn" id="net-if-eth" onclick="setNetIface('eth0')">Ethernet</button>
+            <button class="mode-btn" id="net-if-wifi" onclick="setNetIface('wlan0')">Wi-Fi</button>
+          </div>
           <div class="mode-toggle" style="margin:10px 0">
             <button class="mode-btn" id="net-dhcp-btn" onclick="setNetMode('auto')">DHCP (Automatic)</button>
             <button class="mode-btn" id="net-static-btn" onclick="setNetMode('manual')">Static IP</button>
@@ -2106,16 +2107,19 @@
 
   // ── Network (static IP) ────────────────────────────────────────────────────────
   let netMode = 'auto';
+  let netIface = null;   // which interface the IP box edits; null = primary
+  function setNetIface(i) { netIface = i; loadNetwork(); }
   async function loadNetwork() {
     try {
-      const d = await (await fetch('/network/info')).json();
+      const d = await (await fetch('/network/info' + (netIface ? '?iface=' + netIface : ''))).json();
+      netIface = d.iface || netIface;
+      document.getElementById('net-if-eth')?.classList.toggle('active', netIface === 'eth0');
+      document.getElementById('net-if-wifi')?.classList.toggle('active', netIface !== 'eth0');
+      const ab = document.getElementById('net-apply-btn');
+      if (ab) ab.disabled = d.available === false;
+      if (d.available === false) showToast('No saved profile for that interface yet.', 'info');
       netMode = d.method === 'manual' ? 'manual' : 'auto';
       const ifaceName = { eth0: 'Ethernet', wlan0: 'Wi-Fi' }[d.iface] || d.iface || '—';
-      const tgt = document.getElementById('ipcfg-target');
-      if (tgt) tgt.innerHTML = 'IP settings for <b>' + ifaceName + '</b> — the primary connection'
-        + (d.iface === 'wlan0'
-           ? '. A static address here binds to this WiFi network\u2019s profile.'
-           : '.');
       if (d.method === 'manual' && d.address) {
         const [ip, prefix] = d.address.split('/');
         document.getElementById('net-ip').value = ip || '';
@@ -2137,7 +2141,7 @@
   function setNetMode(mode) { applyNetModeUI(mode); }
 
   async function applyNetwork() {
-    const body = { method: netMode };
+    const body = { method: netMode, iface: netIface };
     if (netMode === 'manual') {
       body.ip     = document.getElementById('net-ip').value.trim();
       body.prefix = parseInt(document.getElementById('net-prefix').value.trim() || '24', 10);
