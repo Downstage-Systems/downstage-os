@@ -604,6 +604,7 @@
     .iface-panel { display:flex; flex-direction:column; gap:8px; margin-bottom:16px; }
     .iface-row { display:flex; align-items:center; gap:10px; padding:11px 14px;
                  background:var(--surface2); border:1px solid var(--border2); border-radius:9px; }
+    .iface-row .ithumb { height:36px; width:auto; flex-shrink:0; }
     .iface-row .idot { width:8px; height:8px; border-radius:50%; background:var(--accent);
                        box-shadow:0 0 7px rgba(47,217,123,0.6); flex-shrink:0; }
     .iface-row .ikind { font-family:var(--font-display); font-weight:700; font-size:13px;
@@ -2351,6 +2352,9 @@
       } else {
         box.innerHTML = d.units.map(u =>
           '<div class="iface-row"><span class="idot"></span>' +
+          '<img class="ithumb" src="/static/unit-' +
+            ((u.product || '').toLowerCase() === 'view' ? 'view' : 'one') +
+            '.png" alt="">' +
           '<span class="ikind">' + u.product + '</span>' +
           '<span class="iip" onclick="copyIp(\'' + u.ip + '\')" title="Click to copy">' + u.ip + '</span>' +
           '<span class="idev">' + u.serial + ' · v' + u.version + '</span>' +

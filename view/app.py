@@ -1665,6 +1665,13 @@ def _touch_dispatch(px, py):
 threading.Thread(target=_touch_loop, daemon=True).start()
 
 
+# Factory ships the unit with this flag armed (burn-in touches it on PASS).
+# While present the e-ink shows the branded ship screen instead of status;
+# the hotspot/QR page still wins so setup is never blocked. First visit to
+# the web UI clears it for good.
+_SHIP_FLAG = BASE_DIR / ".ship"
+
+
 class EPaperDisplay:
     """Single status page on the 250x122 e-ink panel. No touch, no paging —
     the display adapts: hotspot credentials when the hotspot is up, otherwise
@@ -1803,6 +1810,10 @@ class EPaperDisplay:
                 self._page_confirm(draw)
                 self._flush(img)
                 return
+            if getattr(self, "_searching", False) and _SHIP_FLAG.exists():
+                self._page_ship(draw)
+                self._flush(img)
+                return
             if getattr(self, "_searching", False):
                 self._header(draw, "DOWNSTAGE VIEW")
                 self._spin = (getattr(self, "_spin", 0) + 1) % 8
@@ -1822,7 +1833,9 @@ class EPaperDisplay:
                 self._flush(img, partial=True)   # no flash while the wheel turns
                 return
             hs = hotspot_is_active()
-            if hs and not _real_network_ip():
+            if _SHIP_FLAG.exists() and not (hs and not _real_network_ip()):
+                self._page_ship(draw)
+            elif hs and not _real_network_ip():
                 self._page_hotspot(draw)
             else:
                 self._page_status(draw, hotspot=hs)
@@ -1961,6 +1974,51 @@ class EPaperDisplay:
             print(f"[epaper] restart screen: {e}")
 
     # ── Hotspot page: everything a tech needs to get in ──────────────────────
+    def _page_ship(self, draw):
+        # Branded first-boot screen. Layout mirrors docs/make-device-renders.py
+        # ship_frame() — keep the two in sync.
+        img = draw._image
+        try:
+            fdir = BASE_DIR / "static" / "fonts"
+            wordmark = ImageFont.truetype(str(fdir / "Rajdhani-700.ttf"), 26)
+            sub      = ImageFont.truetype(str(fdir / "ShareTechMono-400.ttf"), 12)
+        except Exception:
+            wordmark, sub = self._font_lg, self._font_sm
+        mark_s = 44
+        img.paste(self._ship_mark(mark_s), ((self.W - mark_s) // 2, 4))
+        text = "DOWNSTAGE VIEW"
+        tw = draw.textlength(text, font=wordmark)
+        draw.text(((self.W - tw) / 2, 50), text, font=wordmark, fill=0)
+        draw.line([78, 92, 172, 92], fill=0, width=1)
+        serial = load_config().get("serial", "")
+        if serial:
+            sw = draw.textlength(serial, font=sub)
+            draw.text(((self.W - sw) / 2, 100), serial, font=sub, fill=0)
+
+    def _ship_mark(self, size):
+        # View brand mark, supersampled then thresholded so 1-bit stays crisp
+        if getattr(self, "_ship_mark_cache", None) is not None:
+            return self._ship_mark_cache
+        big = Image.new("L", (size * 4, size * 4), 255)
+        d = ImageDraw.Draw(big)
+        u = size * 4 / 96.0
+        w = max(2, round(7 * u))
+        d.rounded_rectangle([6 * u, 10 * u, 90 * u, 76 * u], radius=10 * u,
+                            outline=0, width=w)
+        d.rounded_rectangle([20 * u, 54 * u, 50 * u, 63 * u], radius=4.5 * u, fill=0)
+        d.rounded_rectangle([20 * u, 83 * u, 76 * u, 90 * u], radius=3.5 * u, fill=0)
+        cx, cy, r = 64 * u, 58 * u, 4 * u
+        d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=0)
+        aw = max(2, round(5.5 * u))
+        r2 = 12 * u
+        d.arc([cx - r2, cy - r2, cx + r2, cy + r2], -90, 0, fill=0, width=aw)
+        r3 = 25 * u
+        d.arc([cx - r3, cy - r3, cx + r3, cy + r3], -90, -35, fill=0,
+              width=max(1, aw - 2))
+        self._ship_mark_cache = big.resize((size, size), Image.LANCZOS).point(
+            lambda v: 0 if v < 150 else 255, "1")
+        return self._ship_mark_cache
+
     def _page_hotspot(self, draw):
         config = load_config()
         ssid   = config.get("hotspot_ssid", "")
@@ -2019,6 +2077,11 @@ epaper = EPaperDisplay()
 
 @app.route("/")
 def index():
+    if _SHIP_FLAG.exists():
+        try:
+            _SHIP_FLAG.unlink()   # setup begun — ship screen retires forever
+        except Exception:
+            pass
     config = load_config()
     return render_template(
         "index.html",
