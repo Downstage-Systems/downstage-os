@@ -1665,11 +1665,17 @@ def _touch_dispatch(px, py):
 threading.Thread(target=_touch_loop, daemon=True).start()
 
 
-# Factory ships the unit with this flag armed (burn-in touches it on PASS).
-# While present the e-ink shows the branded ship screen instead of status;
-# the hotspot/QR page still wins so setup is never blocked. First visit to
-# the web UI clears it for good.
+# Burn-in arms this flag on PASS; the factory's final shutdown then paints
+# the branded ship screen, which e-ink holds with no power — so the unit
+# sits in the box wearing the brand. The customer's first boot lands here,
+# clears the flag, and goes straight to the normal info screen.
 _SHIP_FLAG = BASE_DIR / ".ship"
+_SHIP_ARMED = _SHIP_FLAG.exists()
+if _SHIP_ARMED:
+    try:
+        _SHIP_FLAG.unlink()
+    except Exception:
+        pass
 
 
 class EPaperDisplay:
@@ -1810,7 +1816,7 @@ class EPaperDisplay:
                 self._page_confirm(draw)
                 self._flush(img)
                 return
-            if getattr(self, "_searching", False) and _SHIP_FLAG.exists():
+            if getattr(self, "_searching", False) and _SHIP_FLAG.exists():  # armed this session
                 self._page_ship(draw)
                 self._flush(img)
                 return
@@ -2049,6 +2055,13 @@ class EPaperDisplay:
         try:
             img  = self._new_image()
             draw = ImageDraw.Draw(img)
+            if _SHIP_FLAG.exists():
+                # armed by burn-in: the boxed unit wears the brand, not "off"
+                draw._image = img
+                self._page_ship(draw)
+                self._last_frame = None
+                self._flush(img)
+                return
             # the Downstage mark, drawn in PIL: screen outline + stage bars
             mx, my = 18, 26
             draw.rounded_rectangle([mx, my, mx + 62, my + 48], radius=8, outline=0, width=5)
@@ -2077,11 +2090,6 @@ epaper = EPaperDisplay()
 
 @app.route("/")
 def index():
-    if _SHIP_FLAG.exists():
-        try:
-            _SHIP_FLAG.unlink()   # setup begun — ship screen retires forever
-        except Exception:
-            pass
     config = load_config()
     return render_template(
         "index.html",
