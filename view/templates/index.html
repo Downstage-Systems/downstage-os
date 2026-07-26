@@ -824,6 +824,10 @@
         </button>
       </div>
 
+      <div id="wifi-note" style="display:none; margin:0 0 14px; padding:10px 13px;
+           background:var(--amber-bg); border:1px solid var(--amber-bd); border-radius:9px;
+           font-size:12.5px; color:var(--amber); line-height:1.5"></div>
+
       <!-- Show Mode quick bar — OnTime tools on the connected server -->
       <div class="section-label show-quick-label">Quick Actions</div>
       <div class="show-quick" id="show-quick">
@@ -1676,6 +1680,15 @@
       if (inet) inet.style.display = (d.portal && d.portal.internet === false && !d.portal.detected) ? '' : 'none';
       document.getElementById('upd-system')?.classList.toggle('on', !!d.os_update_available);
       renderOutputChain(d);
+      window._wifiNow = d.wifi;
+      const wn = document.getElementById('wifi-note');
+      if (wn) {
+        if (d.wifi && d.wifi.concern) {
+          wn.style.display = '';
+          wn.textContent = d.wifi.concern + ' \u2014 the timer display may stutter or drop. '
+            + 'Consider ethernet, or moving the unit or access point.';
+        } else wn.style.display = 'none';
+      }
       const us = document.getElementById('upd-strip');
       if (us) {
         if (d.os_checked && d.os_update_available && d.os_dismissed !== d.os_latest) {
@@ -2065,6 +2078,12 @@
       document.getElementById('net-current').innerHTML =
         `Current: <span style="font-family:var(--font-mono);color:var(--text)">${d.current_ip}</span> ` +
         `<span style="color:var(--muted)">${ifaceName} · ${netMode === 'manual' ? 'Static' : 'DHCP'}</span>`;
+      const wf = window._wifiNow;
+      if (d.iface === 'wlan0' && wf && wf.up) {
+        const grade = wf.dbm >= -60 ? 'Strong' : wf.dbm >= -70 ? 'OK' : 'Weak';
+        document.getElementById('net-current').innerHTML +=
+          ` <span style="color:${wf.dbm >= -70 ? 'var(--muted)' : 'var(--amber)'}">\u00b7 ${wf.dbm} dBm (${grade})</span>`;
+      }
       if (d.method === 'manual' && d.address) {
         const [ip, prefix] = d.address.split('/');
         document.getElementById('net-ip').value = ip || '';

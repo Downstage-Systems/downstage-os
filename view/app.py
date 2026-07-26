@@ -1785,6 +1785,56 @@ def _touch_dispatch(px, py):
 threading.Thread(target=_touch_loop, daemon=True).start()
 
 
+# ── WiFi health ───────────────────────────────────────────────────────────────
+# Signal straight from the kernel (/proc/net/wireless — no tools needed) plus
+# a watcher that logs link drops. The UI announces only when WiFi is actually
+# carrying the unit (no ethernet) and it's weak or churning.
+
+_WIFI = {"drops": [], "up": None}
+
+def _wifi_signal():
+    try:
+        for ln in open("/proc/net/wireless").read().splitlines():
+            if ln.strip().startswith("wlan0:"):
+                f = ln.split()
+                dbm = float(f[3].rstrip("."))
+                if dbm >= 0 or dbm < -110:      # 0 / -256 = not associated
+                    return {"up": False}
+                return {"up": True, "dbm": int(dbm),
+                        "quality": int(float(f[2].rstrip(".")))}
+    except Exception:
+        pass
+    return {"up": False}
+
+
+def _wifi_watch():
+    while True:
+        up = _wifi_signal()["up"]
+        if _WIFI["up"] and not up:
+            _WIFI["drops"].append(time.time())
+            print("[wifi] link dropped")
+        _WIFI["up"] = up
+        cutoff = time.time() - 600
+        _WIFI["drops"] = [t for t in _WIFI["drops"] if t > cutoff]
+        time.sleep(5)
+
+threading.Thread(target=_wifi_watch, daemon=True).start()
+
+
+def _wifi_health():
+    sig = _wifi_signal()
+    drops = len(_WIFI["drops"])
+    concern = None
+    if sig["up"]:
+        eth_up = any(i["kind"] == "Ethernet" for i in get_all_interfaces())
+        if not eth_up:
+            if drops >= 2:
+                concern = f"WiFi dropped {drops}x in the last 10 minutes"
+            elif sig["dbm"] <= -70:
+                concern = f"Weak WiFi signal ({sig['dbm']} dBm)"
+    return {**sig, "drops_10m": drops, "concern": concern}
+
+
 # Burn-in arms this flag on PASS; the factory's final shutdown then paints
 # the branded ship screen, which e-ink holds with no power — so the unit
 # sits in the box wearing the brand. The customer's first boot lands here,
@@ -2230,6 +2280,7 @@ def status():
         "ip":        ip,
         "source":    config.get("source", "/timer"),
         "output":    _output_chain(),
+        "wifi":      _wifi_health(),
         "external_url": config.get("external_url", ""),
         "connected": connected,
         "local_ip":  get_local_ip(),
