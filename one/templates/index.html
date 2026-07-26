@@ -337,7 +337,7 @@
     }
 
     .preview-badge {
-      position: absolute; top: 7px; left: 8px;
+      position: absolute; top: 7px; left: 8px; z-index: 1;
       font-size: 10px; font-weight: 700;
       color: #fff; background: rgba(0,0,0,0.6);
       backdrop-filter: blur(4px);
@@ -358,12 +358,13 @@
     }
 
     .preview-nodisp {
-      position: absolute; top: 6px; right: 6px;
-      font-family: var(--font-mono); font-size: 9.5px; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--amber);
-      background: rgba(11,13,16,0.75); border: 1px solid rgba(245,165,36,0.45);
-      border-radius: 5px; padding: 3px 7px;
+      position: absolute; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 8px;
+      background: #000; color: var(--muted);
+      font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
     }
+    .preview-nodisp svg { width: 34px; height: 34px; fill: none;
+      stroke: var(--muted2); stroke-width: 1.6; opacity: 0.9; }
     .tab-nodisp {
       font-family: var(--font-mono); font-size: 9px; text-transform: uppercase;
       letter-spacing: 0.06em; color: var(--amber); margin-left: 4px;
@@ -1296,13 +1297,13 @@
             <img id="preview-img-1" alt="">
             <div class="preview-offline" id="preview-off-1" style="display:none">No signal</div>
             <div class="preview-badge">HDMI 1</div>
-            <div class="preview-nodisp" id="preview-nodisp-1" style="display:none">No display</div>
+            <div class="preview-nodisp" id="preview-nodisp-1" style="display:none"><svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/><line x1="4" y1="4" x2="20" y2="16.5" stroke="currentColor" stroke-width="1.8"/></svg><div>No display connected</div></div>
           </div>
           <div class="preview-box" id="preview-box-2" onclick="selectHdmiTab(2)" oncontextmenu="openPreviewMenu(event, 2)">
             <img id="preview-img-2" alt="">
             <div class="preview-offline" id="preview-off-2" style="display:none">No signal</div>
             <div class="preview-badge">HDMI 2</div>
-            <div class="preview-nodisp" id="preview-nodisp-2" style="display:none">No display</div>
+            <div class="preview-nodisp" id="preview-nodisp-2" style="display:none"><svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/><line x1="4" y1="4" x2="20" y2="16.5" stroke="currentColor" stroke-width="1.8"/></svg><div>No display connected</div></div>
           </div>
         </div>
 
