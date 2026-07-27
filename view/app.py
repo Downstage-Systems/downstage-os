@@ -2766,7 +2766,12 @@ def fleet_identify():
         try:
             r = requests.post(f"http://{ip}:8080{path}", timeout=4)
             if r.ok:
-                return jsonify({"ok": True})
+                try:
+                    body_ok = bool(r.json().get("ok", True))
+                except Exception:
+                    body_ok = True
+                if body_ok:
+                    return jsonify({"ok": True})
         except Exception:
             continue
     return jsonify({"ok": False})
