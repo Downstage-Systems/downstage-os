@@ -2631,7 +2631,11 @@
           const tb = document.getElementById('tab-nodisp-' + n);
           if (pb) pb.style.display = on ? 'none' : '';
           if (tb) tb.style.display = on ? 'none' : '';
+          // hotplug: a display just appeared on this output — restart its
+          // preview automatically, same as the Refresh Previews button
+          if (on && window._hdmiWas && window._hdmiWas[n] === false) armPreview(n);
         }
+        window._hdmiWas = { 1: !!d.hdmi_connected['1'], 2: !!d.hdmi_connected['2'] };
         for (const n of ['1','2']) {
           const hp = document.getElementById('hdmi-pill-' + n);
           if (!hp) continue;
