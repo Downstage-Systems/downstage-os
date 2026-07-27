@@ -354,7 +354,7 @@
     /* ── Preview panels ── */
     .preview-row {
       display: grid; grid-template-columns: 1fr 1fr;
-      gap: 10px; margin-bottom: 14px;
+      column-gap: 10px; row-gap: 7px; margin-bottom: 14px;
     }
 
     .preview-box {
@@ -378,10 +378,13 @@
     .preview-virtual { position:absolute; inset:0; overflow:hidden; background:#000; z-index:1; }
     .preview-virtual iframe { width:1280px; height:720px; border:none;
       transform-origin:0 0; pointer-events:none; }
-    .pv-badge { position:absolute; bottom:7px; right:8px; z-index:2;
-      font:700 9.5px var(--font-mono); letter-spacing:0.08em; color:var(--amber);
-      background:rgba(11,13,16,0.85); border:1px solid var(--amber-bd);
-      border-radius:5px; padding:3px 7px; }
+    .pv-bar { display:flex; align-items:center; justify-content:center;
+      padding:6px 10px; border-radius:8px; font:700 10px var(--font-mono);
+      letter-spacing:0.09em; text-transform:uppercase;
+      background:var(--surface2); border:1px solid var(--border2); color:var(--muted2); }
+    .pv-bar.ok { background:var(--green-bg, rgba(47,217,123,0.08)); border-color:rgba(47,217,123,0.35);
+      color:var(--accent); }
+    .pv-bar.virt { background:var(--amber-bg); border-color:var(--amber-bd); color:var(--amber); }
     .preview-badge {
       position: absolute; top: 7px; left: 8px; z-index: 1;
       font-size: 10px; font-weight: 700;
@@ -1441,17 +1444,19 @@
           <div class="preview-box active" id="preview-box-1" onclick="selectHdmiTab(1)" oncontextmenu="openPreviewMenu(event, 1)">
             <img id="preview-img-1" alt="">
             <div class="preview-offline" id="preview-off-1" style="display:none">No signal</div>
-            <div class="preview-virtual" id="preview-virt-1" style="display:none"><iframe title="Virtual preview 1"></iframe><div class="pv-badge">VIRTUAL · NO DISPLAY</div></div>
+            <div class="preview-virtual" id="preview-virt-1" style="display:none"><iframe title="Virtual preview 1"></iframe></div>
             <div class="preview-badge">HDMI 1</div>
             <div class="preview-nodisp" id="preview-nodisp-1" style="display:none"><svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/><line x1="4" y1="4" x2="20" y2="16.5" stroke="currentColor" stroke-width="1.8"/></svg><div>No display connected</div></div>
           </div>
           <div class="preview-box" id="preview-box-2" onclick="selectHdmiTab(2)" oncontextmenu="openPreviewMenu(event, 2)">
             <img id="preview-img-2" alt="">
             <div class="preview-offline" id="preview-off-2" style="display:none">No signal</div>
-            <div class="preview-virtual" id="preview-virt-2" style="display:none"><iframe title="Virtual preview 2"></iframe><div class="pv-badge">VIRTUAL · NO DISPLAY</div></div>
+            <div class="preview-virtual" id="preview-virt-2" style="display:none"><iframe title="Virtual preview 2"></iframe></div>
             <div class="preview-badge">HDMI 2</div>
             <div class="preview-nodisp" id="preview-nodisp-2" style="display:none"><svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/><line x1="4" y1="4" x2="20" y2="16.5" stroke="currentColor" stroke-width="1.8"/></svg><div>No display connected</div></div>
           </div>
+          <div class="pv-bar" id="pv-bar-1"></div>
+          <div class="pv-bar" id="pv-bar-2"></div>
         </div>
 
         <div class="preview-hint">Right-click a preview (long-press on phones) for quick actions</div>
@@ -2722,6 +2727,17 @@
             setTimeout(() => armPreview(n), 7000);
           }
           updateVirtualPreview(n, on);
+          const bar = document.getElementById('pv-bar-' + n);
+          if (bar) {
+            if (on) {
+              bar.className = 'pv-bar ok';
+              const nm = d.hdmi_names && d.hdmi_names[n];
+              bar.textContent = nm ? nm : 'Display connected';
+            } else {
+              bar.className = 'pv-bar virt';
+              bar.textContent = 'Virtual \u00b7 no display';
+            }
+          }
         }
         window._hdmiWas = { 1: !!d.hdmi_connected['1'], 2: !!d.hdmi_connected['2'] };
         for (const n of ['1','2']) {

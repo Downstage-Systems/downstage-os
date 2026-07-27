@@ -803,6 +803,26 @@ def _ontime_runtime(ip, timeout=2):
 _XRANDR_TO_PORT = {"HDMI-1": 2, "HDMI-2": 1, "HDMI-A-1": 2, "HDMI-A-2": 1}
 
 
+def _edid_name_for(port):
+    """Connected display's EDID name (or manufacturer code) for an output."""
+    import glob
+    for c in glob.glob(f"/sys/class/drm/card*-HDMI-A-{port}"):
+        try:
+            raw = open(c + "/edid", "rb").read()
+            if len(raw) < 128:
+                continue
+            w = (raw[8] << 8) | raw[9]
+            mfr = "".join(chr(64 + ((w >> sh) & 31)) for sh in (10, 5, 0))
+            name = ""
+            for i in range(54, 126, 18):
+                if raw[i:i + 5] == bytes([0, 0, 0, 0xFC, 0]):
+                    name = raw[i + 5:i + 18].decode("ascii", "ignore").strip()
+            return name or mfr
+        except Exception:
+            pass
+    return ""
+
+
 def hdmi_connected():
     """Physical cable state per CASE-LABEL port, from the kernel's DRM
     connector status (works headless, no X needed)."""
@@ -2080,6 +2100,7 @@ def status():
         "clock": {"epoch": time.time(),
                   "offset_min": int((datetime.datetime.now().astimezone().utcoffset() or datetime.timedelta()).total_seconds() // 60)},
         "hdmi_connected":       hdmi_connected(),
+        "hdmi_names":           {"1": _edid_name_for(1), "2": _edid_name_for(2)},
         "setup_done":           bool(config.get("setup_done")),
         "failsafe":             {"last": _failsafe["last"], "result": _failsafe["result"]},
         "companion_emulator_id": config.get("companion_emulator_id", ""),
