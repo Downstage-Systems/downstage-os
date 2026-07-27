@@ -2957,6 +2957,40 @@ def set_unit_name():
     return jsonify({"ok": True, "name": name})
 
 
+@app.route("/source/url/<int:n>")
+def source_url_for_output(n):
+    """The URL output n is assigned — powers the UI's virtual preview when
+    no physical display is attached. Mirrors the kiosk launcher's branches."""
+    if n not in (1, 2):
+        return jsonify({"ok": False}), 404
+    config = load_config()
+    source = config.get(f"hdmi{n}_source", "config")
+    if source == "off":
+        url = "http://localhost:8080/blackout-page"
+    elif source.startswith("pattern-"):
+        url = f"http://localhost:8080/pattern/{source.split('-', 1)[1]}"
+    elif source in ("welcome", "holding"):
+        url = f"http://localhost:8080/{source}"
+    elif source == "config":
+        url = "http://localhost:8080"
+    elif source == "companion":
+        url = "http://localhost:8000"
+    elif source == "custom":
+        url = "http://localhost:8080/view/custom"
+    else:
+        mode = config.get("mode", "local")
+        ip = "127.0.0.1" if mode == "local" else config.get("ip", "")
+        if source == "external":
+            url = config.get(f"hdmi{n}_external_url", "").strip() or "http://localhost:8080/holding"
+        elif not ip:
+            url = "http://localhost:8080/welcome"
+        elif source == "cleantimer":
+            url = f"http://{ip}:4001/timer/?" + _cleantimer_params(n)
+        else:
+            url = f"http://{ip}:4001{source}"
+    return jsonify({"ok": True, "url": url, "source": source})
+
+
 @app.route("/qr.png")
 def qr_png():
     """QR of this unit's URL — scan from the desktop page to open on a phone.
