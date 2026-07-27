@@ -1459,7 +1459,8 @@
           <div class="pv-bar" id="pv-bar-2"></div>
         </div>
 
-        <div class="preview-hint">Right-click a preview (long-press on phones) for quick actions</div>
+        <div class="preview-hint">Right-click a preview (long-press on phones) for quick actions
+          \u00b7 captured previews trail the real outputs by \u00b11s; virtual previews render live and can run slightly ahead</div>
 
         <!-- Display controls — act on the outputs previewed above -->
         <div class="display-ctl-row">
@@ -2733,9 +2734,11 @@
               bar.className = 'pv-bar ok';
               const nm = d.hdmi_names && d.hdmi_names[n];
               bar.textContent = nm ? nm : 'Display connected';
+              bar.title = 'Captured from the physical output \u2014 the preview trails the real screen by about a second.';
             } else {
               bar.className = 'pv-bar virt';
               bar.textContent = 'Virtual \u00b7 no display';
+              bar.title = 'No display on this output \u2014 its source is rendered live in this browser, so it can run slightly ahead of captured previews.';
             }
           }
         }
