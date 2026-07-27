@@ -264,6 +264,13 @@
     }
     .chip-opt input[type="color"]::-webkit-color-swatch-wrapper { padding: 1px; }
     .chip-opt input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
+    @media (max-width: 620px) {
+      .chip-opt .toggle { width: 46px; height: 26px; border-radius: 13px; }
+      .chip-opt .toggle::after { top: 3px; left: 3px; width: 20px; height: 20px; }
+      .chip-opt .toggle.on::after { left: 23px; }
+      .chip-opt input[type="color"] { width: 58px; height: 32px; border-radius: 8px; }
+    }
+
 
     .source-chip-icon {
       width: 26px; height: 26px; border-radius: 6px;
