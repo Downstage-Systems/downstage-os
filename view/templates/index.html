@@ -1109,6 +1109,10 @@
                 <span class="chip-opt-label">Hide message cards</span>
                 <button class="toggle on" id="cleantimer-hidecards-toggle" onclick="toggleCleanOpt('hidecards')"></button>
               </div>
+              <div class="chip-opt-item" title="Hide the coloured overtime/warning styling on the timer">
+                <span class="chip-opt-label">Hide phase colours</span>
+                <button class="toggle on" id="cleantimer-hidephase-toggle" onclick="toggleCleanOpt('hidephase')"></button>
+              </div>
               <div class="chip-opt-item" title="Background colour — set to your chromakey colour, black for direct video">
                 <span class="chip-opt-label">Key colour</span>
                 <input type="color" id="cleantimer-keycolour" value="#000000" onchange="setCleanColour('keycolour', this.value)">
@@ -1478,6 +1482,7 @@
     hideprogress: {{ config.get('cleantimer_hideprogress', True) | tojson }},
     hideclock:    {{ config.get('cleantimer_hideclock', True) | tojson }},
     hidecards:    {{ config.get('cleantimer_hidecards', True) | tojson }},
+    hidephase:    {{ config.get('cleantimer_hidephase', True) | tojson }},
     keycolour:    {{ config.get('cleantimer_keycolour', '000000') | tojson }},
     timercolour:  {{ config.get('cleantimer_timercolour', 'ffffff') | tojson }},
   };
@@ -2026,7 +2031,7 @@
     try {
       const r = await fetch('/save', {
         method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ ip, source: currentSource, external_url: externalUrl, watchdog: watchdogOn, cleantimer_freeze: cleanOpts.freeze, cleantimer_hideprogress: cleanOpts.hideprogress, cleantimer_hideclock: cleanOpts.hideclock, cleantimer_hidecards: cleanOpts.hidecards, cleantimer_keycolour: cleanOpts.keycolour, cleantimer_timercolour: cleanOpts.timercolour }),
+        body: JSON.stringify({ ip, source: currentSource, external_url: externalUrl, watchdog: watchdogOn, cleantimer_freeze: cleanOpts.freeze, cleantimer_hideprogress: cleanOpts.hideprogress, cleantimer_hideclock: cleanOpts.hideclock, cleantimer_hidecards: cleanOpts.hidecards, cleantimer_hidephase: cleanOpts.hidephase, cleantimer_keycolour: cleanOpts.keycolour, cleantimer_timercolour: cleanOpts.timercolour }),
       });
       const d = await r.json();
       d.ok ? showToast('Settings saved — display updating.', 'success') : showToast(d.error, 'error');

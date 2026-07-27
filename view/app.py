@@ -112,6 +112,7 @@ def load_config():
     data.setdefault("cleantimer_hideprogress", True)
     data.setdefault("cleantimer_hideclock", True)
     data.setdefault("cleantimer_hidecards", True)
+    data.setdefault("cleantimer_hidephase", True)
     data.setdefault("cleantimer_keycolour",   "000000")
     data.setdefault("cleantimer_timercolour", "ffffff")
     data.setdefault("watchdog", True)
@@ -381,6 +382,8 @@ def _cleantimer_params():
         params.append("hideClock=true")
     if cfg.get("cleantimer_freeze", True):
         params.append("freezeOvertime=true")
+    if cfg.get("cleantimer_hidephase", True):
+        params.append("hidePhase=true")
     return "&".join(params)
 
 
@@ -2366,6 +2369,7 @@ def save():
                  "cleantimer_hideprogress": bool(data.get("cleantimer_hideprogress", True)),
                  "cleantimer_hideclock": bool(data.get("cleantimer_hideclock", True)),
                  "cleantimer_hidecards": bool(data.get("cleantimer_hidecards", True)),
+                 "cleantimer_hidephase": bool(data.get("cleantimer_hidephase", True)),
                  "cleantimer_keycolour": _hex6(data.get("cleantimer_keycolour"), "000000"),
                  "cleantimer_timercolour": _hex6(data.get("cleantimer_timercolour"), "ffffff"),
                  "ip_history": history})

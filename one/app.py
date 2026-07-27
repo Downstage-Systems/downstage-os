@@ -152,7 +152,7 @@ def load_config():
     data.setdefault("hotspot_auto", True)
     # per-output custom timer options, seeded from the legacy global keys
     for n in (1, 2):
-        for opt in ("freeze", "hideprogress", "hideclock", "hidecards"):
+        for opt in ("freeze", "hideprogress", "hideclock", "hidecards", "hidephase"):
             data.setdefault(f"hdmi{n}_ct_{opt}", data.get(f"cleantimer_{opt}", True))
         data.setdefault(f"hdmi{n}_ct_keycolour",   "000000")
         data.setdefault(f"hdmi{n}_ct_timercolour", "ffffff")
@@ -941,6 +941,8 @@ def _cleantimer_params(hdmi_index):
         params.append("hideClock=true")
     if cfg.get(k + "freeze", True):
         params.append("freezeOvertime=true")
+    if cfg.get(k + "hidephase", True):
+        params.append("hidePhase=true")
     return "&".join(params)
 
 
@@ -1985,7 +1987,7 @@ def save():
         "ip_history": history, "watchdog": watchdog,
         **{f"hdmi{n}_ct_{opt}": bool(data.get(f"hdmi{n}_ct_{opt}", True))
            for n in (1, 2)
-           for opt in ("freeze", "hideprogress", "hideclock", "hidecards")},
+           for opt in ("freeze", "hideprogress", "hideclock", "hidecards", "hidephase")},
         **{f"hdmi{n}_ct_{c}": _hex6(data.get(f"hdmi{n}_ct_{c}"), d)
            for n in (1, 2)
            for c, d in (("keycolour", "000000"), ("timercolour", "ffffff"))},

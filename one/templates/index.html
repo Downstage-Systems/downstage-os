@@ -1548,6 +1548,10 @@
                 <span class="chip-opt-label">Hide message cards</span>
                 <button class="toggle on" id="cleantimer-hidecards-toggle" onclick="toggleCleanOpt('hidecards')"></button>
               </div>
+              <div class="chip-opt-item" title="Hide the coloured overtime/warning styling on the timer">
+                <span class="chip-opt-label">Hide phase colours</span>
+                <button class="toggle on" id="cleantimer-hidephase-toggle" onclick="toggleCleanOpt('hidephase')"></button>
+              </div>
               <div class="chip-opt-item" title="Background colour — set to your chromakey colour, black for direct video">
                 <span class="chip-opt-label">Key colour</span>
                 <input type="color" id="cleantimer-keycolour" value="#000000" onchange="setCleanColour('keycolour', this.value)">
@@ -2134,6 +2138,7 @@
       hideprogress: {{ config.get('hdmi1_ct_hideprogress', True) | tojson }},
       hideclock:    {{ config.get('hdmi1_ct_hideclock', True) | tojson }},
       hidecards:    {{ config.get('hdmi1_ct_hidecards', True) | tojson }},
+      hidephase:    {{ config.get('hdmi1_ct_hidephase', True) | tojson }},
       keycolour:    {{ config.get('hdmi1_ct_keycolour', '000000') | tojson }},
       timercolour:  {{ config.get('hdmi1_ct_timercolour', 'ffffff') | tojson }},
     },
@@ -2142,6 +2147,7 @@
       hideprogress: {{ config.get('hdmi2_ct_hideprogress', True) | tojson }},
       hideclock:    {{ config.get('hdmi2_ct_hideclock', True) | tojson }},
       hidecards:    {{ config.get('hdmi2_ct_hidecards', True) | tojson }},
+      hidephase:    {{ config.get('hdmi2_ct_hidephase', True) | tojson }},
       keycolour:    {{ config.get('hdmi2_ct_keycolour', '000000') | tojson }},
       timercolour:  {{ config.get('hdmi2_ct_timercolour', 'ffffff') | tojson }},
     },
@@ -2889,8 +2895,8 @@
           hdmi1_res: hdmi1Res, hdmi2_res: hdmi2Res,
           hdmi1_rotate: hdmi1Rotate, hdmi2_rotate: hdmi2Rotate,
           hdmi1_external_url: hdmi1ExternalUrl, hdmi2_external_url: hdmi2ExternalUrl,
-          hdmi1_ct_freeze: ctOpts[1].freeze, hdmi1_ct_hideprogress: ctOpts[1].hideprogress, hdmi1_ct_hideclock: ctOpts[1].hideclock, hdmi1_ct_hidecards: ctOpts[1].hidecards,
-          hdmi2_ct_freeze: ctOpts[2].freeze, hdmi2_ct_hideprogress: ctOpts[2].hideprogress, hdmi2_ct_hideclock: ctOpts[2].hideclock, hdmi2_ct_hidecards: ctOpts[2].hidecards,
+          hdmi1_ct_freeze: ctOpts[1].freeze, hdmi1_ct_hideprogress: ctOpts[1].hideprogress, hdmi1_ct_hideclock: ctOpts[1].hideclock, hdmi1_ct_hidecards: ctOpts[1].hidecards, hdmi1_ct_hidephase: ctOpts[1].hidephase,
+          hdmi2_ct_freeze: ctOpts[2].freeze, hdmi2_ct_hideprogress: ctOpts[2].hideprogress, hdmi2_ct_hideclock: ctOpts[2].hideclock, hdmi2_ct_hidecards: ctOpts[2].hidecards, hdmi2_ct_hidephase: ctOpts[2].hidephase,
           hdmi1_ct_keycolour: ctOpts[1].keycolour, hdmi1_ct_timercolour: ctOpts[1].timercolour,
           hdmi2_ct_keycolour: ctOpts[2].keycolour, hdmi2_ct_timercolour: ctOpts[2].timercolour,
           watchdog: watchdogOn,
