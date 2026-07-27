@@ -545,7 +545,7 @@ def output_snapshot():
 def output_identify():
     """Flash the unit's name on the physical output for 5 seconds."""
     config = load_config()
-    label = socket.gethostname()
+    label = config.get("unit_name") or socket.gethostname()
     serial = config.get("serial", "")
     js = (
         "(() => { const o=document.createElement('div');"
@@ -2282,6 +2282,9 @@ def status():
         "output":    _output_chain(),
         "wifi":      _wifi_health(),
         "primary_ip": get_local_ip(),
+        "name": config.get("unit_name", ""),
+        "now_showing": _now_showing(),
+        "health": _health_summary(),
         "primary_kind": next((i["kind"] for i in get_all_interfaces()
                               if i["ip"] == get_local_ip()), ""),
         "external_url": config.get("external_url", ""),
@@ -2709,6 +2712,73 @@ def _avahi_advertise():
 threading.Thread(target=_avahi_advertise, daemon=True).start()
 
 
+_FLEET_SRC_LABELS = {
+    "off": "Off", "companion": "Companion", "config": "Setup UI",
+    "cleantimer": "Custom Timer", "external": "External URL",
+    "/timer": "Stage Timer", "/countdown": "Countdown", "/clock": "Studio Clock",
+    "/backstage": "Backstage", "/studio": "Studio Clock", "/timeline": "Timeline",
+    "/info": "Public Info", "/op": "Operator", "/cuesheet": "Cue Sheet",
+    "/editor": "Editor", "/timercontrol": "Timer Control",
+    "/messagecontrol": "Message Control", "/rundown": "Rundown",
+}
+
+def _fleet_src_label(key):
+    if not key:
+        return "?"
+    if str(key).startswith("pattern"):
+        return "Test Pattern"
+    return _FLEET_SRC_LABELS.get(key, str(key).lstrip("/")[:12].capitalize())
+
+
+def _now_showing():
+    return _fleet_src_label(load_config().get("source", "/timer"))
+
+
+def _health_summary():
+    probs = []
+    try:
+        o = _output_chain()
+        if not o["render"]["up"]:
+            probs.append("Kiosk not responding")
+        if not o["hdmi"]["connected"]:
+            probs.append("No display")
+    except Exception:
+        pass
+    try:
+        t = _cpu_temp()
+        if t and float(t) >= 80:
+            probs.append(f"CPU hot ({int(float(t))}\u00b0C)")
+    except Exception:
+        pass
+    return {"ok": not probs, "why": " \u00b7 ".join(probs)}
+
+
+@app.route("/fleet/identify", methods=["POST"])
+def fleet_identify():
+    """Flash Identify on ANOTHER unit — proxied server-side because the
+    browser can't POST cross-origin to a peer."""
+    ip = str((request.get_json() or {}).get("ip", ""))
+    try:
+        ipaddress.ip_address(ip)
+    except Exception:
+        return jsonify({"ok": False, "error": "bad ip"}), 400
+    for path in ("/output/identify", "/displays/identify"):
+        try:
+            r = requests.post(f"http://{ip}:8080{path}", timeout=4)
+            if r.ok:
+                return jsonify({"ok": True})
+        except Exception:
+            continue
+    return jsonify({"ok": False})
+
+
+@app.route("/unit-name", methods=["POST"])
+def set_unit_name():
+    name = str((request.get_json() or {}).get("name", "")).strip()[:24]
+    save_config({"unit_name": name})
+    return jsonify({"ok": True, "name": name})
+
+
 @app.route("/discover", methods=["POST"])
 def discover_units():
     """Sweep this unit's /24s for other Downstage units (identified by their
@@ -2733,6 +2803,11 @@ def discover_units():
                         "product": "View" if serial.startswith("DSV") else "One",
                         "version": d.get("os_version", ""),
                         "kind": d.get("primary_kind", ""),
+                        "name": d.get("name", ""),
+                        "showing": d.get("now_showing", ""),
+                        "health_ok": (d.get("health") or {}).get("ok", True),
+                        "health_why": (d.get("health") or {}).get("why", ""),
+                        "upd": bool(d.get("os_update_available")),
                         "primary": d.get("primary_ip", "") in ("", ip)}
         except Exception:
             pass

@@ -649,6 +649,17 @@
     .iface-row .ithumb { height:36px; width:auto; flex-shrink:0; }
     .fleet-ts { font-size:11px; color:var(--muted); padding-left:2px; }
     .fleet-hdr-right { display:flex; align-items:center; gap:12px; }
+    .iface-row .idot.bad { background:#f2555a; box-shadow:0 0 7px rgba(229,72,77,0.6); }
+    #fleet-panel .ikind { width:auto; }
+    #fleet-panel .isub { font-size:10px; color:var(--muted2); text-transform:uppercase; letter-spacing:0.06em; }
+    #fleet-panel .ishow { font-size:11px; color:var(--muted); }
+    #fleet-panel .iwhy { font-size:11px; color:#f2555a; }
+    .iupdot { display:inline-block; width:6px; height:6px; border-radius:50%;
+      background:var(--amber); margin-left:6px; vertical-align:1px; }
+    .fleet-btn { margin-left:8px; background:none; border:1px solid var(--border2);
+      border-radius:6px; color:var(--text); font:600 11px var(--font-body);
+      padding:5px 10px; cursor:pointer; }
+    .fleet-btn:hover { border-color:var(--muted2); }
     .fleet-card { margin:0 0 6px; }
     .if-mini { display:flex; background:var(--surface2); border:1px solid var(--border2);
       border-radius:7px; padding:2px; gap:2px; }
@@ -660,14 +671,19 @@
     #fleet-panel .ibrk { display:none; }
     @media (max-width: 620px) {
       #fleet-panel .iface-row { flex-wrap:wrap; row-gap:8px; padding:13px 14px; }
-      #fleet-panel .ibrk { display:block; flex-basis:100%; height:0; order:4; }
+      #fleet-panel .ibrk { display:block; flex-basis:100%; height:0; order:5; }
       #fleet-panel .idot { order:0; }
       #fleet-panel .ithumb { order:1; }
-      #fleet-panel .ikind { order:2; width:auto; }
-      #fleet-panel .btn-mini { order:3; margin-left:auto !important; }
-      #fleet-panel .iip { order:5; }
-      #fleet-panel .ivia { order:6; }
-      #fleet-panel .idev { order:7; margin-left:auto; }
+      #fleet-panel .ikind { order:2; }
+      #fleet-panel .isub { order:3; }
+      #fleet-panel .fleet-btn { order:4; }
+      #fleet-panel .fleet-btn:first-of-type { margin-left:auto !important; }
+      #fleet-panel .iip { order:6; }
+      #fleet-panel .ivia { order:7; }
+      #fleet-panel .ishow { order:8; }
+      #fleet-panel .idev { order:9; margin-left:auto; }
+      #fleet-panel .iwhy { order:10; flex-basis:100%; }
+      .status-strip .status-bar { justify-content:flex-start; }
       .fleet-hdr-right { flex-wrap:wrap; justify-content:flex-end; }
       .fleet-hdr-right .fleet-ts { flex-basis:100%; text-align:right; white-space:nowrap; order:2; }
     }
@@ -1870,6 +1886,17 @@
 
       <!-- System Health -->
       <div class="field full-only">
+        <div class="section-label">Unit Name</div>
+        <div style="display:flex; gap:8px">
+          <input id="unit-name-input" maxlength="24" placeholder="e.g. FOH, Stage Left, Green Room"
+                 style="flex:1; background:var(--surface2); border:1px solid var(--border2);
+                        border-radius:8px; color:var(--text); padding:9px 12px; font:inherit">
+          <button class="btn-sm" onclick="saveUnitName()">Save</button>
+        </div>
+        <div class="external-url-hint">Shown in other units' fleet lists and on Identify flashes.</div>
+      </div>
+
+      <div class="field full-only">
         <div class="section-label">System Health</div>
         <div class="local-panel">
           <div class="health-grid" id="health-grid">
@@ -2466,19 +2493,26 @@
         ? 'No other Downstage units found on this network.'
         : 'Press Scan to look for other Downstage units.') + '</div>';
     } else {
-      box.innerHTML = d.units.map(u =>
-        '<div class="iface-row"><span class="idot"></span>' +
+      box.innerHTML = d.units.map(u => {
+        const nm = u.name || u.product;
+        const bad = u.health_ok === false;
+        return '<div class="iface-row">' +
+        '<span class="idot' + (bad ? ' bad' : '') + '"' + (bad ? ' title="' + u.health_why + '"' : '') + '></span>' +
         '<img class="ithumb" src="/static/unit-' +
           ((u.product || '').toLowerCase() === 'view' ? 'view' : 'one') +
           '.png" alt="">' +
-        '<span class="ikind">' + u.product + '</span>' +
+        '<span class="ikind">' + nm + '</span>' +
+        (u.name ? '<span class="isub">' + u.product + '</span>' : '') +
         '<i class="ibrk"></i>' +
         '<span class="iip" onclick="copyIp(\'' + u.ip + '\')" title="Click to copy">' + u.ip + '</span>' +
         (u.kind ? '<span class="ivia">via ' + u.kind + '</span>' : '') +
-        '<span class="idev">' + u.serial + ' · v' + u.version + '</span>' +
-        '<button class="btn-mini" style="margin-left:8px; background:none; border:1px solid var(--border2); border-radius:6px; color:var(--text); font:600 11px var(--font-body); padding:5px 10px; cursor:pointer" ' +
-        'onclick="openPanel(\'http://' + u.ip + ':8080\', \'' + u.product + ' ' + u.serial.slice(-4) + '\')">Open</button></div>'
-      ).join('');
+        (u.showing ? '<span class="ishow">' + u.showing + '</span>' : '') +
+        (bad ? '<span class="iwhy">' + u.health_why + '</span>' : '') +
+        '<span class="idev">' + u.serial + ' · v' + u.version +
+          (u.upd ? '<span class="iupdot" title="OS update available"></span>' : '') + '</span>' +
+        '<button class="fleet-btn" onclick="fleetIdentify(\'' + u.ip + '\')" title="Flash this unit\'s name on its output">ID</button>' +
+        '<button class="fleet-btn" onclick="openPanel(\'http://' + u.ip + ':8080\', \'' + nm + '\')">Open</button></div>';
+      }).join('');
     }
     const fts = document.getElementById('fleet-ts');
     if (fts) {
@@ -2510,6 +2544,21 @@
       '<span class="us-link" onclick="showSetupTab(\'' + i.tab + '\')">' + i.name + '</span>'
     ).join(' · ') +
       '<span class="us-hide" onclick="dismissUpdStrip()" title="Hide until the next update">&times;</span>';
+  }
+  async function saveUnitName() {
+    const v = document.getElementById('unit-name-input').value.trim();
+    try {
+      await fetch('/unit-name', { method: 'POST', headers: {'Content-Type':'application/json'},
+                                  body: JSON.stringify({ name: v }) });
+      showToast(v ? 'Unit name saved.' : 'Unit name cleared.', 'success');
+    } catch (e) { showToast('Could not save name.', 'error'); }
+  }
+  async function fleetIdentify(ip) {
+    try {
+      const d = await (await fetch('/fleet/identify', { method: 'POST',
+        headers: {'Content-Type':'application/json'}, body: JSON.stringify({ ip }) })).json();
+      showToast(d.ok ? 'Identify is flashing on that unit.' : 'Could not reach that unit.', d.ok ? 'info' : 'error');
+    } catch (e) { showToast('Identify failed.', 'error'); }
   }
   async function dismissUpdStrip() {
     document.getElementById('upd-strip').style.display = 'none';
@@ -2651,6 +2700,8 @@
             'HDMI ' + n + ' \u2014 ' + (d.hdmi_connected[n] ? 'OK' : 'NO DISPLAY');
         }
       }
+      const uni = document.getElementById('unit-name-input');
+      if (uni && document.activeElement !== uni && !uni.dataset.dirty) uni.value = d.name || '';
       const cp = document.getElementById('comp-pill');
       if (cp && companionInstalled) {
         cp.style.display = '';
