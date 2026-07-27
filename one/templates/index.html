@@ -3424,6 +3424,7 @@
         Blackout all
       </button>`;
     menu.style.display = 'block';
+    _ctxOpenedAt = Date.now();
     const r = menu.getBoundingClientRect();
     menu.style.left = Math.max(4, Math.min(e.clientX, window.innerWidth  - r.width  - 8)) + 'px';
     menu.style.top  = Math.max(4, Math.min(e.clientY, window.innerHeight - r.height - 8)) + 'px';
@@ -3451,12 +3452,24 @@
     }, { passive: false });
   }
 
+  let _ctxOpenedAt = 0;
   function closeCtxMenu() {
+    // grace period: the long-press gesture's own ghosts (synthetic click,
+    // iOS scroll-bounce on release) must not dismiss the menu it just opened
+    if (Date.now() - _ctxOpenedAt < 600) return;
+    document.getElementById('ctx-menu').style.display = 'none';
+  }
+  function forceCloseCtxMenu() {
+    _ctxOpenedAt = 0;
     document.getElementById('ctx-menu').style.display = 'none';
   }
   document.addEventListener('click', closeCtxMenu);
   document.addEventListener('scroll', closeCtxMenu, true);
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeCtxMenu(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') forceCloseCtxMenu(); });
+  // choosing an item always closes immediately, grace period or not
+  document.getElementById('ctx-menu').addEventListener('click', e => {
+    if (e.target.closest('.ctx-item')) forceCloseCtxMenu();
+  });
 
   async function ctxReload(n) {
     closeCtxMenu();
