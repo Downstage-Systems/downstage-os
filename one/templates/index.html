@@ -1056,10 +1056,9 @@
               text-align: center; min-width: 0; overflow: hidden; white-space: nowrap; }
       #setup-tabs .stab-upd { top: 3px; right: 2px; width: 6px; height: 6px; }
       /* Show Mode tiles: all five across one row on a phone */
-      /* fixed-size 3-col grid: tile count varies (5-7) — consistent icon
-         scale beats column gymnastics */
+      /* 4-wide, centered — tiles flex to fill the row */
       body.show-mode .show-quick.qb-live {
-        grid-template-columns: repeat(3, minmax(0, 104px));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         justify-content: center; gap: 8px; }
       .show-quick .btn-sm { border-radius: 12px; gap: 6px; padding: 6px 2px;
                             font-size: 8.5px; letter-spacing: 0.02em; }
