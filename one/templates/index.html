@@ -1226,6 +1226,16 @@
           <div class="status-dot"></div>
           <span id="inet-pill-text"></span>
         </div>
+        <div class="status-bar" id="wifi-pill" style="display:none"
+             onclick="pillGo('network')" title="Open the Network tab">
+          <div class="status-dot"></div>
+          <span id="wifi-pill-text"></span>
+        </div>
+        <div class="status-bar" id="hotspot-pill" style="display:none"
+             onclick="pillGo('network')" title="Open the Network tab">
+          <div class="status-dot"></div>
+          <span id="hotspot-pill-text"></span>
+        </div>
         <div class="status-bar" id="hdmi-pill-1" style="display:none"
              onclick="pillGo('displays')" title="Open the Displays tab">
           <div class="status-dot"></div>
@@ -2639,12 +2649,28 @@
         document.getElementById('comp-pill-text').textContent =
           'COMPANION' + (companionRunning ? '' : ' — STOPPED');
       }
+      const wp = document.getElementById('wifi-pill');
+      if (wp) {
+        if (d.wifi && d.wifi.up) {
+          wp.style.display = '';
+          wp.className = 'status-bar ' + (d.wifi.concern ? 'warn' : 'connected');
+          document.getElementById('wifi-pill-text').textContent = 'WIFI — ' + d.wifi.dbm + ' dBm';
+        } else wp.style.display = 'none';
+      }
+      const hsp = document.getElementById('hotspot-pill');
+      if (hsp) {
+        if (d.hotspot_active) {
+          hsp.style.display = '';
+          hsp.className = 'status-bar warn';
+          document.getElementById('hotspot-pill-text').textContent = 'HOTSPOT — ON';
+        } else hsp.style.display = 'none';
+      }
       const tp = document.getElementById('temp-pill');
       if (tp && d.cpu_temp != null && d.cpu_temp !== '') {
         const t = Math.round(parseFloat(d.cpu_temp));
         if (!isNaN(t)) {
-          tp.style.display = '';
-          tp.className = 'status-bar ' + (t >= 80 ? 'disconnected' : t >= 70 ? 'warn' : 'connected');
+          tp.style.display = t >= 70 ? '' : 'none';
+          tp.className = 'status-bar ' + (t >= 80 ? 'disconnected' : 'warn');
           document.getElementById('temp-pill-text').textContent =
             'TEMP — ' + t + '°C' + (t >= 80 ? ' HOT' : '');
         }
@@ -2668,10 +2694,10 @@
 
       if (d.connected) {
         bar.className = 'status-bar connected';
-        txt.textContent = d.mode === 'local' ? 'OnTime — Running' : `Connected — ${d.ip}:4001`;
+        txt.textContent = 'OnTime';
       } else if (d.ip || d.mode === 'local') {
         bar.className = 'status-bar disconnected';
-        txt.textContent = d.mode === 'local' ? 'OnTime — Stopped' : `Cannot reach ${d.ip}:4001`;
+        txt.textContent = d.mode === 'local' ? 'OnTime — Stopped' : 'OnTime — Unreachable';
       } else {
         bar.className = 'status-bar disconnected';
         txt.textContent = 'Not configured';

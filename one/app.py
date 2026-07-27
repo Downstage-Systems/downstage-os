@@ -235,6 +235,53 @@ def get_all_interfaces():
     return out
 
 
+# ── WiFi health (same doctrine as the View: kernel signal + drop watcher) ──
+_WIFI = {"drops": [], "up": None}
+
+def _wifi_signal():
+    try:
+        for ln in open("/proc/net/wireless").read().splitlines():
+            if ln.strip().startswith("wlan0:"):
+                f = ln.split()
+                dbm = float(f[3].rstrip("."))
+                if dbm >= 0 or dbm < -110:
+                    return {"up": False}
+                return {"up": True, "dbm": int(dbm),
+                        "quality": int(float(f[2].rstrip(".")))}
+    except Exception:
+        pass
+    return {"up": False}
+
+
+def _wifi_watch():
+    while True:
+        up = _wifi_signal()["up"]
+        if _WIFI["up"] and not up:
+            _WIFI["drops"].append(time.time())
+            print("[wifi] link dropped")
+        _WIFI["up"] = up
+        cutoff = time.time() - 600
+        _WIFI["drops"] = [t for t in _WIFI["drops"] if t > cutoff]
+        time.sleep(5)
+
+threading.Thread(target=_wifi_watch, daemon=True).start()
+
+
+def _wifi_health():
+    sig = _wifi_signal()
+    drops = len(_WIFI["drops"])
+    concern = None
+    if sig["up"]:
+        eth_up = any(i["kind"] == "Ethernet" and not i["ip"].startswith("169.254.")
+                     for i in get_all_interfaces())
+        if not eth_up:
+            if drops >= 2:
+                concern = f"WiFi dropped {drops}x in the last 10 minutes"
+            elif sig["dbm"] <= -70:
+                concern = f"Weak WiFi signal ({sig['dbm']} dBm)"
+    return {**sig, "drops_10m": drops, "concern": concern}
+
+
 def get_network_info():
     """Return {ip, iface} preferring eth0 over wlan0 — but a REAL address on
     either interface beats a link-local one. A direct-cable 169.254 on eth
@@ -2043,6 +2090,7 @@ def status():
         "watchdog_override":    _watchdog_override,
         "watchdog":             config.get("watchdog", True),
         "hotspot_active":       hotspot_is_active(),
+        "wifi":                 _wifi_health(),
         "portal":               dict(_portal),
         "hotspot_ssid":         config.get("hotspot_ssid", ""),
         "cpu_temp":             _cpu_temp(),
