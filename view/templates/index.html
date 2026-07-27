@@ -654,6 +654,8 @@
     .idot.bad { background:#f2555a !important; box-shadow:0 0 7px rgba(229,72,77,0.6) !important; }
     .fu-card { background:var(--surface2); border:1px solid var(--border2);
       border-radius:10px; padding:12px 14px; }
+    .fu-card.ok { border-color:rgba(47,217,123,0.35); background:rgba(47,217,123,0.045); }
+    .fu-card.bad { border-color:rgba(229,72,77,0.45); background:rgba(229,72,77,0.05); }
     .fu-head { display:flex; align-items:center; gap:11px; }
     .fu-head .idot { width:9px; height:9px; border-radius:50%; background:var(--accent);
       box-shadow:0 0 7px rgba(47,217,123,0.6); flex-shrink:0; }
@@ -1711,7 +1713,7 @@
       box.innerHTML = d.units.map(u => {
         const nm = u.name || u.product;
         const bad = u.health_ok === false;
-        return '<div class="fu-card">' +
+        return '<div class="fu-card ' + (bad ? 'bad' : 'ok') + '">' +
         '<div class="fu-head">' +
           '<span class="idot' + (bad ? ' bad' : '') + '"></span>' +
           '<img class="ithumb" src="/static/unit-' +
