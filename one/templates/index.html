@@ -111,7 +111,7 @@
     .head-center { display:flex; flex-direction:column; align-items:center; gap:4px; }
     @media (min-width: 901px) {
       .logo-row { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; }
-      .addr-chip { justify-self:end; }
+      .addr-right { justify-self:end; }
     }
     .head-center .addr-box { align-items:center; }
     .header-clock {
@@ -120,9 +120,30 @@
     }
     .header-clock:empty { display: none; }
     /* vitals: boxed name+address, with the status pill separate below */
-    .addr-chip { margin-left:auto; flex-shrink:0;
-      background:var(--surface2); border:1px solid var(--border);
-      border-radius:11px; padding:6px; }
+    .addr-right { margin-left:auto; flex-shrink:0; }
+    .status-strip { display:flex; background:var(--surface2);
+      border:1px solid var(--border); border-radius:10px; overflow:hidden;
+      margin:0 0 16px; }
+    .status-strip .status-bar { flex:1 1 auto; justify-content:center; gap:8px;
+      white-space:nowrap;
+      margin:0; padding:8px 10px; border:none; border-right:1px solid var(--border);
+      border-radius:0; background:none; cursor:pointer;
+      font:600 10.5px var(--font-display); letter-spacing:0.08em;
+      text-transform:uppercase; color:var(--muted); }
+    .status-strip .status-bar:last-child { border-right:none; }
+    .status-strip .status-bar:hover { filter:brightness(1.3); }
+    .status-strip .status-dot { width:7px; height:7px; }
+    .status-strip .status-bar.connected { background:none; color:var(--muted); }
+    .status-strip .status-bar.connected .status-dot { background:var(--accent); opacity:0.75; }
+    .status-strip .status-bar.checking { background:none; color:var(--muted2); }
+    .status-strip .status-bar.idle { background:none; color:var(--muted2); }
+    .status-strip .status-bar.disconnected { background:rgba(229,72,77,0.10); color:#f2555a; }
+    .status-strip .status-bar.disconnected .status-dot { box-shadow:0 0 8px rgba(229,72,77,0.7); }
+    .status-strip .status-bar.warn { background:var(--amber-bg); color:var(--amber); }
+    @media (max-width: 620px) {
+      .status-strip { flex-wrap:wrap; }
+      .status-strip .status-bar { flex-basis:50%; border-bottom:1px solid var(--border); }
+    }
     .addr-box {
       display: flex; flex-direction: column; gap: 5px; align-items: flex-end;
       position: relative;
@@ -973,12 +994,12 @@
       /* phone: clock joins the title row (right edge); the vitals column
          (IP, then pills) sits directly beneath it */
       .header-clock { margin-left: auto; margin-right: 0; font-size: 14px; }
-      .addr-chip { flex-basis: 100%; align-items: flex-end; gap: 6px; }
+      .addr-right { flex-basis: 100%; align-items: flex-end; gap: 6px; }
       .logo-row { flex-wrap: wrap; gap: 8px 10px; margin-bottom: 16px; }
       /* address becomes one compact line under the wordmark, not a dangling stack */
-      .addr-chip { margin-left: 0; width: 100%; flex-direction: row; align-items: center;
+      .addr-right { margin-left: 0; width: 100%; flex-direction: row; align-items: center;
                    gap: 10px; text-align: left; }
-      .addr-chip .addr-main { font-size: 11px; }
+      .addr-right .addr-main { font-size: 11px; }
       /* five tabs share the width evenly — all visible, no hidden scrolling.
          id selectors: the desktop tab styles live later in this sheet */
       #setup-tabs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; padding: 3px; }
@@ -1175,6 +1196,8 @@
     </div>
     <div class="head-center">
       <div class="header-clock" id="header-clock"></div>
+    </div>
+    <div class="addr-right">
       <div class="addr-box">
       <span class="addr-main" onclick="copyAddr()" title="Click to copy this unit's address">{{ hostname }}.local:8080
         <svg viewBox="0 0 24 24" class="addr-copy-ic"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg></span>
@@ -1184,12 +1207,19 @@
       </div>
       </div>
     </div>
-    <div class="addr-chip">
-      <div class="pill-row">
+  </div>
+
+  <!-- Status strip: quiet when healthy, loud only where broken -->
+  <div class="status-strip">
         <div class="status-bar disconnected" id="status-bar"
              onclick="pillGo('timer')" title="Open the Timer tab">
           <div class="status-dot"></div>
           <span id="status-text">Checking…</span>
+        </div>
+        <div class="status-bar" id="comp-pill" style="display:none"
+             onclick="pillGo('companion')" title="Open the Companion tab">
+          <div class="status-dot"></div>
+          <span id="comp-pill-text"></span>
         </div>
         <div class="status-bar" id="inet-pill" style="display:none"
              onclick="pillGo('network')" title="Open the Network tab">
@@ -1206,8 +1236,11 @@
           <div class="status-dot"></div>
           <span id="hdmi-pill-2-text"></span>
         </div>
-      </div>
-    </div>
+        <div class="status-bar" id="temp-pill" style="display:none"
+             onclick="pillGo('system')" title="Open the System tab">
+          <div class="status-dot"></div>
+          <span id="temp-pill-text"></span>
+        </div>
   </div>
 
   <div class="card">
@@ -2599,6 +2632,24 @@
             'HDMI ' + n + ' \u2014 ' + (d.hdmi_connected[n] ? 'OK' : 'NO DISPLAY');
         }
       }
+      const cp = document.getElementById('comp-pill');
+      if (cp && companionInstalled) {
+        cp.style.display = '';
+        cp.className = 'status-bar ' + (companionRunning ? 'connected' : 'disconnected');
+        document.getElementById('comp-pill-text').textContent =
+          'COMPANION' + (companionRunning ? '' : ' — STOPPED');
+      }
+      const tp = document.getElementById('temp-pill');
+      if (tp && d.cpu_temp != null && d.cpu_temp !== '') {
+        const t = Math.round(parseFloat(d.cpu_temp));
+        if (!isNaN(t)) {
+          tp.style.display = '';
+          tp.className = 'status-bar ' + (t >= 80 ? 'disconnected' : t >= 70 ? 'warn' : 'connected');
+          document.getElementById('temp-pill-text').textContent =
+            'TEMP — ' + t + '°C' + (t >= 80 ? ' HOT' : '');
+        }
+      }
+
 
       // Watchdog toggle
       watchdogOn = d.watchdog ?? true;
@@ -2617,10 +2668,10 @@
 
       if (d.connected) {
         bar.className = 'status-bar connected';
-        txt.textContent = d.mode === 'local' ? 'Local OnTime — running' : `Connected — ${d.ip}:4001`;
+        txt.textContent = d.mode === 'local' ? 'OnTime — Running' : `Connected — ${d.ip}:4001`;
       } else if (d.ip || d.mode === 'local') {
         bar.className = 'status-bar disconnected';
-        txt.textContent = d.mode === 'local' ? 'Local OnTime — Stopped' : `Cannot reach ${d.ip}:4001`;
+        txt.textContent = d.mode === 'local' ? 'OnTime — Stopped' : `Cannot reach ${d.ip}:4001`;
       } else {
         bar.className = 'status-bar disconnected';
         txt.textContent = 'Not configured';

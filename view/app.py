@@ -2296,6 +2296,7 @@ def status():
         "clock": {"epoch": time.time(),
                   "offset_min": int((datetime.datetime.now().astimezone().utcoffset() or datetime.timedelta()).total_seconds() // 60)},
         "os_version": OS_VERSION,
+        "cpu_temp": _cpu_temp(),
         "serial": config.get("serial", ""),
         "os_latest": _os_update["latest"],
         "os_update_available": _os_update["update_available"],
