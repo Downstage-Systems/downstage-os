@@ -649,11 +649,29 @@
     .iface-row .ithumb { height:36px; width:auto; flex-shrink:0; }
     .fleet-ts { font-size:11px; color:var(--muted); padding-left:2px; }
     .fleet-hdr-right { display:flex; align-items:center; gap:12px; }
-    .iface-row .idot.bad { background:#f2555a; box-shadow:0 0 7px rgba(229,72,77,0.6); }
-    #fleet-panel .ikind { width:auto; }
-    #fleet-panel .isub { font-size:10px; color:var(--muted2); text-transform:uppercase; letter-spacing:0.06em; }
-    #fleet-panel .ishow { font-size:11px; color:var(--muted); }
-    #fleet-panel .iwhy { font-size:11px; color:#f2555a; }
+    .idot.bad { background:#f2555a !important; box-shadow:0 0 7px rgba(229,72,77,0.6) !important; }
+    .fu-card { background:var(--surface2); border:1px solid var(--border2);
+      border-radius:10px; padding:12px 14px; }
+    .fu-head { display:flex; align-items:center; gap:11px; }
+    .fu-head .idot { width:9px; height:9px; border-radius:50%; background:var(--accent);
+      box-shadow:0 0 7px rgba(47,217,123,0.6); flex-shrink:0; }
+    .fu-head .ithumb { height:34px; width:auto; flex-shrink:0; }
+    .fu-id { min-width:0; }
+    .fu-name { font:700 13.5px var(--font-display); letter-spacing:0.04em; color:var(--text); }
+    .fu-prod { font-size:9.5px; color:var(--muted2); letter-spacing:0.09em;
+      margin-left:7px; text-transform:uppercase; }
+    .fu-serial { font-family:var(--font-mono); font-size:10.5px; color:var(--muted2); margin-top:2px; }
+    .fu-btns { margin-left:auto; display:flex; gap:8px; flex-shrink:0; }
+    .fu-meta { display:grid; grid-template-columns:1.1fr 1fr 1.3fr; gap:12px;
+      margin-top:11px; padding-top:11px; border-top:1px solid var(--border); }
+    .fu-lbl { font:600 9.5px var(--font-display); color:var(--muted2);
+      text-transform:uppercase; letter-spacing:0.09em; margin-bottom:3px; }
+    .fu-val { font-size:12.5px; color:var(--text); line-height:1.4; }
+    .fu-val.ok { color:var(--accent); }
+    .fu-val.bad { color:#f2555a; }
+    .fu-ip { font-family:var(--font-mono); font-size:13px; color:var(--accent); cursor:pointer; }
+    .fu-ip:hover { text-decoration:underline; text-underline-offset:3px; }
+    .fu-sub { font-size:10.5px; color:var(--muted); margin-top:2px; }
     .iupdot { display:inline-block; width:6px; height:6px; border-radius:50%;
       background:var(--amber); margin-left:6px; vertical-align:1px; }
     .fleet-btn { margin-left:8px; background:none; border:1px solid var(--border2);
@@ -670,19 +688,11 @@
     #fleet-panel .ivia { font-size:11px; color:var(--muted); }
     #fleet-panel .ibrk { display:none; }
     @media (max-width: 620px) {
-      #fleet-panel .iface-row { flex-wrap:wrap; row-gap:8px; padding:13px 14px; }
-      #fleet-panel .ibrk { display:block; flex-basis:100%; height:0; order:5; }
-      #fleet-panel .idot { order:0; }
-      #fleet-panel .ithumb { order:1; }
-      #fleet-panel .ikind { order:2; }
-      #fleet-panel .isub { order:3; }
-      #fleet-panel .fleet-btn { order:4; }
-      #fleet-panel .fleet-btn:first-of-type { margin-left:auto !important; }
-      #fleet-panel .iip { order:6; }
-      #fleet-panel .ivia { order:7; }
-      #fleet-panel .ishow { order:8; }
-      #fleet-panel .idev { order:9; margin-left:auto; }
-      #fleet-panel .iwhy { order:10; flex-basis:100%; }
+      .fu-meta { grid-template-columns:1fr; gap:9px; }
+      .fu-head { flex-wrap:wrap; }
+      .fu-id { flex:1; min-width:0; }
+      .fu-btns { flex-basis:100%; justify-content:flex-end; margin-left:0; margin-top:4px; }
+      .fu-serial { font-size:10px; }
       .status-strip .status-bar { justify-content:flex-start; }
       .fleet-hdr-right { flex-wrap:wrap; justify-content:flex-end; }
       .fleet-hdr-right .fleet-ts { flex-basis:100%; text-align:right; white-space:nowrap; order:2; }
@@ -2496,22 +2506,30 @@
       box.innerHTML = d.units.map(u => {
         const nm = u.name || u.product;
         const bad = u.health_ok === false;
-        return '<div class="iface-row">' +
-        '<span class="idot' + (bad ? ' bad' : '') + '"' + (bad ? ' title="' + u.health_why + '"' : '') + '></span>' +
-        '<img class="ithumb" src="/static/unit-' +
-          ((u.product || '').toLowerCase() === 'view' ? 'view' : 'one') +
-          '.png" alt="">' +
-        '<span class="ikind">' + nm + '</span>' +
-        (u.name ? '<span class="isub">' + u.product + '</span>' : '') +
-        '<i class="ibrk"></i>' +
-        '<span class="iip" onclick="copyIp(\'' + u.ip + '\')" title="Click to copy">' + u.ip + '</span>' +
-        (u.kind ? '<span class="ivia">via ' + u.kind + '</span>' : '') +
-        (u.showing ? '<span class="ishow">' + u.showing + '</span>' : '') +
-        (bad ? '<span class="iwhy">' + u.health_why + '</span>' : '') +
-        '<span class="idev">' + u.serial + ' · v' + u.version +
-          (u.upd ? '<span class="iupdot" title="OS update available"></span>' : '') + '</span>' +
-        '<button class="fleet-btn" onclick="fleetIdentify(\'' + u.ip + '\')" title="Flash this unit\'s name on its output">ID</button>' +
-        '<button class="fleet-btn" onclick="openPanel(\'http://' + u.ip + ':8080\', \'' + nm + '\')">Open</button></div>';
+        return '<div class="fu-card">' +
+        '<div class="fu-head">' +
+          '<span class="idot' + (bad ? ' bad' : '') + '"></span>' +
+          '<img class="ithumb" src="/static/unit-' +
+            ((u.product || '').toLowerCase() === 'view' ? 'view' : 'one') + '.png" alt="">' +
+          '<div class="fu-id">' +
+            '<div class="fu-name">' + nm + (u.name ? '<span class="fu-prod">' + u.product + '</span>' : '') + '</div>' +
+            '<div class="fu-serial">' + u.serial + ' · v' + u.version +
+              (u.upd ? '<span class="iupdot" title="OS update available"></span>' : '') + '</div>' +
+          '</div>' +
+          '<div class="fu-btns">' +
+            '<button class="fleet-btn" onclick="fleetIdentify(\'' + u.ip + '\')" title="Flash this unit\'s name on its output">ID</button>' +
+            '<button class="fleet-btn" onclick="openPanel(\'http://' + u.ip + ':8080\', \'' + nm + '\')">Open</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="fu-meta">' +
+          '<div><div class="fu-lbl">Address</div>' +
+            '<div class="fu-ip" onclick="copyIp(\'' + u.ip + '\')" title="Click to copy">' + u.ip + '</div>' +
+            (u.kind ? '<div class="fu-sub">via ' + u.kind + '</div>' : '') + '</div>' +
+          '<div><div class="fu-lbl">Showing</div>' +
+            '<div class="fu-val">' + (u.showing || '—') + '</div></div>' +
+          '<div><div class="fu-lbl">Status</div>' +
+            '<div class="fu-val ' + (bad ? 'bad' : 'ok') + '">' + (bad ? u.health_why : 'All good') + '</div></div>' +
+        '</div></div>';
       }).join('');
     }
     const fts = document.getElementById('fleet-ts');
