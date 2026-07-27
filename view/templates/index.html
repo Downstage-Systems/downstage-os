@@ -1779,7 +1779,7 @@
         const ok = d.portal.internet === true;
         pill.className = 'status-bar ' + (ok ? 'connected' : 'warn');
         document.getElementById('inet-pill-text').textContent =
-          ok ? 'Internet — OK' : (d.portal.detected ? 'Internet — portal' : 'No internet');
+          ok ? 'Internet' : (d.portal.detected ? 'Internet — portal' : 'No internet');
       }
       const pn = document.getElementById('portal-note');
       if (pn) {
