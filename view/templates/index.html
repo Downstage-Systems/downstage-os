@@ -1793,14 +1793,16 @@
       document.getElementById('upd-system')?.classList.toggle('on', !!d.os_update_available);
       renderOutputChain(d);
       const wp = document.getElementById('wifi-pill');
-      if (wp && d.wifi) {
-        wp.style.display = '';
-        wp.classList.remove('connected', 'warn', 'disconnected', 'idle');
-        if (!d.wifi.up) { wp.classList.add('idle'); document.getElementById('wifi-pill-text').textContent = 'WIFI \u2014 OFF'; }
-        else {
-          wp.classList.add(d.wifi.concern ? 'warn' : 'connected');
-          document.getElementById('wifi-pill-text').textContent = 'WIFI \u2014 ' + d.wifi.dbm + ' dBm';
-        }
+      if (wp) {
+        if ((d.primary_kind || '') === 'Ethernet') {
+          wp.style.display = '';
+          wp.className = 'status-bar connected';
+          document.getElementById('wifi-pill-text').textContent = 'ETHERNET';
+        } else if (d.wifi && d.wifi.up) {
+          wp.style.display = '';
+          wp.className = 'status-bar ' + (d.wifi.concern ? 'warn' : 'connected');
+          document.getElementById('wifi-pill-text').textContent = 'WIFI — ' + d.wifi.dbm + ' dBm';
+        } else wp.style.display = 'none';
       }
       const tp = document.getElementById('temp-pill');
       if (tp && d.cpu_temp != null && d.cpu_temp !== '') {

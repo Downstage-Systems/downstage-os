@@ -2651,7 +2651,11 @@
       }
       const wp = document.getElementById('wifi-pill');
       if (wp) {
-        if (d.wifi && d.wifi.up) {
+        if ((d.primary_kind || '') === 'Ethernet') {
+          wp.style.display = '';
+          wp.className = 'status-bar connected';
+          document.getElementById('wifi-pill-text').textContent = 'ETHERNET';
+        } else if (d.wifi && d.wifi.up) {
           wp.style.display = '';
           wp.className = 'status-bar ' + (d.wifi.concern ? 'warn' : 'connected');
           document.getElementById('wifi-pill-text').textContent = 'WIFI — ' + d.wifi.dbm + ' dBm';
