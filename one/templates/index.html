@@ -991,7 +991,7 @@
     /* ── Show Mode quick bar: app-icon tiles — big targets for dark rooms ── */
     .show-quick { display: none; }
     body.show-mode .show-quick.qb-live {
-      display: grid; grid-template-columns: repeat(auto-fit, 100px);
+      display: grid; grid-template-columns: repeat(8, minmax(0, 1fr));
       justify-content: center; gap: 10px; margin-bottom: 18px;
     }
     .show-quick-label { display: none; }
