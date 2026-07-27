@@ -711,7 +711,7 @@
       text-align:center; padding:0 14px; }
     .oc-nodisp { position:absolute; inset:0; display:flex; flex-direction:column;
       align-items:center; justify-content:center; gap:8px; color:var(--muted);
-      font-size:12px; font-weight:600; letter-spacing:0.04em; }
+      font-size:12px; font-weight:600; letter-spacing:0.04em; background:#000; z-index:2; }
     .oc-nodisp svg { width:34px; height:34px; fill:none; stroke:var(--muted2);
       stroke-width:1.6; opacity:0.9; }
     .oc-grid { display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr;
@@ -1779,6 +1779,7 @@
     const img = document.getElementById('oc-snap-img');
     const nod = document.getElementById('oc-nodisp');
     const pro = document.getElementById('oc-prompt');
+    window._lastOut = o;
     const noDisp = !o.hdmi.connected;
     nod.style.display = noDisp ? '' : 'none';
     img.style.display = (!noDisp && img.src) ? '' : 'none';
@@ -1793,9 +1794,11 @@
       const r = await fetch('/output/snapshot?t=' + Date.now());
       if (!r.ok) throw new Error();
       img.src = URL.createObjectURL(await r.blob());
-      img.style.display = '';
+      const noDisp = window._lastOut && !window._lastOut.hdmi.connected;
+      img.style.display = noDisp ? 'none' : '';
       document.getElementById('oc-prompt').style.display = 'none';
       ts.textContent = 'Captured ' + new Date().toLocaleTimeString();
+      if (noDisp) showToast('Captured, but no display is connected \u2014 the output is dark.', 'info');
     } catch (e) { showToast('Could not capture \u2014 kiosk not responding.', 'error'); }
     finally { btn.disabled = false; btn.textContent = 'Check Output'; }
   }
