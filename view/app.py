@@ -1835,6 +1835,27 @@ def _wifi_health():
     return {**sig, "drops_10m": drops, "concern": concern}
 
 
+_COMP_PROBE = {"ts": 0.0, "ok": False, "ip": ""}
+
+def _remote_companion(config):
+    """True when the configured OnTime server also answers on Companion's
+    port — i.e. it's a Downstage One (or another Companion host). Lets the
+    View's Show Mode borrow that unit's button surfaces."""
+    ip = (config.get("ip") or "").strip()
+    if not ip or ip in ("127.0.0.1", "localhost"):
+        return False
+    now = time.time()
+    if _COMP_PROBE["ip"] == ip and now - _COMP_PROBE["ts"] < 30:
+        return _COMP_PROBE["ok"]
+    ok = False
+    try:
+        ok = requests.get(f"http://{ip}:8000/", timeout=1.5).ok
+    except Exception:
+        pass
+    _COMP_PROBE.update(ts=now, ok=ok, ip=ip)
+    return ok
+
+
 # Burn-in arms this flag on PASS; the factory's final shutdown then paints
 # the branded ship screen, which e-ink holds with no power — so the unit
 # sits in the box wearing the brand. The customer's first boot lands here,
@@ -2282,6 +2303,7 @@ def status():
         "output":    _output_chain(),
         "wifi":      _wifi_health(),
         "primary_ip": get_local_ip(),
+        "companion_remote": _remote_companion(config),
         "name": config.get("unit_name", ""),
         "now_showing": _now_showing(),
         "health": _health_summary(),
