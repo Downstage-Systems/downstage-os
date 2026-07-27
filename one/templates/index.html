@@ -2632,8 +2632,13 @@
           if (pb) pb.style.display = on ? 'none' : '';
           if (tb) tb.style.display = on ? 'none' : '';
           // hotplug: a display just appeared on this output — restart its
-          // preview automatically, same as the Refresh Previews button
-          if (on && window._hdmiWas && window._hdmiWas[n] === false) armPreview(n);
+          // preview now for instant feedback, and again once the mode has
+          // settled (arming mid-transition freezes the grab on stale
+          // geometry: the zoomed-crop preview bug)
+          if (on && window._hdmiWas && window._hdmiWas[n] === false) {
+            armPreview(n);
+            setTimeout(() => armPreview(n), 7000);
+          }
         }
         window._hdmiWas = { 1: !!d.hdmi_connected['1'], 2: !!d.hdmi_connected['2'] };
         for (const n of ['1','2']) {
