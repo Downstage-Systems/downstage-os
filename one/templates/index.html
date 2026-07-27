@@ -376,6 +376,8 @@
     }
 
     .preview-virtual { position:absolute; inset:0; overflow:hidden; background:#000; z-index:1; }
+    /* shield: keep every click/right-click on OUR menu, never the iframe's */
+    .preview-virtual::after { content:''; position:absolute; inset:0; z-index:1; }
     .preview-virtual iframe { width:1280px; height:720px; border:none;
       transform-origin:0 0; pointer-events:none; }
     .pv-bar { display:flex; align-items:center; justify-content:center;
