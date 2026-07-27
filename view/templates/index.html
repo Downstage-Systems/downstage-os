@@ -690,9 +690,8 @@
     #fleet-panel .ibrk { display:none; }
     @media (max-width: 620px) {
       .fu-meta { grid-template-columns:1fr; gap:9px; }
-      .fu-head { flex-wrap:wrap; }
       .fu-id { flex:1; min-width:0; }
-      .fu-btns { flex-basis:100%; justify-content:flex-end; margin-left:0; margin-top:4px; }
+      .fu-name, .fu-serial { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
       .fu-serial { font-size:10px; }
       .status-strip .status-bar { justify-content:flex-start; }
       .fleet-hdr-right { flex-wrap:wrap; justify-content:flex-end; }
