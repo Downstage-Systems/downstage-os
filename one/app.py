@@ -804,9 +804,15 @@ _XRANDR_TO_PORT = {"HDMI-1": 2, "HDMI-2": 1, "HDMI-A-1": 2, "HDMI-A-2": 1}
 
 
 def _edid_name_for(port):
-    """Connected display's EDID name (or manufacturer code) for an output."""
+    """Connected display's EDID name (or manufacturer code) for a CASE-LABEL
+    port. The kernel's connector numbering is inverted vs the jacks, so go
+    through _XRANDR_TO_PORT like every other port lookup — never assume
+    HDMI-A-<n> is port <n>."""
     import glob
-    for c in glob.glob(f"/sys/class/drm/card*-HDMI-A-{port}"):
+    for c in glob.glob("/sys/class/drm/card*-HDMI-A-*"):
+        conn = c.rsplit("card", 1)[1].split("-", 1)[1]      # e.g. HDMI-A-2
+        if _XRANDR_TO_PORT.get(conn) != port:
+            continue
         try:
             raw = open(c + "/edid", "rb").read()
             if len(raw) < 128:
