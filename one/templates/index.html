@@ -3501,12 +3501,14 @@
 
   async function ctxReload(n) {
     closeCtxMenu();
+    if (reloadVirtualPreview(n)) { showToast(`Reloading virtual preview ${n}…`, 'info'); return; }
     showToast(`Reloading HDMI ${n}…`, 'info');
     await fetch('/refresh', { method: 'POST', headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({ output: n }) });
   }
   function ctxRefreshPreview(n) {
     closeCtxMenu();
+    if (reloadVirtualPreview(n)) return;
     armPreview(n);
   }
   function ctxIdentify() { closeCtxMenu(); identifyDisplays(); }
@@ -3600,7 +3602,20 @@
   async function refreshDisplays() {
     showToast('Refreshing displays…', 'info');
     await fetch('/refresh', { method: 'POST' });
+    reloadVirtualPreview(1); reloadVirtualPreview(2);
     showToast('Displays refreshed.', 'success');
+  }
+
+  // Reload a virtual tile's iframe (it lives in THIS browser, so the kiosk's
+  // /refresh can't reach it). Returns true if the tile was virtual and handled.
+  function reloadVirtualPreview(n) {
+    const box = document.getElementById('preview-virt-' + n);
+    if (!box || box.style.display === 'none' || !box.dataset.url) return false;
+    const frame = box.querySelector('iframe');
+    const u = box.dataset.url;
+    frame.src = 'about:blank';
+    setTimeout(() => { frame.src = u; }, 50);
+    return true;
   }
 
   // Arm a preview with a cache-busted stream URL. If the stream fails (the
