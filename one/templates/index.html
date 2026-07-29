@@ -2766,7 +2766,7 @@
             if (on) {
               bar.className = 'pv-bar ok';
               const nm = d.hdmi_names && d.hdmi_names[n];
-              bar.textContent = nm ? nm : 'Display connected';
+              bar.textContent = nm ? 'Connected \u2014 ' + nm : 'Display connected';
               bar.title = 'Captured from the physical output \u2014 the preview trails the real screen by about a second.';
             } else {
               bar.className = 'pv-bar virt';
