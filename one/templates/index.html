@@ -2598,6 +2598,13 @@
   (async () => {   // last scan is remembered on the unit — show it on load
     try { renderFleet(await (await fetch('/discover/last')).json()); } catch (e) {}
   })();
+  // while the Network tab is open, freshen the CACHED units (targeted probes,
+  // never a sweep) so health / showing / versions stay live
+  setInterval(async () => {
+    const pane = document.getElementById('tpane-network');
+    if (!pane || pane.offsetParent === null) return;
+    try { renderFleet(await (await fetch('/discover/refresh', { method: 'POST' })).json()); } catch (e) {}
+  }, 60000);
   function renderUpdateStrip(items) {
     const el = document.getElementById('upd-strip');
     if (!el) return;

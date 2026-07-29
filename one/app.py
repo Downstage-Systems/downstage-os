@@ -2839,10 +2839,30 @@ def _avahi_advertise():
 threading.Thread(target=_avahi_advertise, daemon=True).start()
 
 
-@app.route("/discover", methods=["POST"])
-def discover_units():
-    """Sweep this unit's /24s for other Downstage units (identified by their
-    /status signature — works across firmware generations)."""
+def _probe_unit(ip, timeout=0.6):
+    try:
+        r = requests.get(f"http://{ip}:8080/status", timeout=timeout)
+        d = r.json()
+        serial = str(d.get("serial", ""))
+        if serial.startswith("DS"):
+            return {"ip": ip, "serial": serial,
+                    "product": "View" if serial.startswith("DSV") else "One",
+                    "version": d.get("os_version", ""),
+                    "kind": d.get("primary_kind", ""),
+                    "name": d.get("name", ""),
+                    "showing": d.get("now_showing", ""),
+                    "health_ok": (d.get("health") or {}).get("ok", True),
+                    "health_why": (d.get("health") or {}).get("why", ""),
+                    "upd": bool(d.get("os_update_available")),
+                    "primary": d.get("primary_ip", "") in ("", ip)}
+    except Exception:
+        pass
+    return None
+
+
+def _do_discover():
+    """Full /24 sweep for Downstage units. Manual button, network-join, and
+    the daily freshen all funnel here; nothing else sweeps."""
     import concurrent.futures
     mine = {i["ip"] for i in get_all_interfaces()}
     ips = set()
@@ -2853,29 +2873,9 @@ def discover_units():
         ips |= {f"{base}.{n}" for n in range(1, 255)}
     ips -= mine
 
-    def probe(ip):
-        try:
-            r = requests.get(f"http://{ip}:8080/status", timeout=0.6)
-            d = r.json()
-            serial = str(d.get("serial", ""))
-            if serial.startswith("DS"):
-                return {"ip": ip, "serial": serial,
-                        "product": "View" if serial.startswith("DSV") else "One",
-                        "version": d.get("os_version", ""),
-                        "kind": d.get("primary_kind", ""),
-                        "name": d.get("name", ""),
-                        "showing": d.get("now_showing", ""),
-                        "health_ok": (d.get("health") or {}).get("ok", True),
-                        "health_why": (d.get("health") or {}).get("why", ""),
-                        "upd": bool(d.get("os_update_available")),
-                        "primary": d.get("primary_ip", "") in ("", ip)}
-        except Exception:
-            pass
-        return None
-
     found = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=32) as ex:
-        for res in ex.map(probe, sorted(ips)):
+        for res in ex.map(_probe_unit, sorted(ips)):
             if res:
                 found.append(res)
     best = {}
@@ -2890,7 +2890,65 @@ def discover_units():
         _FLEET_CACHE.write_text(json.dumps(cache))
     except Exception:
         pass
+    return cache
+
+
+@app.route("/discover", methods=["POST"])
+def discover_units():
+    """Sweep this unit's /24s for other Downstage units (identified by their
+    /status signature — works across firmware generations)."""
+    return jsonify({"ok": True, **_do_discover()})
+
+
+@app.route("/discover/refresh", methods=["POST"])
+def discover_refresh():
+    """Freshen the cached units only — a handful of targeted probes, never a
+    sweep. A cached unit that stops answering stays listed, marked loudly."""
+    try:
+        cache = json.loads(_FLEET_CACHE.read_text())
+    except Exception:
+        return jsonify({"ok": True, "units": [], "ts": None})
+    fresh = []
+    for u in cache.get("units", []):
+        p = _probe_unit(u["ip"], timeout=1.5)
+        if p:
+            p.pop("primary", None)
+            fresh.append(p)
+        else:
+            gone = dict(u)
+            gone.update(health_ok=False, health_why="Not responding",
+                        showing="", upd=False)
+            fresh.append(gone)
+    cache["units"] = fresh
+    try:
+        _FLEET_CACHE.write_text(json.dumps(cache))
+    except Exception:
+        pass
     return jsonify({"ok": True, **cache})
+
+
+def _fleet_auto():
+    """Keep the fleet cache honest without sweeping strange networks on a
+    timer: one sweep when we land on a new network, one a day otherwise."""
+    last_ip, last_sweep = None, 0.0
+    while True:
+        time.sleep(30)
+        try:
+            ip = get_local_ip()
+            if not ip or ip == "unknown" or ip.startswith("169.254."):
+                continue
+            if ip != last_ip:
+                last_ip = ip
+                time.sleep(12)   # let the network settle after a join
+                _do_discover()
+                last_sweep = time.time()
+            elif time.time() - last_sweep > 86400:
+                _do_discover()
+                last_sweep = time.time()
+        except Exception as e:
+            print(f"[fleet] auto refresh: {e}")
+
+threading.Thread(target=_fleet_auto, daemon=True).start()
 
 
 # Last scan is remembered on the unit, so every browser sees the same list
