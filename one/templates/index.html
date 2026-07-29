@@ -328,6 +328,11 @@
       background: var(--surface2); border: 1px solid var(--border2);
       border-radius: 10px; padding: 16px; margin-bottom: 22px;
     }
+    /* System tab: OS / Unit Name / Virtual Previews as three equal-height panels */
+    .sys-trio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 22px; }
+    .sys-trio .field { margin: 0; display: flex; flex-direction: column; }
+    .sys-trio .local-panel { flex: 1; margin-bottom: 0; }
+    @media (max-width: 900px) { .sys-trio { grid-template-columns: 1fr; } }
     .local-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; overflow: hidden; }
     .local-panel-title { font-size: 13px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
     .local-panel-title svg { width: 14px; height: 14px; fill: var(--muted); flex-shrink: 0; }
@@ -1909,7 +1914,8 @@
         </div>
       </div>
 
-      <!-- Downstage OS version -->
+      <!-- Downstage OS / Unit Name / Virtual Previews — three-up -->
+      <div class="sys-trio full-only">
       <div class="field full-only">
         <div class="section-label">Downstage OS</div>
         <div class="local-panel">
@@ -1936,27 +1942,32 @@
         </div>
       </div>
 
-      <!-- System Health -->
       <div class="field full-only">
         <div class="section-label">Unit Name</div>
-        <div style="display:flex; gap:8px">
-          <input id="unit-name-input" maxlength="24" placeholder="e.g. FOH, Stage Left, Green Room"
-                 style="flex:1; background:var(--surface2); border:1px solid var(--border2);
-                        border-radius:8px; color:var(--text); padding:9px 12px; font:inherit">
-          <button class="btn-sm" onclick="saveUnitName()">Save</button>
+        <div class="local-panel">
+          <div style="display:flex; gap:8px">
+            <input id="unit-name-input" maxlength="24" placeholder="e.g. FOH, Stage Left, Green Room"
+                   style="flex:1; min-width:0; background:var(--surface2); border:1px solid var(--border2);
+                          border-radius:8px; color:var(--text); padding:9px 12px; font:inherit">
+            <button class="btn-sm" onclick="saveUnitName()">Save</button>
+          </div>
+          <div class="external-url-hint">Shown in other units' fleet lists and on Identify flashes.</div>
         </div>
-        <div class="external-url-hint">Shown in other units' fleet lists and on Identify flashes.</div>
       </div>
 
       <div class="field full-only">
         <div class="section-label">Virtual Previews</div>
-        <div class="toggle-row">
-          <span class="toggle-label">Render an output's source in its preview tile when no display is connected</span>
-          <button class="toggle on" id="virtprev-toggle" onclick="toggleVirtualPreviews()"></button>
+        <div class="local-panel">
+          <div class="toggle-row">
+            <span class="toggle-label">Render an output's source in its preview tile when no display is connected</span>
+            <button class="toggle on" id="virtprev-toggle" onclick="toggleVirtualPreviews()"></button>
+          </div>
+          <div class="external-url-hint">Captured previews trail the real outputs by &plusmn;1s; virtual previews render live and can run slightly ahead. Saved on this unit &mdash; applies to every browser that opens this UI.</div>
         </div>
-        <div class="external-url-hint">Captured previews trail the real outputs by &plusmn;1s; virtual previews render live and can run slightly ahead. Saved on this unit &mdash; applies to every browser that opens this UI.</div>
+      </div>
       </div>
 
+      <!-- System Health -->
       <div class="field full-only">
         <div class="section-label">System Health</div>
         <div class="local-panel">
