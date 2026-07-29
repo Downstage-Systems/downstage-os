@@ -3590,6 +3590,12 @@
     document.getElementById('view-tab-show').classList.toggle('active', m === 'show');
     document.getElementById('view-tab-full').classList.toggle('active', m !== 'show');
     try { localStorage.setItem('ds1-view-mode', m); } catch (e) {}
+    // Show Mode forces the displays pane visible — if we arrived from another
+    // tab, its virtual tiles were hidden (possibly evicted); re-arm them
+    if (m === 'show' && window._lastViewMode && window._lastViewMode !== 'show' &&
+        document.body.dataset.page !== 'displays')
+      reviveVirtualPreviews();
+    window._lastViewMode = m;
   }
   try { setViewMode(localStorage.getItem('ds1-view-mode') || 'full'); } catch (e) {}
 
@@ -3606,6 +3612,10 @@
     // top-anchored page: a tab switch puts the chrome back at the top
     if (window.scrollY > 0) window.scrollTo(0, 0);
     try { localStorage.setItem('ds1-setup-tab', t); } catch (e) {}
+    // returning to the previews after a visit elsewhere — re-arm virtual tiles
+    if (t === 'displays' && window._lastSetupTab && window._lastSetupTab !== 'displays')
+      reviveVirtualPreviews();
+    window._lastSetupTab = t;
   }
   try { showSetupTab(localStorage.getItem('ds1-setup-tab') || 'displays'); } catch (e) {}
   document.body.dataset.hdmi = activeHdmiTab;   // colour identity from first paint
@@ -3616,6 +3626,23 @@
     reloadVirtualPreview(1); reloadVirtualPreview(2);
     showToast('Displays refreshed.', 'success');
   }
+
+  // Hidden panes get their iframes evicted by the browser (Safari especially),
+  // so a virtual tile comes back blank after a visit to another tab. Re-scale
+  // and reload whenever the previews return to view.
+  function reviveVirtualPreviews() {
+    for (const n of [1, 2]) {
+      const box = document.getElementById('preview-virt-' + n);
+      if (!box || box.style.display === 'none' || !box.dataset.url) continue;
+      const w = box.parentElement.getBoundingClientRect().width;
+      if (w > 0) box.querySelector('iframe').style.transform = 'scale(' + (w / 1280) + ')';
+      reloadVirtualPreview(n);
+    }
+  }
+  // …and after the whole browser tab/app was backgrounded (iOS evicts there too)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') reviveVirtualPreviews();
+  });
 
   // Reload a virtual tile's iframe (it lives in THIS browser, so the kiosk's
   // /refresh can't reach it). Returns true if the tile was virtual and handled.
@@ -3658,7 +3685,9 @@
         .replace('//localhost', '//' + location.hostname)
         .replace('//127.0.0.1', '//' + location.hostname);
       if (box.dataset.url !== u) { box.dataset.url = u; frame.src = u; }
-      frame.style.transform = 'scale(' + (box.parentElement.getBoundingClientRect().width / 1280) + ')';
+      // never scale against a hidden (0-width) pane — that paints scale(0)
+      const w = box.parentElement.getBoundingClientRect().width;
+      if (w > 0) frame.style.transform = 'scale(' + (w / 1280) + ')';
       box.style.display = '';
       const nod = document.getElementById('preview-nodisp-' + n);
       if (nod) nod.style.display = 'none';
