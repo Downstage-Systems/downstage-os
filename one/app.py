@@ -2097,6 +2097,7 @@ def status():
         "serial":               config.get("serial", ""),
         "primary_ip": get_local_ip(),
         "name": config.get("unit_name", ""),
+        "virtual_previews": bool(config.get("virtual_previews", True)),
         "now_showing": _now_showing(),
         "health": _health_summary(),
         "os_update_available": bool(_update_status["os"].get("update_available")),
@@ -3035,6 +3036,15 @@ def fleet_identify():
         except Exception:
             continue
     return jsonify({"ok": False})
+
+
+@app.route("/virtual-previews", methods=["POST"])
+def set_virtual_previews():
+    """UI preference, stored on the unit so it holds across every browser
+    and device that opens this UI (same idea as unit_name)."""
+    on = bool((request.get_json() or {}).get("on", True))
+    save_config({"virtual_previews": on})
+    return jsonify({"ok": True, "on": on})
 
 
 @app.route("/unit-name", methods=["POST"])
