@@ -1390,6 +1390,8 @@
       <div class="alert-bar power" id="power-bar" style="display:none">
         <div class="alert-dot"></div>
         <span id="power-bar-text">Low voltage detected — check the power supply</span>
+        <button class="alert-action" id="power-bar-ack" style="display:none"
+                onclick="powerAck()" title="Hide until reboot — a new active dip brings it back">&times;</button>
       </div>
 
       <div class="alert-bar watchdog" id="watchdog-bar" style="display:none">
@@ -2752,13 +2754,17 @@
       // Power supply warning (Pi firmware undervoltage flags)
       const pw = d.power || {};
       const pwBar = document.getElementById('power-bar');
+      const pwAck = document.getElementById('power-bar-ack');
       if (pw.undervolt_now) {
         document.getElementById('power-bar-text').textContent =
           'LOW VOLTAGE — the power supply cannot deliver enough current. Use the official 27W USB-C supply.';
+        pwAck.style.display = 'none';
         pwBar.style.display = 'flex';
-      } else if (pw.undervolt_boot) {
+      } else if (pw.undervolt_boot && !pw.ack) {
         document.getElementById('power-bar-text').textContent =
-          'Low voltage was detected since boot — the power supply may be marginal. Displays and USB may misbehave.';
+          'Voltage dipped at some point since boot — often from plugging in power-hungry USB gear ' +
+          '(Stream Decks). If it happened with nothing plugged in, suspect the power supply.';
+        pwAck.style.display = '';
         pwBar.style.display = 'flex';
       } else {
         pwBar.style.display = 'none';
@@ -4213,6 +4219,11 @@
         body: JSON.stringify({ marks: Array.from(set) }) });
       window._marksTouched = false;
     } catch (e) { showToast('Could not save the setting.', 'error'); }
+  }
+  async function powerAck() {
+    document.getElementById('power-bar').style.display = 'none';
+    try { await fetch('/power/ack', { method: 'POST' }); }
+    catch (e) { showToast('Could not save the dismissal.', 'error'); }
   }
   async function testAudioCues() {
     try {

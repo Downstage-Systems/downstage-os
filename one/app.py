@@ -386,6 +386,11 @@ def check_ontime(ip, timeout=3):
         return False
 
 
+# Ack for the sticky since-boot undervolt banner: unit-wide, in RAM so it
+# resets on service restart/reboot, and any NEW active dip re-arms the banner.
+_uv_ack = {"on": False}
+
+
 def _power_state():
     """Pi firmware power flags (vcgencmd get_throttled): bit0 undervoltage
     now, bit16 undervoltage since boot — the 'lightning bolt' warning."""
@@ -395,13 +400,17 @@ def _power_state():
         out = subprocess.check_output(["sudo", "vcgencmd", "get_throttled"],
                                       text=True, timeout=3).strip()
         val = int(out.split("=")[1], 16)
+        if val & 0x1:
+            _uv_ack["on"] = False    # active dip re-arms an acked banner
         return {
             "undervolt_now":  bool(val & 0x1),
             "throttled_now":  bool(val & 0x4),
             "undervolt_boot": bool(val & 0x10000),
+            "ack":            _uv_ack["on"],
         }
     except Exception:
-        return {"undervolt_now": False, "throttled_now": False, "undervolt_boot": False}
+        return {"undervolt_now": False, "throttled_now": False, "undervolt_boot": False,
+                "ack": _uv_ack["on"]}
 
 
 _oled_timer_cache = {"at": 0.0, "val": None}
@@ -3104,6 +3113,14 @@ def fleet_identify():
         except Exception:
             continue
     return jsonify({"ok": False})
+
+
+@app.route("/power/ack", methods=["POST"])
+def power_ack():
+    """Acknowledge the since-boot undervolt banner (unit-wide, until reboot
+    or the next active dip). The active LOW VOLTAGE banner is never ackable."""
+    _uv_ack["on"] = True
+    return jsonify({"ok": True})
 
 
 @app.route("/audio-cues", methods=["POST"])
