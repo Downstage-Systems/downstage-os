@@ -333,6 +333,11 @@
     .sys-trio .field { margin: 0; display: flex; flex-direction: column; }
     .sys-trio .local-panel { flex: 1; margin-bottom: 0; }
     @media (max-width: 900px) { .sys-trio { grid-template-columns: 1fr; } }
+    .cue-seg { display: flex; gap: 8px; flex: 1; min-width: 240px; }
+    .cue-seg button { flex: 1; min-width: 70px; padding: 9px 0; background: var(--surface2);
+      border: 1px solid var(--border2); border-radius: 8px; color: var(--muted);
+      font: inherit; font-weight: 600; cursor: pointer; }
+    .cue-seg button.on { border-color: var(--green-bd); color: var(--green); background: var(--green-bg); }
     .local-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; overflow: hidden; }
     .local-panel-title { font-size: 13px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
     .local-panel-title svg { width: 14px; height: 14px; fill: var(--muted); flex-shrink: 0; }
@@ -1965,6 +1970,21 @@
           <div class="external-url-hint">Captured previews trail the real outputs by &plusmn;1s; virtual previews render live and can run slightly ahead. Saved on this unit &mdash; applies to every browser that opens this UI.</div>
         </div>
       </div>
+
+      <div class="field full-only" style="grid-column:1 / -1">
+        <div class="section-label">Audio Cues</div>
+        <div class="local-panel">
+          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap">
+            <div class="cue-seg">
+              <button id="cue-off" class="on" onclick="setAudioCues('off')">Off</button>
+              <button id="cue-tones" onclick="setAudioCues('tones')">Tones</button>
+              <button id="cue-spoken" onclick="setAudioCues('spoken')">Spoken Times</button>
+            </div>
+            <button class="btn-sm" onclick="testAudioCues()">Test Audio</button>
+          </div>
+          <div class="external-url-hint">Time calls through the unit's 3.5mm jack as the timer passes 5:00 &middot; 2:00 &middot; 1:00 &middot; 0:30 &middot; 0:10 and zero &mdash; feed it to comms or a backstage speaker. Requires the OnTime server (local or remote): cues follow the OnTime timer, so other display sources (external URLs, patterns, Companion) have nothing to cue from. Saved on this unit.</div>
+        </div>
+      </div>
       </div>
 
       <!-- System Health -->
@@ -2767,6 +2787,7 @@
         const vpt = document.getElementById('virtprev-toggle');
         if (vpt) vpt.className = 'toggle ' + (window._virtualPreviews ? 'on' : '');
       }
+      if (d.audio_cues && !window._cueTouched) paintAudioCues(d.audio_cues);
       if (d.hdmi_connected) {
         for (const n of ['1','2']) {
           const on = d.hdmi_connected[n];
@@ -4133,6 +4154,31 @@
       if (conn) armPreview(n);          // fresh captured grab on toggle
       updatePvBar(n, conn);
     }
+  }
+
+  // ── Audio cues — Off / Tones / Spoken, saved on the unit ──
+  function paintAudioCues(m) {
+    for (const k of ['off', 'tones', 'spoken']) {
+      const b = document.getElementById('cue-' + k);
+      if (b) b.classList.toggle('on', m === k);
+    }
+  }
+  async function setAudioCues(m) {
+    window._audioCues = m;
+    window._cueTouched = true;
+    paintAudioCues(m);
+    try {
+      await fetch('/audio-cues', { method: 'POST',
+        headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: m }) });
+      window._cueTouched = false;
+    } catch (e) { showToast('Could not save the setting.', 'error'); }
+  }
+  async function testAudioCues() {
+    try {
+      const d = await (await fetch('/audio-cues/test', { method: 'POST' })).json();
+      showToast(d.ok ? 'Playing test audio on the 3.5mm jack…'
+                     : (d.error || 'Could not play test audio.'), d.ok ? 'success' : 'error');
+    } catch (e) { showToast('Could not play test audio.', 'error'); }
   }
 
   // ── Presets ───────────────────────────────────────────────────────────────────

@@ -267,6 +267,71 @@ def _wifi_watch():
 threading.Thread(target=_wifi_watch, daemon=True).start()
 
 
+# ── Audio cues — spoken time calls / tones through the case's 3.5mm jack ─────
+# The Argon V5's HS100B DAC (enabled via dwc2 host mode) appears as a USB
+# Audio ALSA card. Cue marks fire once per crossing while OnTime plays.
+_AUDIO_DIR = Path(__file__).parent / "static" / "audio"
+_CUE_SPOKEN = {300000: "five-minutes", 120000: "two-minutes", 60000: "one-minute",
+               30000: "thirty-seconds", 10000: "ten-seconds", 0: "time"}
+_CUE_TONES  = {300000: "tone-mark", 120000: "tone-mark", 60000: "tone-mark",
+               30000: "tone-warn", 10000: "tone-warn", 0: "tone-zero"}
+_cue_last_ms = [None]
+
+
+def _audio_card():
+    """ALSA index of the case DAC (USB Audio), or None if absent."""
+    try:
+        for line in Path("/proc/asound/cards").read_text().splitlines():
+            if "USB-Audio" in line:
+                return int(line.split("[")[0].strip())
+    except Exception:
+        pass
+    return None
+
+
+def _play_cue(name):
+    card = _audio_card()
+    f = _AUDIO_DIR / f"{name}.wav"
+    if card is None or not f.exists():
+        return False
+    subprocess.Popen(["aplay", "-q", "-D", f"plughw:{card},0", str(f)],
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return True
+
+
+def _cue_loop():
+    while True:
+        mode = load_config().get("audio_cues", "off")
+        if mode not in ("tones", "spoken"):
+            _cue_last_ms[0] = None
+            time.sleep(3)
+            continue
+        cur = None
+        try:
+            cfg = load_config()
+            ip = cfg.get("ip") if cfg.get("mode") == "remote" else "127.0.0.1"
+            r = requests.get(f"http://{ip}:4001/api/poll", timeout=0.8)
+            t = r.json()["payload"]["timer"]
+            if t.get("playback") in ("play", "roll"):
+                cur = t.get("current")
+        except Exception:
+            pass
+        last = _cue_last_ms[0]
+        if cur is not None and last is not None and cur < last:
+            table = _CUE_SPOKEN if mode == "spoken" else _CUE_TONES
+            # fire the single lowest mark crossed this tick — no barrage
+            # after a big cue-jump
+            for mark in sorted(table):
+                if cur <= mark < last:
+                    _play_cue(table[mark])
+                    break
+        _cue_last_ms[0] = cur
+        time.sleep(1)
+
+
+threading.Thread(target=_cue_loop, daemon=True).start()
+
+
 def _wifi_health():
     sig = _wifi_signal()
     drops = len(_WIFI["drops"])
@@ -2098,6 +2163,7 @@ def status():
         "primary_ip": get_local_ip(),
         "name": config.get("unit_name", ""),
         "virtual_previews": bool(config.get("virtual_previews", True)),
+        "audio_cues": config.get("audio_cues", "off"),
         "now_showing": _now_showing(),
         "health": _health_summary(),
         "os_update_available": bool(_update_status["os"].get("update_available")),
@@ -3036,6 +3102,24 @@ def fleet_identify():
         except Exception:
             continue
     return jsonify({"ok": False})
+
+
+@app.route("/audio-cues", methods=["POST"])
+def set_audio_cues():
+    mode = str((request.get_json() or {}).get("mode", "off"))
+    if mode not in ("off", "tones", "spoken"):
+        return jsonify({"ok": False, "error": "bad mode"}), 400
+    save_config({"audio_cues": mode})
+    return jsonify({"ok": True, "mode": mode})
+
+
+@app.route("/audio-cues/test", methods=["POST"])
+def test_audio_cues():
+    mode = load_config().get("audio_cues", "off")
+    name = "tone-zero" if mode == "tones" else "five-minutes"
+    if _audio_card() is None:
+        return jsonify({"ok": False, "error": "No audio device — is the case DAC enabled?"})
+    return jsonify({"ok": _play_cue(name)})
 
 
 @app.route("/virtual-previews", methods=["POST"])
