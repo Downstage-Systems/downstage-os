@@ -275,7 +275,7 @@ _CUE_SPOKEN = {600000: "ten-minutes", 300000: "five-minutes", 120000: "two-minut
                60000: "one-minute", 30000: "thirty-seconds", 10000: "ten-seconds", 0: "time"}
 _CUE_TONES  = {600000: "tone-mark", 300000: "tone-mark", 120000: "tone-mark",
                60000: "tone-mark", 30000: "tone-warn", 10000: "tone-warn", 0: "tone-zero"}
-_cue_last_ms = [None]
+_cue_last = [(None, 0.0)]   # (remaining_ms at last poll, wall time of that poll)
 
 
 def _audio_card():
@@ -304,7 +304,7 @@ def _cue_loop():
         cfg = load_config()
         mode = cfg.get("audio_cues", "off")
         if mode not in ("tones", "spoken"):
-            _cue_last_ms[0] = None
+            _cue_last[0] = (None, 0.0)
             time.sleep(3)
             continue
         enabled = set(cfg.get("cue_marks", list(_CUE_SPOKEN)))
@@ -317,16 +317,20 @@ def _cue_loop():
                 cur = t.get("current")
         except Exception:
             pass
-        last = _cue_last_ms[0]
+        now = time.time()
+        last, last_at = _cue_last[0]
         if cur is not None and last is not None and cur < last:
-            table = _CUE_SPOKEN if mode == "spoken" else _CUE_TONES
-            # fire the single lowest mark crossed this tick — no barrage
-            # after a big cue-jump
-            for mark in sorted(table):
-                if mark in enabled and cur <= mark < last:
-                    _play_cue(table[mark])
-                    break
-        _cue_last_ms[0] = cur
+            # a NATURAL tick decreases by ~the poll interval; a bigger drop
+            # means the operator jumped the clock (add/subtract time) — the
+            # mark was never actually reached, so stay quiet and resync
+            natural = (last - cur) <= (now - last_at) * 1000 + 1500
+            if natural:
+                table = _CUE_SPOKEN if mode == "spoken" else _CUE_TONES
+                for mark in sorted(table):
+                    if mark in enabled and cur <= mark < last:
+                        _play_cue(table[mark])
+                        break
+        _cue_last[0] = (cur, now)
         time.sleep(1)
 
 
