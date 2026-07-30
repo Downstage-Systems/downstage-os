@@ -2838,8 +2838,13 @@
             setTimeout(() => armPreview(n), 7000);
           }
           updateVirtualPreview(n, on);
-          const bq = document.getElementById('blackout-btn-quick');
-          if (bq) bq.disabled = !d.hdmi_connected['1'] && !d.hdmi_connected['2'] && !d.blackout;
+          // fully virtual (no physical displays) — blackout has nothing to
+          // black out, so dim BOTH blackout buttons until glass returns
+          window._noDisplays = !d.hdmi_connected['1'] && !d.hdmi_connected['2'] && !d.blackout;
+          for (const id of ['blackout-btn', 'blackout-btn-quick']) {
+            const b = document.getElementById(id);
+            if (b) b.disabled = window._noDisplays;
+          }
           window._hdmiNames = d.hdmi_names || window._hdmiNames || {};
           updatePvBar(n, on);
         }
@@ -4317,7 +4322,7 @@
     for (const id of ['blackout-btn', 'blackout-btn-quick']) {
       const btn = document.getElementById(id);
       if (!btn) continue;
-      btn.disabled = false;
+      btn.disabled = !!window._noDisplays && !blackoutActive;
       btn.style.display = '';
       btn.innerHTML = BLACKOUT_ICON + (blackoutActive ? 'Resume' : 'Blackout');
       btn.classList.toggle('flashing', blackoutActive);
