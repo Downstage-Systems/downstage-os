@@ -336,7 +336,8 @@
     .cue-seg { display: flex; gap: 8px; flex: 1; min-width: 240px; }
     .cue-seg button { flex: 1; min-width: 70px; padding: 9px 0; background: var(--surface2);
       border: 1px solid var(--border2); border-radius: 8px; color: var(--muted);
-      font: inherit; font-weight: 600; cursor: pointer;
+      font-family: var(--font-display); font-size: 13px; font-weight: 600;
+      letter-spacing: 0.04em; cursor: pointer;
       text-align: center; display: flex; align-items: center; justify-content: center; }
     .cue-seg button.on { border-color: var(--green-bd); color: var(--green); background: var(--green-bg); }
     .cue-marks { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
@@ -347,8 +348,8 @@
     .cue-marks button:not(.on) { opacity: 0.35; }
     @media (max-width: 600px) {
       .cue-seg { min-width: 100%; }
-      .cue-seg button { padding: 12px 4px; font-size: 15px; white-space: nowrap; }
-      .cue-marks button { min-width: 72px; padding: 12px 0; font-size: 15px; }
+      .cue-seg button { padding: 12px 4px; font-size: 14px; white-space: nowrap; }
+      .cue-marks button { min-width: 72px; padding: 12px 0; font-size: 14px; }
     }
     .local-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; overflow: hidden; }
     .local-panel-title { font-size: 13px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
