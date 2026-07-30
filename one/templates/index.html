@@ -175,6 +175,13 @@
     body:not(.show-mode)[data-page="companion"] .card { background: #16141b; }
     body:not(.show-mode)[data-page="network"]   .card { background: #121822; }
     body:not(.show-mode)[data-page="system"]    .card { background: #1a1613; }
+    /* section labels echo the page hue — same weight/brightness discipline as
+       the surface tints; Displays keeps the standard amber (brand anchor) */
+    .section-label { transition: color 0.35s; }
+    body:not(.show-mode)[data-page="timer"]     .section-label { color: #57C98D; }
+    body:not(.show-mode)[data-page="companion"] .section-label { color: #A18BE0; }
+    body:not(.show-mode)[data-page="network"]   .section-label { color: #5FA3DC; }
+    body:not(.show-mode)[data-page="system"]    .section-label { color: #E0913F; }
     .card-body { padding: 28px; }
 
     /* ── Status bar ── */
