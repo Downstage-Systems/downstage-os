@@ -2594,20 +2594,24 @@ def system_restart():
 _output_power = {}   # output name -> False when powered off (live, non-persistent)
 
 
-def _open_identify_window(display, label, idx):
+def _open_identify_window(display, label, idx, url=None):
     return subprocess.Popen([
         "chromium", *_COMMON_FLAGS,
         f"--user-data-dir=/tmp/kiosk-hdmi{idx}",
         f"--window-position={display['x']},{display['y']}",
         f"--window-size={display['w']},{display['h']}",
-        "--kiosk", f"http://localhost:8080/identify-page/{label}",
+        "--kiosk", url or f"http://localhost:8080/identify-page/{label}",
     ], env=_chromium_env())
 
 
 @app.route("/displays/identify", methods=["POST"])
 def displays_identify():
-    """Flash a big number on each output for a few seconds, then restore."""
+    """Flash a big number on each output for a few seconds, then restore.
+    With {"screen": "info"} (fleet Identify) the outputs show the branded
+    Unit Info screen — name, address, serial — instead of bare numbers."""
     global _win
+    info = (request.get_json(silent=True) or {}).get("screen") == "info"
+    url  = "http://localhost:8080/welcome" if info else None
     displays = get_displays(fresh=True)
     def run():
         with _wlock:
@@ -2615,8 +2619,8 @@ def displays_identify():
             _win[0] = _win[1] = None
             for d in displays:
                 n = min(d["port"], 2)
-                _win[n - 1] = _open_identify_window(d, str(d["port"]), n)
-        time.sleep(5)
+                _win[n - 1] = _open_identify_window(d, str(d["port"]), n, url)
+        time.sleep(7 if info else 5)
         launch_all_windows()
     threading.Thread(target=run, daemon=True).start()
     return jsonify({"ok": True, "displays": len(displays)})
@@ -3103,7 +3107,8 @@ def fleet_identify():
         return jsonify({"ok": False, "error": "bad ip"}), 400
     for path in ("/output/identify", "/displays/identify"):
         try:
-            r = requests.post(f"http://{ip}:8080{path}", timeout=4)
+            r = requests.post(f"http://{ip}:8080{path}", timeout=4,
+                              json={"screen": "info"})
             if r.ok:
                 try:
                     body_ok = bool(r.json().get("ok", True))
@@ -4769,6 +4774,8 @@ def welcome_page():
     live address, and hotspot credentials when broadcasting. Polls status so
     the address updates as networks come and go."""
     config = load_config()
+    uname = re.sub(r"[^A-Za-z0-9 ._-]", "", config.get("unit_name", ""))[:24]
+    uname_html = f'<div class="uname">{uname}</div>' if uname else ""
     return f"""<!DOCTYPE html><html><head><style>
 @font-face {{ font-family:'Rajdhani'; font-weight:700; src:url('/static/fonts/rajdhani-700.woff2') format('woff2'); }}
 @font-face {{ font-family:'STMono'; src:url('/static/fonts/share-tech-mono-400.woff2') format('woff2'); }}
@@ -4785,11 +4792,14 @@ h1 span {{ color:#2FD97B; }}
 #hs .t {{ font-family:'STMono',monospace; font-size:2vh; color:#F5A524; letter-spacing:0.2em;
           text-transform:uppercase; margin-bottom:1vh; }}
 #hs .v {{ font-family:'STMono',monospace; font-size:2.6vh; color:#E8ECEF; }}
+.uname {{ font-size:3vh; font-weight:700; letter-spacing:0.18em; text-transform:uppercase;
+          border:0.45vh solid rgba(47,217,123,0.45); border-radius:1.5vh; padding:0.7vh 3.5vh; }}
 .ser {{ position:fixed; bottom:3vh; font-family:'STMono',monospace; font-size:1.6vh; color:#3a444d;
         letter-spacing:0.2em; }}
 </style></head><body>
 <svg class="mark" viewBox="0 0 96 96"><rect x="6" y="10" width="84" height="66" rx="10" fill="none" stroke="#e8ecef" stroke-width="7"/><rect x="20" y="54" width="40" height="9" rx="4.5" fill="#2fd97b"/><rect x="64" y="54" width="12" height="9" rx="4.5" fill="#e8ecef" opacity="0.28"/><rect x="20" y="83" width="26" height="7" rx="3.5" fill="#2fd97b"/><rect x="50" y="83" width="26" height="7" rx="3.5" fill="#2fd97b"/></svg>
 <h1>Downstage <span>One</span></h1>
+{uname_html}
 <div>
   <div class="addr" id="addr">{socket.gethostname()}.local:8080</div>
   <div class="sub" id="ip"></div>

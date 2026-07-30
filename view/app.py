@@ -979,6 +979,8 @@ def identify_page(label):
 @app.route("/welcome")
 def welcome_page():
     config = load_config()
+    uname  = re.sub(r"[^A-Za-z0-9 ._-]", "", config.get("unit_name", ""))[:24]
+    uname_html = f'<div class="uname">{uname}</div>' if uname else ""
     host   = socket.gethostname()
     ip     = get_local_ip()
     addr   = f"{host}.local:8080"
@@ -994,6 +996,9 @@ def welcome_page():
         '.brand{font-size:3.2vh;color:#e8ecef;letter-spacing:0.4em;font-weight:600}'
         '.brand span{color:#2fd97b}'
         '.addr{font-family:monospace;font-size:3.4vh;color:#2fd97b}'
+        '.uname{font-size:2.6vh;color:#e8ecef;font-weight:700;letter-spacing:0.18em;'
+        'text-transform:uppercase;border:0.4vh solid rgba(47,217,123,0.45);'
+        'border-radius:1.4vh;padding:0.6vh 3vh}'
         'p{font-size:1.9vh;color:#565e66;letter-spacing:0.06em}'
         '</style></head><body>'
         '<svg viewBox="0 0 96 96"><rect x="6" y="10" width="84" height="66" rx="10" '
@@ -1001,6 +1006,7 @@ def welcome_page():
         '<rect x="20" y="54" width="40" height="9" rx="4.5" fill="#2fd97b"/>'
         '<rect x="20" y="83" width="56" height="7" rx="3.5" fill="#2fd97b"/></svg>'
         '<div class="brand">DOWNSTAGE <span>VIEW</span></div>'
+        f'{uname_html}'
         f'<div class="addr">{addr}</div>'
         f'<p>{ip_line} &middot; set up from any browser on the same network</p>'
         f'<p>{config.get("serial", "")}</p>'
@@ -2791,7 +2797,8 @@ def fleet_identify():
         return jsonify({"ok": False, "error": "bad ip"}), 400
     for path in ("/output/identify", "/displays/identify"):
         try:
-            r = requests.post(f"http://{ip}:8080{path}", timeout=4)
+            r = requests.post(f"http://{ip}:8080{path}", timeout=4,
+                              json={"screen": "info"})
             if r.ok:
                 try:
                     body_ok = bool(r.json().get("ok", True))
