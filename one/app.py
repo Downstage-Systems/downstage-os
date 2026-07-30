@@ -4740,16 +4740,24 @@ def identify_page(label):
     label = re.sub(r"[^A-Za-z0-9 ]", "", label)[:12]
     # colour identity matches the config UI: HDMI 1 light blue, HDMI 2 green
     colour = {"1": "#2E90D9"}.get(label, "#12A95C")
+    # unit identity, so Identify answers "which box is this" — not just
+    # "which output" (matches the View, and the System-tab hint's promise)
+    uname = load_config().get("unit_name", "") or socket.gethostname()
+    uname = re.sub(r"[^A-Za-z0-9 ._-]", "", uname)[:24]
     return (
         '<!DOCTYPE html><html><head><style>'
         '*{margin:0;padding:0}'
         f'body{{background:{colour};color:#fff;display:flex;flex-direction:column;'
         'align-items:center;justify-content:center;height:100vh;'
         'font-family:sans-serif;text-align:center}'
-        '.n{font-size:40vh;font-weight:800;line-height:1}'
+        '.n{font-size:36vh;font-weight:800;line-height:1}'
         '.l{font-size:5vh;letter-spacing:0.3em;text-transform:uppercase;opacity:.85}'
+        '.u{font-size:6vh;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;'
+        'margin-top:3vh;padding:1vh 4vh;border:0.6vh solid rgba(255,255,255,.7);'
+        'border-radius:2vh}'
         '</style></head><body>'
         f'<div class="n">{label}</div><div class="l">This Output</div>'
+        f'<div class="u">{uname}</div>'
         '</body></html>'
     ), 200, {"Content-Type": "text/html"}
 
