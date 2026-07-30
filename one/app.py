@@ -271,10 +271,10 @@ threading.Thread(target=_wifi_watch, daemon=True).start()
 # The Argon V5's HS100B DAC (enabled via dwc2 host mode) appears as a USB
 # Audio ALSA card. Cue marks fire once per crossing while OnTime plays.
 _AUDIO_DIR = Path(__file__).parent / "static" / "audio"
-_CUE_SPOKEN = {300000: "five-minutes", 120000: "two-minutes", 60000: "one-minute",
-               30000: "thirty-seconds", 10000: "ten-seconds", 0: "time"}
-_CUE_TONES  = {300000: "tone-mark", 120000: "tone-mark", 60000: "tone-mark",
-               30000: "tone-warn", 10000: "tone-warn", 0: "tone-zero"}
+_CUE_SPOKEN = {600000: "ten-minutes", 300000: "five-minutes", 120000: "two-minutes",
+               60000: "one-minute", 30000: "thirty-seconds", 10000: "ten-seconds", 0: "time"}
+_CUE_TONES  = {600000: "tone-mark", 300000: "tone-mark", 120000: "tone-mark",
+               60000: "tone-mark", 30000: "tone-warn", 10000: "tone-warn", 0: "tone-zero"}
 _cue_last_ms = [None]
 
 
@@ -301,14 +301,15 @@ def _play_cue(name):
 
 def _cue_loop():
     while True:
-        mode = load_config().get("audio_cues", "off")
+        cfg = load_config()
+        mode = cfg.get("audio_cues", "off")
         if mode not in ("tones", "spoken"):
             _cue_last_ms[0] = None
             time.sleep(3)
             continue
+        enabled = set(cfg.get("cue_marks", list(_CUE_SPOKEN)))
         cur = None
         try:
-            cfg = load_config()
             ip = cfg.get("ip") if cfg.get("mode") == "remote" else "127.0.0.1"
             r = requests.get(f"http://{ip}:4001/api/poll", timeout=0.8)
             t = r.json()["payload"]["timer"]
@@ -322,7 +323,7 @@ def _cue_loop():
             # fire the single lowest mark crossed this tick — no barrage
             # after a big cue-jump
             for mark in sorted(table):
-                if cur <= mark < last:
+                if mark in enabled and cur <= mark < last:
                     _play_cue(table[mark])
                     break
         _cue_last_ms[0] = cur
@@ -2164,6 +2165,7 @@ def status():
         "name": config.get("unit_name", ""),
         "virtual_previews": bool(config.get("virtual_previews", True)),
         "audio_cues": config.get("audio_cues", "off"),
+        "cue_marks": config.get("cue_marks", sorted(_CUE_SPOKEN, reverse=True)),
         "now_showing": _now_showing(),
         "health": _health_summary(),
         "os_update_available": bool(_update_status["os"].get("update_available")),
@@ -3106,11 +3108,23 @@ def fleet_identify():
 
 @app.route("/audio-cues", methods=["POST"])
 def set_audio_cues():
-    mode = str((request.get_json() or {}).get("mode", "off"))
-    if mode not in ("off", "tones", "spoken"):
-        return jsonify({"ok": False, "error": "bad mode"}), 400
-    save_config({"audio_cues": mode})
-    return jsonify({"ok": True, "mode": mode})
+    body = request.get_json() or {}
+    out = {}
+    if "mode" in body:
+        mode = str(body["mode"])
+        if mode not in ("off", "tones", "spoken"):
+            return jsonify({"ok": False, "error": "bad mode"}), 400
+        out["audio_cues"] = mode
+    if "marks" in body:
+        try:
+            marks = sorted({int(m) for m in body["marks"]} & set(_CUE_SPOKEN), reverse=True)
+        except (TypeError, ValueError):
+            return jsonify({"ok": False, "error": "bad marks"}), 400
+        out["cue_marks"] = marks
+    if not out:
+        return jsonify({"ok": False, "error": "nothing to set"}), 400
+    save_config(out)
+    return jsonify({"ok": True, **out})
 
 
 @app.route("/audio-cues/test", methods=["POST"])

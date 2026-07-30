@@ -339,6 +339,17 @@
       font: inherit; font-weight: 600; cursor: pointer;
       text-align: center; display: flex; align-items: center; justify-content: center; }
     .cue-seg button.on { border-color: var(--green-bd); color: var(--green); background: var(--green-bg); }
+    .cue-marks { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .cue-marks button { flex: 1; min-width: 58px; padding: 8px 0; background: var(--surface2);
+      border: 1px solid var(--border2); border-radius: 8px; color: var(--text);
+      font-family: 'Share Tech Mono', monospace; font-size: 13px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; }
+    .cue-marks button:not(.on) { opacity: 0.35; }
+    @media (max-width: 600px) {
+      .cue-seg { min-width: 100%; }
+      .cue-seg button { padding: 12px 4px; font-size: 15px; white-space: nowrap; }
+      .cue-marks button { min-width: 72px; padding: 12px 0; font-size: 15px; }
+    }
     .local-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; overflow: hidden; }
     .local-panel-title { font-size: 13px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
     .local-panel-title svg { width: 14px; height: 14px; fill: var(--muted); flex-shrink: 0; }
@@ -1983,7 +1994,16 @@
             </div>
             <button class="btn-sm" onclick="testAudioCues()">Test Audio</button>
           </div>
-          <div class="external-url-hint">Time calls through the unit's 3.5mm jack as the timer passes 5:00 &middot; 2:00 &middot; 1:00 &middot; 0:30 &middot; 0:10 and zero &mdash; feed it to comms or a backstage speaker. Requires the OnTime server (local or remote): cues follow the OnTime timer, so other display sources (external URLs, patterns, Companion) have nothing to cue from. Saved on this unit.</div>
+          <div class="cue-marks" id="cue-marks">
+            <button data-ms="600000" class="on" onclick="toggleCueMark(600000)">10:00</button>
+            <button data-ms="300000" class="on" onclick="toggleCueMark(300000)">5:00</button>
+            <button data-ms="120000" class="on" onclick="toggleCueMark(120000)">2:00</button>
+            <button data-ms="60000" class="on" onclick="toggleCueMark(60000)">1:00</button>
+            <button data-ms="30000" class="on" onclick="toggleCueMark(30000)">0:30</button>
+            <button data-ms="10000" class="on" onclick="toggleCueMark(10000)">0:10</button>
+            <button data-ms="0" class="on" onclick="toggleCueMark(0)">0:00</button>
+          </div>
+          <div class="external-url-hint">Time calls through the unit's 3.5mm jack as the timer passes each selected mark &mdash; tap a time to turn that callout on or off, and feed the jack to comms or a backstage speaker. Requires the OnTime server (local or remote): cues follow the OnTime timer, so other display sources (external URLs, patterns, Companion) have nothing to cue from. Saved on this unit.</div>
         </div>
       </div>
       </div>
@@ -2789,6 +2809,7 @@
         if (vpt) vpt.className = 'toggle ' + (window._virtualPreviews ? 'on' : '');
       }
       if (d.audio_cues && !window._cueTouched) paintAudioCues(d.audio_cues);
+      if (d.cue_marks && !window._marksTouched) paintCueMarks(d.cue_marks);
       if (d.hdmi_connected) {
         for (const n of ['1','2']) {
           const on = d.hdmi_connected[n];
@@ -4172,6 +4193,25 @@
       await fetch('/audio-cues', { method: 'POST',
         headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: m }) });
       window._cueTouched = false;
+    } catch (e) { showToast('Could not save the setting.', 'error'); }
+  }
+  function paintCueMarks(list) {
+    const set = new Set((list || []).map(Number));
+    document.querySelectorAll('#cue-marks button').forEach(b =>
+      b.classList.toggle('on', set.has(+b.dataset.ms)));
+    window._cueMarks = Array.from(set);
+  }
+  async function toggleCueMark(ms) {
+    const set = new Set(window._cueMarks ||
+      [600000, 300000, 120000, 60000, 30000, 10000, 0]);
+    set.has(ms) ? set.delete(ms) : set.add(ms);
+    window._marksTouched = true;
+    paintCueMarks(Array.from(set));
+    try {
+      await fetch('/audio-cues', { method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ marks: Array.from(set) }) });
+      window._marksTouched = false;
     } catch (e) { showToast('Could not save the setting.', 'error'); }
   }
   async function testAudioCues() {
