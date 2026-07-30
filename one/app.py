@@ -3044,6 +3044,7 @@ def discover_last():
 
 _FLEET_SRC_LABELS = {
     "off": "Off", "companion": "Companion", "config": "Setup UI",
+    "welcome": "Unit Info", "holding": "Unit Info",
     "cleantimer": "Custom Timer", "external": "External URL",
     "/timer": "Stage Timer", "/countdown": "Countdown", "/clock": "Studio Clock",
     "/backstage": "Backstage", "/studio": "Studio Clock", "/timeline": "Timeline",
