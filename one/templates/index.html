@@ -346,6 +346,13 @@
       letter-spacing: 0.04em; cursor: pointer;
       text-align: center; display: flex; align-items: center; justify-content: center; }
     .cue-seg button.on { border-color: var(--green-bd); color: var(--green); background: var(--green-bg); }
+    .wd-box { background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 10px; padding: 12px 14px; margin-top: 14px; }
+    .wd-box .toggle-row { margin-top: 0; }
+    .wd-sub { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border);
+      transition: opacity 0.2s; }
+    .wd-sub.off { opacity: 0.4; pointer-events: none; }
     .cue-marks { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
     .cue-marks button { flex: 1; min-width: 58px; padding: 8px 0; background: var(--surface2);
       border: 1px solid var(--border2); border-radius: 8px; color: var(--text);
@@ -1763,17 +1770,19 @@
             <button class="btn-sm" id="hdmi1-power-btn" onclick="toggleOutputPower(1)">HDMI 1: On</button>
             <button class="btn-sm" id="hdmi2-power-btn" onclick="toggleOutputPower(2)">HDMI 2: On</button>
           </div>
-          <div class="toggle-row">
-            <span class="toggle-label">OnTime watchdog (auto-switch displays when the server is offline)</span>
-            <button class="toggle on" id="watchdog-toggle" onclick="toggleWatchdog()"></button>
-          </div>
-          <div class="toggle-row" style="margin-top:8px">
-            <span class="toggle-label">If the server drops, displays show</span>
-            <div class="cue-seg" style="flex:0 0 auto; min-width:0">
-              <button id="wdfb-holding" class="on" style="flex:0 0 auto; padding:7px 16px"
-                      onclick="setWdFallback('holding')">Holding Page</button>
-              <button id="wdfb-black" style="flex:0 0 auto; padding:7px 16px"
-                      onclick="setWdFallback('black')">Black</button>
+          <div class="wd-box">
+            <div class="toggle-row" style="margin-top:0">
+              <span class="toggle-label">OnTime watchdog &mdash; auto-switch displays when the server is offline, restore when it returns</span>
+              <button class="toggle on" id="watchdog-toggle" onclick="toggleWatchdog()"></button>
+            </div>
+            <div class="wd-sub" id="wd-sub">
+              <span class="toggle-label" style="color:var(--muted)">While the server is down, show</span>
+              <div class="cue-seg" style="flex:0 0 auto; min-width:0">
+                <button id="wdfb-holding" class="on" style="flex:0 0 auto; padding:6px 14px"
+                        onclick="setWdFallback('holding')">Holding Page</button>
+                <button id="wdfb-black" style="flex:0 0 auto; padding:6px 14px"
+                        onclick="setWdFallback('black')">Black</button>
+              </div>
             </div>
           </div>
         </div>
@@ -2924,6 +2933,7 @@
       // Watchdog toggle
       watchdogOn = d.watchdog ?? true;
       document.getElementById('watchdog-toggle').className = 'toggle ' + (watchdogOn ? 'on' : '');
+      paintWdSub();
       if (!isDirty && d.watchdog_fallback) { wdFallback = d.watchdog_fallback; paintWdFallback(); }
 
       // Hotspot — if state changed (e.g. auto-fallback fired, or another
@@ -4170,12 +4180,18 @@
     document.getElementById('hdmi2-rotate').value = hdmi2Rotate;
     document.getElementById('watchdog-toggle').className = 'toggle ' + (watchdogOn ? 'on' : '');
     paintWdFallback();
+    paintWdSub();
   }
 
   function toggleWatchdog() {
     watchdogOn = !watchdogOn;
     document.getElementById('watchdog-toggle').className = 'toggle ' + (watchdogOn ? 'on' : '');
+    paintWdSub();
     markDirty();
+  }
+  function paintWdSub() {
+    const s = document.getElementById('wd-sub');
+    if (s) s.classList.toggle('off', !watchdogOn);
   }
   function paintWdFallback() {
     for (const k of ['holding', 'black']) {
