@@ -2007,6 +2007,8 @@
               <button id="cue-spoken" onclick="setAudioCues('spoken')">Spoken Times</button>
             </div>
             <button class="btn-sm" onclick="testAudioCues()">Test Audio</button>
+            <button class="btn-sm" id="linetone-btn" onclick="toggleLineTone()"
+                    title="Continuous 1 kHz reference out the 3.5mm jack — for console line checks. A firing cue cuts the tone.">Line Tone</button>
           </div>
           <div class="cue-marks" id="cue-marks">
             <button data-ms="600000" class="on" onclick="toggleCueMark(600000)">10:00</button>
@@ -2017,7 +2019,7 @@
             <button data-ms="10000" class="on" onclick="toggleCueMark(10000)">0:10</button>
             <button data-ms="0" class="on" onclick="toggleCueMark(0)">0:00</button>
           </div>
-          <div class="external-url-hint">Time calls through the unit's 3.5mm jack as the timer passes each selected mark &mdash; tap a time to turn that callout on or off, and feed the jack to comms or a backstage speaker. Requires the OnTime server (local or remote): cues follow the OnTime timer, so other display sources (external URLs, patterns, Companion) have nothing to cue from. Saved on this unit.</div>
+          <div class="external-url-hint">Time calls through the unit's 3.5mm jack as the timer passes each selected mark &mdash; tap a time to turn that callout on or off, and feed the jack to comms or a backstage speaker. Requires the OnTime server (local or remote): cues follow the OnTime timer, so other display sources (external URLs, patterns, Companion) have nothing to cue from. Saved on this unit. Line Tone plays a continuous 1&nbsp;kHz reference for console line checks &mdash; a firing cue cuts it.</div>
         </div>
       </div>
       </div>
@@ -2829,6 +2831,9 @@
       }
       if (d.audio_cues && !window._cueTouched) paintAudioCues(d.audio_cues);
       if (d.cue_marks && !window._marksTouched) paintCueMarks(d.cue_marks);
+      if (typeof d.line_tone !== 'undefined' && !window._toneTouched) {
+        window._lineTone = !!d.line_tone; paintLineTone();
+      }
       if (d.hdmi_connected) {
         for (const n of ['1','2']) {
           const on = d.hdmi_connected[n];
@@ -4242,6 +4247,28 @@
     document.getElementById('power-bar').style.display = 'none';
     try { await fetch('/power/ack', { method: 'POST' }); }
     catch (e) { showToast('Could not save the dismissal.', 'error'); }
+  }
+  // Line tone: continuous 1kHz out the jack until switched off (or a cue fires)
+  function paintLineTone() {
+    const b = document.getElementById('linetone-btn');
+    if (!b) return;
+    b.textContent = window._lineTone ? 'Tone On' : 'Line Tone';
+    b.style.borderColor = window._lineTone ? 'var(--amber-bd)' : '';
+    b.style.color = window._lineTone ? 'var(--amber)' : '';
+  }
+  async function toggleLineTone() {
+    const on = !window._lineTone;
+    window._lineTone = on;
+    window._toneTouched = true;
+    paintLineTone();
+    try {
+      const d = await (await fetch('/audio-cues/line-tone', { method: 'POST',
+        headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ on }) })).json();
+      window._lineTone = !!d.on;
+      paintLineTone();
+      window._toneTouched = false;
+      if (on && !d.ok) showToast(d.error || 'Could not start the tone.', 'error');
+    } catch (e) { showToast('Could not reach the unit.', 'error'); }
   }
   async function testAudioCues() {
     try {

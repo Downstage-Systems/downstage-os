@@ -289,7 +289,45 @@ def _audio_card():
     return None
 
 
+# Continuous 1 kHz line tone for console line checks — audio SMPTE bars.
+# A firing cue cuts the tone (the show outranks the soundcheck).
+_line_tone = {"proc": None}
+
+
+def _line_tone_on():
+    p = _line_tone["proc"]
+    return p is not None and p.poll() is None
+
+
+def _stop_line_tone():
+    p = _line_tone["proc"]
+    if p is not None and p.poll() is None:
+        try:
+            os.killpg(os.getpgid(p.pid), signal.SIGTERM)
+        except Exception:
+            pass
+    _line_tone["proc"] = None
+    subprocess.run(["pkill", "-f", "tone-line.wav"],
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def _start_line_tone():
+    if _line_tone_on():
+        return True
+    card = _audio_card()
+    f = _AUDIO_DIR / "tone-line.wav"
+    if card is None or not f.exists():
+        return False
+    _line_tone["proc"] = subprocess.Popen(
+        ["bash", "-c",
+         f"while :; do aplay -q -D plughw:{card},0 '{f}' || exit; done"],
+        preexec_fn=os.setsid,
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return True
+
+
 def _play_cue(name):
+    _stop_line_tone()
     card = _audio_card()
     f = _AUDIO_DIR / f"{name}.wav"
     if card is None or not f.exists():
@@ -2179,6 +2217,7 @@ def status():
         "virtual_previews": bool(config.get("virtual_previews", True)),
         "audio_cues": config.get("audio_cues", "off"),
         "cue_marks": config.get("cue_marks", sorted(_CUE_SPOKEN, reverse=True)),
+        "line_tone": _line_tone_on(),
         "now_showing": _now_showing(),
         "health": _health_summary(),
         "os_update_available": bool(_update_status["os"].get("update_available")),
@@ -3152,6 +3191,17 @@ def set_audio_cues():
         return jsonify({"ok": False, "error": "nothing to set"}), 400
     save_config(out)
     return jsonify({"ok": True, **out})
+
+
+@app.route("/audio-cues/line-tone", methods=["POST"])
+def line_tone_route():
+    on = bool((request.get_json() or {}).get("on"))
+    if on:
+        ok = _start_line_tone()
+        return jsonify({"ok": ok, "on": _line_tone_on(),
+                        **({} if ok else {"error": "No audio device — is the case DAC enabled?"})})
+    _stop_line_tone()
+    return jsonify({"ok": True, "on": False})
 
 
 @app.route("/audio-cues/test", methods=["POST"])
