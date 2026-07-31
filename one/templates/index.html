@@ -3390,6 +3390,23 @@
     }
   }
 
+  // Hidden iframes get their canvas backing stores purged (Companion's
+  // emulator buttons come back BLANK until poked). On return to view:
+  // stateless surface pages reload outright after a long hide; everything
+  // else gets a resize nudge, which repaints without losing state.
+  function _reviveFrame(k) {
+    const pn = _panels[k];
+    if (!pn) return;
+    const stateless = /\/emulator\/|\/tablet/.test(pn.url);
+    if (stateless && pn.hiddenAt && Date.now() - pn.hiddenAt > 30000) {
+      pn.frame.src = pn.url;
+    } else {
+      pn.frame.style.width = '99.99%';
+      requestAnimationFrame(() => { pn.frame.style.width = ''; });
+    }
+    pn.hiddenAt = null;
+  }
+
   function renderPanelTabs() {
     const bar = document.getElementById('emu-tabs');
     bar.innerHTML = '';
@@ -3404,7 +3421,12 @@
       x.onclick = (e) => { e.stopPropagation(); closePanelTab(k); };
       t.appendChild(x);
       bar.appendChild(t);
-      _panels[k].frame.style.display = (k === _activePanel) ? '' : 'none';
+      const pn = _panels[k];
+      const show = (k === _activePanel);
+      if (show && !pn.visible) _reviveFrame(k);
+      if (!show && pn.visible) pn.hiddenAt = Date.now();
+      pn.visible = show;
+      pn.frame.style.display = show ? '' : 'none';
     }
   }
 
@@ -3421,6 +3443,9 @@
     document.body.classList.remove('panel-open');
     document.body.style.top = '';
     window.scrollTo(0, _panelScrollY);
+    for (const k of Object.keys(_panels)) {
+      if (_panels[k].visible) { _panels[k].hiddenAt = Date.now(); _panels[k].visible = false; }
+    }
   }
   const CLOSER_ALIAS = hidePanel;   // legacy name kept below
 
@@ -3754,7 +3779,17 @@
   }
   // …and after the whole browser tab/app was backgrounded (iOS evicts there too)
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') reviveVirtualPreviews();
+    if (document.visibilityState === 'visible') {
+      reviveVirtualPreviews();
+      // an open tool panel was backgrounded with the whole browser tab —
+      // its canvases may be gone too
+      if (document.body.classList.contains('panel-open') && _activePanel && _panels[_activePanel]) {
+        _panels[_activePanel].visible = false;
+        renderPanelTabs();
+      }
+    } else if (_activePanel && _panels[_activePanel] && _panels[_activePanel].visible) {
+      _panels[_activePanel].hiddenAt = Date.now();
+    }
   });
 
   // Reload a virtual tile's iframe (it lives in THIS browser, so the kiosk's
