@@ -2547,7 +2547,8 @@
       badge.textContent = 'Not installed';
       actions.innerHTML = `<button class="btn-sm success" id="install-btn" onclick="installOntime()">
         <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zm-8 2V5h2v6h1.17L12 13.17 9.83 11H11zm-6 7h14v2H5z"/></svg>
-        Download &amp; Install OnTime</button>`;
+        Download &amp; Install OnTime</button>
+        <span style="font-size:11px;color:var(--muted)">Downloads from the official source — comes up pre-loaded with the Downstage show profile: timers, views, and settings ready to run</span>`;
     } else if (!ontimeRunning) {
       badge.className = 'status-badge stopped';
       badge.textContent = 'Stopped';
@@ -3086,7 +3087,7 @@
         <button class="btn-sm success" id="companion-install-btn" onclick="installCompanion()">
           <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zm-8 2V5h2v6h1.17L12 13.17 9.83 11H11zm-6 7h14v2H5z"/></svg>
           Install Companion</button>
-        <span style="font-size:11px;color:var(--muted)">Downloads from Bitfocus — needs internet, takes 5–10 min</span>`;
+        <span style="font-size:11px;color:var(--muted)">Downloads from Bitfocus — needs internet, takes 5–10 min. Comes up pre-loaded with the Downstage button layout</span>`;
     } else if (!companionRunning) {
       badge.className   = 'status-badge stopped';
       badge.textContent = 'Stopped';
