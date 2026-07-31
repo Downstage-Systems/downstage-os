@@ -524,7 +524,14 @@
       background: var(--amber-bg); border: 1px solid var(--amber-bd); color: var(--amber);
     }
     .toggle-row { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
-    .wdfb { padding: 7px 16px; background: var(--surface2); border: 1px solid var(--border2);
+    .wd-box { background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 10px; padding: 12px 14px; margin-top: 14px; }
+    .wd-box .toggle-row { margin-top: 0; }
+    .wd-sub { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border);
+      transition: opacity 0.2s; }
+    .wd-sub.off { opacity: 0.4; pointer-events: none; }
+    .wdfb { padding: 6px 14px; background: var(--surface2); border: 1px solid var(--border2);
       border-radius: 8px; color: var(--muted); font-family: var(--font-display);
       font-size: 13px; font-weight: 600; letter-spacing: 0.04em; cursor: pointer; }
     .wdfb.on { border-color: var(--green-bd); color: var(--green); background: var(--green-bg); }
@@ -1215,15 +1222,17 @@
 
 
         <!-- Watchdog toggle -->
-        <div class="toggle-row">
-          <span class="toggle-label">Watchdog — switch the display if OnTime goes offline, restore when it returns</span>
-          <button class="toggle on" id="watchdog-toggle" onclick="toggleWatchdog()"></button>
-        </div>
-        <div class="toggle-row">
-          <span class="toggle-label">If the server drops, the display shows</span>
-          <div style="display:flex; gap:8px">
-            <button id="wdfb-holding" class="wdfb on" onclick="setWdFallback('holding')">Holding Page</button>
-            <button id="wdfb-black" class="wdfb" onclick="setWdFallback('black')">Black</button>
+        <div class="wd-box">
+          <div class="toggle-row" style="margin-top:0">
+            <span class="toggle-label">Watchdog &mdash; switch the display if OnTime goes offline, restore when it returns</span>
+            <button class="toggle on" id="watchdog-toggle" onclick="toggleWatchdog()"></button>
+          </div>
+          <div class="wd-sub" id="wd-sub">
+            <span class="toggle-label" style="color:var(--muted)">While the server is down, show</span>
+            <div style="display:flex; gap:8px">
+              <button id="wdfb-holding" class="wdfb on" onclick="setWdFallback('holding')">Holding Page</button>
+              <button id="wdfb-black" class="wdfb" onclick="setWdFallback('black')">Black</button>
+            </div>
           </div>
         </div>
       </div>
@@ -1742,6 +1751,11 @@
   function toggleWatchdog() {
     watchdogOn = !watchdogOn;
     document.getElementById('watchdog-toggle').className = 'toggle ' + (watchdogOn ? 'on' : '');
+    paintWdSub();
+  }
+  function paintWdSub() {
+    const s = document.getElementById('wd-sub');
+    if (s) s.classList.toggle('off', !watchdogOn);
   }
 
   function fetchT(url, ms = 4000) {
@@ -1997,6 +2011,7 @@
       renderOsPanel(d);
       if (d.serial) document.getElementById('os-serial').textContent = d.serial;
       watchdogOn = d.watchdog ?? true;
+      paintWdSub();
       if (!window._wdfbInit && d.watchdog_fallback) {
         wdFallback = d.watchdog_fallback; paintWdFallback(); window._wdfbInit = true;
       }
