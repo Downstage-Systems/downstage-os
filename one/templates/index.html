@@ -1827,6 +1827,18 @@
         </div>
       </div>
 
+      <div class="field full-only">
+        <div class="section-label">Companion Satellite</div>
+        <div class="local-panel">
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap">
+            <span class="status-badge missing" id="sat-badge">Checking&hellip;</span>
+            <span style="font-size:12.5px; color:var(--muted)" id="sat-note"></span>
+          </div>
+          <div id="sat-actions" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:12px"></div>
+          <div class="external-url-hint">Satellite hands this unit's Stream Decks to a Companion server somewhere else &mdash; the FOH laptop, or another One. While Satellite is on, the onboard Companion stands down (two brains can't share one deck). Downloads from Bitfocus. The reverse also works with no setup: other machines running Bitfocus Satellite can join <i>this</i> unit's Companion.</div>
+        </div>
+      </div>
+
       </div><!-- /tpane-companion -->
       <div class="tpane full-only" id="tpane-network">
       <!-- Network (IP) -->
@@ -2852,6 +2864,7 @@
       if (typeof d.line_tone !== 'undefined' && !window._toneTouched) {
         window._lineTone = !!d.line_tone; paintLineTone();
       }
+      if (d.satellite && document.activeElement?.id !== 'sat-ip') renderSatellite(d.satellite);
       if (d.hdmi_connected) {
         for (const n of ['1','2']) {
           const on = d.hdmi_connected[n];
@@ -4309,6 +4322,66 @@
       window._toneTouched = false;
       if (on && !d.ok) showToast(d.error || 'Could not start the tone.', 'error');
     } catch (e) { showToast('Could not reach the unit.', 'error'); }
+  }
+  // ── Companion Satellite ──
+  function renderSatellite(s) {
+    const badge = document.getElementById('sat-badge');
+    const note  = document.getElementById('sat-note');
+    const act   = document.getElementById('sat-actions');
+    if (!badge || !s) return;
+    if (window._satBusy) return;   // an action is in flight — don't repaint under it
+    if (s.install_state === 'installing') {
+      badge.className = 'status-badge checking'; badge.textContent = 'Installing…';
+      note.textContent = 'Downloading from Bitfocus — takes a few minutes';
+      act.innerHTML = '';
+      return;
+    }
+    if (!s.installed) {
+      badge.className = 'status-badge missing'; badge.textContent = 'Not installed';
+      note.textContent = '';
+      act.innerHTML = `<button class="btn-sm success" onclick="installSatellite()">
+        <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zm-14 9h14v2H5z"/></svg>
+        Install Satellite</button>
+        <span style="font-size:11px;color:var(--muted)">Downloads from Bitfocus — needs internet</span>`;
+      return;
+    }
+    if (s.enabled && s.running) {
+      badge.className = 'status-badge running'; badge.textContent = 'Serving ' + (s.ip || 'remote');
+      note.textContent = 'Decks belong to the remote Companion — onboard Companion is stood down';
+      act.innerHTML = `<button class="btn-sm danger" onclick="setSatellite(false)">Disable — restore onboard Companion</button>`;
+      return;
+    }
+    if (s.enabled && !s.running) {
+      badge.className = 'status-badge stopped'; badge.textContent = 'Enabled, not running';
+      note.textContent = 'Service starting or failed — give it a moment';
+      act.innerHTML = `<button class="btn-sm danger" onclick="setSatellite(false)">Disable</button>`;
+      return;
+    }
+    badge.className = 'status-badge stopped'; badge.textContent = 'Off';
+    note.textContent = '';
+    act.innerHTML = `
+      <input id="sat-ip" placeholder="Remote Companion IP — e.g. 192.168.1.50"
+             autocomplete="off" spellcheck="false" value="${s.ip || ''}"
+             style="flex:1; min-width:200px; background:var(--surface2); border:1px solid var(--border2);
+                    border-radius:8px; color:var(--text); padding:8px 12px; font:inherit; font-size:13.5px">
+      <button class="btn-sm success" onclick="setSatellite(true)">Enable Satellite</button>`;
+  }
+  async function installSatellite() {
+    showToast('Installing Companion Satellite…', 'info');
+    try { await fetch('/satellite/install', { method: 'POST' }); } catch (e) {}
+  }
+  async function setSatellite(on) {
+    const ip = on ? (document.getElementById('sat-ip')?.value || '').trim() : '';
+    window._satBusy = true;
+    try {
+      const d = await (await fetch('/satellite/mode', { method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ on, ip }) })).json();
+      if (!d.ok) { showToast(d.error || 'Could not switch Satellite.', 'error'); return; }
+      showToast(on ? `Satellite serving ${ip} — onboard Companion stood down.`
+                   : 'Satellite off — onboard Companion restored.', 'success');
+    } catch (e) { showToast('Could not reach the unit.', 'error'); }
+    finally { window._satBusy = false; }
   }
   async function testAudioCues() {
     try {

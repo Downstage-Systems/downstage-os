@@ -2250,6 +2250,11 @@ def status():
         "watchdog_override":    _watchdog_override,
         "watchdog":             config.get("watchdog", True),
         "watchdog_fallback":    config.get("watchdog_fallback", "holding"),
+        "satellite": {"installed": satellite_is_installed(),
+                      "running": satellite_is_running(),
+                      "enabled": config.get("satellite_enabled", False),
+                      "ip": config.get("satellite_ip", ""),
+                      "install_state": _satellite_install["state"]},
         "hotspot_active":       hotspot_is_active(),
         "wifi":                 _wifi_health(),
         "portal":               dict(_portal),
@@ -3494,6 +3499,124 @@ def companion_emulator():
         eid = eid.split(":", 1)[1]
     save_config({"companion_emulator_id": eid})
     return jsonify({"ok": True, "id": eid})
+
+
+# ── Companion Satellite — donate this unit's Stream Decks to a remote
+# Companion (FOH laptop, another One). Satellite and the onboard Companion
+# can't share decks, so enabling one stands the other down.
+_satellite_install = {"state": "idle", "message": ""}
+
+
+def satellite_is_installed():
+    try:
+        out = subprocess.check_output(
+            ["systemctl", "show", "-p", "LoadState", "--value", "satellite"],
+            text=True, timeout=3,
+        ).strip()
+        return out == "loaded"
+    except Exception:
+        return False
+
+
+def satellite_is_running():
+    try:
+        out = subprocess.check_output(
+            ["systemctl", "is-active", "satellite"], text=True, timeout=3,
+        ).strip()
+        return out == "active"
+    except Exception:
+        return False
+
+
+def _satellite_install_worker():
+    """Customer-initiated install using Bitfocus's official script — same
+    licensing posture as the Companion install."""
+    _satellite_install["state"] = "installing"
+    _satellite_install["message"] = ""
+    try:
+        r = subprocess.run(
+            ["sudo", "bash", "-c",
+             "curl -sL https://raw.githubusercontent.com/bitfocus/companion-satellite/main/pi-image/install.sh | bash"],
+            capture_output=True, text=True, timeout=1800,
+        )
+        if r.returncode == 0 and satellite_is_installed():
+            # mode is OFF until the user points it somewhere — never let a
+            # fresh Satellite grab the decks out from under Companion
+            subprocess.run(["sudo", "systemctl", "disable", "--now", "satellite"],
+                           timeout=30, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            _satellite_install["state"] = "done"
+        else:
+            _satellite_install["state"] = "failed"
+            _satellite_install["message"] = (r.stderr or r.stdout or "install script failed")[-300:]
+    except Exception as e:
+        _satellite_install["state"] = "failed"
+        _satellite_install["message"] = str(e)
+    print(f"[satellite] install: {_satellite_install['state']} {_satellite_install['message'][:120]}")
+
+
+def _satellite_point_at(ip):
+    """Tell the running Satellite which Companion to serve (REST on :9999).
+    Retries while the service finishes booting."""
+    for _ in range(15):
+        try:
+            r = requests.post("http://127.0.0.1:9999/api/host",
+                              json={"host": ip}, timeout=3)
+            if r.ok:
+                return True
+        except Exception:
+            pass
+        time.sleep(2)
+    return False
+
+
+@app.route("/satellite/install", methods=["POST"])
+def satellite_install_route():
+    if _satellite_install["state"] == "installing":
+        return jsonify({"ok": True, "state": "installing"})
+    threading.Thread(target=_satellite_install_worker, daemon=True).start()
+    return jsonify({"ok": True, "state": "installing"})
+
+
+@app.route("/satellite/mode", methods=["POST"])
+def satellite_mode():
+    data = request.get_json() or {}
+    on = bool(data.get("on"))
+    if on:
+        ip = (data.get("ip") or "").strip()
+        try:
+            ipaddress.ip_address(ip)
+        except Exception:
+            return jsonify({"ok": False, "error": "Enter the remote Companion's IP address"})
+        if not satellite_is_installed():
+            return jsonify({"ok": False, "error": "Satellite is not installed"})
+        save_config({"satellite_enabled": True, "satellite_ip": ip})
+        subprocess.run(["sudo", "systemctl", "stop", "companion"], timeout=30,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(["sudo", "systemctl", "enable", "--now", "satellite"], timeout=30,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        threading.Thread(target=_satellite_point_at, args=(ip,), daemon=True).start()
+        _audit("SATELLITE", f"enabled -> {ip} (onboard Companion stood down)")
+        return jsonify({"ok": True, "on": True, "ip": ip})
+    save_config({"satellite_enabled": False})
+    subprocess.run(["sudo", "systemctl", "disable", "--now", "satellite"], timeout=30,
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    if companion_is_installed():
+        subprocess.run(["sudo", "systemctl", "start", "companion"], timeout=30,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    _audit("SATELLITE", "disabled (onboard Companion restored)")
+    return jsonify({"ok": True, "on": False})
+
+
+@app.route("/satellite/status")
+def satellite_status_route():
+    return jsonify({
+        "installed": satellite_is_installed(),
+        "running":   satellite_is_running(),
+        "enabled":   load_config().get("satellite_enabled", False),
+        "ip":        load_config().get("satellite_ip", ""),
+        "install_state":   _satellite_install["state"],
+        "install_message": _satellite_install["message"],
+    })
 
 
 @app.route("/companion/install", methods=["POST"])
