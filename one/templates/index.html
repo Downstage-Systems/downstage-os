@@ -1366,7 +1366,7 @@
       <div class="section-label show-quick-label">Quick Actions</div>
       <div class="show-quick" id="show-quick" style="display:none">
         <button class="btn-sm blackout" id="blackout-btn-quick" onclick="blackout()" title="Black out all displays — press again to resume">
-          <svg viewBox="0 0 24 24"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg>
+          <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="13" rx="2" stroke="currentColor" stroke-width="2"/><line x1="5.5" y1="7.5" x2="18.5" y2="15.5" stroke="currentColor" stroke-width="2"/></svg>
           Blackout</button>
         <button class="btn-sm qb-ontime" onclick="quickOpen('/editor/')" title="Open the OnTime Editor in a new tab" style="display:none">
           <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
@@ -1550,7 +1550,7 @@
             Reload Pages
           </button>
           <button class="btn-sm blackout" id="blackout-btn" onclick="blackout()" title="Black out all displays">
-            <svg viewBox="0 0 24 24"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg>
+            <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="13" rx="2" stroke="currentColor" stroke-width="2"/><line x1="5.5" y1="7.5" x2="18.5" y2="15.5" stroke="currentColor" stroke-width="2"/></svg>
             Blackout
           </button>
           <button class="btn-sm" onclick="identifyDisplays()" title="Flash a big 1 and 2 on the outputs">Identify</button>
@@ -4583,7 +4583,7 @@
   }
 
   // ── Blackout ──────────────────────────────────────────────────────────────────
-  const BLACKOUT_ICON = `<svg viewBox="0 0 24 24"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg>`;
+  const BLACKOUT_ICON = `<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="13" rx="2" stroke="currentColor" stroke-width="2"/><line x1="5.5" y1="7.5" x2="18.5" y2="15.5" stroke="currentColor" stroke-width="2"/></svg>`;
   let blackoutActive = false;
 
   function renderBlackoutBtn() {
