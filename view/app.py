@@ -116,6 +116,7 @@ def load_config():
     data.setdefault("cleantimer_keycolour",   "000000")
     data.setdefault("cleantimer_timercolour", "ffffff")
     data.setdefault("watchdog", True)
+    data.setdefault("watchdog_fallback", "holding")
     data.setdefault("os_update_repo", "")   # e.g. "youruser/downstage-os"
     data.setdefault("ip_history", [])
     return data
@@ -790,8 +791,11 @@ _watchdog_override = False
 def _launch_watchdog_window():
     """Swap to the holding page without touching config."""
     try:
-        source = load_config().get("source", "/timer")
-        _show(_source_url("holding" if _is_ontime_source(source) else source))
+        config = load_config()
+        source = config.get("source", "/timer")
+        # operator's choice of failover face: branded holding or black
+        fb = "off" if config.get("watchdog_fallback") == "black" else "holding"
+        _show(_source_url(fb if _is_ontime_source(source) else source))
         print("[watchdog] holding window shown")
     except Exception as e:
         print(f"[watchdog] FAILED to show holding window: {e}")
@@ -2339,6 +2343,7 @@ def status():
         "os_checked": _os_update.get("checked", False),
         "os_update_result": _os_update_result(),
         "watchdog":  config.get("watchdog", True),
+        "watchdog_fallback": config.get("watchdog_fallback", "holding"),
         "watchdog_override": _watchdog_override,
     })
 
@@ -2369,8 +2374,12 @@ def save():
     history = _update_ip_history(ip) if ip else load_config().get("ip_history", [])
     global _watchdog_override
     _watchdog_override = False
+    wd_fb = data.get("watchdog_fallback", "holding")
+    if wd_fb not in ("holding", "black"):
+        wd_fb = "holding"
     save_config({"ip": ip, "source": source, "external_url": external_url,
                  "watchdog": bool(data.get("watchdog", True)),
+                 "watchdog_fallback": wd_fb,
                  "cleantimer_freeze": bool(data.get("cleantimer_freeze", True)),
                  "cleantimer_hideprogress": bool(data.get("cleantimer_hideprogress", True)),
                  "cleantimer_hideclock": bool(data.get("cleantimer_hideclock", True)),

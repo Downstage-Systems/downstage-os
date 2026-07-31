@@ -1764,8 +1764,17 @@
             <button class="btn-sm" id="hdmi2-power-btn" onclick="toggleOutputPower(2)">HDMI 2: On</button>
           </div>
           <div class="toggle-row">
-            <span class="toggle-label">OnTime watchdog (auto-switch to holding page when offline)</span>
+            <span class="toggle-label">OnTime watchdog (auto-switch displays when the server is offline)</span>
             <button class="toggle on" id="watchdog-toggle" onclick="toggleWatchdog()"></button>
+          </div>
+          <div class="toggle-row" style="margin-top:8px">
+            <span class="toggle-label">If the server drops, displays show</span>
+            <div class="cue-seg" style="flex:0 0 auto; min-width:0">
+              <button id="wdfb-holding" class="on" style="flex:0 0 auto; padding:7px 16px"
+                      onclick="setWdFallback('holding')">Holding Page</button>
+              <button id="wdfb-black" style="flex:0 0 auto; padding:7px 16px"
+                      onclick="setWdFallback('black')">Black</button>
+            </div>
           </div>
         </div>
       </div>
@@ -2915,6 +2924,7 @@
       // Watchdog toggle
       watchdogOn = d.watchdog ?? true;
       document.getElementById('watchdog-toggle').className = 'toggle ' + (watchdogOn ? 'on' : '');
+      if (!isDirty && d.watchdog_fallback) { wdFallback = d.watchdog_fallback; paintWdFallback(); }
 
       // Hotspot — if state changed (e.g. auto-fallback fired, or another
       // browser toggled it), update the chip and refresh the WiFi list too
@@ -2996,6 +3006,7 @@
           hdmi1_ct_keycolour: ctOpts[1].keycolour, hdmi1_ct_timercolour: ctOpts[1].timercolour,
           hdmi2_ct_keycolour: ctOpts[2].keycolour, hdmi2_ct_timercolour: ctOpts[2].timercolour,
           watchdog: watchdogOn,
+          watchdog_fallback: wdFallback,
         }),
       });
       const d = await r.json();
@@ -4149,6 +4160,7 @@
   let hdmi1Rotate = "{{ config.get('hdmi1_rotate', 'normal') }}";
   let hdmi2Rotate = "{{ config.get('hdmi2_rotate', 'normal') }}";
   let watchdogOn  = {{ 'true' if config.get('watchdog', True) else 'false' }};
+  let wdFallback  = "{{ config.get('watchdog_fallback', 'holding') }}";
 
   function initDisplaySettings() {
     document.getElementById('hdmi1-res').value    = hdmi1Res;
@@ -4157,11 +4169,23 @@
     document.getElementById('hdmi1-rotate').value = hdmi1Rotate;
     document.getElementById('hdmi2-rotate').value = hdmi2Rotate;
     document.getElementById('watchdog-toggle').className = 'toggle ' + (watchdogOn ? 'on' : '');
+    paintWdFallback();
   }
 
   function toggleWatchdog() {
     watchdogOn = !watchdogOn;
     document.getElementById('watchdog-toggle').className = 'toggle ' + (watchdogOn ? 'on' : '');
+    markDirty();
+  }
+  function paintWdFallback() {
+    for (const k of ['holding', 'black']) {
+      const b = document.getElementById('wdfb-' + k);
+      if (b) b.classList.toggle('on', wdFallback === k);
+    }
+  }
+  function setWdFallback(v) {
+    wdFallback = v;
+    paintWdFallback();
     markDirty();
   }
 

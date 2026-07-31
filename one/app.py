@@ -142,6 +142,7 @@ def load_config():
     data.setdefault("hdmi2_rotate", "normal")
     data.setdefault("presets",           [])
     data.setdefault("watchdog",          True)
+    data.setdefault("watchdog_fallback", "holding")
     data.setdefault("companion_channel", "stable")
     data.setdefault("companion_emulator_id", "")
     data.setdefault("hdmi1_external_url", "")
@@ -1299,7 +1300,9 @@ def _launch_watchdog_windows():
             for d in displays:
                 n = min(d["port"], 2)
                 h = config.get(f"hdmi{n}_source", "config" if n == 1 else "/timer")
-                _win[n - 1] = _open_window("holding" if _is_ontime_source(h) else h, d, n)
+                # operator's choice of failover face: branded holding or black
+                fb = "off" if config.get("watchdog_fallback") == "black" else "holding"
+                _win[n - 1] = _open_window(fb if _is_ontime_source(h) else h, d, n)
         print("[watchdog] holding windows launched")
     except Exception as e:
         print(f"[watchdog] FAILED to launch holding windows: {e}")
@@ -2067,6 +2070,9 @@ def save():
     hdmi1_rotate = data.get("hdmi1_rotate", "normal")
     hdmi2_rotate = data.get("hdmi2_rotate", "normal")
     watchdog     = bool(data.get("watchdog", True))
+    wd_fb        = data.get("watchdog_fallback", "holding")
+    if wd_fb not in ("holding", "black"):
+        wd_fb = "holding"
     hdmi1_ext    = _clean_external_url(data.get("hdmi1_external_url", ""))
     hdmi2_ext    = _clean_external_url(data.get("hdmi2_external_url", ""))
 
@@ -2107,7 +2113,7 @@ def save():
         "hdmi1_res": hdmi1_res, "hdmi2_res": hdmi2_res,
         "hdmi1_rotate": hdmi1_rotate, "hdmi2_rotate": hdmi2_rotate,
         "hdmi1_external_url": hdmi1_ext, "hdmi2_external_url": hdmi2_ext,
-        "ip_history": history, "watchdog": watchdog,
+        "ip_history": history, "watchdog": watchdog, "watchdog_fallback": wd_fb,
         **{f"hdmi{n}_ct_{opt}": bool(data.get(f"hdmi{n}_ct_{opt}", True))
            for n in (1, 2)
            for opt in ("freeze", "hideprogress", "hideclock", "hidecards", "hidephase")},
@@ -2243,6 +2249,7 @@ def status():
         "testcard_outputs":     sorted(_testcard_override),
         "watchdog_override":    _watchdog_override,
         "watchdog":             config.get("watchdog", True),
+        "watchdog_fallback":    config.get("watchdog_fallback", "holding"),
         "hotspot_active":       hotspot_is_active(),
         "wifi":                 _wifi_health(),
         "portal":               dict(_portal),

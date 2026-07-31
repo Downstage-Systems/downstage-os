@@ -524,6 +524,10 @@
       background: var(--amber-bg); border: 1px solid var(--amber-bd); color: var(--amber);
     }
     .toggle-row { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+    .wdfb { padding: 7px 16px; background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 8px; color: var(--muted); font-family: var(--font-display);
+      font-size: 13px; font-weight: 600; letter-spacing: 0.04em; cursor: pointer; }
+    .wdfb.on { border-color: var(--green-bd); color: var(--green); background: var(--green-bg); }
     .toggle-label { font-size: 12px; color: var(--muted); flex: 1; min-width: 0; line-height: 1.4; }
     .toggle {
       width: 36px; height: 20px; border-radius: 10px; border: none; cursor: pointer;
@@ -1212,8 +1216,15 @@
 
         <!-- Watchdog toggle -->
         <div class="toggle-row">
-          <span class="toggle-label">Watchdog — show a holding page if OnTime goes offline, restore when it returns</span>
+          <span class="toggle-label">Watchdog — switch the display if OnTime goes offline, restore when it returns</span>
           <button class="toggle on" id="watchdog-toggle" onclick="toggleWatchdog()"></button>
+        </div>
+        <div class="toggle-row">
+          <span class="toggle-label">If the server drops, the display shows</span>
+          <div style="display:flex; gap:8px">
+            <button id="wdfb-holding" class="wdfb on" onclick="setWdFallback('holding')">Holding Page</button>
+            <button id="wdfb-black" class="wdfb" onclick="setWdFallback('black')">Black</button>
+          </div>
         </div>
       </div>
 
@@ -1714,6 +1725,18 @@
   }
 
   let watchdogOn = true;
+  let wdFallback = 'holding';
+  // called by Custom Timer controls; the View applies via explicit Save, so
+  // this is a no-op kept for shared-markup parity (was undefined — a live
+  // ReferenceError on every toggle tap)
+  function markDirty() {}
+  function paintWdFallback() {
+    for (const k of ['holding', 'black']) {
+      const b = document.getElementById('wdfb-' + k);
+      if (b) b.classList.toggle('on', wdFallback === k);
+    }
+  }
+  function setWdFallback(v) { wdFallback = v; paintWdFallback(); }
   document.addEventListener('DOMContentLoaded', syncCleanOptToggles);
 
   function toggleWatchdog() {
@@ -1974,6 +1997,9 @@
       renderOsPanel(d);
       if (d.serial) document.getElementById('os-serial').textContent = d.serial;
       watchdogOn = d.watchdog ?? true;
+      if (!window._wdfbInit && d.watchdog_fallback) {
+        wdFallback = d.watchdog_fallback; paintWdFallback(); window._wdfbInit = true;
+      }
       document.getElementById('watchdog-toggle').className = 'toggle ' + (watchdogOn ? 'on' : '');
       lastServerIp = d.ip || '';
       const qb = document.getElementById('show-quick');
@@ -2028,7 +2054,7 @@
       if (!c.ok) { showToast(`Cannot reach OnTime at ${ip}:4001`, 'error'); return; }
       const r = await fetch('/save', {
         method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ ip, source: currentSource, external_url: externalUrl, watchdog: watchdogOn }),
+        body: JSON.stringify({ ip, source: currentSource, external_url: externalUrl, watchdog: watchdogOn, watchdog_fallback: wdFallback }),
       });
       const d = await r.json();
       if (d.ok) { showToast(`Connected to ${ip} — display updating.`, 'success'); setTimeout(fetchStatus, 2500); }
@@ -2049,7 +2075,7 @@
     try {
       const r = await fetch('/save', {
         method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ ip, source: currentSource, external_url: externalUrl, watchdog: watchdogOn, cleantimer_freeze: cleanOpts.freeze, cleantimer_hideprogress: cleanOpts.hideprogress, cleantimer_hideclock: cleanOpts.hideclock, cleantimer_hidecards: cleanOpts.hidecards, cleantimer_hidephase: cleanOpts.hidephase, cleantimer_keycolour: cleanOpts.keycolour, cleantimer_timercolour: cleanOpts.timercolour }),
+        body: JSON.stringify({ ip, source: currentSource, external_url: externalUrl, watchdog: watchdogOn, watchdog_fallback: wdFallback, cleantimer_freeze: cleanOpts.freeze, cleantimer_hideprogress: cleanOpts.hideprogress, cleantimer_hideclock: cleanOpts.hideclock, cleantimer_hidecards: cleanOpts.hidecards, cleantimer_hidephase: cleanOpts.hidephase, cleantimer_keycolour: cleanOpts.keycolour, cleantimer_timercolour: cleanOpts.timercolour }),
       });
       const d = await r.json();
       d.ok ? showToast('Settings saved — display updating.', 'success') : showToast(d.error, 'error');
@@ -2522,7 +2548,7 @@
       const r = await fetch('/save', {
         method: 'POST', headers: {'Content-Type':'application/json'},
         body: JSON.stringify({ ip: document.getElementById('ip').value.trim(),
-                               source: target, external_url: externalUrl, watchdog: watchdogOn }),
+                               source: target, external_url: externalUrl, watchdog: watchdogOn, watchdog_fallback: wdFallback }),
       });
       const d = await r.json();
       if (d.ok) {
