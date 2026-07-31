@@ -2255,6 +2255,10 @@ def status():
                       "enabled": config.get("satellite_enabled", False),
                       "ip": config.get("satellite_ip", ""),
                       "install_state": _satellite_install["state"]},
+        "companion_remote": ({"ip": config.get("satellite_ip", ""),
+                              "ok": _satellite_companion_ok(config.get("satellite_ip", ""))}
+                             if config.get("satellite_enabled") and config.get("satellite_ip")
+                             else None),
         "hotspot_active":       hotspot_is_active(),
         "wifi":                 _wifi_health(),
         "portal":               dict(_portal),
@@ -3567,6 +3571,22 @@ def _satellite_point_at(ip):
             pass
         time.sleep(2)
     return False
+
+
+_sat_comp = {"at": 0.0, "ok": False, "ip": ""}
+
+
+def _satellite_companion_ok(ip):
+    now = time.time()
+    if _sat_comp["ip"] == ip and now - _sat_comp["at"] < 30:
+        return _sat_comp["ok"]
+    ok = False
+    try:
+        ok = requests.get(f"http://{ip}:8000", timeout=2).status_code < 500
+    except Exception:
+        pass
+    _sat_comp.update(at=now, ok=ok, ip=ip)
+    return ok
 
 
 @app.route("/satellite/install", methods=["POST"])

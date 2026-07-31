@@ -2770,14 +2770,16 @@
       // when its service is running
       document.querySelectorAll('.show-quick .qb-ontime')
         .forEach(b => { b.style.display = d.connected ? '' : 'none'; });
+      window._compHost = (d.companion_remote && d.companion_remote.ok) ? d.companion_remote.ip : null;
+      const compOn = d.companion_running || !!window._compHost;
       document.querySelectorAll('.show-quick .qb-companion')
-        .forEach(b => { b.style.display = d.companion_running ? '' : 'none'; });
+        .forEach(b => { b.style.display = compOn ? '' : 'none'; });
       if (d.companion_emulator_id !== undefined) {
         emulatorId = d.companion_emulator_id;
         const ef = document.getElementById('emulator-id');
         if (ef && document.activeElement !== ef) ef.value = emulatorId;
       }
-      const emuTileOn = !!(d.companion_running && emulatorId);
+      const emuTileOn = !!(compOn && emulatorId);
       document.querySelectorAll('.show-quick .qb-emulator')
         .forEach(b => { b.style.display = emuTileOn ? '' : 'none'; });
       document.getElementById('show-quick')?.classList.toggle('has-emu', emuTileOn);
@@ -2907,9 +2909,11 @@
       const cp = document.getElementById('comp-pill');
       if (cp && companionInstalled) {
         cp.style.display = '';
-        cp.className = 'status-bar ' + (companionRunning ? 'connected' : 'disconnected');
+        const remote = !companionRunning && !!window._compHost;
+        cp.className = 'status-bar ' + ((companionRunning || remote) ? 'connected' : 'disconnected');
         document.getElementById('comp-pill-text').textContent =
-          'COMPANION' + (companionRunning ? '' : ' — STOPPED');
+          'COMPANION' + (remote ? ' — REMOTE' : (companionRunning ? '' : ' — STOPPED'));
+        cp.title = remote ? 'Satellite is serving the Companion at ' + window._compHost : '';
       }
       const wp = document.getElementById('wifi-pill');
       if (wp) {
@@ -3324,15 +3328,18 @@
       updateCompanionPanel();
       if (d.ok) {
         showToast('USB rescanned. Opening Companion Surfaces…', 'success');
-        setTimeout(() => openExternal(`http://${window.location.hostname}:8000/#/surfaces`), 1000);
+        setTimeout(() => openExternal(`http://${compHost()}:8000/#/surfaces`), 1000);
       } else {
         showToast(`Rescan failed: ${d.message}`, 'error');
       }
     } catch { showToast('Failed to rescan USB.', 'error'); }
   }
 
+  // While Satellite serves a remote Companion, every Companion surface —
+  // tiles, panel, emulator — follows the remote brain
+  function compHost() { return window._compHost || window.location.hostname; }
   function openCompanion() {
-    openPanel(`http://${window.location.hostname}:8000`, 'Companion');
+    openPanel(`http://${compHost()}:8000`, 'Companion');
   }
   let emulatorId = '';
   async function setEmulatorId() {
@@ -3440,10 +3447,10 @@
   function closeEmulator() { hidePanel(); }
   function openEmulator() {
     if (!emulatorId) return;
-    openPanel(`http://${window.location.hostname}:8000/emulator/${emulatorId}`, 'My Buttons');
+    openPanel(`http://${compHost()}:8000/emulator/${emulatorId}`, 'My Buttons');
   }
   function openCompanionButtons() {
-    openPanel(`http://${window.location.hostname}:8000/tablet`, 'Buttons');
+    openPanel(`http://${compHost()}:8000/tablet`, 'Buttons');
   }
 
   // ── OnTime Editor ─────────────────────────────────────────────────────────────
