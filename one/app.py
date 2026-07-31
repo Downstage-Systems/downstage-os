@@ -3243,10 +3243,61 @@ def setup_complete():
     return jsonify({"ok": True})
 
 
+# ── Factory profiles ─────────────────────────────────────────────────────────
+# The golden image ships WITHOUT OnTime/Companion (customer's click installs
+# them from official sources) — but WITH Downstage's default show profiles,
+# captured from the bench by prepare-golden.sh. First install on a fresh unit
+# starts from those instead of an empty database. No seed dir = no-op.
+_SEED_DIR = Path("/home/pi/downstage-seed")
+
+
+def _seed_ontime_profile():
+    seed = _SEED_DIR / "ontime"
+    dest = Path.home() / ".Ontime"
+    if not seed.is_dir() or dest.exists():
+        return False
+    try:
+        shutil.copytree(seed, dest)
+        print("[ontime] seeded factory profile")
+        return True
+    except Exception as e:
+        print(f"[ontime] profile seed failed: {e}")
+        return False
+
+
+def _seed_companion_profile():
+    """Runs after a FIRST Companion install: wait for its initial start to
+    create the versioned config, then swap in the factory db and restart."""
+    seed = _SEED_DIR / "companion" / "db.sqlite"
+    base = Path("/home/companion/.config/companion-nodejs")
+    if not seed.is_file():
+        return
+    for _ in range(45):
+        dbs = sorted(base.glob("v*/db.sqlite"))
+        if dbs:
+            break
+        time.sleep(2)
+    else:
+        print("[companion] profile seed: no db appeared, skipping")
+        return
+    db = dbs[-1]
+    try:
+        subprocess.run(["sudo", "systemctl", "stop", "companion"], timeout=30)
+        subprocess.run(["sudo", "cp", str(seed), str(db)], check=True, timeout=30)
+        for suf in ("-wal", "-shm"):
+            subprocess.run(["sudo", "rm", "-f", str(db) + suf], timeout=10)
+        subprocess.run(["sudo", "chown", "companion:companion", str(db)], timeout=10)
+        subprocess.run(["sudo", "systemctl", "start", "companion"], timeout=30)
+        print("[companion] seeded factory profile")
+    except Exception as e:
+        print(f"[companion] profile seed failed: {e}")
+
+
 @app.route("/ontime/install", methods=["POST"])
 def ontime_install():
     ok, msg = install_ontime_server()
     if ok:
+        _seed_ontime_profile()
         threading.Thread(target=_check_updates_background, daemon=True).start()
     return jsonify({"ok": ok, "message": msg})
 
@@ -3359,8 +3410,12 @@ def _companion_install_worker():
             capture_output=True, text=True, timeout=1800,
         )
         if r.returncode == 0 and companion_is_installed(fresh=True):
+            fresh = not list(
+                Path("/home/companion/.config/companion-nodejs").glob("v*/db.sqlite"))
             subprocess.run(["sudo", "systemctl", "enable", "--now", "companion"],
                            timeout=30, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if fresh:
+                _seed_companion_profile()
             _companion_install["state"] = "done"
             threading.Thread(target=_check_updates_background, daemon=True).start()
         else:
@@ -4380,8 +4435,8 @@ def _failsafe_sync_once():
             pairs = [
                 ("/home/pi/ontime-kiosk/config.json",
                  f"{_FAILSAFE_MNT}/home/pi/ontime-kiosk/config.json"),
-                ("/home/pi/.getontime/",
-                 f"{_FAILSAFE_MNT}/home/pi/.getontime/"),
+                ("/home/pi/.Ontime/",
+                 f"{_FAILSAFE_MNT}/home/pi/.Ontime/"),
                 ("/home/companion/.config/companion-nodejs/",
                  f"{_FAILSAFE_MNT}/home/companion/.config/companion-nodejs/"),
                 ("/etc/NetworkManager/system-connections/",
