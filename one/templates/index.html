@@ -1036,6 +1036,8 @@
     }
     .show-quick-label { display: none; }
     body.show-mode .show-quick-label { display: block; text-align: center; margin-bottom: 10px; }
+    #show-embed { display: none !important; }
+    body.show-mode #show-embed.on { display: block !important; }
     /* blacked out: the Resume controls flash until someone brings it back */
     @keyframes resume-flash {
       0%, 100% { border-color: var(--red); box-shadow: 0 0 12px rgba(229,72,77,0.55); }
@@ -1391,6 +1393,15 @@
         <button class="btn-sm qb-power" onclick="shutdownPi()" title="Shut the unit down cleanly — the panel confirms when it's safe to unplug">
           <svg viewBox="0 0 24 24"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg>
           Power Off</button>
+      </div>
+
+      <!-- My Buttons, live on the Show Mode page — the button wall under the
+           tiles, no overlay hop -->
+      <div id="show-embed" style="display:none">
+        <div class="section-label show-quick-label" style="margin-top:22px">My Buttons</div>
+        <iframe id="show-embed-frame" title="My Buttons"
+                style="width:100%; aspect-ratio:1.9/1; min-height:300px; max-height:64vh;
+                       border:1px solid var(--border2); border-radius:14px; background:#000"></iframe>
       </div>
 
       <!-- Blackout banner -->
@@ -2779,10 +2790,21 @@
         const ef = document.getElementById('emulator-id');
         if (ef && document.activeElement !== ef) ef.value = emulatorId;
       }
-      const emuTileOn = !!(compOn && emulatorId);
+      const emuOn = !!(compOn && emulatorId);
       document.querySelectorAll('.show-quick .qb-emulator')
-        .forEach(b => { b.style.display = emuTileOn ? '' : 'none'; });
-      document.getElementById('show-quick')?.classList.toggle('has-emu', emuTileOn);
+        .forEach(b => { b.style.display = 'none'; });
+      document.getElementById('show-quick')?.classList.toggle('has-emu', false);
+      const se = document.getElementById('show-embed');
+      const sef = document.getElementById('show-embed-frame');
+      if (se && sef) {
+        se.classList.toggle('on', emuOn);
+        if (emuOn) {
+          const u = `http://${compHost()}:8000/emulator/${emulatorId}`;
+          if (sef.dataset.url !== u) { sef.dataset.url = u; sef.src = u; sef.dataset.at = Date.now(); }
+        } else if (sef.dataset.url) {
+          sef.dataset.url = ''; sef.removeAttribute('src');
+        }
+      }
       const qb = document.getElementById('show-quick');
       if (qb) {
         qb.style.display = '';
@@ -3733,6 +3755,7 @@
     if (m === 'show' && window._lastViewMode && window._lastViewMode !== 'show' &&
         document.body.dataset.page !== 'displays')
       reviveVirtualPreviews();
+    if (m === 'show') reviveShowEmbed();
     window._lastViewMode = m;
   }
   try { setViewMode(localStorage.getItem('ds1-view-mode') || 'full'); } catch (e) {}
@@ -3778,9 +3801,19 @@
     }
   }
   // …and after the whole browser tab/app was backgrounded (iOS evicts there too)
+  // the inline My Buttons wall is an iframe too — hidden canvases purge,
+  // so reload it when Show Mode returns after a real absence
+  function reviveShowEmbed() {
+    const sef = document.getElementById('show-embed-frame');
+    if (sef && sef.dataset.url && Date.now() - (+sef.dataset.at || 0) > 30000) {
+      sef.src = sef.dataset.url;
+      sef.dataset.at = Date.now();
+    }
+  }
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
       reviveVirtualPreviews();
+      if (document.body.classList.contains('show-mode')) reviveShowEmbed();
       // an open tool panel was backgrounded with the whole browser tab —
       // its canvases may be gone too
       if (document.body.classList.contains('panel-open') && _activePanel && _panels[_activePanel]) {
