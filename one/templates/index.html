@@ -1036,6 +1036,7 @@
     }
     .show-quick-label { display: none; }
     body.show-mode .show-quick-label { display: block; text-align: center; margin-bottom: 10px; }
+    .show-quick .qb-emulator.dimmed { opacity: 0.45; }
     #show-embed { display: none !important; }
     body.show-mode #show-embed.on { display: block !important; }
     /* blacked out: the Resume controls flash until someone brings it back */
@@ -1383,7 +1384,7 @@
         <button class="btn-sm qb-companion" onclick="openCompanionButtons()" title="Open Companion's web button surface — your Stream Deck pages, tappable from this device" style="display:none">
           <svg viewBox="0 0 24 24"><path d="M4 4h4v4H4V4zm6 0h4v4h-4V4zm6 0h4v4h-4V4zM4 10h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4zM4 16h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4z"/></svg>
           Buttons</button>
-        <button class="btn-sm qb-companion qb-emulator" onclick="openEmulator()" title="Open your Companion emulator — the custom surface set on the Companion tab" style="display:none">
+        <button class="btn-sm qb-companion qb-emulator" onclick="toggleShowEmbed()" title="Show your Companion button wall right here under Quick Actions — tap again to close" style="display:none">
           <svg viewBox="0 0 24 24"><path d="M20 5H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-1 2H5v-2h2v2zm0-3H5V8h2v2zm9 7H8v-2h8v2zm0-4h-2v-2h2v2zm0-3h-2V8h2v2zm3 3h-2v-2h2v2zm0-3h-2V8h2v2z"/></svg>
           My Buttons</button>
         <button class="btn-sm qb-companion" onclick="openCompanion()" title="Open the Companion admin UI in a new tab — edit Stream Deck buttons and pages" style="display:none">
@@ -1398,7 +1399,13 @@
       <!-- My Buttons, live on the Show Mode page — the button wall under the
            tiles, no overlay hop -->
       <div id="show-embed" style="display:none">
-        <div class="section-label show-quick-label" style="margin-top:22px">My Buttons</div>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:22px; margin-bottom:10px">
+          <div class="section-label" style="margin:0">My Buttons</div>
+          <div style="display:flex; gap:8px">
+            <button class="btn-sm" onclick="openEmulator()" title="Open My Buttons in the tool viewer — tabbed, full-height, survives page switches">Open in Viewer</button>
+            <button class="btn-sm" onclick="toggleShowEmbed()" title="Close — the quick action brings it back">&times;</button>
+          </div>
+        </div>
         <iframe id="show-embed-frame" title="My Buttons"
                 style="width:100%; aspect-ratio:1.9/1; min-height:300px; max-height:64vh;
                        border:1px solid var(--border2); border-radius:14px; background:#000"></iframe>
@@ -2790,21 +2797,11 @@
         const ef = document.getElementById('emulator-id');
         if (ef && document.activeElement !== ef) ef.value = emulatorId;
       }
-      const emuOn = !!(compOn && emulatorId);
+      window._emuOn = !!(compOn && emulatorId);
       document.querySelectorAll('.show-quick .qb-emulator')
-        .forEach(b => { b.style.display = 'none'; });
-      document.getElementById('show-quick')?.classList.toggle('has-emu', false);
-      const se = document.getElementById('show-embed');
-      const sef = document.getElementById('show-embed-frame');
-      if (se && sef) {
-        se.classList.toggle('on', emuOn);
-        if (emuOn) {
-          const u = `http://${compHost()}:8000/emulator/${emulatorId}`;
-          if (sef.dataset.url !== u) { sef.dataset.url = u; sef.src = u; sef.dataset.at = Date.now(); }
-        } else if (sef.dataset.url) {
-          sef.dataset.url = ''; sef.removeAttribute('src');
-        }
-      }
+        .forEach(b => { b.style.display = window._emuOn ? '' : 'none'; });
+      document.getElementById('show-quick')?.classList.toggle('has-emu', window._emuOn);
+      paintShowEmbed();
       const qb = document.getElementById('show-quick');
       if (qb) {
         qb.style.display = '';
@@ -3801,6 +3798,31 @@
     }
   }
   // …and after the whole browser tab/app was backgrounded (iOS evicts there too)
+  // Inline My Buttons wall: toggled by its quick action (which dims while
+  // the wall is open); choice persists per browser
+  function embedOpen() {
+    try { return localStorage.getItem('ds1-embed-open') === '1'; } catch (e) { return false; }
+  }
+  function toggleShowEmbed() {
+    try { localStorage.setItem('ds1-embed-open', embedOpen() ? '0' : '1'); } catch (e) {}
+    paintShowEmbed();
+  }
+  function paintShowEmbed() {
+    const open = !!window._emuOn && embedOpen();
+    const se = document.getElementById('show-embed');
+    const sef = document.getElementById('show-embed-frame');
+    if (!se || !sef) return;
+    se.classList.toggle('on', open);
+    document.querySelectorAll('.show-quick .qb-emulator')
+      .forEach(b => b.classList.toggle('dimmed', open));
+    if (open) {
+      const u = `http://${compHost()}:8000/emulator/${emulatorId}`;
+      if (sef.dataset.url !== u) { sef.dataset.url = u; sef.src = u; sef.dataset.at = Date.now(); }
+    } else if (sef.dataset.url) {
+      sef.dataset.url = ''; sef.removeAttribute('src');
+    }
+  }
+
   // the inline My Buttons wall is an iframe too — hidden canvases purge,
   // so reload it when Show Mode returns after a real absence
   function reviveShowEmbed() {
