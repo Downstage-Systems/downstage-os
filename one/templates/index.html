@@ -4354,8 +4354,12 @@
     }
     if (s.enabled && s.running) {
       badge.className = 'status-badge running'; badge.textContent = 'Serving ' + (s.ip || 'remote');
-      note.textContent = 'Decks belong to the remote Companion — onboard Companion is stood down';
-      act.innerHTML = `<button class="btn-sm danger" onclick="setSatellite(false)">Disable — restore onboard Companion</button>`;
+      note.textContent = (s.version ? 'v' + s.version + ' — ' : '') +
+        'Decks belong to the remote Companion — onboard Companion is stood down';
+      act.innerHTML = `
+        <button class="btn-sm danger" onclick="setSatellite(false)">Disable — restore onboard Companion</button>
+        <button class="btn-sm" onclick="restartSatellite()" title="Restarts Satellite — it re-detects USB Stream Decks on startup">Rescan USB</button>
+        <button class="btn-sm" onclick="updateSatellite()" title="Re-runs the official Bitfocus installer, which fetches the current stable build — decks drop for a few minutes, then Satellite resumes serving its remote">Update</button>`;
       return;
     }
     if (s.enabled && !s.running) {
@@ -4365,13 +4369,23 @@
       return;
     }
     badge.className = 'status-badge stopped'; badge.textContent = 'Off';
-    note.textContent = '';
+    note.textContent = s.version ? 'v' + s.version + ' installed' : '';
     act.innerHTML = `
       <input id="sat-ip" placeholder="Remote Companion IP — e.g. 192.168.1.50"
              autocomplete="off" spellcheck="false" value="${s.ip || ''}"
              style="flex:1; min-width:200px; background:var(--surface2); border:1px solid var(--border2);
                     border-radius:8px; color:var(--text); padding:8px 12px; font:inherit; font-size:13.5px">
-      <button class="btn-sm success" onclick="setSatellite(true)">Enable Satellite</button>`;
+      <button class="btn-sm success" onclick="setSatellite(true)">Enable Satellite</button>
+      <button class="btn-sm" onclick="updateSatellite()" title="Re-runs the official Bitfocus installer — fetches the current stable build">Update</button>`;
+  }
+  async function restartSatellite() {
+    showToast('Restarting Satellite — decks re-detect in a few seconds…', 'info');
+    try { await fetch('/satellite/restart', { method: 'POST' }); }
+    catch (e) { showToast('Could not reach the unit.', 'error'); }
+  }
+  async function updateSatellite() {
+    showToast('Updating Satellite from Bitfocus — decks drop until it finishes…', 'info');
+    try { await fetch('/satellite/install', { method: 'POST' }); } catch (e) {}
   }
   async function installSatellite() {
     showToast('Installing Companion Satellite…', 'info');

@@ -2254,7 +2254,8 @@ def status():
                       "running": satellite_is_running(),
                       "enabled": config.get("satellite_enabled", False),
                       "ip": config.get("satellite_ip", ""),
-                      "install_state": _satellite_install["state"]},
+                      "install_state": _satellite_install["state"],
+                      "version": _satellite_version()},
         "companion_remote": ({"ip": config.get("satellite_ip", ""),
                               "ok": _satellite_companion_ok(config.get("satellite_ip", ""))}
                              if config.get("satellite_enabled") and config.get("satellite_ip")
@@ -3544,10 +3545,17 @@ def _satellite_install_worker():
             capture_output=True, text=True, timeout=1800,
         )
         if r.returncode == 0 and satellite_is_installed():
-            # mode is OFF until the user points it somewhere — never let a
-            # fresh Satellite grab the decks out from under Companion
-            subprocess.run(["sudo", "systemctl", "disable", "--now", "satellite"],
-                           timeout=30, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            # land in the CONFIGURED state: a fresh install stays off (never
+            # grab decks out from under Companion); an update of an enabled
+            # Satellite comes back serving its remote
+            cfg = load_config()
+            if cfg.get("satellite_enabled") and cfg.get("satellite_ip"):
+                subprocess.run(["sudo", "systemctl", "enable", "--now", "satellite"],
+                               timeout=30, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                _satellite_point_at(cfg["satellite_ip"])
+            else:
+                subprocess.run(["sudo", "systemctl", "disable", "--now", "satellite"],
+                               timeout=30, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             _satellite_install["state"] = "done"
         else:
             _satellite_install["state"] = "failed"
@@ -3571,6 +3579,20 @@ def _satellite_point_at(ip):
             pass
         time.sleep(2)
     return False
+
+
+def _satellite_version():
+    """Best-effort installed version — Satellite keeps a package.json in its
+    install tree; absent or unreadable just means we don't show a number."""
+    for p in ("/usr/local/src/companion-satellite/package.json",
+              "/opt/companion-satellite/package.json",
+              "/usr/local/lib/companion-satellite/package.json"):
+        try:
+            import json as _json
+            return _json.load(open(p)).get("version")
+        except Exception:
+            continue
+    return None
 
 
 _sat_comp = {"at": 0.0, "ok": False, "ip": ""}
@@ -3627,6 +3649,17 @@ def satellite_mode():
     return jsonify({"ok": True, "on": False})
 
 
+@app.route("/satellite/restart", methods=["POST"])
+def satellite_restart():
+    """Satellite re-enumerates USB decks on startup — this IS its rescan."""
+    subprocess.run(["sudo", "systemctl", "restart", "satellite"], timeout=30,
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    ip = load_config().get("satellite_ip", "")
+    if ip:
+        threading.Thread(target=_satellite_point_at, args=(ip,), daemon=True).start()
+    return jsonify({"ok": True})
+
+
 @app.route("/satellite/status")
 def satellite_status_route():
     return jsonify({
@@ -3634,6 +3667,7 @@ def satellite_status_route():
         "running":   satellite_is_running(),
         "enabled":   load_config().get("satellite_enabled", False),
         "ip":        load_config().get("satellite_ip", ""),
+        "version":   _satellite_version(),
         "install_state":   _satellite_install["state"],
         "install_message": _satellite_install["message"],
     })
