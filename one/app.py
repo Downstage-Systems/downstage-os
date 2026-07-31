@@ -3548,6 +3548,14 @@ def _satellite_install_worker():
             # land in the CONFIGURED state: a fresh install stays off (never
             # grab decks out from under Companion); an update of an enabled
             # Satellite comes back serving its remote
+            # satellite's udev rules grab Elgato hidraw nodes for the
+            # satellite group, locking the companion user out of decks (found
+            # live: SD+ stuck on the Elgato logo). Cross-enroll both service
+            # users so either owns decks regardless of whose rule wins.
+            subprocess.run(["sudo", "usermod", "-aG", "satellite", "companion"],
+                           timeout=10, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(["sudo", "usermod", "-aG", "companion", "satellite"],
+                           timeout=10, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             cfg = load_config()
             if cfg.get("satellite_enabled") and cfg.get("satellite_ip"):
                 subprocess.run(["sudo", "systemctl", "enable", "--now", "satellite"],
