@@ -1411,6 +1411,14 @@
                        border:1px solid var(--border2); border-radius:14px; background:#000"></iframe>
       </div>
 
+      <!-- discovery nudge: Companion is up but no button wall configured -->
+      <div id="show-embed-hint" class="show-quick-label" style="display:none; text-align:center;
+           margin-top:18px; font-size:12.5px; color:var(--muted); font-family:inherit;
+           text-transform:none; letter-spacing:normal">
+        No Stream Deck? No problem &mdash; add a button wall right here.
+        Set an <b>Emulator ID</b> on the Companion tab and it appears under Quick Actions.
+      </div>
+
       <!-- Blackout banner -->
       <div class="alert-bar blackout" id="blackout-bar" style="display:none">
         <div class="alert-dot"></div>
@@ -2798,6 +2806,8 @@
         if (ef && document.activeElement !== ef) ef.value = emulatorId;
       }
       window._emuOn = !!(compOn && emulatorId);
+      const seh = document.getElementById('show-embed-hint');
+      if (seh) seh.style.display = (compOn && !emulatorId) ? '' : 'none';
       document.querySelectorAll('.show-quick .qb-emulator')
         .forEach(b => { b.style.display = window._emuOn ? '' : 'none'; });
       document.getElementById('show-quick')?.classList.toggle('has-emu', window._emuOn);
