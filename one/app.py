@@ -4108,7 +4108,7 @@ rm -f  {app}/ontime.log {app}/kiosk.log {app}/.update-result
 python3 - << 'PY'
 import json
 cfg = json.load(open("{app}/config.json"))
-keep = {{k: cfg[k] for k in ("serial", "hotspot_ssid", "hotspot_pass", "os_update_repo") if k in cfg}}
+keep = {{k: cfg[k] for k in ("serial", "hotspot_ssid", "hotspot_pass", "os_update_repo", "companion_emulator_id") if k in cfg}}
 json.dump(keep, open("{app}/config.json", "w"))
 PY
 sudo reboot
