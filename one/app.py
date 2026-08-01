@@ -2630,6 +2630,10 @@ def _apply_timezone_and_restart(tz):
         start_local_ontime()
         threading.Thread(target=_reload_windows_when_ontime_back,
                          daemon=True).start()
+    else:
+        # clock-bearing pages (Sync Clock, welcome) hold their startup
+        # timezone — relaunch so the new zone shows even with OnTime down
+        threading.Thread(target=launch_all_windows, daemon=True).start()
 
 
 @app.route("/system/timezone", methods=["POST"])
