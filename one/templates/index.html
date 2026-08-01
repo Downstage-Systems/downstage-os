@@ -1057,6 +1057,9 @@
     @media (max-width: 600px) {
       #show-embed-frame { min-height: 0 !important; aspect-ratio: 2 / 1 !important;
                           border-radius: 10px !important; }
+      /* Pop Out is a desktop/tablet feature — phones get inline + Viewer
+         (mobile browsers can't make sized windows; Copy Link stays) */
+      button[onclick="popOutButtons()"] { display: none; }
     }
     #show-embed { display: none !important; }
     body.show-mode #show-embed.on { display: block !important; margin-bottom: 34px; }
