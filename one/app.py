@@ -3227,14 +3227,15 @@ header svg {{ width:22px; height:22px; }}
 iframe {{ border:0; width:100%; height:100%; display:block; background:#000; }}
 </style></head><body>
 <header>
-  <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="13" rx="3"
-    stroke="#2FD97B" stroke-width="2"/><rect x="5.5" y="7.5" width="3" height="3" rx="0.8" fill="#E8ECEF"/>
-    <rect x="10.5" y="7.5" width="3" height="3" rx="0.8" fill="#E8ECEF"/>
-    <rect x="15.5" y="7.5" width="3" height="3" rx="0.8" fill="#E8ECEF"/>
-    <circle cx="7" cy="14" r="1.6" stroke="#2FD97B" stroke-width="1.4"/>
-    <circle cx="12" cy="14" r="1.6" stroke="#2FD97B" stroke-width="1.4"/>
-    <circle cx="17" cy="14" r="1.6" stroke="#2FD97B" stroke-width="1.4"/>
-    <rect x="8" y="19.5" width="8" height="2" rx="1" fill="#2FD97B"/></svg>
+  <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="3" width="20" height="18" rx="3"
+    stroke="#2FD97B" stroke-width="2"/>
+    <rect x="5.6" y="6.4" width="3.2" height="3.2" rx="0.8" fill="#E8ECEF"/>
+    <rect x="10.4" y="6.4" width="3.2" height="3.2" rx="0.8" fill="#E8ECEF"/>
+    <rect x="15.2" y="6.4" width="3.2" height="3.2" rx="0.8" fill="#E8ECEF"/>
+    <rect x="5.6" y="11.6" width="12.8" height="1.9" rx="0.95" fill="#2FD97B"/>
+    <circle cx="7.2" cy="16.6" r="1.5" stroke="#2FD97B" stroke-width="1.3"/>
+    <circle cx="12" cy="16.6" r="1.5" stroke="#2FD97B" stroke-width="1.3"/>
+    <circle cx="16.8" cy="16.6" r="1.5" stroke="#2FD97B" stroke-width="1.3"/></svg>
   <span class="wm">VIRTUAL <b>DECK</b></span>
 </header>
 <div class="chassis"><div class="screen">
