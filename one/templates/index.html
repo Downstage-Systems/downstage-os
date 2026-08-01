@@ -1889,9 +1889,7 @@
             <button class="btn-sm" onclick="copyWallLink(this)"
                     title="Copy the wall's address for another device — a touchscreen, a tablet, a spare display">Copy Link</button>
           </div>
-          <div class="external-url-hint" style="display:block; margin-top:6px">The wall lives at
-            <code id="wall-url"></code> &mdash; point any browser at it for a dedicated
-            button console. Follows Satellite's remote Companion automatically.</div>
+
           <div class="external-url-hint" style="display:block; margin-top:10px">Up to two 15-key Stream Decks can run from the USB ports (an XL counts as two — key backlights add up). For more, connect them through a powered USB hub.</div>
         </div>
       </div>
@@ -4611,10 +4609,6 @@
     try { document.execCommand('copy'); done(); } catch (e) {}
     ta.remove();
   }
-  document.addEventListener('DOMContentLoaded', () => {
-    const el = document.getElementById('wall-url');
-    if (el) el.textContent = `http://${window.location.host}/wall`;
-  });
   async function testAudioCues() {
     try {
       const d = await (await fetch('/audio-cues/test', { method: 'POST' })).json();
