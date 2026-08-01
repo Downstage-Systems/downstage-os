@@ -4552,7 +4552,7 @@
     const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
     if (!standalone) {
       window.open('/virtual-deck', 'ds-wall',
-        'width=880,height=480,menubar=no,toolbar=no,location=no,status=no');
+        'width=960,height=560,menubar=no,toolbar=no,location=no,status=no');
       return;
     }
     const u = `http://${compHost()}:8000/emulator/${emulatorId}`;
