@@ -1409,6 +1409,7 @@
           <div class="section-label" style="margin:0">My Buttons</div>
           <div style="display:flex; gap:8px">
             <button class="btn-sm" onclick="openEmulator()" title="Open My Buttons in the tool viewer — tabbed, full-height, survives page switches">Open in Viewer</button>
+            <button class="btn-sm" onclick="openExternal(`http://${compHost()}:8000/emulator/${emulatorId}`)" title="Open My Buttons in its own browser tab — full screen, independent of this page">Own Tab &#8599;</button>
             <button class="btn-sm" onclick="toggleShowEmbed()" title="Close — the quick action brings it back">&times;</button>
           </div>
         </div>
