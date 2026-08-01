@@ -5559,10 +5559,78 @@ document.addEventListener('pointerdown', () => ac.resume());
 </script></body></html>"""
 
 
+_DVD_PAGE = """<!DOCTYPE html><html><head><meta charset="utf-8">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html,body { height:100%; background:#0B0D10; overflow:hidden; cursor:none; }
+#logo { position:absolute; width:12.5vw; will-change:transform; }
+#tc { position:fixed; right:2vh; bottom:1.6vh; font:2vh monospace; color:#3a444d; }
+</style></head><body>
+<svg id="logo" viewBox="0 0 96 108">
+  <rect x="6" y="10" width="84" height="66" rx="10" fill="none" stroke="currentColor" stroke-width="7"/>
+  <rect x="20" y="54" width="40" height="9" rx="4.5" fill="currentColor"/>
+  <rect x="64" y="54" width="12" height="9" rx="4.5" fill="currentColor" opacity="0.4"/>
+  <rect x="20" y="83" width="26" height="7" rx="3.5" fill="currentColor"/>
+  <rect x="50" y="83" width="26" height="7" rx="3.5" fill="currentColor"/>
+</svg>
+<div id="tc"></div>
+<script>
+// Deterministic bounce: position is a pure function of wall time mod 240 s,
+// so the loop is mathematically perfect and every screen agrees. 17 x-trips
+// and 24 y-trips per loop put corners at exactly 1:03 (bottom-right) and
+// 3:03 (bottom-left).
+const LOOP = 240, FX = 17/240, FY = 24/240, PHX = 0.0375, PHY = 0.2;
+const COLORS = ['#2FD97B','#8E6FE6','#F5A524','#2E90D9','#E5484D','#E8ECEF'];
+const logo = document.getElementById('logo');
+const tc = document.getElementById('tc');
+const ac = new (window.AudioContext || window.webkitAudioContext)();
+function blip(freq, dur, vol) {
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.type = 'square'; o.frequency.value = freq;
+  o.connect(g); g.connect(ac.destination);
+  g.gain.setValueAtTime(vol, ac.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + dur);
+  o.start(); o.stop(ac.currentTime + dur + 0.01);
+}
+function fanfare() {
+  [523, 659, 784, 1047].forEach((f, i) =>
+    setTimeout(() => blip(f, 0.12, 0.25), i * 90));
+}
+const tri = u => { u = u - Math.floor(u); return 1 - Math.abs(2*u - 1); };
+let pnx = null, pny = null;
+function frame() {
+  const t = (Date.now() / 1000) % LOOP;
+  const W = innerWidth, H = innerHeight;
+  const lw = logo.getBoundingClientRect().width || W * 0.125;
+  const lh = lw * 108/96;
+  const ux = FX*t + PHX, uy = FY*t + PHY;
+  const x = (W - lw) * tri(ux), y = (H - lh) * tri(uy);
+  logo.style.transform = 'translate(' + x + 'px,' + y + 'px)';
+  const nx = Math.floor(2*ux), ny = Math.floor(2*uy);
+  logo.style.color = COLORS[(nx % 2) * 3 + (ny % 3)];
+  if (pnx !== null && ac.state === 'running') {
+    const hx = nx !== pnx, hy = ny !== pny;
+    if (hx && hy) fanfare();
+    else if (hx) blip(392, 0.07, 0.2);
+    else if (hy) blip(330, 0.07, 0.2);
+  }
+  pnx = nx; pny = ny;
+  const s = Math.floor(t);
+  tc.textContent = Math.floor(s/60) + ':' + String(s%60).padStart(2,'0');
+  requestAnimationFrame(frame);
+}
+frame();
+document.addEventListener('pointerdown', () => ac.resume());
+if (ac.state !== 'running') ac.resume();
+</script></body></html>"""
+
+
 @app.route("/pattern/<name>")
 def pattern_page(name):
     if name == "sync":
         return _SYNC_PAGE, 200, {"Content-Type": "text/html"}
+    if name == "dvd":
+        return _DVD_PAGE, 200, {"Content-Type": "text/html"}
     if name not in ("card", "bars", "grid", "ramp"):
         name = "card"
     return _PATTERN_PAGE, 200, {"Content-Type": "text/html"}
