@@ -1409,7 +1409,7 @@
           <div class="section-label" style="margin:0">My Buttons</div>
           <div style="display:flex; gap:8px">
             <button class="btn-sm" onclick="openEmulator()" title="Open My Buttons in the tool viewer — tabbed, full-height, survives page switches">Open in Viewer</button>
-            <button class="btn-sm" onclick="openExternal(`http://${compHost()}:8000/emulator/${emulatorId}`)" title="Open My Buttons in its own browser tab — full screen, independent of this page">Own Tab &#8599;</button>
+            <button class="btn-sm" onclick="popOutButtons()" title="Float My Buttons in its own movable window, sized to the deck layout">Pop Out &#8599;</button>
             <button class="btn-sm" onclick="toggleShowEmbed()" title="Close — the quick action brings it back">&times;</button>
           </div>
         </div>
@@ -4510,6 +4510,16 @@
                    : 'Satellite off — onboard Companion restored.', 'success');
     } catch (e) { showToast('Could not reach the unit.', 'error'); }
     finally { window._satBusy = false; }
+  }
+  // My Buttons as its own movable window — a sized popup the OS treats as a
+  // real window on desktop. Standalone/home-screen apps hand off to the
+  // browser instead (popups there trap with no chrome).
+  function popOutButtons() {
+    const u = `http://${compHost()}:8000/emulator/${emulatorId}`;
+    const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+    if (standalone) { openExternal(u); return; }
+    window.open(u, 'ds-mybuttons',
+      'width=1100,height=600,menubar=no,toolbar=no,location=no,status=no');
   }
   async function testAudioCues() {
     try {
