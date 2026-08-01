@@ -5572,7 +5572,24 @@ _DVD_PAGE = """<!DOCTYPE html><html><head><meta charset="utf-8">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 html,body { height:100%; background:#0B0D10; overflow:hidden; cursor:none; }
-#logo { position:absolute; width:12.5vw; will-change:transform; }
+#logo { position:absolute; width:12.5vw; will-change:transform, filter; }
+/* CRT: scanlines + vignette */
+#crt { position:fixed; inset:0; pointer-events:none; z-index:5;
+  background:repeating-linear-gradient(0deg, rgba(0,0,0,0.22) 0 1px, transparent 1px 3px); }
+#vig { position:fixed; inset:0; pointer-events:none; z-index:4;
+  background:radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.55) 100%); }
+#osd { position:fixed; top:4vh; left:4vh; z-index:6; font:700 4.5vh monospace;
+  color:#2FD97B; text-shadow:0 0 1.2vh rgba(47,217,123,0.8); display:none;
+  letter-spacing:0.1em; }
+#flash { position:fixed; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:7; }
+.pop { position:absolute; font:700 5vh monospace; z-index:6; pointer-events:none;
+  animation:pop 1.2s ease-out forwards; text-shadow:0 0 1.5vh currentColor; }
+@keyframes pop { 0% { opacity:1; transform:translateY(0); }
+  100% { opacity:0; transform:translateY(-12vh); } }
+@keyframes shake { 0%,100% { transform:translate(0,0); }
+  25% { transform:translate(1.2vh,0.8vh); } 50% { transform:translate(-1vh,-0.6vh); }
+  75% { transform:translate(0.6vh,1vh); } }
+body.shake { animation:shake 0.35s linear; }
 </style></head><body>
 <svg id="logo" viewBox="0 0 96 108">
   <rect x="6" y="10" width="84" height="66" rx="10" fill="none" stroke="currentColor" stroke-width="7"/>
@@ -5580,12 +5597,13 @@ html,body { height:100%; background:#0B0D10; overflow:hidden; cursor:none; }
   <rect x="64" y="54" width="12" height="9" rx="4.5" fill="currentColor" opacity="0.4"/>
   <rect x="20" y="83" width="26" height="7" rx="3.5" fill="currentColor"/>
   <rect x="50" y="83" width="26" height="7" rx="3.5" fill="currentColor"/>
+  <text x="48" y="105" text-anchor="middle" font-family="monospace" font-weight="bold"
+        font-size="15" fill="currentColor" letter-spacing="2">VIDEO</text>
 </svg>
+<div id="vig"></div><div id="crt"></div>
+<div id="osd">&#9654; PLAY</div>
+<div id="flash"></div>
 <script>
-// Deterministic bounce: position is a pure function of wall time mod 240 s,
-// so the loop is mathematically perfect and every screen agrees. 17 x-trips
-// and 24 y-trips per loop put corners at exactly 1:03 (bottom-right) and
-// 3:03 (bottom-left).
 const LOOP = 240, FX = 17/240, FY = 24/240, PHX = 0.0375, PHY = 0.2;
 const COLORS = ['#2FD97B','#8E6FE6','#F5A524','#2E90D9','#E5484D','#E8ECEF'];
 const logo = document.getElementById('logo');
@@ -5602,8 +5620,25 @@ function fanfare() {
   [523, 659, 784, 1047].forEach((f, i) =>
     setTimeout(() => blip(f, 0.12, 0.25), i * 90));
 }
+function popText(x, y, txt, col) {
+  const p = document.createElement('div');
+  p.className = 'pop'; p.textContent = txt; p.style.color = col;
+  p.style.left = Math.min(x, innerWidth - 200) + 'px';
+  p.style.top = Math.max(y, 60) + 'px';
+  document.body.appendChild(p);
+  setTimeout(() => p.remove(), 1300);
+}
+function cornerParty(x, y, col) {
+  fanfare();
+  popText(x, y, '+1000', col);
+  const fl = document.getElementById('flash');
+  fl.style.transition = 'none'; fl.style.opacity = 0.5;
+  requestAnimationFrame(() => { fl.style.transition = 'opacity 0.5s'; fl.style.opacity = 0; });
+  document.body.classList.remove('shake'); void document.body.offsetWidth;
+  document.body.classList.add('shake');
+}
 const tri = u => { u = u - Math.floor(u); return 1 - Math.abs(2*u - 1); };
-let pnx = null, pny = null;
+let pnx = null, pny = null, osdShown = -1;
 function frame() {
   const t = (Date.now() / 1000) % LOOP;
   const W = innerWidth, H = innerHeight;
@@ -5612,15 +5647,26 @@ function frame() {
   const ux = FX*t + PHX, uy = FY*t + PHY;
   const x = (W - lw) * tri(ux), y = (H - lh) * tri(uy);
   logo.style.transform = 'translate(' + x + 'px,' + y + 'px)';
+  const col = COLORS[(Math.floor(2*ux) % 2) * 3 + (Math.floor(2*uy) % 3)];
+  logo.style.color = col;
+  logo.style.filter = 'drop-shadow(0 0 1.4vh ' + col + ')';
   const nx = Math.floor(2*ux), ny = Math.floor(2*uy);
-  logo.style.color = COLORS[(nx % 2) * 3 + (ny % 3)];
-  if (pnx !== null && ac.state === 'running') {
+  if (pnx !== null) {
     const hx = nx !== pnx, hy = ny !== pny;
-    if (hx && hy) fanfare();
-    else if (hx) blip(392, 0.07, 0.2);
-    else if (hy) blip(330, 0.07, 0.2);
+    if (hx && hy) cornerParty(x, y, col);
+    else if (hx && ac.state === 'running') blip(392, 0.07, 0.2);
+    else if (hy && ac.state === 'running') blip(330, 0.07, 0.2);
   }
   pnx = nx; pny = ny;
+  // VCR OSD: PLAY blinks for the first 4 s of every loop
+  const loopN = Math.floor(Date.now() / 1000 / LOOP);
+  if (t < 4) {
+    document.getElementById('osd').style.display =
+      (Math.floor(t * 2) % 2 === 0) ? '' : 'none';
+    osdShown = loopN;
+  } else if (osdShown === loopN) {
+    document.getElementById('osd').style.display = 'none';
+  }
   requestAnimationFrame(frame);
 }
 frame();
