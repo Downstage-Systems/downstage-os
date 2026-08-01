@@ -396,8 +396,13 @@ def _ensure_combined_sink():
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             subprocess.run(["pactl", "set-default-sink", "downstage_all"], env=env,
                            timeout=5, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            subprocess.run(["pactl", "set-sink-volume", "downstage_all", "100%"], env=env,
-                           timeout=5, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            # full volume on EVERY sink — the combined sink multiplies
+            # through its slaves, so 40% hardware defaults made HDMI whisper
+            for line in subprocess.check_output(["pactl", "list", "short", "sinks"],
+                                                env=env, text=True, timeout=5).splitlines():
+                name = line.split("\t")[1]
+                subprocess.run(["pactl", "set-sink-volume", name, "100%"], env=env,
+                               timeout=5, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             print("[audio] combined sink ready — kiosk audio mirrors to all outputs")
             return
         except Exception:
