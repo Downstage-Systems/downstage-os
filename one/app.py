@@ -3243,8 +3243,10 @@ iframe {{ border:0; width:100%; height:100%; display:block; background:#000; }}
 .pv .vf iframe {{ width:1280px; height:720px; transform-origin:0 0; pointer-events:none; }}
 .pv .off {{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
   color:#5a646d; font:700 12px 'Rajdhani'; letter-spacing:0.1em; }}
-.pvbar {{ font:11px 'STMono'; padding:3px 2px 0; }}
-.pvbar.ok {{ color:#2FD97B; }} .pvbar.virt {{ color:#F5A524; }}
+.pvbar {{ font:11px 'STMono'; margin-top:5px; padding:4px 8px; text-align:center;
+  border-radius:7px; border:1px solid transparent; }}
+.pvbar.ok {{ color:#2FD97B; border-color:rgba(47,217,123,0.35); background:rgba(47,217,123,0.08); }}
+.pvbar.virt {{ color:#F5A524; border-color:rgba(245,165,36,0.35); background:rgba(245,165,36,0.08); }}
 .st {{ display:flex; align-items:center; gap:8px; font:12px 'STMono'; color:#9AA4AD; }}
 .st .dot {{ width:8px; height:8px; border-radius:50%; background:#5a646d; flex-shrink:0; }}
 .st .dot.ok {{ background:#2FD97B; }} .st .dot.bad {{ background:#E5484D; }}
