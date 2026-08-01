@@ -5459,48 +5459,60 @@ _SYNC_PAGE = """<!DOCTYPE html><html><head><meta charset="utf-8">
 * { margin:0; padding:0; box-sizing:border-box; }
 html,body { height:100%; background:#0B0D10; overflow:hidden; cursor:none; }
 body { display:flex; flex-direction:column; align-items:center; justify-content:center;
-  gap:4vh; font-family:'Rajdhani',sans-serif;
+  gap:3.2vh; font-family:'Rajdhani',sans-serif;
   background-image:linear-gradient(#14181d 1px,transparent 1px),
     linear-gradient(90deg,#14181d 1px,transparent 1px);
   background-size:80px 80px; }
-.wm { font-size:6vh; font-weight:700; letter-spacing:0.1em; color:#E8ECEF; }
+.mark { width:13vh; height:13vh; }
+.wm { font-size:5.5vh; font-weight:700; letter-spacing:0.1em; color:#E8ECEF; }
 .wm b { color:#2FD97B; }
-.clock { font-family:'STMono',monospace; font-size:16vh; color:#E8ECEF; line-height:1;
+.clock { font-family:'STMono',monospace; font-size:15vh; color:#E8ECEF; line-height:1;
   font-variant-numeric:tabular-nums; }
-.row { display:flex; align-items:center; gap:5vh; }
-.dot { width:9vh; height:9vh; border-radius:50%; border:0.6vh solid #3a444d; }
-.dot.on { background:#fff; border-color:#fff; box-shadow:0 0 5vh rgba(255,255,255,0.8); }
+.clock small { font-size:5vh; color:#9AA4AD; margin-left:1.5vh; }
+.beats { display:flex; align-items:center; gap:5vh; margin-top:2vh; height:8vh; }
+.b { border-radius:50%; border:0.5vh solid #3a444d; width:4vh; height:4vh; }
+.b.lg { width:7.5vh; height:7.5vh; }
+.b.on { background:#fff; border-color:#fff; box-shadow:0 0 4vh rgba(255,255,255,0.8); }
+.b.lg.on { background:#2FD97B; border-color:#2FD97B; box-shadow:0 0 5vh rgba(47,217,123,0.9); }
 .meta { position:fixed; bottom:3vh; width:100%; display:flex; justify-content:space-between;
   padding:0 4vh; font-family:'STMono',monospace; font-size:2vh; color:#5a646d; }
 </style></head><body>
+<svg class="mark" viewBox="0 0 96 96"><rect x="6" y="10" width="84" height="66" rx="10" fill="none" stroke="#e8ecef" stroke-width="7"/><rect x="20" y="54" width="40" height="9" rx="4.5" fill="#2fd97b"/><rect x="64" y="54" width="12" height="9" rx="4.5" fill="#e8ecef" opacity="0.28"/><rect x="20" y="83" width="26" height="7" rx="3.5" fill="#2fd97b"/><rect x="50" y="83" width="26" height="7" rx="3.5" fill="#2fd97b"/></svg>
 <div class="wm">DOWNSTAGE <b>SYNC</b></div>
-<div class="row">
-  <div class="dot" id="dot"></div>
-  <div class="clock" id="clock">--:--:--</div>
-  <div class="dot" id="dot2"></div>
+<div class="clock" id="clock">--:--:--</div>
+<div class="beats">
+  <div class="b" id="b0"></div>
+  <div class="b" id="b1"></div>
+  <div class="b" id="b2"></div>
+  <div class="b lg" id="b3"></div>
 </div>
-<div class="meta"><span>SYNC + CLOCK · 1 Hz POP</span><span id="res"></span></div>
+<div class="meta"><span>SYNC + CLOCK · 1 Hz · ACCENT ON 4</span><span id="res"></span></div>
 <script>
 const ac = new (window.AudioContext || window.webkitAudioContext)();
 let lastSec = null;
-function beep() {
+function beep(freq, vol) {
   const o = ac.createOscillator(), g = ac.createGain();
-  o.frequency.value = 1000; o.connect(g); g.connect(ac.destination);
-  g.gain.setValueAtTime(0.5, ac.currentTime);
+  o.frequency.value = freq; o.connect(g); g.connect(ac.destination);
+  g.gain.setValueAtTime(vol, ac.currentTime);
   g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.05);
   o.start(); o.stop(ac.currentTime + 0.06);
 }
 function frame() {
   const now = new Date();
   const p = n => String(n).padStart(2, '0');
-  document.getElementById('clock').textContent =
-    p(now.getHours()) + ':' + p(now.getMinutes()) + ':' + p(now.getSeconds());
+  const h24 = now.getHours();
+  const h12 = ((h24 + 11) % 12) + 1;
+  document.getElementById('clock').innerHTML =
+    p(h12) + ':' + p(now.getMinutes()) + ':' + p(now.getSeconds()) +
+    '<small>' + (h24 < 12 ? 'AM' : 'PM') + '</small>';
+  const beat = now.getSeconds() % 4;
   const on = now.getMilliseconds() < 120;
-  document.getElementById('dot').classList.toggle('on', on);
-  document.getElementById('dot2').classList.toggle('on', on);
+  for (let i = 0; i < 4; i++)
+    document.getElementById('b' + i).classList.toggle('on', on && i === beat);
   if (on && lastSec !== now.getSeconds()) {
     lastSec = now.getSeconds();
-    if (ac.state === 'running') beep(); else ac.resume();
+    if (ac.state === 'running') beep(beat === 3 ? 1800 : 900, beat === 3 ? 0.6 : 0.4);
+    else ac.resume();
   }
   requestAnimationFrame(frame);
 }
