@@ -4394,6 +4394,11 @@
   // browser that opens this UI. Takes effect immediately, no Apply needed.
   async function toggleVirtualPreviews() {
     const on = window._virtualPreviews === false;
+    if (on && !confirm('Virtual previews render an output\u2019s assigned source live in this ' +
+        'browser whenever no display is connected.\n\nA timing note: captured previews of real ' +
+        'displays trail the outputs by about a second, while virtual previews run live \u2014 so ' +
+        'the two kinds of tile can look slightly out of sync with each other. That\u2019s normal.' +
+        '\n\nTurn virtual previews on?')) return;
     window._virtualPreviews = on;
     window._virtprevTouched = true;
     document.getElementById('virtprev-toggle').className = 'toggle ' + (on ? 'on' : '');

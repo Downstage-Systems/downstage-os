@@ -143,6 +143,7 @@ def load_config():
     data.setdefault("presets",           [])
     data.setdefault("watchdog",          True)
     data.setdefault("watchdog_fallback", "holding")
+    data.setdefault("virtual_previews", False)
     data.setdefault("companion_channel", "stable")
     data.setdefault("companion_emulator_id", "")
     data.setdefault("hdmi1_external_url", "")
@@ -2220,7 +2221,7 @@ def status():
         "serial":               config.get("serial", ""),
         "primary_ip": get_local_ip(),
         "name": config.get("unit_name", ""),
-        "virtual_previews": bool(config.get("virtual_previews", True)),
+        "virtual_previews": bool(config.get("virtual_previews", False)),
         "audio_cues": config.get("audio_cues", "off"),
         "cue_marks": config.get("cue_marks", sorted(_CUE_SPOKEN, reverse=True)),
         "line_tone": _line_tone_on(),
