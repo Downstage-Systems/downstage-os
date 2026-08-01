@@ -3248,6 +3248,13 @@ iframe {{ border:0; width:100%; height:100%; display:block; background:#000; }}
 .st {{ display:flex; align-items:center; gap:8px; font:12px 'STMono'; color:#9AA4AD; }}
 .st .dot {{ width:8px; height:8px; border-radius:50%; background:#5a646d; flex-shrink:0; }}
 .st .dot.ok {{ background:#2FD97B; }} .st .dot.bad {{ background:#E5484D; }}
+.tbtns {{ display:flex; gap:8px; margin-top:2px; }}
+.tbtn {{ flex:1; padding:8px 0; background:#14181d; border:1px solid #2a323c; border-radius:8px;
+  color:#9AA4AD; font:700 12px 'Rajdhani'; letter-spacing:0.08em; cursor:pointer; text-align:center; }}
+.tbtn:hover {{ color:#E8ECEF; border-color:#3a444d; }}
+.tbtn.bo {{ color:#E5484D; border-color:rgba(229,72,77,0.4); }}
+.tbtn.bo.active {{ background:#E5484D; color:#fff; animation:boflash 1s infinite; }}
+@keyframes boflash {{ 50% {{ opacity:0.6; }} }}
 </style></head><body>
 <div class="main">
 <header>
@@ -3276,6 +3283,10 @@ iframe {{ border:0; width:100%; height:100%; display:block; background:#000; }}
   <div>
     <div class="pv" id="pv2"><div class="off">HDMI 2</div></div>
     <div class="pvbar" id="pb2"></div>
+  </div>
+  <div class="tbtns">
+    <button class="tbtn" onclick="refreshPv()" title="Re-arm both preview tiles">REFRESH</button>
+    <button class="tbtn bo" id="t-bo" onclick="boToggle()" title="Black out all displays — press again to resume">BLACKOUT</button>
   </div>
   <div class="tr-h" style="margin-top:6px">CONNECTIONS</div>
   <div class="st"><div class="dot" id="d-ot"></div><span id="t-ot">ONTIME</span></div>
@@ -3324,12 +3335,28 @@ async function tick() {{
     const cp = document.getElementById('d-cp');
     cp.className = 'dot ' + ((d.companion_running || remote) ? 'ok' : 'bad');
     document.getElementById('t-cp').textContent = 'COMPANION' + (remote ? ' — REMOTE' : (d.companion_running ? '' : ' — STOPPED'));
+    const bo = document.getElementById('t-bo');
+    bo.classList.toggle('active', !!d.blackout);
+    bo.textContent = d.blackout ? 'RESUME' : 'BLACKOUT';
     document.getElementById('d-net').className = 'dot ok';
     document.getElementById('t-net').textContent = (d.name ? d.name + ' · ' : '') + (d.primary_ip || '');
   }} catch (e) {{
     for (const id of ['d-ot','d-cp','d-net']) document.getElementById(id).className = 'dot bad';
     document.getElementById('t-net').textContent = 'UNIT UNREACHABLE';
   }}
+}}
+function refreshPv() {{
+  armed = {{}};
+  if (lastStatus) armPreviews(lastStatus);
+  tick();
+}}
+async function boToggle() {{
+  const active = lastStatus && lastStatus.blackout;
+  try {{
+    await fetch(active ? '/blackout/clear' : '/blackout', {{ method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }}, body: '{{}}' }});
+  }} catch (e) {{}}
+  setTimeout(tick, 400);
 }}
 let armed = {{}};
 async function armPreviews(d) {{
