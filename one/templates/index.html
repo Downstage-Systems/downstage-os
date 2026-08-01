@@ -1037,6 +1037,21 @@
     .show-quick-label { display: none; }
     body.show-mode .show-quick-label { display: block; text-align: center; margin-bottom: 10px; }
     .show-quick .qb-emulator.dimmed { opacity: 0.45; }
+    #float-wall { position: fixed; z-index: 1200; top: 72px; left: 12px;
+      width: min(92vw, 880px); background: var(--surface);
+      border: 1px solid var(--border2); border-radius: 12px; overflow: hidden;
+      box-shadow: 0 14px 44px rgba(0,0,0,0.55); display: flex; flex-direction: column; }
+    .fw-head { display: flex; justify-content: space-between; align-items: center;
+      padding: 7px 12px; background: var(--surface2); border-bottom: 1px solid var(--border);
+      cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+    .fw-title { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.18em;
+      color: var(--amber); }
+    .fw-x { background: none; border: none; color: var(--muted); font-size: 18px;
+      cursor: pointer; padding: 0 4px; line-height: 1; }
+    #float-wall-frame { border: 0; background: #000; flex: 1; width: 100%; min-height: 0; }
+    .fw-size { position: absolute; right: 0; bottom: 0; width: 22px; height: 22px;
+      cursor: nwse-resize; touch-action: none;
+      background: linear-gradient(135deg, transparent 55%, var(--border2) 55%); }
     /* phone: the wall is width-fitted inside the frame, so extra height is
        pure letterbox — let the aspect ratio hug the grid instead */
     @media (max-width: 600px) {
@@ -1416,6 +1431,17 @@
         <iframe id="show-embed-frame" title="My Buttons"
                 style="width:100%; aspect-ratio:1.9/1; min-height:300px; max-height:64vh;
                        border:1px solid var(--border2); border-radius:14px; background:#000"></iframe>
+      </div>
+
+      <!-- floating My Buttons window: draggable, resizable, works in
+           standalone web-app mode where OS popups can't -->
+      <div id="float-wall" style="display:none">
+        <div class="fw-head" id="fw-head">
+          <span class="fw-title">MY BUTTONS</span>
+          <button class="fw-x" onclick="closeFloatWall()" title="Close">&times;</button>
+        </div>
+        <iframe id="float-wall-frame" title="My Buttons floating"></iframe>
+        <div class="fw-size" id="fw-size" title="Drag to resize"></div>
       </div>
 
       <!-- discovery nudge: Companion is up but no button wall configured -->
@@ -4511,16 +4537,50 @@
     } catch (e) { showToast('Could not reach the unit.', 'error'); }
     finally { window._satBusy = false; }
   }
-  // My Buttons as its own movable window — a sized popup the OS treats as a
-  // real window on desktop. Standalone/home-screen apps hand off to the
-  // browser instead (popups there trap with no chrome).
+  // My Buttons as its own movable window — an in-page floating panel, so it
+  // works identically in the browser and in standalone web-app mode
   function popOutButtons() {
     const u = `http://${compHost()}:8000/emulator/${emulatorId}`;
-    const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
-    if (standalone) { openExternal(u); return; }
-    window.open(u, 'ds-mybuttons',
-      'width=1100,height=600,menubar=no,toolbar=no,location=no,status=no');
+    const fw = document.getElementById('float-wall');
+    const f = document.getElementById('float-wall-frame');
+    if (f.dataset.url !== u) { f.dataset.url = u; f.src = u; }
+    if (!fw.style.height) fw.style.height =
+      Math.round(Math.min(window.innerWidth * 0.92, 880) / 2 + 34) + 'px';
+    fw.style.display = 'flex';
   }
+  function closeFloatWall() {
+    document.getElementById('float-wall').style.display = 'none';
+  }
+  (function () {
+    const fw = document.getElementById('float-wall');
+    const head = document.getElementById('fw-head');
+    const grip = document.getElementById('fw-size');
+    let drag = null, size = null;
+    head.addEventListener('pointerdown', e => {
+      if (e.target.closest('button')) return;
+      const r = fw.getBoundingClientRect();
+      drag = { dx: e.clientX - r.left, dy: e.clientY - r.top };
+      head.setPointerCapture(e.pointerId);
+    });
+    head.addEventListener('pointermove', e => {
+      if (!drag) return;
+      fw.style.left = Math.max(0, Math.min(innerWidth - 90, e.clientX - drag.dx)) + 'px';
+      fw.style.top  = Math.max(0, Math.min(innerHeight - 40, e.clientY - drag.dy)) + 'px';
+    });
+    head.addEventListener('pointerup', () => { drag = null; });
+    grip.addEventListener('pointerdown', e => {
+      const r = fw.getBoundingClientRect();
+      size = { w: r.width - e.clientX, h: r.height - e.clientY };
+      grip.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+    grip.addEventListener('pointermove', e => {
+      if (!size) return;
+      fw.style.width  = Math.max(320, e.clientX + size.w) + 'px';
+      fw.style.height = Math.max(200, e.clientY + size.h) + 'px';
+    });
+    grip.addEventListener('pointerup', () => { size = null; });
+  })();
   async function testAudioCues() {
     try {
       const d = await (await fetch('/audio-cues/test', { method: 'POST' })).json();
