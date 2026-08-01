@@ -3323,6 +3323,8 @@ async function tick() {{
       if (hc[n]) {{
         const nm = (d.hdmi_names || {{}})[n];
         bar.className = 'pvbar ok'; bar.textContent = nm ? 'HDMI ' + n + ' — ' + nm : 'HDMI ' + n + ' — connected';
+      }} else if (d.virtual_previews === false) {{
+        bar.className = 'pvbar virt'; bar.textContent = 'HDMI ' + n + ' — no display';
       }} else {{
         bar.className = 'pvbar virt'; bar.textContent = 'HDMI ' + n + ' — virtual';
       }}
@@ -3364,11 +3366,15 @@ async function armPreviews(d) {{
   const hc = d.hdmi_connected || {{}};
   for (const n of ['1','2']) {{
     const box = document.getElementById('pv' + n);
-    const want = hc[n] ? 'live' : 'virt';
+    const want = hc[n] ? 'live' : (d.virtual_previews === false ? 'off' : 'virt');
     if (armed[n] === want) continue;
     armed[n] = want;
     box.innerHTML = '';
-    if (want === 'live') {{
+    if (want === 'off') {{
+      const o = document.createElement('div'); o.className = 'off';
+      o.textContent = 'NO DISPLAY';
+      box.appendChild(o);
+    }} else if (want === 'live') {{
       const img = document.createElement('img');
       img.src = '/stream/hdmi' + n + '?t=' + Date.now();
       img.onerror = () => {{ armed[n] = null; }};
