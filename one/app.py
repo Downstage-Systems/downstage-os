@@ -3206,11 +3206,41 @@ def wall_page():
     return f"""<!DOCTYPE html><html><head><meta charset="utf-8">
 <title>Virtual Deck — Downstage</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<style>*{{margin:0;padding:0}}html,body{{height:100%;background:#0B0D10}}
-iframe{{border:0;width:100%;height:100%;display:block;background:#000}}</style>
-</head><body><iframe id="w" src="{url}" allow="fullscreen"></iframe>
+<style>
+@font-face {{ font-family:'Rajdhani'; font-weight:700; src:url('/static/fonts/rajdhani-700.woff2') format('woff2'); }}
+* {{ margin:0; padding:0; box-sizing:border-box; }}
+html, body {{ height:100%; background:#0B0D10; overflow:hidden; }}
+body {{ display:flex; flex-direction:column; font-family:'Rajdhani',sans-serif; }}
+header {{ display:flex; align-items:center; justify-content:center; gap:10px;
+  padding:9px 0 7px; user-select:none; -webkit-user-select:none; }}
+header svg {{ width:22px; height:22px; }}
+.wm {{ font-size:17px; font-weight:700; letter-spacing:0.22em; color:#E8ECEF; }}
+.wm b {{ color:#2FD97B; font-weight:700; }}
+.chassis {{ flex:1; margin:0 12px 12px; min-height:0;
+  background:linear-gradient(180deg,#1c2127,#14181d 60%);
+  border:1px solid #2a323c; border-radius:20px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -2px 8px rgba(0,0,0,0.5),
+              0 10px 30px rgba(0,0,0,0.6);
+  padding:12px; display:flex; }}
+.screen {{ flex:1; min-height:0; background:#000; border-radius:10px; overflow:hidden;
+  border:1px solid #06070a; box-shadow: inset 0 0 12px rgba(0,0,0,0.8); }}
+iframe {{ border:0; width:100%; height:100%; display:block; background:#000; }}
+</style></head><body>
+<header>
+  <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="13" rx="3"
+    stroke="#2FD97B" stroke-width="2"/><rect x="5.5" y="7.5" width="3" height="3" rx="0.8" fill="#E8ECEF"/>
+    <rect x="10.5" y="7.5" width="3" height="3" rx="0.8" fill="#E8ECEF"/>
+    <rect x="15.5" y="7.5" width="3" height="3" rx="0.8" fill="#E8ECEF"/>
+    <circle cx="7" cy="14" r="1.6" stroke="#2FD97B" stroke-width="1.4"/>
+    <circle cx="12" cy="14" r="1.6" stroke="#2FD97B" stroke-width="1.4"/>
+    <circle cx="17" cy="14" r="1.6" stroke="#2FD97B" stroke-width="1.4"/>
+    <rect x="8" y="19.5" width="8" height="2" rx="1" fill="#2FD97B"/></svg>
+  <span class="wm">VIRTUAL <b>DECK</b></span>
+</header>
+<div class="chassis"><div class="screen">
+  <iframe id="w" src="{url}" allow="fullscreen"></iframe>
+</div></div>
 <script>
-// hidden canvases purge — reload the wall after a real absence
 let hiddenAt = null;
 document.addEventListener('visibilitychange', () => {{
   if (document.visibilityState === 'hidden') hiddenAt = Date.now();
