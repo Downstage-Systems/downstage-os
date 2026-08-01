@@ -5476,17 +5476,21 @@ body { display:flex; flex-direction:column; align-items:center; justify-content:
 .b.lg.on { background:#2FD97B; border-color:#2FD97B; box-shadow:0 0 5vh rgba(47,217,123,0.9); }
 .meta { position:fixed; bottom:3vh; width:100%; display:flex; justify-content:space-between;
   padding:0 4vh; font-family:'STMono',monospace; font-size:2vh; color:#5a646d; }
+.frame { position:fixed; inset:1.4vh; border:0.5vh solid #2FD97B; border-radius:2.2vh;
+  pointer-events:none; }
 </style></head><body>
+<div class="frame"></div>
 <svg class="mark" viewBox="0 0 96 96"><rect x="6" y="10" width="84" height="66" rx="10" fill="none" stroke="#e8ecef" stroke-width="7"/><rect x="20" y="54" width="40" height="9" rx="4.5" fill="#2fd97b"/><rect x="64" y="54" width="12" height="9" rx="4.5" fill="#e8ecef" opacity="0.28"/><rect x="20" y="83" width="26" height="7" rx="3.5" fill="#2fd97b"/><rect x="50" y="83" width="26" height="7" rx="3.5" fill="#2fd97b"/></svg>
 <div class="wm">DOWNSTAGE <b>SYNC</b></div>
 <div class="clock" id="clock">--:--:--</div>
 <div class="beats">
-  <div class="b" id="b0"></div>
+  <div class="b lg" id="bL"></div>
   <div class="b" id="b1"></div>
   <div class="b" id="b2"></div>
-  <div class="b lg" id="b3"></div>
+  <div class="b" id="b3"></div>
+  <div class="b lg" id="bR"></div>
 </div>
-<div class="meta"><span>SYNC + CLOCK · 1 Hz · ACCENT ON 4</span><span id="res"></span></div>
+<div class="meta"><span>SYNC + CLOCK · 1 Hz · ACCENT ON 1</span><span id="res"></span></div>
 <script>
 const ac = new (window.AudioContext || window.webkitAudioContext)();
 let lastSec = null;
@@ -5507,11 +5511,13 @@ function frame() {
     '<small>' + (h24 < 12 ? 'AM' : 'PM') + '</small>';
   const beat = now.getSeconds() % 4;
   const on = now.getMilliseconds() < 120;
-  for (let i = 0; i < 4; i++)
+  document.getElementById('bL').classList.toggle('on', on && beat === 0);
+  document.getElementById('bR').classList.toggle('on', on && beat === 0);
+  for (let i = 1; i < 4; i++)
     document.getElementById('b' + i).classList.toggle('on', on && i === beat);
   if (on && lastSec !== now.getSeconds()) {
     lastSec = now.getSeconds();
-    if (ac.state === 'running') beep(beat === 3 ? 1800 : 900, beat === 3 ? 0.6 : 0.4);
+    if (ac.state === 'running') beep(beat === 0 ? 1800 : 900, beat === 0 ? 0.6 : 0.4);
     else ac.resume();
   }
   requestAnimationFrame(frame);
