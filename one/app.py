@@ -5575,7 +5575,6 @@ html,body { height:100%; background:#0B0D10; overflow:hidden; cursor:none; }
 .sprite { position:absolute; width:12.5vw; will-change:transform;
   image-rendering:pixelated; }
 #logo { z-index:3; }
-.ghost { z-index:2; }
 #crt { position:fixed; inset:0; pointer-events:none; z-index:5;
   background:repeating-linear-gradient(0deg, rgba(0,0,0,0.22) 0 1px, transparent 1px 3px); }
 #vig { position:fixed; inset:0; pointer-events:none; z-index:4;
@@ -5584,10 +5583,6 @@ html,body { height:100%; background:#0B0D10; overflow:hidden; cursor:none; }
   color:#2FD97B; text-shadow:0 0 1.2vh rgba(47,217,123,0.8); display:none;
   letter-spacing:0.1em; }
 #flash { position:fixed; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:7; }
-.pop { position:absolute; font:700 5vh monospace; z-index:6; pointer-events:none;
-  animation:pop 1.2s ease-out forwards; text-shadow:0 0 1.5vh currentColor; }
-@keyframes pop { 0% { opacity:1; transform:translateY(0); }
-  100% { opacity:0; transform:translateY(-12vh); } }
 @keyframes shake { 0%,100% { transform:translate(0,0); }
   25% { transform:translate(1.2vh,0.8vh); } 50% { transform:translate(-1vh,-0.6vh); }
   75% { transform:translate(0.6vh,1vh); } }
@@ -5599,8 +5594,6 @@ body.shake { animation:shake 0.35s linear; }
 <script>
 const LOOP = 240, FX = 17/240, FY = 24/240, PHX = 0.0375, PHY = 0.2;
 const COLORS = ['#2FD97B','#8E6FE6','#F5A524','#2E90D9','#E5484D','#E8ECEF'];
-const NGHOST = 6, GDELAY = 0.07;
-
 // pixel-art sprites: rasterize the mark tiny (48px) once per colour, then
 // let image-rendering:pixelated blow the chunks up
 const svgFor = c => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 108">' +
@@ -5626,7 +5619,6 @@ COLORS.forEach(c => {
   im.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(svgFor(c));
 });
 
-const ghosts = [];
 let logo;
 function makeSprite(cls) {
   const im = document.createElement('img');
@@ -5648,17 +5640,8 @@ function fanfare() {
   [523, 659, 784, 1047].forEach((f, i) =>
     setTimeout(() => blip(f, 0.12, 0.25), i * 90));
 }
-function popText(x, y, txt, col) {
-  const p = document.createElement('div');
-  p.className = 'pop'; p.textContent = txt; p.style.color = col;
-  p.style.left = Math.min(x, innerWidth - 200) + 'px';
-  p.style.top = Math.max(y, 60) + 'px';
-  document.body.appendChild(p);
-  setTimeout(() => p.remove(), 1300);
-}
 function cornerParty(x, y, col) {
   fanfare();
-  popText(x, y, '+1000', col);
   const fl = document.getElementById('flash');
   fl.style.transition = 'none'; fl.style.opacity = 0.5;
   requestAnimationFrame(() => { fl.style.transition = 'opacity 0.5s'; fl.style.opacity = 0; });
@@ -5685,13 +5668,6 @@ function frame() {
   const col = colAt(p);
   logo.style.transform = 'translate(' + p.x + 'px,' + p.y + 'px)';
   if (logo.dataset.c !== col) { logo.dataset.c = col; logo.src = sprites[col]; }
-  for (let i = 0; i < NGHOST; i++) {
-    const gp = pose((now - (i+1)*GDELAY) % LOOP, W, H, lw, lh);
-    const g = ghosts[i], gc = colAt(gp);
-    g.style.transform = 'translate(' + gp.x + 'px,' + gp.y + 'px)';
-    g.style.opacity = 0.45 * (1 - i / NGHOST);
-    if (g.dataset.c !== gc) { g.dataset.c = gc; g.src = sprites[gc]; }
-  }
   if (pnx !== null) {
     const hx = p.nx !== pnx, hy = p.ny !== pny;
     if (hx && hy) cornerParty(p.x, p.y, col);
@@ -5710,7 +5686,6 @@ function frame() {
   requestAnimationFrame(frame);
 }
 function start() {
-  for (let i = NGHOST - 1; i >= 0; i--) ghosts[i] = makeSprite('ghost');
   logo = makeSprite('');
   logo.id = 'logo';
   frame();
