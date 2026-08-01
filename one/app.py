@@ -3208,14 +3208,20 @@ def wall_page():
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 @font-face {{ font-family:'Rajdhani'; font-weight:700; src:url('/static/fonts/rajdhani-700.woff2') format('woff2'); }}
+@font-face {{ font-family:'STMono'; src:url('/static/fonts/share-tech-mono-400.woff2') format('woff2'); }}
 * {{ margin:0; padding:0; box-sizing:border-box; }}
 html, body {{ height:100%; background:#0B0D10; overflow:hidden; }}
-body {{ display:flex; flex-direction:column; font-family:'Rajdhani',sans-serif; }}
+body {{ display:flex; font-family:'Rajdhani',sans-serif; }}
+.main {{ flex:1; min-width:0; display:flex; flex-direction:column; }}
 header {{ display:flex; align-items:center; justify-content:center; gap:10px;
-  padding:9px 0 7px; user-select:none; -webkit-user-select:none; }}
+  padding:9px 0 7px; user-select:none; -webkit-user-select:none; position:relative; }}
 header svg {{ width:22px; height:22px; }}
 .wm {{ font-size:17px; font-weight:700; letter-spacing:0.22em; color:#E8ECEF; }}
 .wm b {{ color:#2FD97B; font-weight:700; }}
+#tray-btn {{ position:absolute; right:12px; top:7px; background:#14181d; color:#9AA4AD;
+  border:1px solid #2a323c; border-radius:7px; font:700 12px 'Rajdhani'; letter-spacing:0.08em;
+  padding:4px 10px; cursor:pointer; }}
+#tray-btn:hover {{ color:#2FD97B; border-color:#2FD97B; }}
 .chassis {{ flex:1; margin:0 12px 12px; min-height:0;
   background:linear-gradient(180deg,#1c2127,#14181d 60%);
   border:1px solid #2a323c; border-radius:20px;
@@ -3225,7 +3231,25 @@ header svg {{ width:22px; height:22px; }}
 .screen {{ flex:1; min-height:0; background:#000; border-radius:10px; overflow:hidden;
   border:1px solid #06070a; box-shadow: inset 0 0 12px rgba(0,0,0,0.8); }}
 iframe {{ border:0; width:100%; height:100%; display:block; background:#000; }}
+#tray {{ width:0; overflow:hidden; transition:width 0.2s; background:#101318;
+  border-left:1px solid #2a323c; display:flex; flex-direction:column; }}
+#tray.on {{ width:260px; }}
+.tr-inner {{ width:260px; padding:12px; display:flex; flex-direction:column; gap:10px; }}
+.tr-h {{ font:700 11px 'Rajdhani'; letter-spacing:0.22em; color:#F5A524; }}
+.pv {{ background:#000; border:1px solid #2a323c; border-radius:8px; overflow:hidden;
+  aspect-ratio:16/9; position:relative; }}
+.pv img {{ width:100%; height:100%; object-fit:contain; display:block; }}
+.pv .vf {{ position:absolute; inset:0; overflow:hidden; }}
+.pv .vf iframe {{ width:1280px; height:720px; transform-origin:0 0; pointer-events:none; }}
+.pv .off {{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  color:#5a646d; font:700 12px 'Rajdhani'; letter-spacing:0.1em; }}
+.pvbar {{ font:11px 'STMono'; padding:3px 2px 0; }}
+.pvbar.ok {{ color:#2FD97B; }} .pvbar.virt {{ color:#F5A524; }}
+.st {{ display:flex; align-items:center; gap:8px; font:12px 'STMono'; color:#9AA4AD; }}
+.st .dot {{ width:8px; height:8px; border-radius:50%; background:#5a646d; flex-shrink:0; }}
+.st .dot.ok {{ background:#2FD97B; }} .st .dot.bad {{ background:#E5484D; }}
 </style></head><body>
+<div class="main">
 <header>
   <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="3" width="20" height="18" rx="3"
     stroke="#2FD97B" stroke-width="2"/>
@@ -3237,9 +3261,26 @@ iframe {{ border:0; width:100%; height:100%; display:block; background:#000; }}
     <circle cx="12" cy="16.6" r="1.5" stroke="#2FD97B" stroke-width="1.3"/>
     <circle cx="16.8" cy="16.6" r="1.5" stroke="#2FD97B" stroke-width="1.3"/></svg>
   <span class="wm">VIRTUAL <b>DECK</b></span>
+  <button id="tray-btn" onclick="toggleTray()">STATUS &#9656;</button>
 </header>
 <div class="chassis"><div class="screen">
   <iframe id="w" src="{url}" allow="fullscreen"></iframe>
+</div></div>
+</div>
+<div id="tray"><div class="tr-inner">
+  <div class="tr-h">DISPLAYS</div>
+  <div>
+    <div class="pv" id="pv1"><div class="off">HDMI 1</div></div>
+    <div class="pvbar" id="pb1"></div>
+  </div>
+  <div>
+    <div class="pv" id="pv2"><div class="off">HDMI 2</div></div>
+    <div class="pvbar" id="pb2"></div>
+  </div>
+  <div class="tr-h" style="margin-top:6px">CONNECTIONS</div>
+  <div class="st"><div class="dot" id="d-ot"></div><span id="t-ot">ONTIME</span></div>
+  <div class="st"><div class="dot" id="d-cp"></div><span id="t-cp">COMPANION</span></div>
+  <div class="st"><div class="dot" id="d-net"></div><span id="t-net">&mdash;</span></div>
 </div></div>
 <script>
 let hiddenAt = null;
@@ -3248,8 +3289,77 @@ document.addEventListener('visibilitychange', () => {{
   else if (hiddenAt && Date.now() - hiddenAt > 30000) {{
     const f = document.getElementById('w'); f.src = f.src;
     hiddenAt = null;
+    if (trayOn) armPreviews(lastStatus);
   }}
 }});
+
+let trayOn = false, poll = null, lastStatus = null;
+function toggleTray() {{
+  trayOn = !trayOn;
+  document.getElementById('tray').classList.toggle('on', trayOn);
+  document.getElementById('tray-btn').innerHTML = trayOn ? 'STATUS &#9662;' : 'STATUS &#9656;';
+  try {{ window.resizeBy(trayOn ? 260 : -260, 0); }} catch (e) {{}}
+  if (trayOn) {{ tick(); poll = setInterval(tick, 4000); }}
+  else {{ clearInterval(poll); poll = null; }}
+}}
+async function tick() {{
+  try {{
+    const d = await (await fetch('/status')).json();
+    lastStatus = d;
+    const hc = d.hdmi_connected || {{}};
+    for (const n of ['1','2']) {{
+      const bar = document.getElementById('pb' + n);
+      if (hc[n]) {{
+        const nm = (d.hdmi_names || {{}})[n];
+        bar.className = 'pvbar ok'; bar.textContent = nm ? 'HDMI ' + n + ' — ' + nm : 'HDMI ' + n + ' — connected';
+      }} else {{
+        bar.className = 'pvbar virt'; bar.textContent = 'HDMI ' + n + ' — virtual';
+      }}
+    }}
+    armPreviews(d);
+    const ot = document.getElementById('d-ot');
+    ot.className = 'dot ' + (d.connected ? 'ok' : 'bad');
+    document.getElementById('t-ot').textContent = 'ONTIME' + (d.connected ? '' : ' — OFFLINE');
+    const remote = d.companion_remote && d.companion_remote.ok;
+    const cp = document.getElementById('d-cp');
+    cp.className = 'dot ' + ((d.companion_running || remote) ? 'ok' : 'bad');
+    document.getElementById('t-cp').textContent = 'COMPANION' + (remote ? ' — REMOTE' : (d.companion_running ? '' : ' — STOPPED'));
+    document.getElementById('d-net').className = 'dot ok';
+    document.getElementById('t-net').textContent = (d.name ? d.name + ' · ' : '') + (d.primary_ip || '');
+  }} catch (e) {{
+    for (const id of ['d-ot','d-cp','d-net']) document.getElementById(id).className = 'dot bad';
+    document.getElementById('t-net').textContent = 'UNIT UNREACHABLE';
+  }}
+}}
+let armed = {{}};
+async function armPreviews(d) {{
+  if (!d) return;
+  const hc = d.hdmi_connected || {{}};
+  for (const n of ['1','2']) {{
+    const box = document.getElementById('pv' + n);
+    const want = hc[n] ? 'live' : 'virt';
+    if (armed[n] === want) continue;
+    armed[n] = want;
+    box.innerHTML = '';
+    if (want === 'live') {{
+      const img = document.createElement('img');
+      img.src = '/stream/hdmi' + n + '?t=' + Date.now();
+      img.onerror = () => {{ armed[n] = null; }};
+      box.appendChild(img);
+    }} else {{
+      try {{
+        const s = await (await fetch('/source/url/' + n)).json();
+        const u = (s.url || '').replace('//localhost', '//' + location.hostname)
+                               .replace('//127.0.0.1', '//' + location.hostname);
+        const vf = document.createElement('div'); vf.className = 'vf';
+        const f = document.createElement('iframe'); f.src = u;
+        vf.appendChild(f); box.appendChild(vf);
+        const scale = box.getBoundingClientRect().width / 1280;
+        f.style.transform = 'scale(' + scale + ')';
+      }} catch (e) {{ armed[n] = null; }}
+    }}
+  }}
+}}
 </script></body></html>"""
 
 
