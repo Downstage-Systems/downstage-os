@@ -1358,7 +1358,7 @@
 
       <div id="tpane-system" class="tpane">
       <!-- Timezone -->
-      <div class="field" style="margin-top:0; margin-bottom:0">
+      <div class="field" style="margin-top:0">
         <div class="section-label">Pi Timezone</div>
         <div class="local-panel">
           <div class="tz-current">Current: <span id="tz-current">Loading…</span></div>
@@ -1377,19 +1377,21 @@
         </div>
       </div>
 
-      <!-- Downstage OS -->
       <div class="field full-only">
         <div class="section-label">Unit Name</div>
-        <div style="display:flex; gap:8px">
-          <input id="unit-name-input" maxlength="24" placeholder="e.g. FOH, Stage Left, Green Room"
-                 style="flex:1; background:var(--surface2); border:1px solid var(--border2);
-                        border-radius:8px; color:var(--text); padding:9px 12px; font:inherit">
-          <button class="btn-sm" onclick="saveUnitName()">Save</button>
+        <div class="local-panel">
+          <div style="display:flex; gap:8px">
+            <input id="unit-name-input" maxlength="24" placeholder="e.g. FOH, Stage Left, Green Room"
+                   style="flex:1; min-width:0; background:var(--surface2); border:1px solid var(--border2);
+                          border-radius:8px; color:var(--text); padding:9px 12px; font:inherit">
+            <button class="btn-sm" onclick="saveUnitName()">Save</button>
+          </div>
+          <div class="external-url-hint">Shown in other units' fleet lists and on Identify flashes.</div>
         </div>
-        <div class="external-url-hint">Shown in other units' fleet lists and on Identify flashes.</div>
       </div>
 
-      <div class="field full-only" style="margin-top:22px; margin-bottom:0">
+      <!-- Downstage OS -->
+      <div class="field full-only" style="margin-bottom:0">
         <div class="section-label">Downstage OS</div>
         <div class="local-panel">
           <div class="version-row" style="margin-top:0; padding-top:0; border-top:none">
