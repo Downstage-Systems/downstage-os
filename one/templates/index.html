@@ -1407,7 +1407,7 @@
           Buttons</button>
         <button class="btn-sm qb-companion qb-emulator" onclick="toggleShowEmbed()" title="Show your Companion button wall right here under Quick Actions — tap again to close" style="display:none">
           <svg viewBox="0 0 24 24"><path d="M20 5H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-1 2H5v-2h2v2zm0-3H5V8h2v2zm9 7H8v-2h8v2zm0-4h-2v-2h2v2zm0-3h-2V8h2v2zm3 3h-2v-2h2v2zm0-3h-2V8h2v2z"/></svg>
-          My Buttons</button>
+          Virtual Deck</button>
         <button class="btn-sm qb-companion" onclick="openCompanion()" title="Open the Companion admin UI in a new tab — edit Stream Deck buttons and pages" style="display:none">
           <svg viewBox="0 0 24 24"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/></svg>
           Companion
@@ -1421,14 +1421,14 @@
            tiles, no overlay hop -->
       <div id="show-embed" style="display:none">
         <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:22px; margin-bottom:10px">
-          <div class="section-label" style="margin:0">My Buttons</div>
+          <div class="section-label" style="margin:0">Virtual Deck</div>
           <div style="display:flex; gap:8px">
-            <button class="btn-sm" onclick="openEmulator()" title="Open My Buttons in the tool viewer — tabbed, full-height, survives page switches">Open in Viewer</button>
-            <button class="btn-sm" onclick="popOutButtons()" title="Float My Buttons in its own movable window, sized to the deck layout">Pop Out &#8599;</button>
+            <button class="btn-sm" onclick="openEmulator()" title="Open the Virtual Deck in the tool viewer — tabbed, full-height, survives page switches">Open in Viewer</button>
+            <button class="btn-sm" onclick="popOutButtons()" title="Float the Virtual Deck in its own movable window, sized to the deck layout">Pop Out &#8599;</button>
             <button class="btn-sm" onclick="toggleShowEmbed()" title="Close — the quick action brings it back">&times;</button>
           </div>
         </div>
-        <iframe id="show-embed-frame" title="My Buttons"
+        <iframe id="show-embed-frame" title="Virtual Deck"
                 style="width:100%; aspect-ratio:1.9/1; min-height:300px; max-height:64vh;
                        border:1px solid var(--border2); border-radius:14px; background:#000"></iframe>
       </div>
@@ -1437,10 +1437,10 @@
            standalone web-app mode where OS popups can't -->
       <div id="float-wall" style="display:none">
         <div class="fw-head" id="fw-head">
-          <span class="fw-title">MY BUTTONS</span>
+          <span class="fw-title">VIRTUAL DECK</span>
           <button class="fw-x" onclick="closeFloatWall()" title="Close">&times;</button>
         </div>
-        <iframe id="float-wall-frame" title="My Buttons floating"></iframe>
+        <iframe id="float-wall-frame" title="Virtual Deck floating"></iframe>
         <div class="fw-size" id="fw-size" title="Drag to resize"></div>
       </div>
 
@@ -1448,7 +1448,7 @@
       <div id="show-embed-hint" class="show-quick-label" style="display:none; text-align:center;
            margin-top:18px; font-size:12.5px; color:var(--muted); font-family:inherit;
            text-transform:none; letter-spacing:normal">
-        No Stream Deck? No problem &mdash; add a button wall right here.
+        No Stream Deck? No problem &mdash; add a Virtual Deck right here.
         Set an <b>Emulator ID</b> on the Companion tab and it appears under Quick Actions.
       </div>
 
@@ -1880,14 +1880,14 @@
             <button class="btn-sm success" onclick="setEmulatorId()">Set</button>
           </div>
           <div class="external-url-hint" style="display:block; margin-top:6px">Paste a Companion
-            emulator ID and a My Buttons tile appears in Show Mode, opening that emulator
+            emulator ID and a Virtual Deck tile appears in Show Mode, opening that emulator
             full-page. Clear the field and Set to remove it.</div>
           <div class="channel-row" style="margin-top:10px">
-            <span class="channel-label">My Buttons</span>
+            <span class="channel-label">Virtual Deck</span>
             <button class="btn-sm" onclick="popOutButtons()"
-                    title="My Buttons in its own small window — drag it to any display">Open in Window</button>
+                    title="The Virtual Deck in its own small window — drag it to any display">Open in Window</button>
             <button class="btn-sm" onclick="copyWallLink(this)"
-                    title="Copy the My Buttons page address for another device — a touchscreen, a tablet, a spare display">Copy Link</button>
+                    title="Copy the Virtual Deck page address for another device — a touchscreen, a tablet, a spare display">Copy Link</button>
           </div>
 
           <div class="external-url-hint" style="display:block; margin-top:10px">Up to two 15-key Stream Decks can run from the USB ports (an XL counts as two — key backlights add up). For more, connect them through a powered USB hub.</div>
@@ -3420,7 +3420,7 @@
     if (d.ok) {
       emulatorId = d.id;
       document.getElementById('emulator-id').value = d.id;
-      showToast(d.id ? 'Emulator set — My Buttons tile added to Show Mode.' : 'Emulator cleared.', 'success');
+      showToast(d.id ? 'Emulator set — Virtual Deck tile added to Show Mode.' : 'Emulator cleared.', 'success');
       fetchStatus(true);
     }
   }
@@ -3542,7 +3542,7 @@
   function closeEmulator() { hidePanel(); }
   function openEmulator() {
     if (!emulatorId) return;
-    openPanel(`http://${compHost()}:8000/emulator/${emulatorId}`, 'My Buttons');
+    openPanel(`http://${compHost()}:8000/emulator/${emulatorId}`, 'Virtual Deck');
   }
   function openCompanionButtons() {
     openPanel(`http://${compHost()}:8000/tablet`, 'Buttons');
@@ -4551,7 +4551,7 @@
   function popOutButtons() {
     const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
     if (!standalone) {
-      window.open('/my-buttons', 'ds-wall',
+      window.open('/virtual-deck', 'ds-wall',
         'width=880,height=480,menubar=no,toolbar=no,location=no,status=no');
       return;
     }
@@ -4597,8 +4597,8 @@
     grip.addEventListener('pointerup', () => { size = null; });
   })();
   function copyWallLink(btn) {
-    const u = `http://${window.location.host}/my-buttons`;
-    const done = () => showToast('My Buttons link copied — paste it on the console device.', 'success');
+    const u = `http://${window.location.host}/virtual-deck`;
+    const done = () => showToast('Virtual Deck link copied — paste it on the console device.', 'success');
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(u).then(done, () => fallbackCopyWall(u, done));
     } else fallbackCopyWall(u, done);

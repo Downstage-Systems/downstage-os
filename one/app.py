@@ -3189,7 +3189,8 @@ def power_ack():
     return jsonify({"ok": True})
 
 
-@app.route("/my-buttons")
+@app.route("/virtual-deck")
+@app.route("/my-buttons")     # legacy alias
 @app.route("/wall")           # legacy alias
 def wall_page():
     """My Buttons in a window of its own — a full-bleed emulator wrapper the
@@ -3203,7 +3204,7 @@ def wall_page():
         host = config["satellite_ip"]
     url = f"http://{host}:8000/emulator/{emu}"
     return f"""<!DOCTYPE html><html><head><meta charset="utf-8">
-<title>My Buttons — Downstage</title>
+<title>Virtual Deck — Downstage</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>*{{margin:0;padding:0}}html,body{{height:100%;background:#0B0D10}}
 iframe{{border:0;width:100%;height:100%;display:block;background:#000}}</style>
