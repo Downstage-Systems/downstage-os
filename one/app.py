@@ -3189,6 +3189,37 @@ def power_ack():
     return jsonify({"ok": True})
 
 
+@app.route("/wall")
+def wall_page():
+    """My Buttons in a window of its own — a full-bleed emulator wrapper the
+    UI opens as an OS popup, draggable to any display. Follows Satellite's
+    remote Companion when it's serving."""
+    config = load_config()
+    emu = config.get("companion_emulator_id", "")
+    host = request.host.split(":")[0]
+    if (config.get("satellite_enabled") and config.get("satellite_ip")
+            and _satellite_companion_ok(config["satellite_ip"])):
+        host = config["satellite_ip"]
+    url = f"http://{host}:8000/emulator/{emu}"
+    return f"""<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>My Buttons — Downstage</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>*{{margin:0;padding:0}}html,body{{height:100%;background:#0B0D10}}
+iframe{{border:0;width:100%;height:100%;display:block;background:#000}}</style>
+</head><body><iframe id="w" src="{url}" allow="fullscreen"></iframe>
+<script>
+// hidden canvases purge — reload the wall after a real absence
+let hiddenAt = null;
+document.addEventListener('visibilitychange', () => {{
+  if (document.visibilityState === 'hidden') hiddenAt = Date.now();
+  else if (hiddenAt && Date.now() - hiddenAt > 30000) {{
+    const f = document.getElementById('w'); f.src = f.src;
+    hiddenAt = null;
+  }}
+}});
+</script></body></html>"""
+
+
 @app.route("/audio-cues", methods=["POST"])
 def set_audio_cues():
     body = request.get_json() or {}

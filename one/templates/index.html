@@ -4537,9 +4537,16 @@
     } catch (e) { showToast('Could not reach the unit.', 'error'); }
     finally { window._satBusy = false; }
   }
-  // My Buttons as its own movable window — an in-page floating panel, so it
-  // works identically in the browser and in standalone web-app mode
+  // Pop Out: a REAL OS window (the /wall wrapper) you can drag to any
+  // display. Standalone web apps can't spawn OS windows, so there the
+  // in-page floating panel steps in instead.
   function popOutButtons() {
+    const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+    if (!standalone) {
+      window.open('/wall', 'ds-wall',
+        'width=1100,height=600,menubar=no,toolbar=no,location=no,status=no');
+      return;
+    }
     const u = `http://${compHost()}:8000/emulator/${emulatorId}`;
     const fw = document.getElementById('float-wall');
     const f = document.getElementById('float-wall-frame');
