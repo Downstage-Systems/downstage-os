@@ -5490,7 +5490,7 @@ body { display:flex; flex-direction:column; align-items:center; justify-content:
   <div class="b" id="b3"></div>
   <div class="b lg" id="bR"></div>
 </div>
-<div class="meta"><span>SYNC + CLOCK · 1 Hz · ACCENT ON 1</span><span id="res"></span></div>
+<div class="meta"><span>SYNC + CLOCK · 1 Hz</span><span id="res"></span></div>
 <script>
 const ac = new (window.AudioContext || window.webkitAudioContext)();
 let lastSec = null;
