@@ -5573,7 +5573,6 @@ _DVD_PAGE = """<!DOCTYPE html><html><head><meta charset="utf-8">
 * { margin:0; padding:0; box-sizing:border-box; }
 html,body { height:100%; background:#0B0D10; overflow:hidden; cursor:none; }
 #logo { position:absolute; width:12.5vw; will-change:transform; }
-#tc { position:fixed; right:2vh; bottom:1.6vh; font:2vh monospace; color:#3a444d; }
 </style></head><body>
 <svg id="logo" viewBox="0 0 96 108">
   <rect x="6" y="10" width="84" height="66" rx="10" fill="none" stroke="currentColor" stroke-width="7"/>
@@ -5582,7 +5581,6 @@ html,body { height:100%; background:#0B0D10; overflow:hidden; cursor:none; }
   <rect x="20" y="83" width="26" height="7" rx="3.5" fill="currentColor"/>
   <rect x="50" y="83" width="26" height="7" rx="3.5" fill="currentColor"/>
 </svg>
-<div id="tc"></div>
 <script>
 // Deterministic bounce: position is a pure function of wall time mod 240 s,
 // so the loop is mathematically perfect and every screen agrees. 17 x-trips
@@ -5591,7 +5589,6 @@ html,body { height:100%; background:#0B0D10; overflow:hidden; cursor:none; }
 const LOOP = 240, FX = 17/240, FY = 24/240, PHX = 0.0375, PHY = 0.2;
 const COLORS = ['#2FD97B','#8E6FE6','#F5A524','#2E90D9','#E5484D','#E8ECEF'];
 const logo = document.getElementById('logo');
-const tc = document.getElementById('tc');
 const ac = new (window.AudioContext || window.webkitAudioContext)();
 function blip(freq, dur, vol) {
   const o = ac.createOscillator(), g = ac.createGain();
@@ -5624,8 +5621,6 @@ function frame() {
     else if (hy) blip(330, 0.07, 0.2);
   }
   pnx = nx; pny = ny;
-  const s = Math.floor(t);
-  tc.textContent = Math.floor(s/60) + ':' + String(s%60).padStart(2,'0');
   requestAnimationFrame(frame);
 }
 frame();
