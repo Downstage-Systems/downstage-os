@@ -1008,6 +1008,7 @@ def get_displays():
 
 _COMMON_FLAGS = [
     "--noerrdialogs",
+    "--autoplay-policy=no-user-gesture-required",
     "--disable-session-crashed-bubble",
     "--hide-crash-restore-bubble",
     # paint House Black from the first frame — otherwise every fresh window
@@ -5451,8 +5452,68 @@ draw(); addEventListener("resize", draw);
 </script></body></html>"""
 
 
+_SYNC_PAGE = """<!DOCTYPE html><html><head><meta charset="utf-8">
+<style>
+@font-face { font-family:'Rajdhani'; font-weight:700; src:url('/static/fonts/rajdhani-700.woff2') format('woff2'); }
+@font-face { font-family:'STMono'; src:url('/static/fonts/share-tech-mono-400.woff2') format('woff2'); }
+* { margin:0; padding:0; box-sizing:border-box; }
+html,body { height:100%; background:#0B0D10; overflow:hidden; cursor:none; }
+body { display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:4vh; font-family:'Rajdhani',sans-serif;
+  background-image:linear-gradient(#14181d 1px,transparent 1px),
+    linear-gradient(90deg,#14181d 1px,transparent 1px);
+  background-size:80px 80px; }
+.wm { font-size:6vh; font-weight:700; letter-spacing:0.1em; color:#E8ECEF; }
+.wm b { color:#2FD97B; }
+.clock { font-family:'STMono',monospace; font-size:16vh; color:#E8ECEF; line-height:1;
+  font-variant-numeric:tabular-nums; }
+.row { display:flex; align-items:center; gap:5vh; }
+.dot { width:9vh; height:9vh; border-radius:50%; border:0.6vh solid #3a444d; }
+.dot.on { background:#fff; border-color:#fff; box-shadow:0 0 5vh rgba(255,255,255,0.8); }
+.meta { position:fixed; bottom:3vh; width:100%; display:flex; justify-content:space-between;
+  padding:0 4vh; font-family:'STMono',monospace; font-size:2vh; color:#5a646d; }
+</style></head><body>
+<div class="wm">DOWNSTAGE <b>SYNC</b></div>
+<div class="row">
+  <div class="dot" id="dot"></div>
+  <div class="clock" id="clock">--:--:--</div>
+  <div class="dot" id="dot2"></div>
+</div>
+<div class="meta"><span>SYNC + CLOCK · 1 Hz POP</span><span id="res"></span></div>
+<script>
+const ac = new (window.AudioContext || window.webkitAudioContext)();
+let lastSec = null;
+function beep() {
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.frequency.value = 1000; o.connect(g); g.connect(ac.destination);
+  g.gain.setValueAtTime(0.5, ac.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.05);
+  o.start(); o.stop(ac.currentTime + 0.06);
+}
+function frame() {
+  const now = new Date();
+  const p = n => String(n).padStart(2, '0');
+  document.getElementById('clock').textContent =
+    p(now.getHours()) + ':' + p(now.getMinutes()) + ':' + p(now.getSeconds());
+  const on = now.getMilliseconds() < 120;
+  document.getElementById('dot').classList.toggle('on', on);
+  document.getElementById('dot2').classList.toggle('on', on);
+  if (on && lastSec !== now.getSeconds()) {
+    lastSec = now.getSeconds();
+    if (ac.state === 'running') beep(); else ac.resume();
+  }
+  requestAnimationFrame(frame);
+}
+document.getElementById('res').textContent = screen.width + 'x' + screen.height;
+frame();
+document.addEventListener('pointerdown', () => ac.resume());
+</script></body></html>"""
+
+
 @app.route("/pattern/<name>")
 def pattern_page(name):
+    if name == "sync":
+        return _SYNC_PAGE, 200, {"Content-Type": "text/html"}
     if name not in ("card", "bars", "grid", "ramp"):
         name = "card"
     return _PATTERN_PAGE, 200, {"Content-Type": "text/html"}
