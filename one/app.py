@@ -377,6 +377,37 @@ def _cue_loop():
 threading.Thread(target=_cue_loop, daemon=True).start()
 
 
+def _ensure_combined_sink():
+    """Kiosk/browser audio should reach EVERY output — the case jack and any
+    HDMI display — so patterns and video sources are heard wherever the
+    audience is. PipeWire's combine sink does it; ensure one exists and is
+    the default. (Audio cues bypass this on purpose: raw ALSA to the jack,
+    because that's the comms feed.) Retries while audio boots."""
+    env = {**os.environ, "XDG_RUNTIME_DIR": os.environ.get("XDG_RUNTIME_DIR", "/run/user/1000")}
+    for _ in range(20):
+        try:
+            sinks = subprocess.check_output(["pactl", "list", "short", "sinks"],
+                                            env=env, text=True, timeout=5)
+            if "downstage_all" not in sinks:
+                if not sinks.strip():
+                    raise RuntimeError("no sinks yet")
+                subprocess.run(["pactl", "load-module", "module-combine-sink",
+                                "sink_name=downstage_all"], env=env, timeout=5,
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(["pactl", "set-default-sink", "downstage_all"], env=env,
+                           timeout=5, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(["pactl", "set-sink-volume", "downstage_all", "100%"], env=env,
+                           timeout=5, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            print("[audio] combined sink ready — kiosk audio mirrors to all outputs")
+            return
+        except Exception:
+            time.sleep(3)
+    print("[audio] combined sink unavailable (pactl missing or no sinks)")
+
+
+threading.Thread(target=_ensure_combined_sink, daemon=True).start()
+
+
 def _wifi_health():
     sig = _wifi_signal()
     drops = len(_WIFI["drops"])
