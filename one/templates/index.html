@@ -4550,7 +4550,11 @@
   // in-page floating panel steps in instead.
   function popOutButtons() {
     const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
-    if (!standalone) {
+    // iOS can't make real windows — everyone else can, and for this page a
+    // chrome-less web-app window is exactly right (it's all deck, no nav)
+    const iOS = /iP(hone|ad|od)/.test(navigator.userAgent) ||
+                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (!(standalone && iOS)) {
       window.open('/virtual-deck', 'ds-wall',
         'width=960,height=560,menubar=no,toolbar=no,location=no,status=no');
       return;
