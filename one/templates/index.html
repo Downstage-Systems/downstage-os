@@ -1883,11 +1883,11 @@
             emulator ID and a My Buttons tile appears in Show Mode, opening that emulator
             full-page. Clear the field and Set to remove it.</div>
           <div class="channel-row" style="margin-top:10px">
-            <span class="channel-label">Wall</span>
+            <span class="channel-label">My Buttons</span>
             <button class="btn-sm" onclick="popOutButtons()"
-                    title="My Buttons in its own small window — drag it to any display">Open Wall Window</button>
+                    title="My Buttons in its own small window — drag it to any display">Open in Window</button>
             <button class="btn-sm" onclick="copyWallLink(this)"
-                    title="Copy the wall's address for another device — a touchscreen, a tablet, a spare display">Copy Link</button>
+                    title="Copy the My Buttons page address for another device — a touchscreen, a tablet, a spare display">Copy Link</button>
           </div>
 
           <div class="external-url-hint" style="display:block; margin-top:10px">Up to two 15-key Stream Decks can run from the USB ports (an XL counts as two — key backlights add up). For more, connect them through a powered USB hub.</div>
@@ -4551,7 +4551,7 @@
   function popOutButtons() {
     const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
     if (!standalone) {
-      window.open('/wall', 'ds-wall',
+      window.open('/my-buttons', 'ds-wall',
         'width=880,height=480,menubar=no,toolbar=no,location=no,status=no');
       return;
     }
@@ -4597,8 +4597,8 @@
     grip.addEventListener('pointerup', () => { size = null; });
   })();
   function copyWallLink(btn) {
-    const u = `http://${window.location.host}/wall`;
-    const done = () => showToast('Wall link copied — paste it on the console device.', 'success');
+    const u = `http://${window.location.host}/my-buttons`;
+    const done = () => showToast('My Buttons link copied — paste it on the console device.', 'success');
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(u).then(done, () => fallbackCopyWall(u, done));
     } else fallbackCopyWall(u, done);

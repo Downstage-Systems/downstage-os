@@ -3189,7 +3189,8 @@ def power_ack():
     return jsonify({"ok": True})
 
 
-@app.route("/wall")
+@app.route("/my-buttons")
+@app.route("/wall")           # legacy alias
 def wall_page():
     """My Buttons in a window of its own — a full-bleed emulator wrapper the
     UI opens as an OS popup, draggable to any display. Follows Satellite's
