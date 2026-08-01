@@ -5572,8 +5572,10 @@ _DVD_PAGE = """<!DOCTYPE html><html><head><meta charset="utf-8">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 html,body { height:100%; background:#0B0D10; overflow:hidden; cursor:none; }
-#logo { position:absolute; width:12.5vw; will-change:transform, filter; }
-/* CRT: scanlines + vignette */
+.sprite { position:absolute; width:12.5vw; will-change:transform;
+  image-rendering:pixelated; }
+#logo { z-index:3; }
+.ghost { z-index:2; }
 #crt { position:fixed; inset:0; pointer-events:none; z-index:5;
   background:repeating-linear-gradient(0deg, rgba(0,0,0,0.22) 0 1px, transparent 1px 3px); }
 #vig { position:fixed; inset:0; pointer-events:none; z-index:4;
@@ -5591,22 +5593,48 @@ html,body { height:100%; background:#0B0D10; overflow:hidden; cursor:none; }
   75% { transform:translate(0.6vh,1vh); } }
 body.shake { animation:shake 0.35s linear; }
 </style></head><body>
-<svg id="logo" viewBox="0 0 96 108">
-  <rect x="6" y="10" width="84" height="66" rx="10" fill="none" stroke="currentColor" stroke-width="7"/>
-  <rect x="20" y="54" width="40" height="9" rx="4.5" fill="currentColor"/>
-  <rect x="64" y="54" width="12" height="9" rx="4.5" fill="currentColor" opacity="0.4"/>
-  <rect x="20" y="83" width="26" height="7" rx="3.5" fill="currentColor"/>
-  <rect x="50" y="83" width="26" height="7" rx="3.5" fill="currentColor"/>
-  <text x="48" y="105" text-anchor="middle" font-family="monospace" font-weight="bold"
-        font-size="15" fill="currentColor" letter-spacing="2">VIDEO</text>
-</svg>
 <div id="vig"></div><div id="crt"></div>
 <div id="osd">&#9654; PLAY</div>
 <div id="flash"></div>
 <script>
 const LOOP = 240, FX = 17/240, FY = 24/240, PHX = 0.0375, PHY = 0.2;
 const COLORS = ['#2FD97B','#8E6FE6','#F5A524','#2E90D9','#E5484D','#E8ECEF'];
-const logo = document.getElementById('logo');
+const NGHOST = 6, GDELAY = 0.07;
+
+// pixel-art sprites: rasterize the mark tiny (48px) once per colour, then
+// let image-rendering:pixelated blow the chunks up
+const svgFor = c => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 108">' +
+  '<rect x="6" y="10" width="84" height="66" rx="10" fill="none" stroke="' + c + '" stroke-width="7"/>' +
+  '<rect x="20" y="54" width="40" height="9" rx="4.5" fill="' + c + '"/>' +
+  '<rect x="64" y="54" width="12" height="9" rx="4.5" fill="' + c + '" opacity="0.4"/>' +
+  '<rect x="20" y="83" width="26" height="7" rx="3.5" fill="' + c + '"/>' +
+  '<rect x="50" y="83" width="26" height="7" rx="3.5" fill="' + c + '"/>' +
+  '<text x="48" y="106" text-anchor="middle" font-family="monospace" font-weight="bold"' +
+  ' font-size="17" fill="' + c + '" letter-spacing="3">ONE</text></svg>';
+
+const sprites = {};
+let ready = 0;
+COLORS.forEach(c => {
+  const im = new Image();
+  im.onload = () => {
+    const cv = document.createElement('canvas');
+    cv.width = 48; cv.height = 54;
+    cv.getContext('2d').drawImage(im, 0, 0, 48, 54);
+    sprites[c] = cv.toDataURL();
+    if (++ready === COLORS.length) start();
+  };
+  im.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(svgFor(c));
+});
+
+const ghosts = [];
+let logo;
+function makeSprite(cls) {
+  const im = document.createElement('img');
+  im.className = 'sprite ' + cls;
+  document.body.appendChild(im);
+  return im;
+}
+
 const ac = new (window.AudioContext || window.webkitAudioContext)();
 function blip(freq, dur, vol) {
   const o = ac.createOscillator(), g = ac.createGain();
@@ -5637,29 +5665,41 @@ function cornerParty(x, y, col) {
   document.body.classList.remove('shake'); void document.body.offsetWidth;
   document.body.classList.add('shake');
 }
+
 const tri = u => { u = u - Math.floor(u); return 1 - Math.abs(2*u - 1); };
+function pose(t, W, H, lw, lh) {
+  const ux = FX*t + PHX, uy = FY*t + PHY;
+  return { x: (W - lw) * tri(ux), y: (H - lh) * tri(uy),
+           nx: Math.floor(2*ux), ny: Math.floor(2*uy) };
+}
+const colAt = p => COLORS[(p.nx % 2) * 3 + (p.ny % 3)];
+
 let pnx = null, pny = null, osdShown = -1;
 function frame() {
-  const t = (Date.now() / 1000) % LOOP;
+  const now = Date.now() / 1000;
+  const t = now % LOOP;
   const W = innerWidth, H = innerHeight;
   const lw = logo.getBoundingClientRect().width || W * 0.125;
   const lh = lw * 108/96;
-  const ux = FX*t + PHX, uy = FY*t + PHY;
-  const x = (W - lw) * tri(ux), y = (H - lh) * tri(uy);
-  logo.style.transform = 'translate(' + x + 'px,' + y + 'px)';
-  const col = COLORS[(Math.floor(2*ux) % 2) * 3 + (Math.floor(2*uy) % 3)];
-  logo.style.color = col;
-  logo.style.filter = 'drop-shadow(0 0 1.4vh ' + col + ')';
-  const nx = Math.floor(2*ux), ny = Math.floor(2*uy);
+  const p = pose(t, W, H, lw, lh);
+  const col = colAt(p);
+  logo.style.transform = 'translate(' + p.x + 'px,' + p.y + 'px)';
+  if (logo.dataset.c !== col) { logo.dataset.c = col; logo.src = sprites[col]; }
+  for (let i = 0; i < NGHOST; i++) {
+    const gp = pose((now - (i+1)*GDELAY) % LOOP, W, H, lw, lh);
+    const g = ghosts[i], gc = colAt(gp);
+    g.style.transform = 'translate(' + gp.x + 'px,' + gp.y + 'px)';
+    g.style.opacity = 0.45 * (1 - i / NGHOST);
+    if (g.dataset.c !== gc) { g.dataset.c = gc; g.src = sprites[gc]; }
+  }
   if (pnx !== null) {
-    const hx = nx !== pnx, hy = ny !== pny;
-    if (hx && hy) cornerParty(x, y, col);
+    const hx = p.nx !== pnx, hy = p.ny !== pny;
+    if (hx && hy) cornerParty(p.x, p.y, col);
     else if (hx && ac.state === 'running') blip(392, 0.07, 0.2);
     else if (hy && ac.state === 'running') blip(330, 0.07, 0.2);
   }
-  pnx = nx; pny = ny;
-  // VCR OSD: PLAY blinks for the first 4 s of every loop
-  const loopN = Math.floor(Date.now() / 1000 / LOOP);
+  pnx = p.nx; pny = p.ny;
+  const loopN = Math.floor(now / LOOP);
   if (t < 4) {
     document.getElementById('osd').style.display =
       (Math.floor(t * 2) % 2 === 0) ? '' : 'none';
@@ -5669,7 +5709,12 @@ function frame() {
   }
   requestAnimationFrame(frame);
 }
-frame();
+function start() {
+  for (let i = NGHOST - 1; i >= 0; i--) ghosts[i] = makeSprite('ghost');
+  logo = makeSprite('');
+  logo.id = 'logo';
+  frame();
+}
 document.addEventListener('pointerdown', () => ac.resume());
 if (ac.state !== 'running') ac.resume();
 </script></body></html>"""
