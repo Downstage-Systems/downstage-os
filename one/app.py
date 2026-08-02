@@ -3278,6 +3278,12 @@ iframe {{ border:0; width:100%; height:100%; display:block; background:#000; }}
   border-left:1px solid #2a323c; display:flex; flex-direction:column; }}
 #tray.on {{ width:260px; }}
 .tr-inner {{ width:260px; padding:12px; display:flex; flex-direction:column; gap:10px; }}
+#split {{ display:none; width:9px; flex-shrink:0; cursor:col-resize; touch-action:none;
+  position:relative; }}
+#split.on {{ display:block; }}
+#split::after {{ content:''; position:absolute; left:3px; top:50%; transform:translateY(-50%);
+  width:3px; height:46px; border-radius:2px; background:#2a323c; }}
+#split:hover::after, #split.drag::after {{ background:#2FD97B; }}
 .tr-h {{ font:700 11px 'Rajdhani'; letter-spacing:0.22em; color:#F5A524; }}
 .pv {{ background:#000; border:1px solid #2a323c; border-radius:8px; overflow:hidden;
   aspect-ratio:16/9; position:relative; }}
@@ -3319,6 +3325,7 @@ iframe {{ border:0; width:100%; height:100%; display:block; background:#000; }}
   <iframe id="w" src="{url}" allow="fullscreen"></iframe>
 </div></div>
 </div>
+<div id="split" title="Drag to resize the status tray"></div>
 <div id="tray"><div class="tr-inner">
   <div class="tr-h">DISPLAYS</div>
   <div>
@@ -3350,14 +3357,58 @@ document.addEventListener('visibilitychange', () => {{
 }});
 
 let trayOn = false, poll = null, lastStatus = null;
+let trayW = 260;
+try {{ trayW = Math.min(700, Math.max(200, +localStorage.getItem('ds1-tray-w') || 260)); }} catch (e) {{}}
+function applyTrayW() {{
+  document.getElementById('tray').style.width = trayOn ? trayW + 'px' : '0px';
+  document.querySelector('.tr-inner').style.width = trayW + 'px';
+}}
 function toggleTray() {{
   trayOn = !trayOn;
   document.getElementById('tray').classList.toggle('on', trayOn);
+  document.getElementById('split').classList.toggle('on', trayOn);
+  applyTrayW();
   document.getElementById('tray-btn').innerHTML = trayOn ? 'STATUS &#9662;' : 'STATUS &#9656;';
-  try {{ window.resizeBy(trayOn ? 260 : -260, 0); }} catch (e) {{}}
+  try {{ window.resizeBy(trayOn ? trayW : -trayW, 0); }} catch (e) {{}}
   if (trayOn) {{ tick(); poll = setInterval(tick, 4000); }}
   else {{ clearInterval(poll); poll = null; }}
 }}
+
+// Splitter: drag left to grow the previews, right to give the deck room back.
+// Width persists per browser; virtual tiles re-scale live as it moves.
+function rescalePv() {{
+  document.querySelectorAll('.pv .vf iframe').forEach(f => {{
+    const w = f.closest('.pv').getBoundingClientRect().width;
+    if (w > 0) f.style.transform = 'scale(' + (w / 1280) + ')';
+  }});
+}}
+(() => {{
+  const split = document.getElementById('split');
+  split.addEventListener('pointerdown', e => {{
+    if (!trayOn) return;
+    e.preventDefault();
+    split.setPointerCapture(e.pointerId);
+    split.classList.add('drag');
+    const tray = document.getElementById('tray');
+    const startX = e.clientX, startW = tray.getBoundingClientRect().width;
+    tray.style.transition = 'none';
+    const move = ev => {{
+      const max = Math.max(200, window.innerWidth - 340);   // keep the deck usable
+      trayW = Math.min(Math.max(startW + (startX - ev.clientX), 200), max);
+      applyTrayW();
+      rescalePv();
+    }};
+    const up = () => {{
+      split.classList.remove('drag');
+      tray.style.transition = '';
+      split.removeEventListener('pointermove', move);
+      split.removeEventListener('pointerup', up);
+      try {{ localStorage.setItem('ds1-tray-w', Math.round(trayW)); }} catch (err) {{}}
+    }};
+    split.addEventListener('pointermove', move);
+    split.addEventListener('pointerup', up);
+  }});
+}})();
 async function tick() {{
   try {{
     const d = await (await fetch('/status')).json();
