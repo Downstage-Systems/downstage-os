@@ -2137,7 +2137,12 @@ class EPaperDisplay:
         elif _blackout_active:
             draw.text((5, 104), "BLACKOUT - resume in UI", font=self._font_md, fill=0)
         else:
-            view_lbl = self.SOURCE_LABELS.get(source, source)
+            try:
+                disp = _output_chain()["hdmi"]["connected"]
+            except Exception:
+                disp = True
+            view_lbl = (self.SOURCE_LABELS.get(source, source)
+                        if disp else "No Display")
             self._row(draw, 106, "Shows", view_lbl[:18])
         self._draw_power_glyph(draw)
 

@@ -4682,7 +4682,15 @@
     try {
       const r = await fetch('/presets/save', {
         method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ name: name.trim(), hdmi1_source: hdmi1Source, hdmi2_source: hdmi2Source }),
+        body: JSON.stringify((() => {
+          // the preset is the whole look as currently set in the UI -
+          // sources, custom-timer options, and External Viewer URLs
+          const b = { name: name.trim(), hdmi1_source: hdmi1Source, hdmi2_source: hdmi2Source,
+                      hdmi1_external_url: hdmi1ExternalUrl, hdmi2_external_url: hdmi2ExternalUrl };
+          for (const n of [1, 2])
+            for (const [k, v] of Object.entries(ctOpts[n])) b[`hdmi${n}_ct_${k}`] = v;
+          return b;
+        })()),
       });
       const d = await r.json();
       if (d.ok) { renderPresets(d.presets); showToast(`Preset "${name.trim()}" saved.`, 'success'); }
@@ -4700,9 +4708,15 @@
       const d = await r.json();
       if (d.ok) {
         showToast(`Preset "${name}" applied.`, 'success');
-        // reflect the recalled sources in the selector immediately
+        // reflect the recalled look in the controls immediately
         hdmi1Source = d.hdmi1_source;
         hdmi2Source = d.hdmi2_source;
+        for (const [k, v] of Object.entries(d.applied || {})) {
+          let m = k.match(/^hdmi([12])_ct_(.+)$/);
+          if (m) { ctOpts[+m[1]][m[2]] = v; continue; }
+          if (k === 'hdmi1_external_url') hdmi1ExternalUrl = v;
+          if (k === 'hdmi2_external_url') hdmi2ExternalUrl = v;
+        }
         refreshSourceGrid();
         updateHdmiLabels();
         setTimeout(fetchStatus, 2000);

@@ -5971,11 +5971,24 @@ def presets_save():
         return jsonify({"ok": False, "message": "Name required"})
     config  = load_config()
     presets = [p for p in config.get("presets", []) if p.get("name") != name]
-    presets.append({
+    entry = {
         "name":         name,
         "hdmi1_source": data.get("hdmi1_source", config.get("hdmi1_source", "config")),
         "hdmi2_source": data.get("hdmi2_source", config.get("hdmi2_source", "/timer")),
-    })
+    }
+    # a preset is the whole look, not just which source is up: the custom
+    # timer's toggles/colors and the External Viewer URLs ride along
+    for n in (1, 2):
+        for k in ("freeze", "hideprogress", "hideclock", "hidecards",
+                  "hidephase", "keycolour", "timercolour"):
+            ck = f"hdmi{n}_ct_{k}"
+            if ck in data:
+                entry[ck] = data[ck]
+            elif ck in config:
+                entry[ck] = config[ck]
+        uk = f"hdmi{n}_external_url"
+        entry[uk] = data.get(uk, config.get(uk, ""))
+    presets.append(entry)
     save_config({"presets": presets})
     return jsonify({"ok": True, "presets": presets})
 
@@ -5991,14 +6004,21 @@ def presets_apply():
         return jsonify({"ok": False, "message": "Preset not found"})
     _watchdog_override = False
     _blackout_active   = False
-    save_config({
+    updates = {
         "hdmi1_source": preset["hdmi1_source"],
         "hdmi2_source": preset["hdmi2_source"],
-    })
+    }
+    # presets saved before the full-look upgrade carried only the sources;
+    # anything they don't name simply stays as it is now
+    for k, v in preset.items():
+        if k.startswith(("hdmi1_ct_", "hdmi2_ct_")) or k.endswith("_external_url"):
+            updates[k] = v
+    save_config(updates)
     threading.Thread(target=launch_all_windows, daemon=True).start()
     return jsonify({"ok": True,
                     "hdmi1_source": preset["hdmi1_source"],
-                    "hdmi2_source": preset["hdmi2_source"]})
+                    "hdmi2_source": preset["hdmi2_source"],
+                    "applied": updates})
 
 
 @app.route("/presets/delete", methods=["POST"])
