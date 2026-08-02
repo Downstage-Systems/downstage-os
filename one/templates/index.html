@@ -410,6 +410,9 @@
     .preview-box img {
       width: 100%; height: 100%; object-fit: cover; display: block;
     }
+    /* transparent layer over the preview: keeps Safari's Live Text from
+       claiming right-clicks on recognized text in the video frame */
+    .pv-shield { position: absolute; inset: 0; z-index: 6; }
 
     .preview-virtual { position:absolute; inset:0; overflow:hidden; background:#000; z-index:1; }
     /* shield: keep every click/right-click on OUR menu, never the iframe's */
@@ -1564,14 +1567,14 @@
             <div class="preview-offline" id="preview-off-1" style="display:none">No signal</div>
             <div class="preview-virtual" id="preview-virt-1" style="display:none"><iframe title="Virtual preview 1" allow="autoplay 'none'"></iframe></div>
             <div class="preview-badge">HDMI 1</div>
-            <div class="preview-nodisp" id="preview-nodisp-1" style="display:none"><svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/><line x1="4" y1="4" x2="20" y2="16.5" stroke="currentColor" stroke-width="1.8"/></svg><div>No display connected</div></div>
+            <div class="pv-shield"></div><div class="preview-nodisp" id="preview-nodisp-1" style="display:none"><svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/><line x1="4" y1="4" x2="20" y2="16.5" stroke="currentColor" stroke-width="1.8"/></svg><div>No display connected</div></div>
           </div>
           <div class="preview-box" id="preview-box-2" onclick="selectHdmiTab(2)" oncontextmenu="openPreviewMenu(event, 2)">
             <img id="preview-img-2" alt="">
             <div class="preview-offline" id="preview-off-2" style="display:none">No signal</div>
             <div class="preview-virtual" id="preview-virt-2" style="display:none"><iframe title="Virtual preview 2" allow="autoplay 'none'"></iframe></div>
             <div class="preview-badge">HDMI 2</div>
-            <div class="preview-nodisp" id="preview-nodisp-2" style="display:none"><svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/><line x1="4" y1="4" x2="20" y2="16.5" stroke="currentColor" stroke-width="1.8"/></svg><div>No display connected</div></div>
+            <div class="pv-shield"></div><div class="preview-nodisp" id="preview-nodisp-2" style="display:none"><svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/><line x1="4" y1="4" x2="20" y2="16.5" stroke="currentColor" stroke-width="1.8"/></svg><div>No display connected</div></div>
           </div>
           <div class="pv-bar" id="pv-bar-1"></div>
           <div class="pv-bar" id="pv-bar-2"></div>
