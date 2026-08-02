@@ -377,41 +377,100 @@ def _cue_loop():
 threading.Thread(target=_cue_loop, daemon=True).start()
 
 
-def _ensure_combined_sink():
-    """Kiosk/browser audio should reach EVERY output - the case jack and any
-    HDMI display - so patterns and video sources are heard wherever the
-    audience is. PipeWire's combine sink does it; ensure one exists and is
-    the default. (Audio cues bypass this on purpose: raw ALSA to the jack,
-    because that's the comms feed.) Retries while audio boots."""
+# Pi 5 HDMI audio, keyed by CASE-LABEL port. The kernel's connector numbering
+# is inverted vs the jacks (see _XRANDR_TO_PORT): case port 1 = HDMI-A-2 =
+# the 107c706400 card, case port 2 = HDMI-A-1 = 107c701400. A card only
+# offers the hdmi-stereo profile while a display that accepts audio is
+# plugged into it.
+_HDMI_AUDIO = {
+    1: "alsa_output.platform-107c706400.hdmi.hdmi-stereo",
+    2: "alsa_output.platform-107c701400.hdmi.hdmi-stereo",
+}
+_HDMI_CARDS = {
+    1: "alsa_card.platform-107c706400.hdmi",
+    2: "alsa_card.platform-107c701400.hdmi",
+}
+_JACK_SINK = "alsa_output.usb-C-Media_Electronics_Inc._USB_Audio_Device-00.analog-stereo"
+
+
+def _audio_caretaker():
+    """Each HDMI output owns its audio: the kiosk window for output N launches
+    with PULSE_SINK aimed at that port's HDMI sink, so a video source is heard
+    only on its own display. The case jack stays the DEFAULT sink - cue
+    playback uses it directly, and a window whose display can't take audio
+    falls back there instead of leaking onto the other screen. This loop keeps
+    the HDMI card profiles switched on (PipeWire doesn't always do it on
+    hotplug), levels fresh sinks at 75%, and retires the old combine sink."""
     env = {**os.environ, "XDG_RUNTIME_DIR": os.environ.get("XDG_RUNTIME_DIR", "/run/user/1000")}
-    for _ in range(20):
+    def run(*a):
+        subprocess.run(a, env=env, timeout=5,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    leveled = set()
+    while True:
         try:
+            cards = subprocess.check_output(["pactl", "list", "cards"],
+                                            env=env, text=True, timeout=5)
+            for blk in cards.split("Card #"):
+                for card in _HDMI_CARDS.values():
+                    if (f"Name: {card}" in blk and "output:hdmi-stereo:" in blk
+                            and "Active Profile: off" in blk):
+                        run("pactl", "set-card-profile", card, "output:hdmi-stereo")
+                        print(f"[audio] enabled HDMI audio on {card}")
+            for line in subprocess.check_output(["pactl", "list", "short", "modules"],
+                                                env=env, text=True, timeout=5).splitlines():
+                if "downstage_all" in line:
+                    run("pactl", "unload-module", line.split("\t")[0])
+                    print("[audio] retired legacy combine sink")
             sinks = subprocess.check_output(["pactl", "list", "short", "sinks"],
                                             env=env, text=True, timeout=5)
-            if "downstage_all" not in sinks:
-                if not sinks.strip():
-                    raise RuntimeError("no sinks yet")
-                subprocess.run(["pactl", "load-module", "module-combine-sink",
-                                "sink_name=downstage_all"], env=env, timeout=5,
-                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            subprocess.run(["pactl", "set-default-sink", "downstage_all"], env=env,
-                           timeout=5, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            # hardware sinks at 75% (100% ran hot on real speakers), the
-            # combiner itself at unity - net level is the hardware setting
-            for line in subprocess.check_output(["pactl", "list", "short", "sinks"],
+            names = [l.split("\t")[1] for l in sinks.splitlines() if "\t" in l]
+            for name in names:
+                if name not in leveled:
+                    run("pactl", "set-sink-volume", name, "75%")
+                    leveled.add(name)
+            if _JACK_SINK in names:
+                run("pactl", "set-default-sink", _JACK_SINK)
+            # Steer each kiosk window's streams onto its own HDMI sink. A
+            # display that can't take audio gets parked on silence instead of
+            # leaking into the jack, and a stream that started before its
+            # sink existed (hotplug) is moved without a page reload.
+            if "downstage_silent" not in names:
+                run("pactl", "load-module", "module-null-sink",
+                    "sink_name=downstage_silent")
+            by_id = {l.split("\t")[0]: l.split("\t")[1]
+                     for l in sinks.splitlines() if "\t" in l}
+            idx = pid = cur = None
+            entries = []
+            for line in subprocess.check_output(["pactl", "list", "sink-inputs"],
                                                 env=env, text=True, timeout=5).splitlines():
-                name = line.split("\t")[1]
-                level = "100%" if name == "downstage_all" else "75%"
-                subprocess.run(["pactl", "set-sink-volume", name, level], env=env,
-                               timeout=5, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            print("[audio] combined sink ready - kiosk audio mirrors to all outputs")
-            return
+                line = line.strip()
+                if line.startswith("Sink Input #"):
+                    idx, pid, cur = line.split("#")[1], None, None
+                elif line.startswith("Sink: "):
+                    cur = by_id.get(line.split("Sink: ")[1].strip())
+                elif "application.process.id" in line:
+                    pid = line.split('"')[1]
+                    entries.append((idx, pid, cur))
+            for idx, pid, cur in entries:
+                try:
+                    cmd = open(f"/proc/{pid}/cmdline").read()
+                except Exception:
+                    continue
+                port = 1 if "kiosk-hdmi1" in cmd else 2 if "kiosk-hdmi2" in cmd else None
+                if port is None:
+                    continue
+                want = _HDMI_AUDIO[port]
+                if want not in names:
+                    want = "downstage_silent"
+                if cur != want:
+                    run("pactl", "move-sink-input", idx, want)
+                    print(f"[audio] window {port} stream -> {want}")
         except Exception:
-            time.sleep(3)
-    print("[audio] combined sink unavailable (pactl missing or no sinks)")
+            pass
+        time.sleep(15)
 
 
-threading.Thread(target=_ensure_combined_sink, daemon=True).start()
+threading.Thread(target=_audio_caretaker, daemon=True).start()
 
 
 def _wifi_health():
@@ -1075,9 +1134,14 @@ def _kill(proc):
             proc.kill()
 
 
-def _chromium_env():
+def _chromium_env(hdmi_index=None):
     env = os.environ.copy()
     env.setdefault("DISPLAY", ":0")
+    # route this window's audio to its own HDMI port; unknown/absent sinks
+    # fall back to the default (the jack), never the other display
+    sink = _HDMI_AUDIO.get(hdmi_index)
+    if sink:
+        env["PULSE_SINK"] = sink
     return env
 
 
@@ -1127,28 +1191,28 @@ def _open_window(source, display, hdmi_index):
             "chromium", *_COMMON_FLAGS,
             profile, pos, size, "--kiosk",
             "http://localhost:8080/blackout-page",
-        ], env=_chromium_env())
+        ], env=_chromium_env(hdmi_index))
 
     if source.startswith("pattern-"):
         return subprocess.Popen([
             "chromium", *_COMMON_FLAGS,
             profile, pos, size, "--kiosk",
             f"http://localhost:8080/pattern/{source.split('-', 1)[1]}",
-        ], env=_chromium_env())
+        ], env=_chromium_env(hdmi_index))
 
     if source == "welcome":
         return subprocess.Popen([
             "chromium", *_COMMON_FLAGS,
             profile, pos, size, "--kiosk",
             "http://localhost:8080/welcome",
-        ], env=_chromium_env())
+        ], env=_chromium_env(hdmi_index))
 
     if source == "holding":
         return subprocess.Popen([
             "chromium", *_COMMON_FLAGS,
             profile, pos, size, "--kiosk",
             "http://localhost:8080/holding",
-        ], env=_chromium_env())
+        ], env=_chromium_env(hdmi_index))
 
     if source == "config":
         return subprocess.Popen([
@@ -1156,7 +1220,7 @@ def _open_window(source, display, hdmi_index):
             profile, pos, size,
             "--app=http://localhost:8080",
             "--start-maximized",
-        ], env=_chromium_env())
+        ], env=_chromium_env(hdmi_index))
 
     if source == "companion":
         return subprocess.Popen([
@@ -1164,7 +1228,7 @@ def _open_window(source, display, hdmi_index):
             profile, pos, size,
             "--kiosk",
             "http://localhost:8000",
-        ], env=_chromium_env())
+        ], env=_chromium_env(hdmi_index))
 
     config = load_config()
     mode   = config.get("mode", "local")
@@ -1180,7 +1244,7 @@ def _open_window(source, display, hdmi_index):
             profile, pos, size,
             "--kiosk",
             url,
-        ], env=_chromium_env())
+        ], env=_chromium_env(hdmi_index))
 
     if not ip and source != "custom":
         # OnTime source but no server configured (fresh unit) - a browser
@@ -1198,7 +1262,7 @@ def _open_window(source, display, hdmi_index):
         profile, pos, size,
         "--kiosk",
         url,
-    ], env=_chromium_env())
+    ], env=_chromium_env(hdmi_index))
 
 
 def _mark_profiles_clean():
