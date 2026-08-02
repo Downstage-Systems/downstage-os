@@ -3861,6 +3861,20 @@
       reloadVirtualPreview(n);
     }
   }
+  // Rotation (and any window resize) changes the pane width, but the iframe's
+  // transform was baked at arm time — re-scale in place, no reload needed.
+  let _pvResizeT = null;
+  window.addEventListener('resize', () => {
+    clearTimeout(_pvResizeT);
+    _pvResizeT = setTimeout(() => {
+      for (const n of [1, 2]) {
+        const box = document.getElementById('preview-virt-' + n);
+        if (!box || box.style.display === 'none' || !box.dataset.url) continue;
+        const w = box.parentElement.getBoundingClientRect().width;
+        if (w > 0) box.querySelector('iframe').style.transform = 'scale(' + (w / 1280) + ')';
+      }
+    }, 200);
+  });
   // …and after the whole browser tab/app was backgrounded (iOS evicts there too)
   // Inline My Buttons wall: toggled by its quick action (which dims while
   // the wall is open); choice persists per browser
