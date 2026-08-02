@@ -403,9 +403,11 @@ def _audio_caretaker():
     hotplug), levels fresh sinks at 75%, and retires the old combine sink."""
     env = {**os.environ, "XDG_RUNTIME_DIR": os.environ.get("XDG_RUNTIME_DIR", "/run/user/1000")}
     def run(*a):
-        subprocess.run(a, env=env, timeout=5,
+        subprocess.run(a, env=env, timeout=30,
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     leveled = set()
+    stale_cycles = 0
+    last_reprobe = 0.0
     while True:
         try:
             cards = subprocess.check_output(["pactl", "list", "cards"],
@@ -416,6 +418,27 @@ def _audio_caretaker():
                             and "Active Profile: off" in blk):
                         run("pactl", "set-card-profile", card, "output:hdmi-stereo")
                         print(f"[audio] enabled HDMI audio on {card}")
+            # After a display moves ports, PipeWire sometimes never re-offers
+            # the moved-to card's hdmi-stereo profile at all; only a
+            # WirePlumber restart re-probes it. Nudge when a port has a
+            # cable but its card has no audio profile - two cycles in a row
+            # so a mid-hotplug wobble doesn't trigger it, and rate-limited.
+            stale = False
+            hc = hdmi_connected()
+            for port, card in _HDMI_CARDS.items():
+                blk = next((b for b in cards.split("Card #")
+                            if f"Name: {card}" in b), "")
+                if blk and "output:hdmi-stereo:" not in blk and hc.get(str(port)):
+                    stale = True
+            stale_cycles = stale_cycles + 1 if stale else 0
+            if stale_cycles >= 2 and time.time() - last_reprobe > 180:
+                print("[audio] connected port has no audio profile - re-probing")
+                run("systemctl", "--user", "restart", "wireplumber")
+                last_reprobe = time.time()
+                stale_cycles = 0
+                leveled.clear()
+                time.sleep(6)
+                continue
             for line in subprocess.check_output(["pactl", "list", "short", "modules"],
                                                 env=env, text=True, timeout=5).splitlines():
                 if "downstage_all" in line:
