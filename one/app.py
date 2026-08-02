@@ -5660,6 +5660,7 @@ body { display:flex; flex-direction:column; align-items:center; justify-content:
 #ball { position:absolute; left:50%; bottom:0; width:min(6.5vh, 5.5vw); height:min(6.5vh, 5.5vw);
   border-radius:50%; background:#fff; transform:translateX(-50%);
   box-shadow:0 0 3vh rgba(255,255,255,0.35); will-change:transform; }
+#ball.hit { background:#E5484D; box-shadow:0 0 4vh rgba(229,72,77,0.85); }
 #floor { position:absolute; left:0; right:0; bottom:-0.6vh; height:0.55vh;
   background:#2a323c; border-radius:0.3vh; }
 #floor.hit { background:#fff; box-shadow:0 0 2.5vh rgba(255,255,255,0.8); }
@@ -5741,6 +5742,7 @@ function frame() {
   const sq = (f < 0.05 || f > 0.95) ? ' scale(1.18, 0.78)' : '';
   ball.style.transform = 'translateX(-50%) translateY(' + (-h * zoneH).toFixed(1) + 'px)' + sq;
   floorEl.classList.toggle('hit', f < 0.1);
+  ball.classList.toggle('hit', f < 0.1 || f > 0.97);
   for (let i = 0; i < 4; i++) {
     const pos = (i - 2) + f;
     if (pos < -1.05 || pos > 1.05) { mks[i].style.display = 'none'; }
