@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Downstage View — Setup</title>
+  <title>Downstage View - Setup</title>
   <link rel="icon" type="image/svg+xml" href="/static/downstage-view-mark.svg">
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
   <meta name="apple-mobile-web-app-title" content="Downstage View">
   <style>
-    /* ── Brand fonts (served locally — no internet required) ── */
+    /* ── Brand fonts (served locally - no internet required) ── */
     @font-face {
       font-family: 'Rajdhani'; font-weight: 600; font-style: normal; font-display: swap;
       src: url('/static/fonts/rajdhani-600.woff2') format('woff2');
@@ -32,7 +32,7 @@
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    /* ── Downstage Systems palette — "House Lights Down" ── */
+    /* ── Downstage Systems palette - "House Lights Down" ── */
     :root {
       --bg:        #0B0D10;   /* House Black */
       --surface:   #14181D;   /* Panel */
@@ -50,13 +50,13 @@
       --red:       #E5484D;   /* Over Red */
       --red-bg:    rgba(229,72,77,0.08);
       --red-bd:    rgba(229,72,77,0.2);
-      --blue:      #F5A524;   /* Standby Amber — checking / attention */
+      --blue:      #F5A524;   /* Standby Amber - checking / attention */
       --blue-bg:   rgba(245,165,36,0.08);
       --blue-bd:   rgba(245,165,36,0.2);
       --amber:     #F5A524;
       --amber-bg:  rgba(245,165,36,0.08);
       --amber-bd:  rgba(245,165,36,0.2);
-      --violet:    #8E6FE6;   /* Cue Violet — control surfaces (Companion) */
+      --violet:    #8E6FE6;   /* Cue Violet - control surfaces (Companion) */
       --violet-bg: rgba(142,111,230,0.08);
       --violet-bd: rgba(142,111,230,0.28);
       --font-display: 'Rajdhani', 'Segoe UI', sans-serif;
@@ -155,7 +155,7 @@
 
     /* ── Card ── */
     .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
-    /* Per-page surface tint — same doctrine as the One: subtle, Show Mode neutral */
+    /* Per-page surface tint - same doctrine as the One: subtle, Show Mode neutral */
     .card { transition: background-color 0.35s; }
     body:not(.show-mode)[data-page="ontime"]  .card { background: #121915; }
     body:not(.show-mode)[data-page="network"] .card { background: #121822; }
@@ -254,7 +254,7 @@
     .source-chip.chip-wide { grid-column: span 2; }
     .chip-opt-label { font-size: 12.5px; color: var(--text); line-height: 1.3;
       text-align: left; flex: 1; min-width: 0; }
-    /* even grid of self-contained option cells — no ragged flex stretch */
+    /* even grid of self-contained option cells - no ragged flex stretch */
     .chip-opt { display: none; grid-template-columns: repeat(auto-fit, minmax(196px, 1fr));
       gap: 7px; }
     .source-chip.selected .chip-opt { display: grid; }
@@ -343,7 +343,7 @@
     .show-quick .btn-sm.qb-pattern svg { fill: var(--amber); }
     .show-quick .btn-sm.qb-power { border-color: var(--red-bd); order: -1; }  /* always the first tile */
     .show-quick .btn-sm.blackout { border-color: var(--border2); background: #000;
-      color: var(--muted); order: 98; }   /* far right — opposite Power Off */
+      color: var(--muted); order: 98; }   /* far right - opposite Power Off */
     .show-quick .btn-sm.blackout svg { fill: var(--text); }
     .show-quick .btn-sm.blackout.flashing { border-color: var(--red-bd); background: var(--red-bg);
       color: var(--red); animation: resume-flash 1.1s ease-in-out infinite; }
@@ -612,7 +612,7 @@
     /* ── Mobile (opened from phones) ── */
     @media (max-width: 560px) {
       body { padding: 14px 8px; }
-      /* bigger reading text on phones — chips, labels, values, hints */
+      /* bigger reading text on phones - chips, labels, values, hints */
       .source-chip { padding: 11px 13px; }
       .source-chip-label { font-size: 15px; }
       .section-label { font-size: 14px; }
@@ -667,7 +667,7 @@
     body.show-mode #setup-tabs { display:none; }
     /* ── interfaces panel ── */
     .iface-panel { display:flex; flex-direction:column; gap:8px; margin-bottom:16px; }
-    /* this unit's interfaces: two-up — same content, half the height */
+    /* this unit's interfaces: two-up - same content, half the height */
     #iface-panel { display:grid; grid-template-columns:1fr 1fr; }
     #iface-panel .iface-row { padding:10px 13px; }
     #iface-panel .iface-row:only-child, #iface-panel .iface-none { grid-column:1 / -1; }
@@ -880,7 +880,7 @@
 <div id="conn-ribbon">
   <span class="cdot"></span>
   <span id="conn-label">Unit unreachable</span>
-  <span class="csub" id="conn-sub">powered off or off the network — reconnecting…</span>
+  <span class="csub" id="conn-sub">powered off or off the network - reconnecting…</span>
   <button id="conn-hostname-btn" style="display:none; margin-left:auto; background:none;
           border:1px solid var(--border2); border-radius:7px; color:var(--text);
           font:600 12px var(--font-body); padding:6px 12px; cursor:pointer"
@@ -896,7 +896,7 @@
     <button class="emu-act" onclick="emuPopOut()" title="Open this tool in its own tab">
       <svg viewBox="0 0 24 24"><path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
     </button>
-    <button class="emu-act" onclick="hidePanel()" title="Back to the UI — tools stay open">
+    <button class="emu-act" onclick="hidePanel()" title="Back to the UI - tools stay open">
       <svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
     </button>
   </div>
@@ -982,31 +982,31 @@
            background:var(--amber-bg); border:1px solid var(--amber-bd); border-radius:9px;
            font-size:12.5px; color:var(--amber); line-height:1.5"></div>
 
-      <!-- Show Mode quick bar — OnTime tools on the connected server -->
+      <!-- Show Mode quick bar - OnTime tools on the connected server -->
       <div class="section-label show-quick-label">Quick Actions</div>
       <div class="show-quick" id="show-quick">
         <button class="btn-sm qb-ontime" onclick="quickOpen('/editor/')" title="Open the OnTime Editor in a new tab">
           <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
           OnTime Editor
         </button>
-        <button class="btn-sm qb-ontime" onclick="quickOpen('/messagecontrol')" title="Open OnTime Message Control in a new tab — send messages to stage displays">
+        <button class="btn-sm qb-ontime" onclick="quickOpen('/messagecontrol')" title="Open OnTime Message Control in a new tab - send messages to stage displays">
           <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>
           Messages
         </button>
         <button class="btn-sm qb-companion" id="companion-quick" style="display:none"
                 onclick="openPanel('http://' + window._compIp + ':8000', 'Companion')"
-                title="Open Companion on the connected Downstage One — its button surfaces, tappable from here">
+                title="Open Companion on the connected Downstage One - its button surfaces, tappable from here">
           <svg viewBox="0 0 24 24"><path d="M4 4h4v4H4V4zm6 0h4v4h-4V4zm6 0h4v4h-4V4zM4 10h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4zM4 16h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4z"/></svg>
           Companion</button>
         <button class="btn-sm qb-pattern" id="testpattern-btn" onclick="toggleTestPattern()"
-                title="Throw the test card on the display — press again to restore what was showing">
+                title="Throw the test card on the display - press again to restore what was showing">
           <svg viewBox="0 0 24 24"><path d="M3 3h7v7H3V3zm11 0h7v7h-7V3zM3 14h7v7H3v-7zm11 3.5c0-1.93 1.57-3.5 3.5-3.5s3.5 1.57 3.5 3.5S19.43 21 17.5 21 14 19.43 14 17.5z"/></svg>
           Test Patterns
         </button>
-        <button class="btn-sm blackout" id="blackout-btn-quick" onclick="blackout()" title="Black out the display — press again to resume">
+        <button class="btn-sm blackout" id="blackout-btn-quick" onclick="blackout()" title="Black out the display - press again to resume">
           <svg viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9-4.03-9-9-9zm0 16c-3.86 0-7-3.14-7-7s3.14-7 7-7 7 3.14 7 7-3.14 7-7 7z"/></svg>
           <span id="blackout-label-quick">Blackout</span></button>
-                <button class="btn-sm qb-power" onclick="shutdownPi()" title="Shut the unit down cleanly — the panel confirms when it's safe to unplug">
+                <button class="btn-sm qb-power" onclick="shutdownPi()" title="Shut the unit down cleanly - the panel confirms when it's safe to unplug">
           <svg viewBox="0 0 24 24"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg>
           Power Off</button>
       </div>
@@ -1014,11 +1014,11 @@
       <!-- Status -->
       <div class="watchdog-bar" id="watchdog-bar" style="display:none">
         <div class="status-dot"></div>
-        <span>OnTime offline — holding page active. The view restores automatically when it returns.</span>
+        <span>OnTime offline - holding page active. The view restores automatically when it returns.</span>
       </div>
 
       <!-- Server address -->
-      <!-- Setup tabs: task-based — Display is home -->
+      <!-- Setup tabs: task-based - Display is home -->
       <div id="setup-tabs" class="full-only">
         <button class="stab" id="stab-display" onclick="showSetupTab('display')">Display</button>
         <button class="stab" id="stab-ontime" onclick="showSetupTab('ontime')">OnTime</button>
@@ -1052,7 +1052,7 @@
       </div>
 
       <div id="tpane-display" class="tpane">
-      <!-- HDMI output confidence — the "is it actually up on the screen" card -->
+      <!-- HDMI output confidence - the "is it actually up on the screen" card -->
       <div class="out-card" id="out-card">
         <div class="section-label" style="text-align:center">HDMI Output</div>
         <div class="preview-row">
@@ -1066,10 +1066,10 @@
             <div class="preview-badge">OUTPUT</div>
           </div>
           <div class="oc-grid">
-            <div class="oc-node" id="ocn-content"><div class="n-tick">·</div><div class="n-lbl">Content</div><div class="n-val">—</div></div>
-            <div class="oc-node" id="ocn-render"><div class="n-tick">·</div><div class="n-lbl">Render</div><div class="n-val">—</div></div>
-            <div class="oc-node" id="ocn-hdmi"><div class="n-tick">·</div><div class="n-lbl">HDMI Port</div><div class="n-val">—</div></div>
-            <div class="oc-node" id="ocn-display"><div class="n-tick">·</div><div class="n-lbl">Display</div><div class="n-val">—</div></div>
+            <div class="oc-node" id="ocn-content"><div class="n-tick">·</div><div class="n-lbl">Content</div><div class="n-val">-</div></div>
+            <div class="oc-node" id="ocn-render"><div class="n-tick">·</div><div class="n-lbl">Render</div><div class="n-val">-</div></div>
+            <div class="oc-node" id="ocn-hdmi"><div class="n-tick">·</div><div class="n-lbl">HDMI Port</div><div class="n-val">-</div></div>
+            <div class="oc-node" id="ocn-display"><div class="n-tick">·</div><div class="n-lbl">Display</div><div class="n-val">-</div></div>
           </div>
         </div>
         <div class="oc-actions">
@@ -1106,7 +1106,7 @@
           <input type="url" id="external-url" placeholder="https://stagetimer.io/r/ABC123/viewer"
                  autocomplete="off" spellcheck="false"
                  oninput="externalUrl = this.value.trim()">
-          <div class="external-url-hint">Full URL of the page to display — a stagetimer.io viewer, a Google Slides present link, any web page.</div>
+          <div class="external-url-hint">Full URL of the page to display - a stagetimer.io viewer, a Google Slides present link, any web page.</div>
         </div>
 
           <div class="source-group-label">OnTime · Views</div>
@@ -1135,7 +1135,7 @@
                 <span class="chip-opt-label">Hide phase colours</span>
                 <button class="toggle on" id="cleantimer-hidephase-toggle" onclick="toggleCleanOpt('hidephase')"></button>
               </div>
-              <div class="chip-opt-item" title="Background colour — set to your chromakey colour, black for direct video">
+              <div class="chip-opt-item" title="Background colour - set to your chromakey colour, black for direct video">
                 <span class="chip-opt-label">Key colour</span>
                 <input type="color" id="cleantimer-keycolour" value="#000000" onchange="setCleanColour('keycolour', this.value)">
               </div>
@@ -1224,7 +1224,7 @@
         <!-- Watchdog toggle -->
         <div class="wd-box">
           <div class="toggle-row" style="margin-top:0">
-            <span class="toggle-label">Watchdog &mdash; switch the display if OnTime goes offline, restore when it returns</span>
+            <span class="toggle-label">Watchdog - switch the display if OnTime goes offline, restore when it returns</span>
             <button class="toggle on" id="watchdog-toggle" onclick="toggleWatchdog()"></button>
           </div>
           <div class="wd-sub" id="wd-sub">
@@ -1269,7 +1269,7 @@
 
         <div id="inet-note" style="display:none; margin-bottom:12px; padding:10px 13px;
              background:var(--amber-bg); border:1px solid var(--amber-bd); border-radius:9px;
-             font-size:12.5px; color:var(--amber); line-height:1.5">No internet access —
+             font-size:12.5px; color:var(--amber); line-height:1.5">No internet access -
           the network works locally, but updates won't load. The display and timers are unaffected.</div>
         <div id="portal-note" style="display:none; margin-bottom:12px; padding:10px 13px;
              background:var(--amber-bg); border:1px solid var(--amber-bd); border-radius:9px;
@@ -1344,7 +1344,7 @@
             <div class="hotspot-info">
               <svg viewBox="0 0 24 24"><path d="M12 11c1.33 0 2.71.18 4 .5V9.72C14.72 9.25 13.36 9 12 9s-2.72.25-4 .72v1.78c1.29-.32 2.67-.5 4-.5zM12 5c2.62 0 5.13.62 7.35 1.73l1.32-2.37A19.02 19.02 0 0012 2C8.87 2 5.9 2.86 3.33 4.36l1.32 2.37A16.75 16.75 0 0112 5zm0 10c-.83 0-1.5.67-1.5 1.5v4c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5v-4c0-.83-.67-1.5-1.5-1.5z"/></svg>
               <span>Hotspot</span>
-              <span class="hotspot-ssid" id="hotspot-ssid-label">—</span>
+              <span class="hotspot-ssid" id="hotspot-ssid-label">-</span>
               <span class="hotspot-state" id="hotspot-state">Off</span>
             </div>
             <button class="btn-sm" id="hotspot-btn" onclick="toggleHotspot()">Start</button>
@@ -1370,7 +1370,7 @@
             <button class="btn-sm" id="tz-detect-btn" onclick="detectTimezone()">
               <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
               Auto-detect</button>
-            <button class="btn-sm" id="time-sync-btn" onclick="syncTimeFromDevice()" title="Set the View's clock from this device — for venues with no internet">
+            <button class="btn-sm" id="time-sync-btn" onclick="syncTimeFromDevice()" title="Set the View's clock from this device - for venues with no internet">
               <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
               Sync Time</button>
           </div>
@@ -1395,14 +1395,14 @@
         <div class="section-label">Downstage OS</div>
         <div class="local-panel">
           <div class="version-row" style="margin-top:0; padding-top:0; border-top:none">
-            <span class="version-tag" id="os-ver-installed">—</span>
+            <span class="version-tag" id="os-ver-installed">-</span>
             <span class="version-tag" id="os-serial" style="color:var(--muted)"></span>
             <span class="version-badge checking" id="os-ver-badge">Checking…</span>
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px">
             <button class="btn-sm" id="os-update-btn" onclick="osUpdate()" style="display:none">Update</button>
             <button class="btn-sm" id="os-check-btn" onclick="osRecheck()">Check</button>
-            <button class="btn-sm" onclick="osInstallFile()" title="Install a downloaded release archive — for venues with no internet">Install from file</button>
+            <button class="btn-sm" onclick="osInstallFile()" title="Install a downloaded release archive - for venues with no internet">Install from file</button>
             <input type="file" id="os-file-input" accept=".tar.gz,.tgz,application/gzip" style="display:none" onchange="osUpdateFromFile(this)">
             <button class="btn-sm" onclick="window.location='/diagnostics'" title="Download a support diagnostics bundle">Diagnostics</button>
           </div>
@@ -1427,7 +1427,7 @@
         <div class="oss-credit">Built on <a href="https://www.getontime.no" target="_blank" rel="noopener">Ontime</a>, free open-source software (GPL v3) · <a href="https://github.com/cpvalente/ontime" target="_blank" rel="noopener">source</a></div>
       </div>
       <div class="footer-btns">
-        <button class="footer-btn" onclick="refreshDisplay()" title="Reload the display window — fixes a stuck or black screen">
+        <button class="footer-btn" onclick="refreshDisplay()" title="Reload the display window - fixes a stuck or black screen">
           <svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
           Refresh
         </button>
@@ -1452,7 +1452,7 @@
           Shutdown
         </button>
         <button class="footer-btn danger" onclick="resetKiosk()">Reset</button>
-        <button class="footer-btn danger" onclick="factoryReset()" title="Erase all user data — out-of-box state">Factory Reset</button>
+        <button class="footer-btn danger" onclick="factoryReset()" title="Erase all user data - out-of-box state">Factory Reset</button>
       </div>
     </div>
   </div>
@@ -1644,17 +1644,17 @@
       row.style.display = '';
       const txt = document.getElementById('patches-text');
       txt.innerHTML = '<b>System patches available</b>';
-      txt.title = `Tested through ${p.tested_through}` + (p.notes ? ` — ${p.notes}` : '');
+      txt.title = `Tested through ${p.tested_through}` + (p.notes ? ` - ${p.notes}` : '');
     } else {
       row.style.display = 'none';
     }
   }
   async function applyPatches() {
-    if (!confirm('Install system patches?\n\nTested by Downstage. The display keeps running during the install — allow 30+ minutes on this hardware. Restart afterwards when convenient.\n\nAvoid doing this during a show.')) return;
+    if (!confirm('Install system patches?\n\nTested by Downstage. The display keeps running during the install - allow 30+ minutes on this hardware. Restart afterwards when convenient.\n\nAvoid doing this during a show.')) return;
     const r = await fetch('/system/patches/apply', { method: 'POST' });
     const d = await r.json();
     if (!d.ok) { showToast(d.message, 'error'); return; }
-    showToast('Installing system patches — the display stays live…', 'info');
+    showToast('Installing system patches - the display stays live…', 'info');
     const t = setInterval(async () => {
       try {
         const rr = await fetch('/system/patches/status');
@@ -1720,7 +1720,7 @@
       const r = await fetch('/os/update', { method: 'POST', headers: {'Content-Type':'application/json'}, body: '{}' });
       const d = await r.json();
       if (!d.ok) { showToast(d.message, 'error'); return; }
-      showToast('Updating — this page will reload when the new version is up.', 'info');
+      showToast('Updating - this page will reload when the new version is up.', 'info');
       const startVer = d.from || null;
       let sawDown = false;
       const poll = setInterval(async () => {
@@ -1738,7 +1738,7 @@
   let watchdogOn = true;
   let wdFallback = 'holding';
   // called by Custom Timer controls; the View applies via explicit Save, so
-  // this is a no-op kept for shared-markup parity (was undefined — a live
+  // this is a no-op kept for shared-markup parity (was undefined - a live
   // ReferenceError on every toggle tap)
   function markDirty() {}
   function paintWdFallback() {
@@ -1761,7 +1761,7 @@
   }
 
   function fetchT(url, ms = 4000) {
-    // a dead LAN IP HANGS fetches (no host to refuse) — fail fast instead,
+    // a dead LAN IP HANGS fetches (no host to refuse) - fail fast instead,
     // so the offline ribbon and hostname rescue appear in seconds
     const c = new AbortController();
     const t = setTimeout(() => c.abort(), ms);
@@ -1797,7 +1797,7 @@
             '<div class="fu-ip" onclick="copyIp(\'' + u.ip + '\')" title="Click to copy">' + u.ip + '</div>' +
             (u.kind ? '<div class="fu-sub">via ' + u.kind + '</div>' : '') + '</div>' +
           '<div><div class="fu-lbl">Showing</div>' +
-            '<div class="fu-val">' + (u.showing || '—') + '</div></div>' +
+            '<div class="fu-val">' + (u.showing || '-') + '</div></div>' +
           '<div><div class="fu-lbl">Status</div>' +
             '<div class="fu-val ' + (bad ? 'bad' : 'ok') + '">' + (bad ? u.health_why : 'All good') + '</div></div>' +
         '</div></div>';
@@ -1821,7 +1821,7 @@
     catch (e) { showToast('Scan failed.', 'error'); }
     finally { btn.disabled = false; btn.textContent = 'Scan for Units'; }
   }
-  (async () => {   // last scan is remembered on the unit — show it on load
+  (async () => {   // last scan is remembered on the unit - show it on load
     try { renderFleet(await (await fetch('/discover/last')).json()); } catch (e) {}
   })();
   // while the Network tab is open, freshen the CACHED units (targeted probes,
@@ -1840,17 +1840,17 @@
   function renderOutputChain(d) {
     if (!d.output || !document.getElementById('ocn-hdmi')) return;
     const o = d.output;
-    const srcLabel = (typeof SOURCE_LABELS !== 'undefined' && SOURCE_LABELS[d.source]) || d.source || '\u2014';
+    const srcLabel = (typeof SOURCE_LABELS !== 'undefined' && SOURCE_LABELS[d.source]) || d.source || '-';
     if (d.source === 'off') ocNode('ocn-content', '', 'Off');
     else ocNode('ocn-content', 'ok', srcLabel);
     ocNode('ocn-render', o.render.up ? 'ok' : 'bad',
            o.render.up ? 'Success' : 'Not responding');
     ocNode('ocn-hdmi', o.hdmi.connected ? 'ok' : 'bad',
            o.hdmi.connected ? 'Live' + (o.hdmi.mode ? ' \u00b7 ' + o.hdmi.mode : '')
-                            : 'No display \u2014 check cable');
+                            : 'No display - check cable');
     const dn = o.display.name || o.display.mfr;
     ocNode('ocn-display', o.hdmi.connected ? 'ok' : '',
-           o.hdmi.connected ? (dn ? dn + ' detected' : 'Display detected') : '\u2014');
+           o.hdmi.connected ? (dn ? dn + ' detected' : 'Display detected') : '-');
     // preview window: no-display graphic beats everything; else snapshot or prompt
     const img = document.getElementById('oc-snap-img');
     const nod = document.getElementById('oc-nodisp');
@@ -1874,8 +1874,8 @@
       img.style.display = noDisp ? 'none' : '';
       document.getElementById('oc-prompt').style.display = 'none';
       ts.textContent = 'Captured ' + new Date().toLocaleTimeString();
-      if (noDisp) showToast('Captured, but no display is connected \u2014 the output is dark.', 'info');
-    } catch (e) { showToast('Could not capture \u2014 kiosk not responding.', 'error'); }
+      if (noDisp) showToast('Captured, but no display is connected - the output is dark.', 'info');
+    } catch (e) { showToast('Could not capture - kiosk not responding.', 'error'); }
     finally { btn.disabled = false; btn.textContent = 'Check Output'; }
   }
   async function identifyOutput() {
@@ -1926,14 +1926,14 @@
         const ok = d.portal.internet === true;
         pill.className = 'status-bar ' + (ok ? 'connected' : 'warn');
         document.getElementById('inet-pill-text').textContent =
-          ok ? 'Internet' : (d.portal.detected ? 'Internet — portal' : 'No internet');
+          ok ? 'Internet' : (d.portal.detected ? 'Internet - portal' : 'No internet');
       }
       const pn = document.getElementById('portal-note');
       if (pn) {
         pn.style.display = d.portal?.detected ? '' : 'none';
         if (d.portal?.detected) pn.textContent = d.portal.internet
-          ? 'Captive portal on the WiFi leg — internet flows over the other connection; nothing is affected.'
-          : 'Captive portal detected — the display works, but internet features are paused. If the unit ends up stranded here, it drops this network and starts its setup hotspot automatically within a few minutes.';
+          ? 'Captive portal on the WiFi leg - internet flows over the other connection; nothing is affected.'
+          : 'Captive portal detected - the display works, but internet features are paused. If the unit ends up stranded here, it drops this network and starts its setup hotspot automatically within a few minutes.';
       }
       const inet = document.getElementById('inet-note');
       if (inet) inet.style.display = (d.portal && d.portal.internet === false && !d.portal.detected) ? '' : 'none';
@@ -1948,7 +1948,7 @@
         } else if (d.wifi && d.wifi.up) {
           wp.style.display = '';
           wp.className = 'status-bar ' + (d.wifi.concern ? 'warn' : 'connected');
-          document.getElementById('wifi-pill-text').textContent = 'WIFI — ' + d.wifi.dbm + ' dBm';
+          document.getElementById('wifi-pill-text').textContent = 'WIFI - ' + d.wifi.dbm + ' dBm';
         } else wp.style.display = 'none';
       }
       const tp = document.getElementById('temp-pill');
@@ -1958,7 +1958,7 @@
           tp.style.display = t >= 70 ? '' : 'none';
           tp.className = 'status-bar ' + (t >= 80 ? 'disconnected' : 'warn');
           document.getElementById('temp-pill-text').textContent =
-            'TEMP — ' + t + '°C' + (t >= 80 ? ' HOT' : '');
+            'TEMP - ' + t + '°C' + (t >= 80 ? ' HOT' : '');
         }
       }
       const hsp = document.getElementById('hotspot-pill');
@@ -1966,7 +1966,7 @@
         if (d.hotspot_active) {
           hsp.style.display = '';
           hsp.className = 'status-bar warn';
-          document.getElementById('hotspot-pill-text').textContent = 'HOTSPOT — ON';
+          document.getElementById('hotspot-pill-text').textContent = 'HOTSPOT - ON';
         } else hsp.style.display = 'none';
       }
       const cq = document.getElementById('companion-quick');
@@ -1976,7 +1976,7 @@
       }
       const bq = document.getElementById('blackout-btn-quick');
       if (bq && d.output) {
-        // nothing to black out with no display — unless a blackout is already
+        // nothing to black out with no display - unless a blackout is already
         // engaged, which must stay resumable
         bq.disabled = !d.output.hdmi.connected && !d.blackout;
       }
@@ -1987,7 +1987,7 @@
         hp.classList.toggle('connected', ok);
         hp.classList.toggle('disconnected', !ok);
         document.getElementById('hdmi-pill-text').textContent =
-          ok ? 'HDMI \u2014 OK' : 'HDMI \u2014 NO DISPLAY';
+          ok ? 'HDMI - OK' : 'HDMI - NO DISPLAY';
       }
       const uni = document.getElementById('unit-name-input');
       if (uni && document.activeElement !== uni && !uni.dataset.dirty) uni.value = d.name || '';
@@ -1996,7 +1996,7 @@
       if (wn) {
         if (d.wifi && d.wifi.concern) {
           wn.style.display = '';
-          wn.textContent = d.wifi.concern + ' \u2014 the timer display may stutter or drop. '
+          wn.textContent = d.wifi.concern + ' - the timer display may stutter or drop. '
             + 'Consider ethernet, or moving the unit or access point.';
         } else wn.style.display = 'none';
       }
@@ -2030,7 +2030,7 @@
         txt.textContent = 'OnTime';
       } else if (d.ip) {
         bar.className = 'status-bar disconnected';
-        txt.textContent = 'OnTime — Unreachable';
+        txt.textContent = 'OnTime - Unreachable';
       } else {
         bar.className = 'status-bar disconnected';
         txt.textContent = 'Not configured';
@@ -2074,7 +2074,7 @@
         body: JSON.stringify({ ip, source: currentSource, external_url: externalUrl, watchdog: watchdogOn, watchdog_fallback: wdFallback }),
       });
       const d = await r.json();
-      if (d.ok) { showToast(`Connected to ${ip} — display updating.`, 'success'); setTimeout(fetchStatus, 2500); }
+      if (d.ok) { showToast(`Connected to ${ip} - display updating.`, 'success'); setTimeout(fetchStatus, 2500); }
       else showToast(d.error || 'Could not connect.', 'error');
     } catch { showToast('Could not reach the unit.', 'error'); }
     finally { btn.disabled = false; btn.textContent = 'Connect'; }
@@ -2095,7 +2095,7 @@
         body: JSON.stringify({ ip, source: currentSource, external_url: externalUrl, watchdog: watchdogOn, watchdog_fallback: wdFallback, cleantimer_freeze: cleanOpts.freeze, cleantimer_hideprogress: cleanOpts.hideprogress, cleantimer_hideclock: cleanOpts.hideclock, cleantimer_hidecards: cleanOpts.hidecards, cleantimer_hidephase: cleanOpts.hidephase, cleantimer_keycolour: cleanOpts.keycolour, cleantimer_timercolour: cleanOpts.timercolour }),
       });
       const d = await r.json();
-      d.ok ? showToast('Settings saved — display updating.', 'success') : showToast(d.error, 'error');
+      d.ok ? showToast('Settings saved - display updating.', 'success') : showToast(d.error, 'error');
       if (d.ok) setTimeout(fetchStatus, 3000);
     } catch { showToast('Network error.', 'error'); }
     finally {
@@ -2119,7 +2119,7 @@
     const el = document.getElementById('wifi-network-list');
     const ssidEl = document.getElementById('wifi-current-ssid');
     if (hotspot) {
-      ssidEl.innerHTML = `<span style="color:var(--amber)">Hotspot mode active — ${hotspotSsid}</span>`;
+      ssidEl.innerHTML = `<span style="color:var(--amber)">Hotspot mode active - ${hotspotSsid}</span>`;
     } else {
       ssidEl.innerHTML = current
         ? `<span class="wifi-ssid">${current}</span>`
@@ -2128,7 +2128,7 @@
 
     if (!networks.length) {
       el.innerHTML = hotspot
-        ? '<div class="wifi-empty">Hotspot running — press Scan to find networks to join</div>'
+        ? '<div class="wifi-empty">Hotspot running - press Scan to find networks to join</div>'
         : '<div class="wifi-empty">No networks found</div>';
       return;
     }
@@ -2156,7 +2156,7 @@
       }).join('');
   }
   async function wifiForget(ssid) {
-    if (!confirm('Forget "' + ssid + '"?\n\nThe saved password is deleted — the unit will no longer auto-join this network.')) return;
+    if (!confirm('Forget "' + ssid + '"?\n\nThe saved password is deleted - the unit will no longer auto-join this network.')) return;
     const d = await (await fetch('/wifi/forget', { method: 'POST',
       headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ssid }) })).json();
     showToast(d.ok ? 'Forgotten.' : (d.message || 'Could not forget.'), d.ok ? 'success' : 'error');
@@ -2166,7 +2166,7 @@
     if (!confirm('Disconnect from "' + ssid + '"?\n\nThe network stays saved. If this leaves no other connection, the setup hotspot comes up so the unit stays reachable.')) return;
     const d = await (await fetch('/wifi/disconnect', { method: 'POST',
       headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ ssid }) })).json();
-    showToast(d.ok ? (d.hotspot_raised ? 'Disconnected — hotspot is up.' : 'Disconnected.')
+    showToast(d.ok ? (d.hotspot_raised ? 'Disconnected - hotspot is up.' : 'Disconnected.')
                    : (d.message || 'Could not disconnect.'), d.ok ? 'success' : 'error');
     setTimeout(loadWifiStatus, 2500);
   }
@@ -2212,7 +2212,7 @@
 
   async function wifiDoConnect(ssid, password) {
     if (hotspotActive) {
-      if (!confirm(`Joining "${ssid}" will stop the hotspot (one radio — it can't do both).\n\nIf you're connected through the hotspot right now, you'll lose this page and can rejoin the device on "${ssid}"'s network. If the join fails, the hotspot restarts automatically.`)) return;
+      if (!confirm(`Joining "${ssid}" will stop the hotspot (one radio - it can't do both).\n\nIf you're connected through the hotspot right now, you'll lose this page and can rejoin the device on "${ssid}"'s network. If the join fails, the hotspot restarts automatically.`)) return;
     }
     showToast(`Connecting to ${ssid}…${hotspotActive ? ' (stopping hotspot first)' : ''}`, 'info');
     try {
@@ -2238,14 +2238,14 @@
   let hotspotPass   = '';
 
   function updateHotspotUI() {
-    document.getElementById('hotspot-ssid-label').textContent = hotspotSsid || '—';
+    document.getElementById('hotspot-ssid-label').textContent = hotspotSsid || '-';
     const state = document.getElementById('hotspot-state');
     state.textContent = hotspotActive ? 'On' : 'Off';
     state.classList.toggle('on', hotspotActive);
     document.getElementById('hotspot-btn').textContent = hotspotActive ? 'Stop' : 'Start';
     if (hotspotActive) {
       document.getElementById('wifi-current-ssid').innerHTML =
-        `<span style="color:var(--amber)">Hotspot mode active — ${hotspotSsid}</span>`;
+        `<span style="color:var(--amber)">Hotspot mode active - ${hotspotSsid}</span>`;
     }
     const hint = document.getElementById('hotspot-hint');
     if (hotspotActive) {
@@ -2267,7 +2267,7 @@
   async function toggleHotspot() {
     const btn = document.getElementById('hotspot-btn');
     if (!hotspotActive) {
-      if (!confirm(`Start hotspot ${hotspotSsid}?\n\nThe device will leave any WiFi network it is on. If you are connected over WiFi right now, rejoin via the hotspot (password: ${hotspotPass}) at http://10.42.0.1:8080 — or use ethernet.`)) return;
+      if (!confirm(`Start hotspot ${hotspotSsid}?\n\nThe device will leave any WiFi network it is on. If you are connected over WiFi right now, rejoin via the hotspot (password: ${hotspotPass}) at http://10.42.0.1:8080 - or use ethernet.`)) return;
     }
     btn.disabled = true;
     try {
@@ -2279,7 +2279,7 @@
       loadWifiStatus();
       [3000, 9000, 16000].forEach(t => setTimeout(loadWifiStatus, t));
     } catch {
-      showToast('Connection changed — rejoin via hotspot or ethernet.', 'warning');
+      showToast('Connection changed - rejoin via hotspot or ethernet.', 'warning');
     }
     btn.disabled = false;
   }
@@ -2373,13 +2373,13 @@
 
 
   function factoryReset() {
-    const typed = prompt('FACTORY RESET\n\nThis erases WiFi credentials, OnTime projects, and logs. The unit keeps its serial and hotspot identity, then reboots — it will come back on ethernet or its fallback hotspot.\n\nType RESET to confirm:');
-    if (typed !== 'RESET') { if (typed !== null) showToast('Not confirmed — type RESET exactly.', 'warning'); return; }
+    const typed = prompt('FACTORY RESET\n\nThis erases WiFi credentials, OnTime projects, and logs. The unit keeps its serial and hotspot identity, then reboots - it will come back on ethernet or its fallback hotspot.\n\nType RESET to confirm:');
+    if (typed !== 'RESET') { if (typed !== null) showToast('Not confirmed - type RESET exactly.', 'warning'); return; }
     fetch('/system/factory-reset', {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ confirm: 'RESET' }),
     }).then(r => r.json()).then(d =>
-      showToast(d.ok ? 'Factory reset started — unit is rebooting.' : `Failed: ${d.message}`, d.ok ? 'info' : 'error')
+      showToast(d.ok ? 'Factory reset started - unit is rebooting.' : `Failed: ${d.message}`, d.ok ? 'info' : 'error')
     ).catch(() => showToast('Reset started (connection dropped).', 'info'));
   }
 
@@ -2397,7 +2397,7 @@
       if (ab) ab.disabled = d.available === false;
       if (d.available === false) showToast('No saved profile for that interface yet.', 'info');
       netMode = d.method === 'manual' ? 'manual' : 'auto';
-      const ifaceName = { eth0: 'Ethernet', wlan0: 'Wi-Fi' }[d.iface] || d.iface || '—';
+      const ifaceName = { eth0: 'Ethernet', wlan0: 'Wi-Fi' }[d.iface] || d.iface || '-';
       if (d.method === 'manual' && d.address) {
         const [ip, prefix] = d.address.split('/');
         document.getElementById('net-ip').value = ip || '';
@@ -2427,11 +2427,11 @@
       body.dns    = document.getElementById('net-dns').value.trim();
       if (!body.ip) { showToast('Enter an IP address.', 'error'); return; }
     }
-    if (!confirm(`Apply ${netMode === 'manual' ? 'static IP ' + body.ip : 'DHCP'}?\n\nYour connection to the unit will briefly drop. If the new setting is unreachable, the unit reverts automatically after 90 seconds — so a wrong value can't strand it.`)) return;
+    if (!confirm(`Apply ${netMode === 'manual' ? 'static IP ' + body.ip : 'DHCP'}?\n\nYour connection to the unit will briefly drop. If the new setting is unreachable, the unit reverts automatically after 90 seconds - so a wrong value can't strand it.`)) return;
     const btn = document.getElementById('net-apply-btn');
     const note = document.getElementById('net-note');
     btn.disabled = true; btn.textContent = 'Applying…';
-    note.style.display = ''; note.textContent = 'Applying — reconnecting to confirm…';
+    note.style.display = ''; note.textContent = 'Applying - reconnecting to confirm…';
     let resp;
     try {
       resp = await (await fetch('/network/apply', {
@@ -2450,14 +2450,14 @@
           try {
             const r = await fetch(`${base}/network/confirm`, { method: 'POST', cache: 'no-store', signal: AbortSignal.timeout(3000) });
             if (r.ok) {
-              note.textContent = `Confirmed — settings kept. Reach the unit at ${resp.hostname}.local:8080` + (body.ip ? ` or ${body.ip}:8080` : '') + '.';
+              note.textContent = `Confirmed - settings kept. Reach the unit at ${resp.hostname}.local:8080` + (body.ip ? ` or ${body.ip}:8080` : '') + '.';
               btn.disabled = false; btn.textContent = 'Apply'; setTimeout(loadNetwork, 1500); return;
             }
           } catch {}
         }
         await new Promise(r => setTimeout(r, 4000));
       }
-      note.textContent = 'Could not reach the unit at the new address — it has reverted to the previous settings. (Are you on the same subnet?)';
+      note.textContent = 'Could not reach the unit at the new address - it has reverted to the previous settings. (Are you on the same subnet?)';
       btn.disabled = false; btn.textContent = 'Apply'; setTimeout(loadNetwork, 2000);
     })();
   }
@@ -2572,7 +2572,7 @@
         currentSource = target;
         document.querySelectorAll('.source-chip').forEach(c =>
           c.classList.toggle('selected', c.dataset.source === target));
-        showToast(goingToPattern ? 'Test card on the display — press again to restore.'
+        showToast(goingToPattern ? 'Test card on the display - press again to restore.'
                                  : 'Display restored.', 'success');
       } else showToast(d.error || 'Could not switch.', 'error');
     } catch { showToast('Network error.', 'error'); }
@@ -2601,7 +2601,7 @@
     openPanel(`http://${host}:4001${path}`, titles[path] || 'OnTime');
   }
 
-  // ── Show / Full view mode — persisted per browser ──
+  // ── Show / Full view mode - persisted per browser ──
   function setViewMode(m) {
     document.body.classList.toggle('show-mode', m === 'show');
     document.getElementById('view-tab-show').classList.toggle('active', m === 'show');
@@ -2643,7 +2643,7 @@
         ? 'In Safari, tap the <b>Share</b> button (the square with an arrow), scroll down, and tap <b>Add to Home Screen</b>.'
         : 'In Chrome, tap the <b>&#8942;</b> menu (top right), then tap <b>Add to Home screen</b>.';
       document.getElementById('a2hs-steps').innerHTML =
-        steps + '<br><br>The page becomes an app icon — one tap from your home screen next time.';
+        steps + '<br><br>The page becomes an app icon - one tap from your home screen next time.';
       document.getElementById('a2hs-pop').style.display = 'flex';
     };
     window.a2hsDismiss = function () {
@@ -2655,7 +2655,7 @@
 <script>
   function copyAddr() {
     const addr = 'http://' + window.location.host + '/';
-    const done = () => showToast('Address copied — ' + addr, 'success');
+    const done = () => showToast('Address copied - ' + addr, 'success');
     const pop = document.getElementById('qr-pop');
     if (pop.style.display === 'none') {
       const img = document.getElementById('qr-img');
@@ -2692,12 +2692,12 @@
   function renderInterfaces(list, primary) {
     const box = document.getElementById('iface-panel');
     if (!box) return;
-    if (!list || !list.length) { box.innerHTML = '<div class="iface-none">No network connection — check the cable or join WiFi below.</div>'; return; }
+    if (!list || !list.length) { box.innerHTML = '<div class="iface-none">No network connection - check the cable or join WiFi below.</div>'; return; }
     box.innerHTML = list.map(function(i){
       const ll = i.ip.indexOf('169.254.') === 0;   // self-assigned: no DHCP behind this port
       const isPrim = i.iface === primary && !ll;
       const tag = isPrim ? '<span class="iprim">PRIMARY</span>'
-                : ll ? '<span class="inote" title="Self-assigned address \u2014 nothing answered DHCP on this port">no DHCP</span>' : '';
+                : ll ? '<span class="inote" title="Self-assigned address - nothing answered DHCP on this port">no DHCP</span>' : '';
       let sig = '';
       if (i.kind === 'WiFi' && window._wifiNow && window._wifiNow.up)
         sig = '<span class="inote">' + window._wifiNow.dbm + ' dBm</span>';
@@ -2727,7 +2727,7 @@
   // Wake Lock API needs a secure context (our units speak HTTP), so fall
   // back to the classic trick: an invisible looping video the page records
   // for itself (each browser produces a format it can play).
-  // ── multi-panel manager: tools stay ALIVE in the background (state kept —
+  // ── multi-panel manager: tools stay ALIVE in the background (state kept -
   // the editor reopens where you left it); multiple open tools become tabs ──
   const _panels = {};      // title -> { frame, url }
   let _activePanel = null;
@@ -2797,7 +2797,7 @@
     f.src = f.src;   // re-navigate; cross-origin frames allow nothing subtler
   }
   // While a panel is open, the browser refresh shortcut refreshes the TOOL,
-  // not the whole UI — reloading the page would drop every open panel.
+  // not the whole UI - reloading the page would drop every open panel.
   document.addEventListener('keydown', (e) => {
     if (!document.body.classList.contains('panel-open')) return;
     if (e.key === 'F5' || ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'r')) {
@@ -2816,7 +2816,7 @@
   const _CONN_COPY = {
     shutdown: ['Device shutting down', 'safe to unplug once the panel shows the farewell screen'],
     restart:  ['Device restarting',    'the page reloads automatically when it returns'],
-    offline:  ['Unit unreachable',     'powered off or off the network — reconnecting…'],
+    offline:  ['Unit unreachable',     'powered off or off the network - reconnecting…'],
   };
   function showConnRibbon(mode) {
     const r = document.getElementById('conn-ribbon');

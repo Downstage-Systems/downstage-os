@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Downstage One — Setup</title>
+  <title>Downstage One - Setup</title>
   <link rel="icon" type="image/svg+xml" href="/static/downstage-one-mark.svg">
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
   <meta name="apple-mobile-web-app-title" content="Downstage One">
   <style>
-    /* ── Brand fonts (served locally — no internet required) ── */
+    /* ── Brand fonts (served locally - no internet required) ── */
     @font-face {
       font-family: 'Rajdhani'; font-weight: 600; font-style: normal; font-display: swap;
       src: url('/static/fonts/rajdhani-600.woff2') format('woff2');
@@ -32,7 +32,7 @@
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    /* ── Downstage Systems palette — "House Lights Down" ── */
+    /* ── Downstage Systems palette - "House Lights Down" ── */
     :root {
       --bg:        #0B0D10;   /* House Black */
       --surface:   #14181D;   /* Panel */
@@ -40,24 +40,24 @@
       --border:    #1d232a;
       --border2:   #242B33;   /* Edge */
       --accent:    #2FD97B;   /* Run Green */
-      --hdmi1:     #58B6FF;   /* HDMI 1 identity — light blue */
+      --hdmi1:     #58B6FF;   /* HDMI 1 identity - light blue */
       --hdmi1-lo:  rgba(88,182,255,0.14);
-      --hdmi2:     #2FD97B;   /* HDMI 2 identity — Run Green */
+      --hdmi2:     #2FD97B;   /* HDMI 2 identity - Run Green */
       --hdmi2-lo:  rgba(47,217,123,0.14);
       --accent-lo: rgba(47,217,123,0.12);
       --text:      #E8ECEF;   /* Text */
       --muted:     #9AA4AD;   /* Dim */
       --muted2:    #4a545e;
-      --green:     #2FD97B;   /* Run Green — running / healthy */
+      --green:     #2FD97B;   /* Run Green - running / healthy */
       --green-bg:  rgba(47,217,123,0.08);
       --green-bd:  rgba(47,217,123,0.2);
-      --red:       #E5484D;   /* Over Red — overtime / errors only */
+      --red:       #E5484D;   /* Over Red - overtime / errors only */
       --red-bg:    rgba(229,72,77,0.08);
       --red-bd:    rgba(229,72,77,0.2);
-      --violet:    #8E6FE6;   /* Cue Violet — control surfaces (Companion) */
+      --violet:    #8E6FE6;   /* Cue Violet - control surfaces (Companion) */
       --violet-bg: rgba(142,111,230,0.08);
       --violet-bd: rgba(142,111,230,0.28);
-      --blue:      #F5A524;   /* Standby Amber — checking / attention */
+      --blue:      #F5A524;   /* Standby Amber - checking / attention */
       --blue-bg:   rgba(245,165,36,0.08);
       --blue-bd:   rgba(245,165,36,0.2);
       --amber:     #F5A524;   /* Standby Amber */
@@ -176,7 +176,7 @@
     body:not(.show-mode)[data-page="network"]   .card { background: #121822; }
     body:not(.show-mode)[data-page="system"]    .card { background: #1a1613; }
     /* the SELECTED setup tab takes its page's hue (section labels stay amber
-       everywhere — tried tinting them 2026-07-30, Rob vetoed) */
+       everywhere - tried tinting them 2026-07-30, Rob vetoed) */
     #stab-displays.on  { color: var(--amber); }
     #stab-companion.on { color: #8E6FE6; }
     #stab-network.on   { color: #2E90D9; }
@@ -241,10 +241,10 @@
     .emu-act svg { width:16px; height:16px; fill:var(--muted); display:block; }
     .emu-act:hover svg { fill:var(--text); }
     #emu-frame { flex:1; width:100%; border:0; background:#000; }
-    /* body freeze while a panel is open — iOS scrolls the page behind a
+    /* body freeze while a panel is open - iOS scrolls the page behind a
        fixed overlay unless the body itself is pinned */
     body.panel-open { position:fixed; left:0; right:0; overflow:hidden; }
-    /* connection ribbon — unit unreachable / shutting down, with auto-reconnect */
+    /* connection ribbon - unit unreachable / shutting down, with auto-reconnect */
     #conn-ribbon { position:fixed; top:0; left:0; right:0; z-index:950; display:none;
       align-items:center; gap:12px; padding:10px 20px;
       background:var(--surface); border-bottom:1px solid var(--red);
@@ -262,7 +262,7 @@
       100% { box-shadow: 0 0 0 0 rgba(47,217,123,0); }
     }
 
-    /* ── Section label — mono eyebrow, Standby Amber ── */
+    /* ── Section label - mono eyebrow, Standby Amber ── */
     .section-label {
       font-family: var(--font-mono);
       font-size: 12px; font-weight: 700; color: var(--amber);
@@ -517,7 +517,7 @@
     .source-chip.chip-wide { grid-column: span 2; }
     .chip-opt-label { font-size: 12.5px; color: var(--text); line-height: 1.3;
       text-align: left; flex: 1; min-width: 0; }
-    /* even grid of self-contained option cells — no ragged flex stretch */
+    /* even grid of self-contained option cells - no ragged flex stretch */
     .chip-opt { display: none; grid-template-columns: repeat(auto-fit, minmax(196px, 1fr));
       gap: 7px; }
     .source-chip.selected .chip-opt { display: grid; }
@@ -555,7 +555,7 @@
     .source-chip.selected .source-chip-label     { color: var(--accent); }
     .source-chip.selected-off .source-chip-label { color: var(--red); }
 
-    /* ── Floating save bar — appears when there are unsaved changes ── */
+    /* ── Floating save bar - appears when there are unsaved changes ── */
     .save-bar {
       position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%) translateY(90px);
       width: calc(100% - 32px); max-width: 560px;
@@ -587,7 +587,7 @@
       font-size: 11px; color: var(--muted); margin-top: 6px; line-height: 1.5;
     }
 
-    /* ── Buttons — Rajdhani, uppercase, like panel labels ── */
+    /* ── Buttons - Rajdhani, uppercase, like panel labels ── */
     .actions { display: flex; gap: 10px; }
     button {
       padding: 12px 20px; border: none; border-radius: 9px;
@@ -699,7 +699,7 @@
 
     /* ── WiFi ── */
     .iface-panel { display:flex; flex-direction:column; gap:8px; margin-bottom:16px; }
-    /* this unit's interfaces: two-up — same content, half the height */
+    /* this unit's interfaces: two-up - same content, half the height */
     #iface-panel { display:grid; grid-template-columns:1fr 1fr; }
     #iface-panel .iface-row { padding:10px 13px; }
     #iface-panel .iface-row:only-child, #iface-panel .iface-none { grid-column:1 / -1; }
@@ -867,7 +867,7 @@
       font-size: 13px; font-weight: 600; border: 1px solid transparent;
     }
     .alert-bar.blackout  { background: rgba(0,0,0,0.7); border-color: #333; color: #666; }
-    /* blackout notice floats at the bottom and stays until resumed — it must
+    /* blackout notice floats at the bottom and stays until resumed - it must
        not scroll away with the page header while displays are dark */
     #blackout-bar {
       position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
@@ -988,7 +988,7 @@
     #preview-box-2 .preview-badge { color: var(--hdmi2); }
     #tab-hdmi1.active svg { fill: var(--hdmi1); }
     #tab-hdmi2.active svg { fill: var(--hdmi2); }
-    /* the source pill wears its output's identity end to end — no blue-on-green */
+    /* the source pill wears its output's identity end to end - no blue-on-green */
     #hdmi1-label { color: var(--hdmi1); background: var(--hdmi1-lo); border-color: rgba(88,182,255,0.3); }
     #hdmi2-label { color: var(--hdmi2); background: var(--hdmi2-lo); border-color: rgba(47,217,123,0.25); }
     /* selected source chip takes the active output's colour */
@@ -1028,7 +1028,7 @@
     #view-tab-show.active svg { fill: var(--accent); }
     body.show-mode .full-only { display: none !important; }
 
-    /* ── Show Mode quick bar: app-icon tiles — big targets for dark rooms ── */
+    /* ── Show Mode quick bar: app-icon tiles - big targets for dark rooms ── */
     .show-quick { display: none; }
     body.show-mode .show-quick.qb-live {
       display: grid; grid-template-columns: repeat(8, minmax(0, 1fr));
@@ -1053,11 +1053,11 @@
       cursor: nwse-resize; touch-action: none;
       background: linear-gradient(135deg, transparent 55%, var(--border2) 55%); }
     /* phone: the wall is width-fitted inside the frame, so extra height is
-       pure letterbox — let the aspect ratio hug the grid instead */
+       pure letterbox - let the aspect ratio hug the grid instead */
     @media (max-width: 600px) {
       #show-embed-frame { min-height: 0 !important; aspect-ratio: 2 / 1 !important;
                           border-radius: 10px !important; }
-      /* Pop Out is a desktop/tablet feature — phones get inline + Viewer
+      /* Pop Out is a desktop/tablet feature - phones get inline + Viewer
          (mobile browsers can't make sized windows; Copy Link stays) */
       button[onclick="popOutButtons()"] { display: none; }
     }
@@ -1086,7 +1086,7 @@
     .show-quick .btn-sm.qb-power svg { fill: var(--red); }
     .show-quick .btn-sm.qb-companion svg { fill: var(--violet); }
     .show-quick .btn-sm.blackout { border-color: var(--border2); background: #000;
-      color: var(--muted); order: 98; }   /* far right — opposite Power Off */
+      color: var(--muted); order: 98; }   /* far right - opposite Power Off */
     .show-quick .btn-sm.blackout svg { fill: var(--text); }
     .show-quick .btn-sm.blackout.flashing { border-color: var(--red-bd); background: var(--red-bg);
       color: var(--red); }
@@ -1095,7 +1095,7 @@
     /* ── Mobile (phones open this page constantly) ── */
     @media (max-width: 560px) {
       body { padding: 14px 8px; }
-      /* bigger reading text on phones — chips, labels, values, hints */
+      /* bigger reading text on phones - chips, labels, values, hints */
       .source-chip { padding: 11px 13px; }
       .source-chip-label { font-size: 15px; }
       .section-label { font-size: 14px; }
@@ -1119,14 +1119,14 @@
       .addr-right { margin-left: 0; width: 100%; flex-direction: row; align-items: center;
                    gap: 10px; text-align: left; }
       .addr-right .addr-main { font-size: 11px; }
-      /* five tabs share the width evenly — all visible, no hidden scrolling.
+      /* five tabs share the width evenly - all visible, no hidden scrolling.
          id selectors: the desktop tab styles live later in this sheet */
       #setup-tabs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; padding: 3px; }
       #setup-tabs .stab { padding: 9px 0; font-size: 11px; letter-spacing: -0.01em;
               text-align: center; min-width: 0; overflow: hidden; white-space: nowrap; }
       #setup-tabs .stab-upd { top: 3px; right: 2px; width: 6px; height: 6px; }
       /* Show Mode tiles: all five across one row on a phone */
-      /* 4-wide, centered — tiles flex to fill the row */
+      /* 4-wide, centered - tiles flex to fill the row */
       body.show-mode .show-quick.qb-live {
         grid-template-columns: repeat(4, minmax(0, 1fr));
         justify-content: center; gap: 8px; }
@@ -1144,7 +1144,7 @@
       .health-grid { grid-template-columns: repeat(2, 1fr); }
       .ctx-item { padding: 12px 12px; font-size: 14px; }
     }
-    /* ── Setup tabs — segmented control, same pattern as the view toggle ── */
+    /* ── Setup tabs - segmented control, same pattern as the view toggle ── */
     .setup-tabs { display:flex; gap:4px; background:var(--surface2);
                   border:1px solid var(--border2); border-radius:10px; padding:4px;
                   margin:18px 0 20px; }
@@ -1161,7 +1161,7 @@
                 box-shadow:0 0 6px rgba(245,165,36,0.8); }
     .stab-upd.on { display:block; }
     .tpane { display:none; }
-    /* Save & Apply and the footer hug the pane's real content — no dead space.
+    /* Save & Apply and the footer hug the pane's real content - no dead space.
        The scroll pin in showSetupTab keeps the top chrome planted. */
     .tpane.on { display:block; }
     /* Show Mode keeps its contract: displays content only, tabs hidden */
@@ -1248,7 +1248,7 @@
     </div>
     <div class="wiz-title">Welcome</div>
     <div class="wiz-sub">Let's get this unit ready. Everything below downloads from the
-      official source onto your device — a few minutes total, one press each.</div>
+      official source onto your device - a few minutes total, one press each.</div>
     <div class="wiz-row" id="wiz-os">
       <span class="wdot"></span>
       <div class="winfo"><div class="wname">Downstage OS</div>
@@ -1258,16 +1258,16 @@
     <div class="wiz-row" id="wiz-ontime">
       <span class="wdot"></span>
       <div class="winfo"><div class="wname">OnTime timer server</div>
-        <div class="wdesc" id="wiz-ontime-desc">The heart of the unit — free open-source software (GPL v3)</div></div>
+        <div class="wdesc" id="wiz-ontime-desc">The heart of the unit - free open-source software (GPL v3)</div></div>
       <button class="btn-sm success" id="wiz-ontime-btn" onclick="wizInstallOntime()">Install</button>
     </div>
     <div class="wiz-row" id="wiz-companion">
       <span class="wdot"></span>
       <div class="winfo"><div class="wname">Bitfocus Companion <span style="color:var(--muted);font-weight:400">(optional)</span></div>
-        <div class="wdesc" id="wiz-companion-desc">Stream Deck control — skip it if you don't use one</div></div>
+        <div class="wdesc" id="wiz-companion-desc">Stream Deck control - skip it if you don't use one</div></div>
       <button class="btn-sm" id="wiz-companion-btn" onclick="wizInstallCompanion()">Install</button>
     </div>
-    <div class="wiz-warn"><b>Keep power connected</b> while anything is installing —
+    <div class="wiz-warn"><b>Keep power connected</b> while anything is installing -
       each step takes a few minutes and finishes on its own.</div>
     <div class="wiz-foot">
       <button class="wiz-skip" onclick="wizFinish()">Set up later</button>
@@ -1284,7 +1284,7 @@
     <button class="emu-act" onclick="emuPopOut()" title="Open this tool in its own tab">
       <svg viewBox="0 0 24 24"><path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
     </button>
-    <button class="emu-act" onclick="hidePanel()" title="Back to the UI — tools stay open">
+    <button class="emu-act" onclick="hidePanel()" title="Back to the UI - tools stay open">
       <svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
     </button>
   </div>
@@ -1293,7 +1293,7 @@
 <div id="conn-ribbon">
   <span class="cdot"></span>
   <span id="conn-label">Unit unreachable</span>
-  <span class="csub" id="conn-sub">powered off or off the network — reconnecting…</span>
+  <span class="csub" id="conn-sub">powered off or off the network - reconnecting…</span>
   <button id="conn-hostname-btn" style="display:none; margin-left:auto; background:none;
           border:1px solid var(--border2); border-radius:7px; color:var(--text);
           font:600 12px var(--font-body); padding:6px 12px; cursor:pointer"
@@ -1386,49 +1386,49 @@
         </button>
       </div>
 
-      <!-- Show Mode quick bar — one-tap tools for mid-show -->
+      <!-- Show Mode quick bar - one-tap tools for mid-show -->
       <div class="section-label show-quick-label">Quick Actions</div>
       <div class="show-quick" id="show-quick" style="display:none">
-        <button class="btn-sm blackout" id="blackout-btn-quick" onclick="blackout()" title="Black out all displays — press again to resume">
+        <button class="btn-sm blackout" id="blackout-btn-quick" onclick="blackout()" title="Black out all displays - press again to resume">
           <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="13" rx="2" stroke="currentColor" stroke-width="2"/><line x1="5.5" y1="7.5" x2="18.5" y2="15.5" stroke="currentColor" stroke-width="2"/></svg>
           Blackout</button>
         <button class="btn-sm qb-ontime" onclick="quickOpen('/editor/')" title="Open the OnTime Editor in a new tab" style="display:none">
           <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
           OnTime Editor
         </button>
-        <button class="btn-sm qb-ontime" onclick="quickOpen('/messagecontrol')" title="Open OnTime Message Control — send messages to stage displays" style="display:none">
+        <button class="btn-sm qb-ontime" onclick="quickOpen('/messagecontrol')" title="Open OnTime Message Control - send messages to stage displays" style="display:none">
           <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>
           Messages
         </button>
         <button class="btn-sm qb-pattern" id="testpattern-btn" onclick="toggleTestPattern()"
-                title="Throw test cards on both outputs — press again to restore what was showing">
+                title="Throw test cards on both outputs - press again to restore what was showing">
           <svg viewBox="0 0 24 24"><path d="M3 3h7v7H3V3zm11 0h7v7h-7V3zM3 14h7v7H3v-7zm11 3.5c0-1.93 1.57-3.5 3.5-3.5s3.5 1.57 3.5 3.5S19.43 21 17.5 21 14 19.43 14 17.5z"/></svg>
           Test Patterns
         </button>
-        <button class="btn-sm qb-companion" onclick="openCompanionButtons()" title="Open Companion's web button surface — your Stream Deck pages, tappable from this device" style="display:none">
+        <button class="btn-sm qb-companion" onclick="openCompanionButtons()" title="Open Companion's web button surface - your Stream Deck pages, tappable from this device" style="display:none">
           <svg viewBox="0 0 24 24"><path d="M4 4h4v4H4V4zm6 0h4v4h-4V4zm6 0h4v4h-4V4zM4 10h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4zM4 16h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4z"/></svg>
           Buttons</button>
-        <button class="btn-sm qb-companion qb-emulator" onclick="toggleShowEmbed()" title="Show your Companion button wall right here under Quick Actions — tap again to close" style="display:none">
+        <button class="btn-sm qb-companion qb-emulator" onclick="toggleShowEmbed()" title="Show your Companion button wall right here under Quick Actions - tap again to close" style="display:none">
           <svg viewBox="0 0 24 24"><path d="M20 5H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-1 2H5v-2h2v2zm0-3H5V8h2v2zm9 7H8v-2h8v2zm0-4h-2v-2h2v2zm0-3h-2V8h2v2zm3 3h-2v-2h2v2zm0-3h-2V8h2v2z"/></svg>
           Virtual Deck</button>
-        <button class="btn-sm qb-companion" onclick="openCompanion()" title="Open the Companion admin UI in a new tab — edit Stream Deck buttons and pages" style="display:none">
+        <button class="btn-sm qb-companion" onclick="openCompanion()" title="Open the Companion admin UI in a new tab - edit Stream Deck buttons and pages" style="display:none">
           <svg viewBox="0 0 24 24"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/></svg>
           Companion
         </button>
-        <button class="btn-sm qb-power" onclick="shutdownPi()" title="Shut the unit down cleanly — the panel confirms when it's safe to unplug">
+        <button class="btn-sm qb-power" onclick="shutdownPi()" title="Shut the unit down cleanly - the panel confirms when it's safe to unplug">
           <svg viewBox="0 0 24 24"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg>
           Power Off</button>
       </div>
 
-      <!-- My Buttons, live on the Show Mode page — the button wall under the
+      <!-- My Buttons, live on the Show Mode page - the button wall under the
            tiles, no overlay hop -->
       <div id="show-embed" style="display:none">
         <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:22px; margin-bottom:10px">
           <div class="section-label" style="margin:0">Virtual Deck</div>
           <div style="display:flex; gap:8px">
-            <button class="btn-sm" onclick="openEmulator()" title="Open the Virtual Deck in the tool viewer — tabbed, full-height, survives page switches">Open in Viewer</button>
+            <button class="btn-sm" onclick="openEmulator()" title="Open the Virtual Deck in the tool viewer - tabbed, full-height, survives page switches">Open in Viewer</button>
             <button class="btn-sm" onclick="popOutButtons()" title="Float the Virtual Deck in its own movable window, sized to the deck layout">Pop Out &#8599;</button>
-            <button class="btn-sm" onclick="toggleShowEmbed()" title="Close — the quick action brings it back">&times;</button>
+            <button class="btn-sm" onclick="toggleShowEmbed()" title="Close - the quick action brings it back">&times;</button>
           </div>
         </div>
         <iframe id="show-embed-frame" title="Virtual Deck"
@@ -1451,7 +1451,7 @@
       <div id="show-embed-hint" class="show-quick-label" style="display:none; text-align:center;
            margin-top:18px; font-size:12.5px; color:var(--muted); font-family:inherit;
            text-transform:none; letter-spacing:normal">
-        No Stream Deck? No problem &mdash; add a Virtual Deck right here.
+        No Stream Deck? No problem - add a Virtual Deck right here.
         Set an <b>Emulator ID</b> on the Companion tab and it appears under Quick Actions.
       </div>
 
@@ -1465,17 +1465,17 @@
       <!-- Watchdog offline banner -->
       <div class="alert-bar power" id="power-bar" style="display:none">
         <div class="alert-dot"></div>
-        <span id="power-bar-text">Low voltage detected — check the power supply</span>
+        <span id="power-bar-text">Low voltage detected - check the power supply</span>
         <button class="alert-action" id="power-bar-ack" style="display:none"
-                onclick="powerAck()" title="Hide until reboot — a new active dip brings it back">&times;</button>
+                onclick="powerAck()" title="Hide until reboot - a new active dip brings it back">&times;</button>
       </div>
 
       <div class="alert-bar watchdog" id="watchdog-bar" style="display:none">
         <div class="alert-dot"></div>
-        <span>OnTime offline — holding page active</span>
+        <span>OnTime offline - holding page active</span>
       </div>
 
-      <!-- Setup tabs: task-based — Displays is home; a dot = an update waits inside -->
+      <!-- Setup tabs: task-based - Displays is home; a dot = an update waits inside -->
       <div class="setup-tabs full-only" id="setup-tabs">
         <button class="stab" id="stab-displays" onclick="showSetupTab('displays')">Displays</button>
         <button class="stab" id="stab-timer" onclick="showSetupTab('timer')">OnTime<span class="stab-upd" id="upd-timer"></span></button>
@@ -1504,7 +1504,7 @@
       <div id="remote-section" class="field full-only">
         <div class="section-label">OnTime Server Address</div>
         <div id="remote-local-note" class="tz-note" style="display:none; margin:0 0 12px">
-          In Remote mode the onboard OnTime server stands down — displays, the editor, and
+          In Remote mode the onboard OnTime server stands down - displays, the editor, and
           Show Mode all follow the remote server. Switching back to Local starts it again;
           your local rundown is kept.</div>
         <div class="ip-row">
@@ -1530,7 +1530,7 @@
           <div style="display:flex; align-items:center; gap:12px; padding:11px 14px;
                background:var(--amber-bg); border:1px solid var(--amber-bd); border-radius:9px">
             <span style="flex:1; font-size:12.5px; color:var(--amber); line-height:1.5">
-              Remote mode is active — this server is not driving the displays.</span>
+              Remote mode is active - this server is not driving the displays.</span>
             <button class="btn-sm success" id="local-activate-btn" onclick="activateLocal()">Start Server</button>
           </div>
         </div>
@@ -1541,11 +1541,11 @@
               <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-5 12H4v-2h11v2zm5-4H4v-2h16v2zm0-4H4V6h16v2z"/></svg>
               OnTime Server
             </div>
-            <span class="status-badge" id="local-status-badge">—</span>
+            <span class="status-badge" id="local-status-badge">-</span>
           </div>
           <div class="local-actions" id="local-actions"></div>
           <div class="version-row" id="ontime-version-row">
-            <span class="version-tag" id="ontime-ver-installed">—</span>
+            <span class="version-tag" id="ontime-ver-installed">-</span>
             <span class="version-badge checking" id="ontime-ver-badge">Checking…</span>
           </div>
         </div>
@@ -1579,9 +1579,9 @@
 
         <div class="preview-hint">Right-click a preview (long-press on phones) for quick actions</div>
 
-        <!-- Display controls — act on the outputs previewed above -->
+        <!-- Display controls - act on the outputs previewed above -->
         <div class="display-ctl-row">
-          <button class="btn-sm" onclick="refreshDisplays()" title="Reload the web pages on all outputs — recovers a stuck or frozen view. Plugging in a display is detected automatically.">
+          <button class="btn-sm" onclick="refreshDisplays()" title="Reload the web pages on all outputs - recovers a stuck or frozen view. Plugging in a display is detected automatically.">
             <svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
             Reload Pages
           </button>
@@ -1590,17 +1590,17 @@
             Blackout
           </button>
           <button class="btn-sm" onclick="identifyDisplays()" title="Flash a big 1 and 2 on the outputs">Identify</button>
-          <button class="btn-sm" onclick="resyncDisplays()" title="Re-negotiate the HDMI handshake — re-detects connected displays, re-applies resolution and rotation, and relaunches the outputs. Use if a display shows the wrong size after plugging in.">
+          <button class="btn-sm" onclick="resyncDisplays()" title="Re-negotiate the HDMI handshake - re-detects connected displays, re-applies resolution and rotation, and relaunches the outputs. Use if a display shows the wrong size after plugging in.">
             <svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12zm-9-1c2.76 0 5-2.24 5-5h-2c0 1.66-1.34 3-3 3s-3-1.34-3-3 1.34-3 3-3v2l3-3-3-3v2c-2.76 0-5 2.24-5 5s2.24 5 5 5z"/></svg>
             Re-sync HDMI
           </button>
-          <button class="btn-sm" onclick="refreshPreviews()" title="Restart the two preview thumbnails above — the displays themselves are untouched.">
+          <button class="btn-sm" onclick="refreshPreviews()" title="Restart the two preview thumbnails above - the displays themselves are untouched.">
             <svg viewBox="0 0 24 24"><path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8A5.87 5.87 0 016 12c0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/></svg>
             Refresh Previews
           </button>
         </div>
 
-        <!-- Quick Presets — one-tap recall of a full output setup -->
+        <!-- Quick Presets - one-tap recall of a full output setup -->
         <div class="source-group-label">Quick Presets</div>
         <div class="preset-strip" id="preset-strip">
           <span class="preset-empty">No presets saved yet</span>
@@ -1655,7 +1655,7 @@
                 <span class="chip-opt-label">Hide phase colours</span>
                 <button class="toggle on" id="cleantimer-hidephase-toggle" onclick="toggleCleanOpt('hidephase')"></button>
               </div>
-              <div class="chip-opt-item" title="Background colour — set to your chromakey colour, black for direct video">
+              <div class="chip-opt-item" title="Background colour - set to your chromakey colour, black for direct video">
                 <span class="chip-opt-label">Key colour</span>
                 <input type="color" id="cleantimer-keycolour" value="#000000" onchange="setCleanColour('keycolour', this.value)">
               </div>
@@ -1752,12 +1752,12 @@
 
           <div class="source-chip" data-source="pattern-sync" onclick="selectSource(this)">
             <div class="source-chip-icon"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 18a8 8 0 110-16 8 8 0 010 16zm1-13h-2v6l5.2 3.1 1-1.6-4.2-2.5V7z"/></svg></div>
-            <span class="source-chip-label">Sync Clock &mdash; Video</span>
+            <span class="source-chip-label">Sync Clock - Video</span>
           </div>
 
           <div class="source-chip" data-source="pattern-dvd" onclick="selectSource(this)">
             <div class="source-chip-icon"><svg viewBox="0 0 24 24"><path d="M12 4C6.48 4 2 7.58 2 12s4.48 8 10 8 10-3.58 10-8-4.48-8-10-8zm0 11a3 3 0 110-6 3 3 0 010 6zm0-4a1 1 0 100 2 1 1 0 000-2z"/></svg></div>
-            <span class="source-chip-label">DVD &mdash; Video</span>
+            <span class="source-chip-label">DVD - Video</span>
           </div>
 
           <div class="source-group-label">System</div>
@@ -1793,7 +1793,7 @@
           <input type="url" id="external-url" placeholder="https://stagetimer.io/r/ABC123/viewer"
                  autocomplete="off" spellcheck="false"
                  oninput="setExternalUrl(this.value)">
-          <div class="external-url-hint">Full URL of the page to display — a stagetimer.io viewer, a Google Slides present link, any web page.</div>
+          <div class="external-url-hint">Full URL of the page to display - a stagetimer.io viewer, a Google Slides present link, any web page.</div>
         </div>
 
         </div>
@@ -1844,7 +1844,7 @@
           </div>
           <div class="wd-box">
             <div class="toggle-row" style="margin-top:0">
-              <span class="toggle-label">OnTime watchdog &mdash; auto-switch displays when the server is offline, restore when it returns</span>
+              <span class="toggle-label">OnTime watchdog - auto-switch displays when the server is offline, restore when it returns</span>
               <button class="toggle on" id="watchdog-toggle" onclick="toggleWatchdog()"></button>
             </div>
             <div class="wd-sub" id="wd-sub">
@@ -1871,11 +1871,11 @@
               <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 14.93V15h-2v1.93A8.001 8.001 0 014.07 9H6V7H4.07A8.001 8.001 0 0111 4.07V6h2V4.07A8.001 8.001 0 0119.93 11H18v2h1.93A8.001 8.001 0 0113 16.93z"/></svg>
               Companion
             </div>
-            <span class="status-badge" id="companion-status-badge">—</span>
+            <span class="status-badge" id="companion-status-badge">-</span>
           </div>
           <div class="local-actions" id="companion-actions"></div>
           <div class="version-row" id="companion-version-row">
-            <span class="version-tag" id="companion-ver-installed">—</span>
+            <span class="version-tag" id="companion-ver-installed">-</span>
             <span class="version-badge checking" id="companion-ver-badge">Checking…</span>
           </div>
           <div class="channel-row">
@@ -1898,12 +1898,12 @@
           <div class="channel-row" style="margin-top:10px">
             <span class="channel-label">Virtual Deck</span>
             <button class="btn-sm" onclick="popOutButtons()"
-                    title="The Virtual Deck in its own small window — drag it to any display">Open in Window</button>
+                    title="The Virtual Deck in its own small window - drag it to any display">Open in Window</button>
             <button class="btn-sm" onclick="copyWallLink(this)"
-                    title="Copy the Virtual Deck page address for another device — a touchscreen, a tablet, a spare display">Copy Link</button>
+                    title="Copy the Virtual Deck page address for another device - a touchscreen, a tablet, a spare display">Copy Link</button>
           </div>
 
-          <div class="external-url-hint" style="display:block; margin-top:10px">Up to two 15-key Stream Decks can run from the USB ports (an XL counts as two — key backlights add up). For more, connect them through a powered USB hub.</div>
+          <div class="external-url-hint" style="display:block; margin-top:10px">Up to two 15-key Stream Decks can run from the USB ports (an XL counts as two - key backlights add up). For more, connect them through a powered USB hub.</div>
         </div>
       </div>
 
@@ -1915,7 +1915,7 @@
             <span style="font-size:12.5px; color:var(--muted)" id="sat-note"></span>
           </div>
           <div id="sat-actions" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:12px"></div>
-          <div class="external-url-hint">Satellite hands this unit's Stream Decks to a Companion server somewhere else &mdash; the FOH laptop, or another One. While Satellite is on, the onboard Companion stands down (two brains can't share one deck). Downloads from Bitfocus. The reverse also works with no setup: other machines running Bitfocus Satellite can join <i>this</i> unit's Companion. Laptop running Satellite? Keep it on power with the Satellite window visible &mdash; macOS power-naps hidden apps and drops the link about every 90 seconds.</div>
+          <div class="external-url-hint">Satellite hands this unit's Stream Decks to a Companion server somewhere else - the FOH laptop, or another One. While Satellite is on, the onboard Companion stands down (two brains can't share one deck). Downloads from Bitfocus. The reverse also works with no setup: other machines running Bitfocus Satellite can join <i>this</i> unit's Companion. Laptop running Satellite? Keep it on power with the Satellite window visible - macOS power-naps hidden apps and drops the link about every 90 seconds.</div>
         </div>
       </div>
 
@@ -1940,7 +1940,7 @@
 
         <div id="inet-note" style="display:none; margin-bottom:12px; padding:10px 13px;
              background:var(--amber-bg); border:1px solid var(--amber-bd); border-radius:9px;
-             font-size:12.5px; color:var(--amber); line-height:1.5">No internet access —
+             font-size:12.5px; color:var(--amber); line-height:1.5">No internet access -
           the network works locally, but updates and the Companion module store won't load.
           Timers and local control are unaffected.</div>
         <div class="local-panel">
@@ -1977,7 +1977,7 @@
                 <input id="net-gw" inputmode="decimal" placeholder="192.168.1.1" autocomplete="off" spellcheck="false">
               </div>
               <div class="display-setting-row">
-                <label>DNS (space-separated — leave blank to auto-set)</label>
+                <label>DNS (space-separated - leave blank to auto-set)</label>
                 <input id="net-dns" placeholder="auto: gateway, then 1.1.1.1 / 8.8.8.8" autocomplete="off" spellcheck="false">
               </div>
             </div>
@@ -1995,7 +1995,7 @@
         <div id="portal-note" style="display:none; margin-bottom:12px; padding:10px 13px;
              background:var(--amber-bg); border:1px solid var(--amber-bd); border-radius:9px;
              font-size:12.5px; color:var(--amber); line-height:1.5">
-          Captive portal detected on this network — show functions are unaffected, but
+          Captive portal detected on this network - show functions are unaffected, but
           internet features (updates, time sync) are paused until the portal is cleared.
           If the unit ends up stranded here, it drops this network and starts its
           setup hotspot automatically within a few minutes.</div>
@@ -2020,7 +2020,7 @@
             <div class="hotspot-info">
               <svg viewBox="0 0 24 24"><path d="M12 11c1.33 0 2.71.18 4 .5V9.72C14.72 9.25 13.36 9 12 9s-2.72.25-4 .72v1.78c1.29-.32 2.67-.5 4-.5zM12 5c2.62 0 5.13.62 7.35 1.73l1.32-2.37A19.02 19.02 0 0012 2C8.87 2 5.9 2.86 3.33 4.36l1.32 2.37A16.75 16.75 0 0112 5zm0 10c-.83 0-1.5.67-1.5 1.5v4c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5v-4c0-.83-.67-1.5-1.5-1.5z"/></svg>
               <span>Hotspot</span>
-              <span class="hotspot-ssid" id="hotspot-ssid-label">—</span>
+              <span class="hotspot-ssid" id="hotspot-ssid-label">-</span>
               <span class="hotspot-state" id="hotspot-state">Off</span>
             </div>
             <button class="btn-sm" id="hotspot-btn" onclick="toggleHotspot()">Start</button>
@@ -2045,30 +2045,30 @@
             <button class="btn-sm" id="tz-detect-btn" onclick="detectTimezone()">
               <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
               Auto-detect</button>
-            <button class="btn-sm" id="time-sync-btn" onclick="syncTimeFromDevice()" title="Set the One's clock from this device — for venues with no internet">
+            <button class="btn-sm" id="time-sync-btn" onclick="syncTimeFromDevice()" title="Set the One's clock from this device - for venues with no internet">
               <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
               Sync Time</button>
           </div>
           <div class="tz-note">Sets the whole unit's timezone. OnTime updates right away.
-            Companion follows the system timezone but needs a restart to pick up a change —
+            Companion follows the system timezone but needs a restart to pick up a change -
             restart it from the Companion tab when convenient (briefly drops Stream Decks).</div>
         </div>
       </div>
 
-      <!-- Downstage OS / Unit Name / Virtual Previews — three-up -->
+      <!-- Downstage OS / Unit Name / Virtual Previews - three-up -->
       <div class="sys-trio full-only">
       <div class="field full-only">
         <div class="section-label">Downstage OS</div>
         <div class="local-panel">
           <div class="version-row" id="os-version-row" style="display:flex; margin-top:0; padding-top:0; border-top:none">
-            <span class="version-tag" id="os-ver-installed">—</span>
+            <span class="version-tag" id="os-ver-installed">-</span>
             <span class="version-tag" id="os-serial" style="color:var(--muted)"></span>
             <span class="version-badge checking" id="os-ver-badge">Checking…</span>
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px">
             <button class="btn-sm success" id="os-update-btn" onclick="osUpdate()" style="display:none">Update</button>
             <button class="btn-sm" id="os-check-btn" onclick="osRecheck()" title="Check GitHub for a newer Downstage OS release">Check</button>
-            <button class="btn-sm" onclick="osInstallFile()" title="Install a downloaded release archive — for venues with no internet">Install from file</button>
+            <button class="btn-sm" onclick="osInstallFile()" title="Install a downloaded release archive - for venues with no internet">Install from file</button>
             <input type="file" id="os-file-input" accept=".tar.gz,.tgz,application/gzip" style="display:none" onchange="osUpdateFromFile(this)">
             <button class="btn-sm" onclick="diagDownload()" title="Download a support diagnostics bundle">Diagnostics</button>
           </div>
@@ -2103,7 +2103,7 @@
             <span class="toggle-label">Render an output's source in its preview tile when no display is connected</span>
             <button class="toggle on" id="virtprev-toggle" onclick="toggleVirtualPreviews()"></button>
           </div>
-          <div class="external-url-hint">Captured previews trail the real outputs by &plusmn;1s; virtual previews render live and can run slightly ahead. Saved on this unit &mdash; applies to every browser that opens this UI.</div>
+          <div class="external-url-hint">Captured previews trail the real outputs by &plusmn;1s; virtual previews render live and can run slightly ahead. Saved on this unit - applies to every browser that opens this UI.</div>
         </div>
       </div>
 
@@ -2118,7 +2118,7 @@
             </div>
             <button class="btn-sm" onclick="testAudioCues()">Test Audio</button>
             <button class="btn-sm" id="linetone-btn" onclick="toggleLineTone()"
-                    title="Continuous 1 kHz reference out the 3.5mm jack — for console line checks. A firing cue cuts the tone.">Line Tone</button>
+                    title="Continuous 1 kHz reference out the 3.5mm jack - for console line checks. A firing cue cuts the tone.">Line Tone</button>
           </div>
           <div class="cue-marks" id="cue-marks">
             <button data-ms="600000" class="on" onclick="toggleCueMark(600000)">10:00</button>
@@ -2129,7 +2129,7 @@
             <button data-ms="10000" class="on" onclick="toggleCueMark(10000)">0:10</button>
             <button data-ms="0" class="on" onclick="toggleCueMark(0)">0:00</button>
           </div>
-          <div class="external-url-hint">Time calls through the unit's 3.5mm jack as the timer passes each selected mark &mdash; tap a time to turn that callout on or off, and feed the jack to comms or a backstage speaker. Requires the OnTime server (local or remote): cues follow the OnTime timer, so other display sources (external URLs, patterns, Companion) have nothing to cue from. Saved on this unit. Line Tone plays a continuous 1&nbsp;kHz reference for console line checks &mdash; a firing cue cuts it.</div>
+          <div class="external-url-hint">Time calls through the unit's 3.5mm jack as the timer passes each selected mark - tap a time to turn that callout on or off, and feed the jack to comms or a backstage speaker. Requires the OnTime server (local or remote): cues follow the OnTime timer, so other display sources (external URLs, patterns, Companion) have nothing to cue from. Saved on this unit. Line Tone plays a continuous 1&nbsp;kHz reference for console line checks - a firing cue cuts it.</div>
         </div>
       </div>
       </div>
@@ -2139,11 +2139,11 @@
         <div class="section-label">System Health</div>
         <div class="local-panel">
           <div class="health-grid" id="health-grid">
-            <div class="health-tile"><div class="val" id="h-temp">—</div><div class="lbl">CPU Temp</div></div>
-            <div class="health-tile"><div class="val" id="h-cpu">—</div><div class="lbl">CPU Load</div></div>
-            <div class="health-tile"><div class="val" id="h-gpu">—</div><div class="lbl">GPU Clock</div></div>
-            <div class="health-tile"><div class="val" id="h-ram">—</div><div class="lbl">RAM Used</div></div>
-            <div class="health-tile"><div class="val" id="h-uptime">—</div><div class="lbl">Uptime</div></div>
+            <div class="health-tile"><div class="val" id="h-temp">-</div><div class="lbl">CPU Temp</div></div>
+            <div class="health-tile"><div class="val" id="h-cpu">-</div><div class="lbl">CPU Load</div></div>
+            <div class="health-tile"><div class="val" id="h-gpu">-</div><div class="lbl">GPU Clock</div></div>
+            <div class="health-tile"><div class="val" id="h-ram">-</div><div class="lbl">RAM Used</div></div>
+            <div class="health-tile"><div class="val" id="h-uptime">-</div><div class="lbl">Uptime</div></div>
           </div>
         </div>
       </div>
@@ -2206,7 +2206,7 @@
             <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
             Reset
           </button>
-          <button class="footer-btn danger" onclick="factoryReset()" title="Erase all user data — out-of-box state">
+          <button class="footer-btn danger" onclick="factoryReset()" title="Erase all user data - out-of-box state">
             <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
             Factory Reset
           </button>
@@ -2393,7 +2393,7 @@
     loadHotspotStatus();
     loadOutputPower();
     loadNetwork();
-    // Quiet background refresh — keeps status + health tiles live without
+    // Quiet background refresh - keeps status + health tiles live without
     // flashing the "Checking…" state. Paused while the tab is hidden.
     setInterval(() => { if (!document.hidden) fetchStatus(true); }, 10000);
   });
@@ -2410,11 +2410,11 @@
     pollJobRibbon();   // amber ribbon + elapsed timer while it copies
   }
   function diagDownload() {
-    if (!confirm('Download the diagnostics bundle?\n\nIt contains: system and network info, unit settings, app logs, and the hardware/access audit log (power events, hardware changes, SSH logins — not show content, and no passwords).\n\nIt goes only where you send it.')) return;
+    if (!confirm('Download the diagnostics bundle?\n\nIt contains: system and network info, unit settings, app logs, and the hardware/access audit log (power events, hardware changes, SSH logins - not show content, and no passwords).\n\nIt goes only where you send it.')) return;
     downloadFile('/diagnostics');
   }
   // the OnTime server the UI should open: the remote one when in remote
-  // mode (displays already follow it — the operator links must too)
+  // mode (displays already follow it - the operator links must too)
   let _otHost = window.location.hostname;
   function cleanServerAddr(v) {
     // paste-friendly: "http://192.168.2.109:4001/editor/" → "192.168.2.109"
@@ -2426,7 +2426,7 @@
   }
   function copyIp(ip) {
     const addr = ip;   // bare IP: it gets pasted into server fields, pings,
-                       // Companion configs — not just browsers
+                       // Companion configs - not just browsers
     const done = () => showToast('Copied ' + addr, 'success');
     if (navigator.clipboard && window.isSecureContext) {
       navigator.clipboard.writeText(addr).then(done);
@@ -2440,7 +2440,7 @@
   }
   function copyAddr() {
     const addr = 'http://' + window.location.host + '/';
-    const done = () => showToast('Address copied — ' + addr, 'success');
+    const done = () => showToast('Address copied - ' + addr, 'success');
     // toggle the QR chip; hidden entirely if the unit lacks QR support
     const pop = document.getElementById('qr-pop');
     if (pop.style.display === 'none') {
@@ -2477,7 +2477,7 @@
     document.body.appendChild(a); a.click(); a.remove();
   }
   function cancelChanges() {
-    // the server holds the saved config — reloading is a guaranteed full
+    // the server holds the saved config - reloading is a guaranteed full
     // revert of every field, with no field-by-field drift risk
     location.reload();
   }
@@ -2497,7 +2497,7 @@
 
   // ── Mode ─────────────────────────────────────────────────────────────────────
   function setMode(mode) {
-    // the toggle only navigates between the two sections — nothing changes
+    // the toggle only navigates between the two sections - nothing changes
     // until an explicit action (Start Server / Connect). Amber = where you're
     // looking; the green Active tag = what's actually running.
     setModeButtons(mode);
@@ -2536,7 +2536,7 @@
     const ip = document.getElementById('ip').value.trim();
     if (!ip) { showToast('Enter the OnTime server address first.', 'error'); return; }
     if (ontimeRunning &&
-        !confirm(`Connect to ${ip}?\n\nThe OnTime local server will be turned off — displays, the editor, and Show Mode will follow the remote server. Switching back to Local turns it on again.`)) return;
+        !confirm(`Connect to ${ip}?\n\nThe OnTime local server will be turned off - displays, the editor, and Show Mode will follow the remote server. Switching back to Local turns it on again.`)) return;
     const btn = document.getElementById('connect-btn');
     btn.disabled = true; btn.textContent = 'Connecting…';
     try {
@@ -2603,7 +2603,7 @@
       chip.classList.toggle('selected',     isSelected && !isOff);
       chip.classList.toggle('selected-off', isOff);
     });
-    // External viewer URL input — shown only when External is the active source
+    // External viewer URL input - shown only when External is the active source
     const row   = document.getElementById('external-url-row');
     const input = document.getElementById('external-url');
     row.style.display = active === 'external' ? '' : 'none';
@@ -2635,7 +2635,7 @@
 
   function selectSource(chip) {
     const cur = activeHdmiTab === 1 ? hdmi1Source : hdmi2Source;
-    if (chip.dataset.source === cur) return;   // already selected — no change
+    if (chip.dataset.source === cur) return;   // already selected - no change
     setCurrentSource(chip.dataset.source);
     refreshSourceGrid();
     markDirty();
@@ -2660,7 +2660,7 @@
       actions.innerHTML = `<button class="btn-sm success" id="install-btn" onclick="installOntime()">
         <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zm-8 2V5h2v6h1.17L12 13.17 9.83 11H11zm-6 7h14v2H5z"/></svg>
         Download &amp; Install OnTime</button>
-        <span style="font-size:11px;color:var(--muted)">Downloads from the official source — comes up pre-loaded with the Downstage show profile: timers, views, and settings ready to run</span>`;
+        <span style="font-size:11px;color:var(--muted)">Downloads from the official source - comes up pre-loaded with the Downstage show profile: timers, views, and settings ready to run</span>`;
     } else if (!ontimeRunning) {
       badge.className = 'status-badge stopped';
       badge.textContent = 'Stopped';
@@ -2678,14 +2678,14 @@
 
   async function installOntime() {
     const btn = document.getElementById('install-btn');
-    if (btn) { btn.disabled = true; btn.innerHTML = spinnerHTML('Downloading… (1–2 min)'); }
-    showToast('Downloading OnTime — this may take 1–2 minutes…', 'info');
+    if (btn) { btn.disabled = true; btn.innerHTML = spinnerHTML('Downloading… (1-2 min)'); }
+    showToast('Downloading OnTime - this may take 1-2 minutes…', 'info');
     try {
       const r = await fetch('/ontime/install', { method: 'POST' });
       const d = await r.json();
       ontimeInstalled = d.ok;
       showToast(d.ok ? `OnTime ${d.message} installed.` : `Install failed: ${d.message}`, d.ok ? 'success' : 'error');
-    } catch { showToast('Could not reach the unit — the install did not complete. Try again once the unit answers.', 'error'); }
+    } catch { showToast('Could not reach the unit - the install did not complete. Try again once the unit answers.', 'error'); }
     updateLocalPanel();
   }
 
@@ -2708,7 +2708,7 @@
   const _CONN_COPY = {
     shutdown: ['Device shutting down', 'safe to unplug once the activity light stops'],
     restart:  ['Device restarting',    'the page reloads automatically when it returns'],
-    offline:  ['Unit unreachable',     'powered off or off the network — reconnecting…'],
+    offline:  ['Unit unreachable',     'powered off or off the network - reconnecting…'],
   };
   function showConnRibbon(mode) {
     const r = document.getElementById('conn-ribbon');
@@ -2722,7 +2722,7 @@
   }
 
   function fetchT(url, ms = 4000) {
-    // a dead LAN IP HANGS fetches (no host to refuse) — fail fast instead,
+    // a dead LAN IP HANGS fetches (no host to refuse) - fail fast instead,
     // so the offline ribbon and hostname rescue appear in seconds
     const c = new AbortController();
     const t = setTimeout(() => c.abort(), ms);
@@ -2758,7 +2758,7 @@
             '<div class="fu-ip" onclick="copyIp(\'' + u.ip + '\')" title="Click to copy">' + u.ip + '</div>' +
             (u.kind ? '<div class="fu-sub">via ' + u.kind + '</div>' : '') + '</div>' +
           '<div><div class="fu-lbl">Showing</div>' +
-            '<div class="fu-val">' + (u.showing || '—') + '</div></div>' +
+            '<div class="fu-val">' + (u.showing || '-') + '</div></div>' +
           '<div><div class="fu-lbl">Status</div>' +
             '<div class="fu-val ' + (bad ? 'bad' : 'ok') + '">' + (bad ? u.health_why : 'All good') + '</div></div>' +
         '</div></div>';
@@ -2782,7 +2782,7 @@
     catch (e) { showToast('Scan failed.', 'error'); }
     finally { btn.disabled = false; btn.textContent = 'Scan for Units'; }
   }
-  (async () => {   // last scan is remembered on the unit — show it on load
+  (async () => {   // last scan is remembered on the unit - show it on load
     try { renderFleet(await (await fetch('/discover/last')).json()); } catch (e) {}
   })();
   // while the Network tab is open, freshen the CACHED units (targeted probes,
@@ -2833,7 +2833,7 @@
       if (!r.ok) throw new Error('bad status');
       const d = await r.json();
       // recovered: if we'd shown the offline/shutdown ribbon, the unit is
-      // back — reload so the whole page reflects fresh state
+      // back - reload so the whole page reflects fresh state
       if (_wasOffline) { location.reload(); return; }
       _connFails = 0;
       ontimeInstalled    = d.ontime_installed;
@@ -2845,7 +2845,7 @@
 
       if (d.serial) document.getElementById('os-serial').textContent = d.serial;
 
-      // Show Mode quick bar: only offer tools that are actually reachable —
+      // Show Mode quick bar: only offer tools that are actually reachable -
       // OnTime views when the server (local or remote) answers, Companion
       // when its service is running
       document.querySelectorAll('.show-quick .qb-ontime')
@@ -2887,12 +2887,12 @@
       const pwAck = document.getElementById('power-bar-ack');
       if (pw.undervolt_now) {
         document.getElementById('power-bar-text').textContent =
-          'LOW VOLTAGE — the power supply cannot deliver enough current. Use the official 27W USB-C supply.';
+          'LOW VOLTAGE - the power supply cannot deliver enough current. Use the official 27W USB-C supply.';
         pwAck.style.display = 'none';
         pwBar.style.display = 'flex';
       } else if (pw.undervolt_boot && !pw.ack) {
         document.getElementById('power-bar-text').textContent =
-          'Voltage dipped at some point since boot — often from plugging in power-hungry USB gear ' +
+          'Voltage dipped at some point since boot - often from plugging in power-hungry USB gear ' +
           '(Stream Decks). If it happened with nothing plugged in, suspect the power supply.';
         pwAck.style.display = '';
         pwBar.style.display = 'flex';
@@ -2906,10 +2906,10 @@
         pn.style.display = d.portal?.detected ? '' : 'none';
         if (d.portal?.detected) {
           pn.textContent = d.portal.internet
-            ? 'Captive portal on the WiFi leg — internet is flowing over the other ' +
+            ? 'Captive portal on the WiFi leg - internet is flowing over the other ' +
               'connection, so nothing is affected. The WiFi only becomes useful for ' +
               'internet once its portal is cleared (travel router or phone hotspot instead).'
-            : 'Captive portal detected on this network — show functions are unaffected, but ' +
+            : 'Captive portal detected on this network - show functions are unaffected, but ' +
               'internet features (updates, time sync) are paused until the portal is cleared. ' +
               "If the unit ends up stranded here (no other connection, nobody reaching this page), " +
               'it drops this network and starts its setup hotspot automatically within a few minutes.';
@@ -2921,7 +2921,7 @@
         const ok = d.portal.internet === true;
         pill.className = 'status-bar ' + (ok ? 'connected' : 'warn');
         document.getElementById('inet-pill-text').textContent =
-          ok ? 'Internet' : (d.portal.detected ? 'Internet — portal' : 'No internet');
+          ok ? 'Internet' : (d.portal.detected ? 'Internet - portal' : 'No internet');
       }
       const inet = document.getElementById('inet-note');
       if (inet) inet.style.display =
@@ -2936,7 +2936,7 @@
       const fb = document.getElementById('failsafe-btn');
       if (fb && d.failsafe && d.failsafe.last) {
         const t = new Date(d.failsafe.last * 1000);
-        fb.title = 'Copy the current show state to the failsafe SD now — last backed up ' +
+        fb.title = 'Copy the current show state to the failsafe SD now - last backed up ' +
           t.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
       }
       if (typeof d.virtual_previews !== 'undefined' && !window._virtprevTouched) {
@@ -2957,7 +2957,7 @@
           const tb = document.getElementById('tab-nodisp-' + n);
           if (pb) pb.style.display = on ? 'none' : '';
           if (tb) tb.style.display = on ? 'none' : '';
-          // hotplug: a display just appeared on this output — restart its
+          // hotplug: a display just appeared on this output - restart its
           // preview now for instant feedback, and again once the mode has
           // settled (arming mid-transition freezes the grab on stale
           // geometry: the zoomed-crop preview bug)
@@ -2966,7 +2966,7 @@
             setTimeout(() => armPreview(n), 7000);
           }
           updateVirtualPreview(n, on);
-          // fully virtual (no physical displays) — blackout has nothing to
+          // fully virtual (no physical displays) - blackout has nothing to
           // black out, so dim BOTH blackout buttons until glass returns
           window._noDisplays = !d.hdmi_connected['1'] && !d.hdmi_connected['2'] && !d.blackout;
           for (const id of ['blackout-btn', 'blackout-btn-quick']) {
@@ -2984,7 +2984,7 @@
           hp.classList.toggle('connected', !!d.hdmi_connected[n]);
           hp.classList.toggle('disconnected', !d.hdmi_connected[n]);
           document.getElementById('hdmi-pill-' + n + '-text').textContent =
-            'HDMI ' + n + ' \u2014 ' + (d.hdmi_connected[n] ? 'OK' : 'NO DISPLAY');
+            'HDMI ' + n + ' - ' + (d.hdmi_connected[n] ? 'OK' : 'NO DISPLAY');
         }
       }
       const uni = document.getElementById('unit-name-input');
@@ -2995,7 +2995,7 @@
         const remote = !companionRunning && !!window._compHost;
         cp.className = 'status-bar ' + ((companionRunning || remote) ? 'connected' : 'disconnected');
         document.getElementById('comp-pill-text').textContent =
-          'COMPANION' + (remote ? ' — REMOTE' : (companionRunning ? '' : ' — STOPPED'));
+          'COMPANION' + (remote ? ' - REMOTE' : (companionRunning ? '' : ' - STOPPED'));
         cp.title = remote ? 'Satellite is serving the Companion at ' + window._compHost : '';
       }
       const wp = document.getElementById('wifi-pill');
@@ -3007,7 +3007,7 @@
         } else if (d.wifi && d.wifi.up) {
           wp.style.display = '';
           wp.className = 'status-bar ' + (d.wifi.concern ? 'warn' : 'connected');
-          document.getElementById('wifi-pill-text').textContent = 'WIFI — ' + d.wifi.dbm + ' dBm';
+          document.getElementById('wifi-pill-text').textContent = 'WIFI - ' + d.wifi.dbm + ' dBm';
         } else wp.style.display = 'none';
       }
       const hsp = document.getElementById('hotspot-pill');
@@ -3015,7 +3015,7 @@
         if (d.hotspot_active) {
           hsp.style.display = '';
           hsp.className = 'status-bar warn';
-          document.getElementById('hotspot-pill-text').textContent = 'HOTSPOT — ON';
+          document.getElementById('hotspot-pill-text').textContent = 'HOTSPOT - ON';
         } else hsp.style.display = 'none';
       }
       const tp = document.getElementById('temp-pill');
@@ -3025,7 +3025,7 @@
           tp.style.display = t >= 70 ? '' : 'none';
           tp.className = 'status-bar ' + (t >= 80 ? 'disconnected' : 'warn');
           document.getElementById('temp-pill-text').textContent =
-            'TEMP — ' + t + '°C' + (t >= 80 ? ' HOT' : '');
+            'TEMP - ' + t + '°C' + (t >= 80 ? ' HOT' : '');
         }
       }
 
@@ -3036,7 +3036,7 @@
       paintWdSub();
       if (!isDirty && d.watchdog_fallback) { wdFallback = d.watchdog_fallback; paintWdFallback(); }
 
-      // Hotspot — if state changed (e.g. auto-fallback fired, or another
+      // Hotspot - if state changed (e.g. auto-fallback fired, or another
       // browser toggled it), update the chip and refresh the WiFi list too
       if (d.hotspot_active !== undefined && d.hotspot_active !== hotspotActive) {
         hotspotActive = d.hotspot_active;
@@ -3052,7 +3052,7 @@
         txt.textContent = 'OnTime';
       } else if (d.ip || d.mode === 'local') {
         bar.className = 'status-bar disconnected';
-        txt.textContent = d.mode === 'local' ? 'OnTime — Stopped' : 'OnTime — Unreachable';
+        txt.textContent = d.mode === 'local' ? 'OnTime - Stopped' : 'OnTime - Unreachable';
       } else {
         bar.className = 'status-bar disconnected';
         txt.textContent = 'Not configured';
@@ -3060,7 +3060,7 @@
     } catch {
       bar.className = 'status-bar disconnected';
       document.getElementById('status-text').textContent = 'Error checking status';
-      // a poll failed — if we triggered the shutdown, the ribbon's already up;
+      // a poll failed - if we triggered the shutdown, the ribbon's already up;
       // otherwise wait for a couple of misses before crying wolf (a single
       // dropped request during a service restart shouldn't alarm anyone)
       _connFails++;
@@ -3120,7 +3120,7 @@
         }),
       });
       const d = await r.json();
-      d.ok ? showToast('Settings saved — displays updating.', 'success') : showToast(d.error, 'error');
+      d.ok ? showToast('Settings saved - displays updating.', 'success') : showToast(d.error, 'error');
       if (d.ok) { clearDirty(); setTimeout(fetchStatus, 3000); }
     } catch { showToast('Network error.', 'error'); }
     finally {
@@ -3213,7 +3213,7 @@
         <button class="btn-sm success" id="companion-install-btn" onclick="installCompanion()">
           <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zm-8 2V5h2v6h1.17L12 13.17 9.83 11H11zm-6 7h14v2H5z"/></svg>
           Install Companion</button>
-        <span style="font-size:11px;color:var(--muted)">Downloads from Bitfocus — needs internet, takes 5–10 min. Comes up pre-loaded with the Downstage button layout</span>`;
+        <span style="font-size:11px;color:var(--muted)">Downloads from Bitfocus - needs internet, takes 5-10 min. Comes up pre-loaded with the Downstage button layout</span>`;
     } else if (!companionRunning) {
       badge.className   = 'status-badge stopped';
       badge.textContent = 'Stopped';
@@ -3233,7 +3233,7 @@
           <svg viewBox="0 0 24 24"><path d="M19 19H5V5h7V3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>Open</button>
         <button class="btn-sm" onclick="restartCompanion()">
           <svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>Restart</button>
-        <button class="btn-sm" onclick="downloadCompanionConfig()" title="Download a full backup of the Companion config — pages, connections and surfaces — to this computer">
+        <button class="btn-sm" onclick="downloadCompanionConfig()" title="Download a full backup of the Companion config - pages, connections and surfaces - to this computer">
           <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zm-8 2V5h2v6h1.17L12 13.17 9.83 11H11zm-6 7h14v2H5z"/></svg>
           Save Config</button>
         <button class="btn-sm" id="companion-rescan-btn" onclick="rescanUSB()">
@@ -3275,12 +3275,12 @@
   }
 
   async function installCompanion() {
-    if (!confirm('Install Bitfocus Companion?\n\nThis downloads Companion from Bitfocus onto this unit (internet required, 5–10 minutes). Stream Deck support activates when it finishes.')) return;
+    if (!confirm('Install Bitfocus Companion?\n\nThis downloads Companion from Bitfocus onto this unit (internet required, 5-10 minutes). Stream Deck support activates when it finishes.')) return;
     const btn = document.getElementById('companion-install-btn');
-    if (btn) { btn.disabled = true; btn.innerHTML = spinnerHTML('Installing… (5–10 min)'); }
+    if (btn) { btn.disabled = true; btn.innerHTML = spinnerHTML('Installing… (5-10 min)'); }
     try {
       await fetch('/companion/install', { method: 'POST' });
-      showToast('Installing Companion — this panel updates when it finishes.', 'info');
+      showToast('Installing Companion - this panel updates when it finishes.', 'info');
       const poll = setInterval(async () => {
         try {
           const d = await (await fetch('/companion/status')).json();
@@ -3326,7 +3326,7 @@
     try { j = await (await fetch('/jobs')).json(); } catch { return; }
     const r = document.getElementById('job-ribbon');
     if (!j || !j.name || j.state === 'idle') { r.className = ''; document.body.classList.remove('job-ribboned'); return; }
-    // a finished job is only news for a couple of minutes — after that a
+    // a finished job is only news for a couple of minutes - after that a
     // page load shouldn't resurrect the ribbon (daily backups made every
     // refresh open with "finished")
     if (j.state !== 'running' && j.finished && Date.now() / 1000 - j.finished > 120) {
@@ -3345,7 +3345,7 @@
       const wasShown = r.className.includes('on');
       r.className = 'on ' + j.state;
       document.getElementById('job-label').textContent =
-        j.label + (j.state === 'done' ? ' — finished' : ` — FAILED${j.detail ? ': ' + j.detail : ''}`);
+        j.label + (j.state === 'done' ? ' - finished' : ` - FAILED${j.detail ? ': ' + j.detail : ''}`);
       document.getElementById('job-time').textContent = '';
       if (wasShown && j.state === 'done') { loadUpdateStatus(); }
     }
@@ -3356,27 +3356,27 @@
 
   async function updateCompanion() {
     const ch = companionChannel === 'beta' ? 'beta' : 'stable';
-    if (confirm('Download a backup of the Companion config to this computer first?\n\nRecommended before any update — pages, connections and surfaces, restorable if a migration misbehaves.\n\nOK downloads the backup and continues; Cancel skips the backup.')) {
+    if (confirm('Download a backup of the Companion config to this computer first?\n\nRecommended before any update - pages, connections and surfaces, restorable if a migration misbehaves.\n\nOK downloads the backup and continues; Cancel skips the backup.')) {
       downloadCompanionConfig();
     }
-    if (!confirm(`Update Companion to the latest ${ch} version?\n\nThis takes 2–3 minutes and restarts the service — Stream Decks go dark during the update. The current version is recorded so you can revert afterwards.`)) return;
+    if (!confirm(`Update Companion to the latest ${ch} version?\n\nThis takes 2-3 minutes and restarts the service - Stream Decks go dark during the update. The current version is recorded so you can revert afterwards.`)) return;
     const btn = document.getElementById('companion-inline-update-btn');
     if (btn) { btn.disabled = true; btn.innerHTML = spinnerHTML('Updating…'); }
-    showToast('Updating Companion — this may take a few minutes…', 'info');
+    showToast('Updating Companion - this may take a few minutes…', 'info');
     try {
       const r = await fetch('/companion/update', { method: 'POST' });
       const d = await r.json();
-      if (d.ok) { showToast('Update started — progress in the status bar at the top.', 'info'); pollJobRibbon(); }
+      if (d.ok) { showToast('Update started - progress in the status bar at the top.', 'info'); pollJobRibbon(); }
       else showToast(d.message || 'Update could not start.', 'error');
     } catch {
-      // the click never reached the unit — nothing started. Say so plainly,
+      // the click never reached the unit - nothing started. Say so plainly,
       // then verify against the job registry once the unit answers again
-      showToast('Could not reach the unit — the update did NOT start. If the unit is restarting, wait a few seconds and try again.', 'error');
+      showToast('Could not reach the unit - the update did NOT start. If the unit is restarting, wait a few seconds and try again.', 'error');
       setTimeout(async () => {
         try {
           const j = await (await fetch('/jobs')).json();
-          if (j.state === 'running') { showToast('Actually — a job IS running. Watch the top bar.', 'info'); pollJobRibbon(); }
-          else showToast('Confirmed: nothing ran. The unit is untouched — try again when ready.', 'info');
+          if (j.state === 'running') { showToast('Actually - a job IS running. Watch the top bar.', 'info'); pollJobRibbon(); }
+          else showToast('Confirmed: nothing ran. The unit is untouched - try again when ready.', 'info');
         } catch (e) {}
       }, 5000);
     }
@@ -3403,7 +3403,7 @@
     // Step 3: open Companion's Surfaces page so user can verify detection
     const btn = document.getElementById('companion-rescan-btn');
     if (btn) { btn.disabled = true; btn.innerHTML = spinnerHTML('Rescanning…'); }
-    showToast('Rescanning USB — Companion will restart…', 'info');
+    showToast('Rescanning USB - Companion will restart…', 'info');
     try {
       const r = await fetch('/companion/rescan-usb', { method: 'POST' });
       const d = await r.json();
@@ -3418,8 +3418,8 @@
     } catch { showToast('Failed to rescan USB.', 'error'); }
   }
 
-  // While Satellite serves a remote Companion, every Companion surface —
-  // tiles, panel, emulator — follows the remote brain
+  // While Satellite serves a remote Companion, every Companion surface -
+  // tiles, panel, emulator - follows the remote brain
   function compHost() { return window._compHost || window.location.hostname; }
   function openCompanion() {
     openPanel(`http://${compHost()}:8000`, 'Companion');
@@ -3433,7 +3433,7 @@
     if (d.ok) {
       emulatorId = d.id;
       document.getElementById('emulator-id').value = d.id;
-      showToast(d.id ? 'Emulator set — Virtual Deck tile added to Show Mode.' : 'Emulator cleared.', 'success');
+      showToast(d.id ? 'Emulator set - Virtual Deck tile added to Show Mode.' : 'Emulator cleared.', 'success');
       fetchStatus(true);
     }
   }
@@ -3443,7 +3443,7 @@
   // Wake Lock API needs a secure context (our units speak HTTP), so fall
   // back to the classic trick: an invisible looping video the page records
   // for itself (each browser produces a format it can play).
-  // ── multi-panel manager: tools stay ALIVE in the background (state kept —
+  // ── multi-panel manager: tools stay ALIVE in the background (state kept -
   // the editor reopens where you left it); multiple open tools become tabs ──
   const _panels = {};      // title -> { frame, url }
   let _activePanel = null;
@@ -3538,7 +3538,7 @@
     f.src = f.src;   // re-navigate; cross-origin frames allow nothing subtler
   }
   // While a panel is open, the browser refresh shortcut refreshes the TOOL,
-  // not the whole UI — reloading the page would drop every open panel.
+  // not the whole UI - reloading the page would drop every open panel.
   document.addEventListener('keydown', (e) => {
     if (!document.body.classList.contains('panel-open')) return;
     if (e.key === 'F5' || ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'r')) {
@@ -3568,13 +3568,13 @@
 
 
   function factoryReset() {
-    const typed = prompt('FACTORY RESET\n\nThis erases WiFi credentials, OnTime projects, and logs. The unit keeps its serial and hotspot identity, then reboots — it will come back on ethernet or its fallback hotspot.\n\nType RESET to confirm:');
-    if (typed !== 'RESET') { if (typed !== null) showToast('Not confirmed — type RESET exactly.', 'warning'); return; }
+    const typed = prompt('FACTORY RESET\n\nThis erases WiFi credentials, OnTime projects, and logs. The unit keeps its serial and hotspot identity, then reboots - it will come back on ethernet or its fallback hotspot.\n\nType RESET to confirm:');
+    if (typed !== 'RESET') { if (typed !== null) showToast('Not confirmed - type RESET exactly.', 'warning'); return; }
     fetch('/system/factory-reset', {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ confirm: 'RESET' }),
     }).then(r => r.json()).then(d =>
-      showToast(d.ok ? 'Factory reset started — unit is rebooting.' : `Failed: ${d.message}`, d.ok ? 'info' : 'error')
+      showToast(d.ok ? 'Factory reset started - unit is rebooting.' : `Failed: ${d.message}`, d.ok ? 'info' : 'error')
     ).catch(() => showToast('Reset started (connection dropped).', 'info'));
   }
 
@@ -3653,7 +3653,7 @@
     const tc   = outState.testcard.includes(n);
     const bo   = outState.blackout.includes(n);
     menu.innerHTML = `
-      <div class="ctx-title" style="color:${col}">HDMI ${n} — ${SOURCE_LABELS[n === 1 ? hdmi1Source : hdmi2Source] || ''}</div>
+      <div class="ctx-title" style="color:${col}">HDMI ${n} - ${SOURCE_LABELS[n === 1 ? hdmi1Source : hdmi2Source] || ''}</div>
       <button class="ctx-item" onclick="ctxReload(${n})">
         <svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
         Reload this output
@@ -3689,7 +3689,7 @@
     menu.style.left = Math.max(4, Math.min(e.clientX, window.innerWidth  - r.width  - 8)) + 'px';
     menu.style.top  = Math.max(4, Math.min(e.clientY, window.innerHeight - r.height - 8)) + 'px';
   }
-  // Touch long-press (500 ms) opens the same menu — iOS Safari never fires
+  // Touch long-press (500 ms) opens the same menu - iOS Safari never fires
   // contextmenu, and Android's native one is suppressed by preventDefault.
   for (const n of [1, 2]) {
     const box = document.getElementById('preview-box-' + n);
@@ -3805,13 +3805,13 @@
     openPanel(`http://${host}:4001${path}`, titles[path] || 'OnTime');
   }
 
-  // ── Show / Full view mode — persisted per browser ──
+  // ── Show / Full view mode - persisted per browser ──
   function setViewMode(m) {
     document.body.classList.toggle('show-mode', m === 'show');
     document.getElementById('view-tab-show').classList.toggle('active', m === 'show');
     document.getElementById('view-tab-full').classList.toggle('active', m !== 'show');
     try { localStorage.setItem('ds1-view-mode', m); } catch (e) {}
-    // Show Mode forces the displays pane visible — if we arrived from another
+    // Show Mode forces the displays pane visible - if we arrived from another
     // tab, its virtual tiles were hidden (possibly evicted); re-arm them
     if (m === 'show' && window._lastViewMode && window._lastViewMode !== 'show' &&
         document.body.dataset.page !== 'displays')
@@ -3827,14 +3827,14 @@
       document.getElementById('tpane-' + x)?.classList.toggle('on', x === t);
       document.getElementById('stab-' + x)?.classList.toggle('on', x === t);
     }
-    // Save & Apply belongs to Displays alone — every other tab's controls
+    // Save & Apply belongs to Displays alone - every other tab's controls
     // act instantly through their own buttons
     const sa = document.getElementById('save-actions');
     if (sa) sa.style.display = t === 'displays' ? '' : 'none';
     // top-anchored page: a tab switch puts the chrome back at the top
     if (window.scrollY > 0) window.scrollTo(0, 0);
     try { localStorage.setItem('ds1-setup-tab', t); } catch (e) {}
-    // returning to the previews after a visit elsewhere — re-arm virtual tiles
+    // returning to the previews after a visit elsewhere - re-arm virtual tiles
     if (t === 'displays' && window._lastSetupTab && window._lastSetupTab !== 'displays')
       reviveVirtualPreviews();
     window._lastSetupTab = t;
@@ -3862,7 +3862,7 @@
     }
   }
   // Rotation (and any window resize) changes the pane width, but the iframe's
-  // transform was baked at arm time — re-scale in place, no reload needed.
+  // transform was baked at arm time - re-scale in place, no reload needed.
   let _pvResizeT = null;
   window.addEventListener('resize', () => {
     clearTimeout(_pvResizeT);
@@ -3901,7 +3901,7 @@
     }
   }
 
-  // the inline My Buttons wall is an iframe too — hidden canvases purge,
+  // the inline My Buttons wall is an iframe too - hidden canvases purge,
   // so reload it when Show Mode returns after a real absence
   function reviveShowEmbed() {
     const sef = document.getElementById('show-embed-frame');
@@ -3914,7 +3914,7 @@
     if (document.visibilityState === 'visible') {
       reviveVirtualPreviews();
       if (document.body.classList.contains('show-mode')) reviveShowEmbed();
-      // an open tool panel was backgrounded with the whole browser tab —
+      // an open tool panel was backgrounded with the whole browser tab -
       // its canvases may be gone too
       if (document.body.classList.contains('panel-open') && _activePanel && _panels[_activePanel]) {
         _panels[_activePanel].visible = false;
@@ -3941,7 +3941,7 @@
   // server may still be reaping the last page-load's grab), retry with
   // backoff instead of parking on "No signal" forever.
   // Virtual preview: with no display attached, the tile renders the output's
-  // assigned source live in THIS browser — a virtual monitor, clearly badged.
+  // assigned source live in THIS browser - a virtual monitor, clearly badged.
   async function updateVirtualPreview(n, connected) {
     const box = document.getElementById('preview-virt-' + n);
     if (!box) return;
@@ -3966,7 +3966,7 @@
         .replace('//localhost', '//' + location.hostname)
         .replace('//127.0.0.1', '//' + location.hostname);
       if (box.dataset.url !== u) { box.dataset.url = u; frame.src = u; }
-      // never scale against a hidden (0-width) pane — that paints scale(0)
+      // never scale against a hidden (0-width) pane - that paints scale(0)
       const w = box.parentElement.getBoundingClientRect().width;
       if (w > 0) frame.style.transform = 'scale(' + (w / 1280) + ')';
       box.style.display = '';
@@ -3990,7 +3990,7 @@
   }
   armPreview(1); armPreview(2);
 
-  // Restart just the two MJPEG preview streams — fresh ffmpeg grabs at
+  // Restart just the two MJPEG preview streams - fresh ffmpeg grabs at
   // current display geometry. Outputs untouched.
   function refreshPreviews() {
     armPreview(1); armPreview(2);
@@ -4056,7 +4056,7 @@
       if (ab) ab.disabled = d.available === false;
       if (d.available === false) showToast('No saved profile for that interface yet.', 'info');
       netMode = d.method === 'manual' ? 'manual' : 'auto';
-      const ifaceName = { eth0: 'Ethernet', wlan0: 'Wi-Fi' }[d.iface] || d.iface || '—';
+      const ifaceName = { eth0: 'Ethernet', wlan0: 'Wi-Fi' }[d.iface] || d.iface || '-';
       if (d.method === 'manual' && d.address) {
         const [ip, prefix] = d.address.split('/');
         document.getElementById('net-ip').value = ip || '';
@@ -4086,12 +4086,12 @@
       body.dns    = document.getElementById('net-dns').value.trim();
       if (!body.ip) { showToast('Enter an IP address.', 'error'); return; }
     }
-    if (!confirm(`Apply ${netMode === 'manual' ? 'static IP ' + body.ip : 'DHCP'}?\n\nYour connection to the unit will briefly drop. If the new setting is unreachable, the unit automatically reverts to the current settings after 90 seconds — so a wrong value can't strand it.`)) return;
+    if (!confirm(`Apply ${netMode === 'manual' ? 'static IP ' + body.ip : 'DHCP'}?\n\nYour connection to the unit will briefly drop. If the new setting is unreachable, the unit automatically reverts to the current settings after 90 seconds - so a wrong value can't strand it.`)) return;
 
     const btn = document.getElementById('net-apply-btn');
     const note = document.getElementById('net-note');
     btn.disabled = true; btn.textContent = 'Applying…';
-    note.style.display = ''; note.textContent = 'Applying — reconnecting to confirm…';
+    note.style.display = ''; note.textContent = 'Applying - reconnecting to confirm…';
     let resp;
     try {
       resp = await (await fetch('/network/apply', {
@@ -4113,7 +4113,7 @@
           try {
             const r = await fetch(`${base}/network/confirm`, { method: 'POST', cache: 'no-store', signal: AbortSignal.timeout(3000) });
             if (r.ok) {
-              note.textContent = `Confirmed — settings kept. Reach the unit at ${resp.hostname}.local:8080` + (body.ip ? ` or ${body.ip}:8080` : '') + '.';
+              note.textContent = `Confirmed - settings kept. Reach the unit at ${resp.hostname}.local:8080` + (body.ip ? ` or ${body.ip}:8080` : '') + '.';
               btn.disabled = false; btn.textContent = 'Apply';
               setTimeout(loadNetwork, 1500);
               return;
@@ -4122,7 +4122,7 @@
         }
         await new Promise(r => setTimeout(r, 4000));
       }
-      note.textContent = 'Could not reach the unit at the new address — it has reverted to the previous settings. (Are you on the same subnet?)';
+      note.textContent = 'Could not reach the unit at the new address - it has reverted to the previous settings. (Are you on the same subnet?)';
       btn.disabled = false; btn.textContent = 'Apply';
       setTimeout(loadNetwork, 2000);
     })();
@@ -4134,16 +4134,16 @@
   let hotspotPass   = '';
 
   function updateHotspotUI() {
-    document.getElementById('hotspot-ssid-label').textContent = hotspotSsid || '—';
+    document.getElementById('hotspot-ssid-label').textContent = hotspotSsid || '-';
     const state = document.getElementById('hotspot-state');
     state.textContent = hotspotActive ? 'On' : 'Off';
     state.classList.toggle('on', hotspotActive);
     document.getElementById('hotspot-btn').textContent = hotspotActive ? 'Stop' : 'Start';
-    // reflect immediately in the WiFi header too — don't wait for the next
+    // reflect immediately in the WiFi header too - don't wait for the next
     // wifi/status fetch, which can race the radio's mode switch
     if (hotspotActive) {
       document.getElementById('wifi-current-ssid').innerHTML =
-        `<span style="color:var(--amber)">Hotspot mode active — ${hotspotSsid}</span>`;
+        `<span style="color:var(--amber)">Hotspot mode active - ${hotspotSsid}</span>`;
     }
     const hint = document.getElementById('hotspot-hint');
     if (hotspotActive) {
@@ -4166,7 +4166,7 @@
     const btn = document.getElementById('hotspot-btn');
     if (!hotspotActive) {
       const onWifi = true; // conservative: always warn
-      if (!confirm(`Start hotspot ${hotspotSsid}?\n\nThe device will leave any WiFi network it is on. If you are connected over WiFi right now, you will need to rejoin via the hotspot (password: ${hotspotPass}) at http://10.42.0.1:8080 — or use ethernet.`)) return;
+      if (!confirm(`Start hotspot ${hotspotSsid}?\n\nThe device will leave any WiFi network it is on. If you are connected over WiFi right now, you will need to rejoin via the hotspot (password: ${hotspotPass}) at http://10.42.0.1:8080 - or use ethernet.`)) return;
     }
     btn.disabled = true;
     try {
@@ -4181,7 +4181,7 @@
       [3000, 9000, 16000].forEach(t => setTimeout(loadWifiStatus, t));
     } catch {
       // expected if we were connected via the WiFi that just went away
-      showToast('Connection changed — rejoin via hotspot or ethernet.', 'warning');
+      showToast('Connection changed - rejoin via hotspot or ethernet.', 'warning');
     }
     btn.disabled = false;
   }
@@ -4209,7 +4209,7 @@
     const el     = document.getElementById('wifi-network-list');
     const ssidEl = document.getElementById('wifi-current-ssid');
     if (hotspot) {
-      ssidEl.innerHTML = `<span style="color:var(--amber)">Hotspot mode active — ${hotspotSsid}</span>`;
+      ssidEl.innerHTML = `<span style="color:var(--amber)">Hotspot mode active - ${hotspotSsid}</span>`;
     } else {
       ssidEl.innerHTML = current
         ? `<span class="wifi-ssid">${current}</span>`
@@ -4217,7 +4217,7 @@
     }
     if (!networks.length) {
       el.innerHTML = hotspot
-        ? '<div class="wifi-empty">Hotspot running — press Scan to find networks to join</div>'
+        ? '<div class="wifi-empty">Hotspot running - press Scan to find networks to join</div>'
         : '<div class="wifi-empty">No networks found</div>';
       return;
     }
@@ -4234,12 +4234,12 @@
   function renderInterfaces(list, primary) {
     const box = document.getElementById('iface-panel');
     if (!box) return;
-    if (!list || !list.length) { box.innerHTML = '<div class="iface-none">No network connection — check the cable or join WiFi below.</div>'; return; }
+    if (!list || !list.length) { box.innerHTML = '<div class="iface-none">No network connection - check the cable or join WiFi below.</div>'; return; }
     box.innerHTML = list.map(function(i){
       const ll = i.ip.indexOf('169.254.') === 0;   // self-assigned: no DHCP behind this port
       const isPrim = i.iface === primary && !ll;
       const tag = isPrim ? '<span class="iprim">PRIMARY</span>'
-                : ll ? '<span class="inote" title="Self-assigned address \u2014 nothing answered DHCP on this port">no DHCP</span>' : '';
+                : ll ? '<span class="inote" title="Self-assigned address - nothing answered DHCP on this port">no DHCP</span>' : '';
       let sig = '';
       if (i.kind === 'WiFi' && window._wifiNow && window._wifiNow.up)
         sig = '<span class="inote">' + window._wifiNow.dbm + ' dBm</span>';
@@ -4322,7 +4322,7 @@
 
   async function wifiDoConnect(ssid, password) {
     if (hotspotActive) {
-      if (!confirm(`Joining "${ssid}" will stop the hotspot (one radio — it can't do both).\n\nIf you're connected through the hotspot right now, you'll lose this page and can rejoin the device on "${ssid}"'s network.\n\nSafety net: if nothing reaches the setup page within 3 minutes — wrong password, captive portal, isolated network — the unit drops "${ssid}" and its hotspot comes back automatically.`)) return;
+      if (!confirm(`Joining "${ssid}" will stop the hotspot (one radio - it can't do both).\n\nIf you're connected through the hotspot right now, you'll lose this page and can rejoin the device on "${ssid}"'s network.\n\nSafety net: if nothing reaches the setup page within 3 minutes - wrong password, captive portal, isolated network - the unit drops "${ssid}" and its hotspot comes back automatically.`)) return;
     }
     showToast(`Connecting to ${ssid}…${hotspotActive ? ' (stopping hotspot first)' : ''}`, 'info');
     try {
@@ -4393,7 +4393,7 @@
     markDirty();
   }
 
-  // The status bar under a preview tile — shared by the status poll and the
+  // The status bar under a preview tile - shared by the status poll and the
   // Virtual Previews toggle so both keep it current.
   function updatePvBar(n, connected) {
     const bar = document.getElementById('pv-bar-' + n);
@@ -4401,26 +4401,26 @@
     if (connected) {
       bar.className = 'pv-bar ok';
       const nm = window._hdmiNames && window._hdmiNames[n];
-      bar.textContent = nm ? 'Connected — ' + nm : 'Display connected';
-      bar.title = 'Captured from the physical output — the preview trails the real screen by about a second.';
+      bar.textContent = nm ? 'Connected - ' + nm : 'Display connected';
+      bar.title = 'Captured from the physical output - the preview trails the real screen by about a second.';
     } else if (window._virtualPreviews === false) {
       bar.className = 'pv-bar virt';
       bar.textContent = 'No display';
-      bar.title = 'No display on this output. Virtual previews are off — turn them on in System settings.';
+      bar.title = 'No display on this output. Virtual previews are off - turn them on in System settings.';
     } else {
       bar.className = 'pv-bar virt';
       bar.textContent = 'Virtual · no display';
-      bar.title = 'No display on this output — its source is rendered live in this browser, so it can run slightly ahead of captured previews.';
+      bar.title = 'No display on this output - its source is rendered live in this browser, so it can run slightly ahead of captured previews.';
     }
   }
 
-  // Virtual previews preference — saved on the unit, so it applies to every
+  // Virtual previews preference - saved on the unit, so it applies to every
   // browser that opens this UI. Takes effect immediately, no Apply needed.
   async function toggleVirtualPreviews() {
     const on = window._virtualPreviews === false;
     if (on && !confirm('Virtual previews render an output\u2019s assigned source live in this ' +
         'browser whenever no display is connected.\n\nA timing note: captured previews of real ' +
-        'displays trail the outputs by about a second, while virtual previews run live \u2014 so ' +
+        'displays trail the outputs by about a second, while virtual previews run live - so ' +
         'the two kinds of tile can look slightly out of sync with each other. That\u2019s normal.' +
         '\n\nTurn virtual previews on?')) return;
     window._virtualPreviews = on;
@@ -4440,7 +4440,7 @@
     }
   }
 
-  // ── Audio cues — Off / Tones / Spoken, saved on the unit ──
+  // ── Audio cues - Off / Tones / Spoken, saved on the unit ──
   function paintAudioCues(m) {
     for (const k of ['off', 'tones', 'spoken']) {
       const b = document.getElementById('cue-' + k);
@@ -4509,10 +4509,10 @@
     const note  = document.getElementById('sat-note');
     const act   = document.getElementById('sat-actions');
     if (!badge || !s) return;
-    if (window._satBusy) return;   // an action is in flight — don't repaint under it
+    if (window._satBusy) return;   // an action is in flight - don't repaint under it
     if (s.install_state === 'installing') {
       badge.className = 'status-badge checking'; badge.textContent = 'Installing…';
-      note.textContent = 'Downloading from Bitfocus — takes a few minutes';
+      note.textContent = 'Downloading from Bitfocus - takes a few minutes';
       act.innerHTML = '';
       return;
     }
@@ -4522,42 +4522,42 @@
       act.innerHTML = `<button class="btn-sm success" onclick="installSatellite()">
         <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zm-14 9h14v2H5z"/></svg>
         Install Satellite</button>
-        <span style="font-size:11px;color:var(--muted)">Downloads from Bitfocus — needs internet</span>`;
+        <span style="font-size:11px;color:var(--muted)">Downloads from Bitfocus - needs internet</span>`;
       return;
     }
     if (s.enabled && s.running) {
       badge.className = 'status-badge running'; badge.textContent = 'Serving ' + (s.ip || 'remote');
-      note.textContent = (s.version ? 'v' + s.version + ' — ' : '') +
-        'Decks belong to the remote Companion — onboard Companion is stood down';
+      note.textContent = (s.version ? 'v' + s.version + ' - ' : '') +
+        'Decks belong to the remote Companion - onboard Companion is stood down';
       act.innerHTML = `
-        <button class="btn-sm danger" onclick="setSatellite(false)">Disable — restore onboard Companion</button>
-        <button class="btn-sm" onclick="restartSatellite()" title="Restarts Satellite — it re-detects USB Stream Decks on startup">Rescan USB</button>
-        <button class="btn-sm" onclick="updateSatellite()" title="Re-runs the official Bitfocus installer, which fetches the current stable build — decks drop for a few minutes, then Satellite resumes serving its remote">Update</button>`;
+        <button class="btn-sm danger" onclick="setSatellite(false)">Disable - restore onboard Companion</button>
+        <button class="btn-sm" onclick="restartSatellite()" title="Restarts Satellite - it re-detects USB Stream Decks on startup">Rescan USB</button>
+        <button class="btn-sm" onclick="updateSatellite()" title="Re-runs the official Bitfocus installer, which fetches the current stable build - decks drop for a few minutes, then Satellite resumes serving its remote">Update</button>`;
       return;
     }
     if (s.enabled && !s.running) {
       badge.className = 'status-badge stopped'; badge.textContent = 'Enabled, not running';
-      note.textContent = 'Service starting or failed — give it a moment';
+      note.textContent = 'Service starting or failed - give it a moment';
       act.innerHTML = `<button class="btn-sm danger" onclick="setSatellite(false)">Disable</button>`;
       return;
     }
     badge.className = 'status-badge stopped'; badge.textContent = 'Off';
     note.textContent = s.version ? 'v' + s.version + ' installed' : '';
     act.innerHTML = `
-      <input id="sat-ip" placeholder="Remote Companion IP — e.g. 192.168.1.50"
+      <input id="sat-ip" placeholder="Remote Companion IP - e.g. 192.168.1.50"
              autocomplete="off" spellcheck="false" value="${s.ip || ''}"
              style="flex:1; min-width:200px; background:var(--surface2); border:1px solid var(--border2);
                     border-radius:8px; color:var(--text); padding:8px 12px; font:inherit; font-size:13.5px">
       <button class="btn-sm success" onclick="setSatellite(true)">Enable Satellite</button>
-      <button class="btn-sm" onclick="updateSatellite()" title="Re-runs the official Bitfocus installer — fetches the current stable build">Update</button>`;
+      <button class="btn-sm" onclick="updateSatellite()" title="Re-runs the official Bitfocus installer - fetches the current stable build">Update</button>`;
   }
   async function restartSatellite() {
-    showToast('Restarting Satellite — decks re-detect in a few seconds…', 'info');
+    showToast('Restarting Satellite - decks re-detect in a few seconds…', 'info');
     try { await fetch('/satellite/restart', { method: 'POST' }); }
     catch (e) { showToast('Could not reach the unit.', 'error'); }
   }
   async function updateSatellite() {
-    showToast('Updating Satellite from Bitfocus — decks drop until it finishes…', 'info');
+    showToast('Updating Satellite from Bitfocus - decks drop until it finishes…', 'info');
     try { await fetch('/satellite/install', { method: 'POST' }); } catch (e) {}
   }
   async function installSatellite() {
@@ -4572,8 +4572,8 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ on, ip }) })).json();
       if (!d.ok) { showToast(d.error || 'Could not switch Satellite.', 'error'); return; }
-      showToast(on ? `Satellite serving ${ip} — onboard Companion stood down.`
-                   : 'Satellite off — onboard Companion restored.', 'success');
+      showToast(on ? `Satellite serving ${ip} - onboard Companion stood down.`
+                   : 'Satellite off - onboard Companion restored.', 'success');
     } catch (e) { showToast('Could not reach the unit.', 'error'); }
     finally { window._satBusy = false; }
   }
@@ -4582,7 +4582,7 @@
   // in-page floating panel steps in instead.
   function popOutButtons() {
     const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
-    // iOS can't make real windows — everyone else can, and for this page a
+    // iOS can't make real windows - everyone else can, and for this page a
     // chrome-less web-app window is exactly right (it's all deck, no nav)
     const iOS = /iP(hone|ad|od)/.test(navigator.userAgent) ||
                 (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -4634,7 +4634,7 @@
   })();
   function copyWallLink(btn) {
     const u = `http://${window.location.host}/virtual-deck`;
-    const done = () => showToast('Virtual Deck link copied — paste it on the console device.', 'success');
+    const done = () => showToast('Virtual Deck link copied - paste it on the console device.', 'success');
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(u).then(done, () => fallbackCopyWall(u, done));
     } else fallbackCopyWall(u, done);
@@ -4766,11 +4766,11 @@
 
   // ── System health ─────────────────────────────────────────────────────────────
   function updateHealthDisplay(d) {
-    document.getElementById('h-temp').textContent   = d.cpu_temp     || '—';
-    document.getElementById('h-cpu').textContent    = d.cpu_percent  != null ? `${d.cpu_percent}%` : '—';
-    document.getElementById('h-gpu').textContent    = d.gpu_clock_mhz != null ? `${d.gpu_clock_mhz} MHz` : '—';
-    document.getElementById('h-ram').textContent    = d.ram_used     != null ? `${d.ram_used}/${d.ram_total} MB` : '—';
-    document.getElementById('h-uptime').textContent = d.uptime       || '—';
+    document.getElementById('h-temp').textContent   = d.cpu_temp     || '-';
+    document.getElementById('h-cpu').textContent    = d.cpu_percent  != null ? `${d.cpu_percent}%` : '-';
+    document.getElementById('h-gpu').textContent    = d.gpu_clock_mhz != null ? `${d.gpu_clock_mhz} MHz` : '-';
+    document.getElementById('h-ram').textContent    = d.ram_used     != null ? `${d.ram_used}/${d.ram_total} MB` : '-';
+    document.getElementById('h-uptime').textContent = d.uptime       || '-';
   }
 
   // ── Config backup / restore ───────────────────────────────────────────────────
@@ -4787,8 +4787,8 @@
       const r = await fetch('/os/update', { method: 'POST', headers: {'Content-Type':'application/json'}, body: '{}' });
       const d = await r.json();
       if (!d.ok) { showToast(d.message, 'error'); btn.disabled = false; btn.textContent = 'Update'; return; }
-      showToast('Updating — this page will reload when the new version is up.', 'info');
-      // reload when the reported version CHANGES — waiting to "see it go
+      showToast('Updating - this page will reload when the new version is up.', 'info');
+      // reload when the reported version CHANGES - waiting to "see it go
       // down" missed the 2s restart window between polls and left the page
       // stale until a manual refresh
       const startVer = d.from || null;
@@ -4809,7 +4809,7 @@
     try {
       const r = await fetch('/update-status');
       const d = await r.json();
-      // right after boot the background check may still be running — keep
+      // right after boot the background check may still be running - keep
       // asking until every component has actually answered (the "stuck on
       // checking until refresh" bug)
       if (!(d.os?.checked && d.ontime?.checked && d.companion?.checked)) {
@@ -4849,7 +4849,7 @@
         const cur = d.companion.installed, latest = d.companion.latest;
         const ch  = d.companion.channel || 'stable';
         if (latest && latest !== cur) {
-          chHint.innerHTML = `Newest on the <b>${ch}</b> channel: <b>v${latest}</b> — installed: v${cur}. ` +
+          chHint.innerHTML = `Newest on the <b>${ch}</b> channel: <b>v${latest}</b> - installed: v${cur}. ` +
             `The Update button above installs it.`;
           chHint.style.display = '';
         } else if (latest) {
@@ -4877,7 +4877,7 @@
       row.style.display = '';
       const txt = document.getElementById('patches-text');
       txt.innerHTML = '<b>System patches available</b>';
-      txt.title = `Tested through ${p.tested_through}` + (p.notes ? ` — ${p.notes}` : '');
+      txt.title = `Tested through ${p.tested_through}` + (p.notes ? ` - ${p.notes}` : '');
     } else {
       row.style.display = 'none';
     }
@@ -4888,7 +4888,7 @@
     const r = await fetch('/system/patches/apply', { method: 'POST' });
     const d = await r.json();
     if (!d.ok) { showToast(d.message, 'error'); return; }
-    showToast('Installing system patches — the unit stays on the air…', 'info');
+    showToast('Installing system patches - the unit stays on the air…', 'info');
     pollPatches();
   }
 
@@ -4938,7 +4938,7 @@
     row.style.display = 'flex';
 
     if (!data.checked) {
-      verEl.textContent   = '—';
+      verEl.textContent   = '-';
       badgeEl.className   = 'version-badge checking';
       badgeEl.textContent = 'Checking…';
       return;
@@ -4951,7 +4951,7 @@
 
     verEl.textContent = `v${data.installed}`;
 
-    // dynamically injected update button (ontime/companion rows only —
+    // dynamically injected update button (ontime/companion rows only -
     // the OS row has its own static buttons). Tracked by id so it can be
     // removed when an update stops being available (e.g. after a channel
     // flip), and so it never collides with the revert button.
@@ -4979,19 +4979,19 @@
   }
 
   async function updateOntimeServer() {
-    if (!confirm('Update OnTime to the latest release?\n\nThe timer server restarts during the update — avoid doing this during a show. The current version is kept on the unit, so you can revert with one click if the new one misbehaves.')) return;
+    if (!confirm('Update OnTime to the latest release?\n\nThe timer server restarts during the update - avoid doing this during a show. The current version is kept on the unit, so you can revert with one click if the new one misbehaves.')) return;
     try {
       const r = await fetch('/ontime/update', { method: 'POST' });
       const d = await r.json();
       if (!d.ok) { showToast(d.message || 'Could not start.', 'error'); return; }
       pollJobRibbon();   // amber ribbon + timer; green when done, versions refresh
     } catch {
-      showToast('Could not reach the unit — the update did NOT start. If the unit is restarting, wait a few seconds and try again.', 'error');
+      showToast('Could not reach the unit - the update did NOT start. If the unit is restarting, wait a few seconds and try again.', 'error');
       setTimeout(async () => {
         try {
           const j = await (await fetch('/jobs')).json();
-          if (j.state === 'running') { showToast('Actually — a job IS running. Watch the top bar.', 'info'); pollJobRibbon(); }
-          else showToast('Confirmed: nothing ran. OnTime is untouched — try again when ready.', 'info');
+          if (j.state === 'running') { showToast('Actually - a job IS running. Watch the top bar.', 'info'); pollJobRibbon(); }
+          else showToast('Confirmed: nothing ran. OnTime is untouched - try again when ready.', 'info');
         } catch (e) {}
       }, 5000);
     }
@@ -5011,12 +5011,12 @@
   }
 
   async function revertCompanion() {
-    if (!confirm('Reinstall the previous Companion version?\n\nThis takes a few minutes and restarts the Companion service — Stream Decks go dark until it is back.')) return;
-    showToast('Reverting Companion — this may take a few minutes…', 'info');
+    if (!confirm('Reinstall the previous Companion version?\n\nThis takes a few minutes and restarts the Companion service - Stream Decks go dark until it is back.')) return;
+    showToast('Reverting Companion - this may take a few minutes…', 'info');
     try {
       const r = await fetch('/companion/revert', { method: 'POST' });
       const d = await r.json();
-      if (d.ok) { showToast(`Revert to v${d.message} started — progress in the status bar.`, 'info'); pollJobRibbon(); }
+      if (d.ok) { showToast(`Revert to v${d.message} started - progress in the status bar.`, 'info'); pollJobRibbon(); }
       else showToast(d.message || 'Revert could not start.', 'error');
     } catch { showToast('Network error during revert.', 'error'); }
   }
@@ -5065,7 +5065,7 @@
       const r = await fetch('/config/upload', { method: 'POST', body: form });
       const d = await r.json();
       if (d.ok) {
-        showToast('Config restored — reloading…', 'success');
+        showToast('Config restored - reloading…', 'success');
         setTimeout(() => location.reload(), 1500);
       } else {
         showToast(`Upload failed: ${d.message}`, 'error');
@@ -5092,7 +5092,7 @@
         ? 'In Safari, tap the <b>Share</b> button (the square with an arrow), scroll down, and tap <b>Add to Home Screen</b>.'
         : 'In Chrome, tap the <b>&#8942;</b> menu (top right), then tap <b>Add to Home screen</b>.';
       document.getElementById('a2hs-steps').innerHTML =
-        steps + '<br><br>The page becomes an app icon — one tap from your home screen next time.';
+        steps + '<br><br>The page becomes an app icon - one tap from your home screen next time.';
       document.getElementById('a2hs-pop').style.display = 'flex';
     };
     window.a2hsDismiss = function () {
@@ -5186,7 +5186,7 @@
           'Update available: v' + (os.latest || '');
         document.getElementById('wiz-os-btn').style.display = '';
       } else {
-        wizRow('os', true, 'v' + (os.installed || '') + ' — up to date', null);
+        wizRow('os', true, 'v' + (os.installed || '') + ' - up to date', null);
       }
     } catch (e) {}
   }
@@ -5208,7 +5208,7 @@
   async function wizInstallOntime() {
     const b = document.getElementById('wiz-ontime-btn');
     b.disabled = true; b.textContent = 'Downloading…';
-    wizBusy('ontime', true, 'Downloading the official release — 1–2 minutes…');
+    wizBusy('ontime', true, 'Downloading the official release - 1-2 minutes…');
     await installOntime();
     wizBusy('ontime', false);
     b.disabled = false; b.textContent = 'Install';
@@ -5217,7 +5217,7 @@
   async function wizInstallCompanion() {
     const b = document.getElementById('wiz-companion-btn');
     b.disabled = true; b.textContent = 'Installing…';
-    wizBusy('companion', true, 'Running the official installer — a few minutes…');
+    wizBusy('companion', true, 'Running the official installer - a few minutes…');
     await installCompanion();
     wizBusy('companion', false);
     b.disabled = false; b.textContent = 'Install';

@@ -13,7 +13,7 @@ from pathlib import Path
 import requests
 from flask import Flask, jsonify, render_template, request, send_file, Response
 
-OS_VERSION = "1.5.4"   # Downstage OS release — bump on tagged releases
+OS_VERSION = "1.5.4"   # Downstage OS release - bump on tagged releases
 OS_PRODUCT = "Downstage One"
 
 app = Flask(__name__)
@@ -30,7 +30,7 @@ def _no_html_cache(resp):
 
 @app.after_request
 def _no_store(resp):
-    # the config UI must never be served stale from browser cache — the page
+    # the config UI must never be served stale from browser cache - the page
     # changes with every OS update, and a cached copy silently breaks controls
     if resp.content_type and resp.content_type.startswith("text/html"):
         resp.headers["Cache-Control"] = "no-store, must-revalidate"
@@ -59,7 +59,7 @@ VIEWS = [
 
 # ── Process handles ───────────────────────────────────────────────────────────
 _win   = [None, None]   # [hdmi1_proc, hdmi2_proc]
-_win_sig = [None, None]  # per-window target signature — for selective relaunch
+_win_sig = [None, None]  # per-window target signature - for selective relaunch
 _wlock = threading.Lock()
 _ontime_proc = None
 _ontime_lock = threading.Lock()
@@ -89,7 +89,7 @@ _update_status = {
 # touch the boot EEPROM updater.
 
 PATCH_STAMP    = BASE_DIR / ".os-patched"   # date this unit last applied blessed patches
-PATCH_BASELINE = "2026-04-27"               # golden image capture date — fallback stamp
+PATCH_BASELINE = "2026-04-27"               # golden image capture date - fallback stamp
 PATCH_LOG      = BASE_DIR / "patch.log"
 
 _patch_state = {"state": "idle", "message": ""}   # idle|running|done|failed
@@ -133,7 +133,7 @@ def load_config():
     data.setdefault("ip_history",   [])
     data.setdefault("hdmi1_res",    "1920x1080")
     data.setdefault("hdmi2_res",    "1920x1080")
-    # 1080p is the ceiling — a timer never needs 4K, and the Pi shouldn't
+    # 1080p is the ceiling - a timer never needs 4K, and the Pi shouldn't
     # spend 4x the GPU on it (also clamps configs saved before the cap)
     for k in ("hdmi1_res", "hdmi2_res"):
         if data[k] not in ("1920x1080", "1280x720"):
@@ -269,7 +269,7 @@ def _wifi_watch():
 threading.Thread(target=_wifi_watch, daemon=True).start()
 
 
-# ── Audio cues — spoken time calls / tones through the case's 3.5mm jack ─────
+# ── Audio cues - spoken time calls / tones through the case's 3.5mm jack ─────
 # The Argon V5's HS100B DAC (enabled via dwc2 host mode) appears as a USB
 # Audio ALSA card. Cue marks fire once per crossing while OnTime plays.
 _AUDIO_DIR = Path(__file__).parent / "static" / "audio"
@@ -291,7 +291,7 @@ def _audio_card():
     return None
 
 
-# Continuous 1 kHz line tone for console line checks — audio SMPTE bars.
+# Continuous 1 kHz line tone for console line checks - audio SMPTE bars.
 # A firing cue cuts the tone (the show outranks the soundcheck).
 _line_tone = {"proc": None}
 
@@ -361,7 +361,7 @@ def _cue_loop():
         last, last_at = _cue_last[0]
         if cur is not None and last is not None and cur < last:
             # a NATURAL tick decreases by ~the poll interval; a bigger drop
-            # means the operator jumped the clock (add/subtract time) — the
+            # means the operator jumped the clock (add/subtract time) - the
             # mark was never actually reached, so stay quiet and resync
             natural = (last - cur) <= (now - last_at) * 1000 + 1500
             if natural:
@@ -378,8 +378,8 @@ threading.Thread(target=_cue_loop, daemon=True).start()
 
 
 def _ensure_combined_sink():
-    """Kiosk/browser audio should reach EVERY output — the case jack and any
-    HDMI display — so patterns and video sources are heard wherever the
+    """Kiosk/browser audio should reach EVERY output - the case jack and any
+    HDMI display - so patterns and video sources are heard wherever the
     audience is. PipeWire's combine sink does it; ensure one exists and is
     the default. (Audio cues bypass this on purpose: raw ALSA to the jack,
     because that's the comms feed.) Retries while audio boots."""
@@ -397,14 +397,14 @@ def _ensure_combined_sink():
             subprocess.run(["pactl", "set-default-sink", "downstage_all"], env=env,
                            timeout=5, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             # hardware sinks at 75% (100% ran hot on real speakers), the
-            # combiner itself at unity — net level is the hardware setting
+            # combiner itself at unity - net level is the hardware setting
             for line in subprocess.check_output(["pactl", "list", "short", "sinks"],
                                                 env=env, text=True, timeout=5).splitlines():
                 name = line.split("\t")[1]
                 level = "100%" if name == "downstage_all" else "75%"
                 subprocess.run(["pactl", "set-sink-volume", name, level], env=env,
                                timeout=5, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            print("[audio] combined sink ready — kiosk audio mirrors to all outputs")
+            print("[audio] combined sink ready - kiosk audio mirrors to all outputs")
             return
         except Exception:
             time.sleep(3)
@@ -430,7 +430,7 @@ def _wifi_health():
 
 
 def get_network_info():
-    """Return {ip, iface} preferring eth0 over wlan0 — but a REAL address on
+    """Return {ip, iface} preferring eth0 over wlan0 - but a REAL address on
     either interface beats a link-local one. A direct-cable 169.254 on eth
     must never mask working WiFi (it made the OLED search forever and the
     supervisor hunt a network the unit already had)."""
@@ -474,10 +474,10 @@ _uv_ack = {"on": False}
 
 def _power_state():
     """Pi firmware power flags (vcgencmd get_throttled): bit0 undervoltage
-    now, bit16 undervoltage since boot — the 'lightning bolt' warning."""
+    now, bit16 undervoltage since boot - the 'lightning bolt' warning."""
     try:
         # raspi-utils 2026-06 needs /dev/vcio_gencmd (absent on this kernel)
-        # for non-root — root path still works, and pi has passwordless sudo
+        # for non-root - root path still works, and pi has passwordless sudo
         out = subprocess.check_output(["sudo", "vcgencmd", "get_throttled"],
                                       text=True, timeout=3).strip()
         val = int(out.split("=")[1], 16)
@@ -658,7 +658,7 @@ def _resync_displays():
     Apply display settings and verify every output actually landed on its
     configured mode.  A display plugged in after boot (especially a headless
     boot) may not have its EDID modes probed yet, so the first xrandr --mode
-    call can fail silently — retry with growing delays before giving up.
+    call can fail silently - retry with growing delays before giving up.
     """
     config = load_config()
     for attempt in range(3):
@@ -688,7 +688,7 @@ def _resync_displays():
 def _restart_wm():
     """Restart openbox so it re-reads the monitor layout. After a hot-plug on
     a headless boot openbox still believes the screen is one giant monitor,
-    and fullscreens every kiosk window across BOTH outputs — xrandr looks
+    and fullscreens every kiosk window across BOTH outputs - xrandr looks
     perfect while the image is stretched over two screens."""
     try:
         subprocess.run(["openbox", "--restart"],
@@ -696,7 +696,7 @@ def _restart_wm():
                        timeout=10, check=True,
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         time.sleep(1.5)   # let the WM settle before windows are relaunched
-        print("[wm] openbox restarted — monitor layout re-read")
+        print("[wm] openbox restarted - monitor layout re-read")
     except Exception as e:
         print(f"[wm] openbox restart failed: {e}")
 
@@ -715,14 +715,14 @@ def _apply_display_settings():
         res = config.get(f"hdmi{n}_res",    "1920x1080")
         rot = config.get(f"hdmi{n}_rotate", "normal")
         # re-anchor positions: a mode change alters widths, and stale offsets
-        # leave gaps/overlap — content then isn't centered on the glass
+        # leave gaps/overlap - content then isn't centered on the glass
         place = ["--pos", "0x0"] if idx == 0 else ["--right-of", outputs[idx - 1]]
         cmd = ["xrandr", "--output", name, "--mode", res, "--rotate", rot] + place
         try:
             subprocess.run(cmd, env=env, timeout=10, check=True,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except Exception as e:
-            print(f"[xrandr] failed for {name}: {e} — forcing a CVT mode (no/bad EDID?)")
+            print(f"[xrandr] failed for {name}: {e} - forcing a CVT mode (no/bad EDID?)")
             forced = _force_mode(name, res, env)
             if forced:
                 try:
@@ -735,7 +735,7 @@ def _apply_display_settings():
                     print(f"[xrandr] forced mode also failed for {name}: {e2}")
 
 
-# CVT 60Hz modelines for the resolutions the setup UI offers — used when a
+# CVT 60Hz modelines for the resolutions the setup UI offers - used when a
 # display gives no EDID and the wanted mode therefore isn't in xrandr's list.
 _CVT_MODELINES = {
     "1920x1080": ["173.00", "1920", "2048", "2248", "2576",
@@ -770,7 +770,7 @@ def _force_mode(name, res, env):
 
 def _version_tuple(v):
     try:
-        # leading digits per component — survives beta builds like "5.1.0+9638"
+        # leading digits per component - survives beta builds like "5.1.0+9638"
         parts = []
         for x in str(v).lstrip("v").split(".")[:3]:
             m = re.match(r"\d+", x)
@@ -933,7 +933,7 @@ def _clean_external_url(url):
 
 def _is_ontime_source(source):
     # NB: "cleantimer" IS an OnTime source (it loads :4001/timer with styling
-    # params) — it must not appear in this exclusion list or the watchdog
+    # params) - it must not appear in this exclusion list or the watchdog
     # will relaunch a dead page instead of the holding screen.
     if source and source.startswith("pattern-"):
         return False
@@ -955,14 +955,14 @@ def _ontime_runtime(ip, timeout=2):
 
 # The Pi 5's driver names don't match the jacks: the jack we label HDMI 1
 # on the unit is xrandr's "HDMI-2" and vice versa. Product port numbers are
-# what the customer sees on the case — translate here, nowhere else.
+# what the customer sees on the case - translate here, nowhere else.
 _XRANDR_TO_PORT = {"HDMI-1": 2, "HDMI-2": 1, "HDMI-A-1": 2, "HDMI-A-2": 1}
 
 
 def _edid_name_for(port):
     """Connected display's EDID name (or manufacturer code) for a CASE-LABEL
     port. The kernel's connector numbering is inverted vs the jacks, so go
-    through _XRANDR_TO_PORT like every other port lookup — never assume
+    through _XRANDR_TO_PORT like every other port lookup - never assume
     HDMI-A-<n> is port <n>."""
     import glob
     for c in glob.glob("/sys/class/drm/card*-HDMI-A-*"):
@@ -1005,7 +1005,7 @@ def hdmi_connected():
 
 def _port_num(output_name, fallback=1):
     """Product port number (case label) for an xrandr output name. The port
-    is the unit's identity for an output — a lone display on the HDMI 1 jack
+    is the unit's identity for an output - a lone display on the HDMI 1 jack
     is HDMI 1, not "the first display we found"."""
     return _XRANDR_TO_PORT.get(output_name, fallback)
 
@@ -1048,7 +1048,7 @@ _COMMON_FLAGS = [
     "--autoplay-policy=no-user-gesture-required",
     "--disable-session-crashed-bubble",
     "--hide-crash-restore-bubble",
-    # paint House Black from the first frame — otherwise every fresh window
+    # paint House Black from the first frame - otherwise every fresh window
     # flashes white on screen before the page's dark background loads
     "--default-background-color=0b0d10",
     "--disable-infobars",
@@ -1059,10 +1059,10 @@ _COMMON_FLAGS = [
     "--check-for-update-interval=31536000",
     "--password-store=basic",   # skip GNOME keyring prompt
     # no phone-home: kills GCM push registration (which spams the log with
-    # DEPRECATED_ENDPOINT retries), update pings and safe-browsing fetches —
+    # DEPRECATED_ENDPOINT retries), update pings and safe-browsing fetches -
     # none of it has any business on a show machine
     "--disable-background-networking",
-    "--disk-cache-size=52428800",   # cap the browser cache — appliances run for months between reboots
+    "--disk-cache-size=52428800",   # cap the browser cache - appliances run for months between reboots
 ]
 
 
@@ -1088,7 +1088,7 @@ def _hex6(v, default):
 
 
 def _cleantimer_params(hdmi_index):
-    """Query string for the Custom Timer preset — always chromakey-ready
+    """Query string for the Custom Timer preset - always chromakey-ready
     (black key, white timer, no logo), with per-output show-day options
     from config (each HDMI can run its own custom timer)."""
     cfg = load_config()
@@ -1113,7 +1113,7 @@ def _open_window(source, display, hdmi_index):
     """
     Launch a Chromium window on the given display.
     source: "config" | "off" | "/ontime-view-path"
-    hdmi_index: 1 or 2 — used to give each instance its own profile dir.
+    hdmi_index: 1 or 2 - used to give each instance its own profile dir.
     Returns the Popen handle, or None if source is "off".
     """
     pos      = f"--window-position={display['x']},{display['y']}"
@@ -1122,7 +1122,7 @@ def _open_window(source, display, hdmi_index):
     profile  = f"--user-data-dir=/tmp/kiosk-hdmi{hdmi_index}"
 
     if source in ("off", "blackout"):
-        # "off" renders true black — leaving no window would show the desktop
+        # "off" renders true black - leaving no window would show the desktop
         return subprocess.Popen([
             "chromium", *_COMMON_FLAGS,
             profile, pos, size, "--kiosk",
@@ -1173,7 +1173,7 @@ def _open_window(source, display, hdmi_index):
     if source == "external":
         url = config.get(f"hdmi{hdmi_index}_external_url", "").strip()
         if not url:
-            # No URL configured — show the holding page rather than a browser error
+            # No URL configured - show the holding page rather than a browser error
             url = "http://localhost:8080/holding"
         return subprocess.Popen([
             "chromium", *_COMMON_FLAGS,
@@ -1183,7 +1183,7 @@ def _open_window(source, display, hdmi_index):
         ], env=_chromium_env())
 
     if not ip and source != "custom":
-        # OnTime source but no server configured (fresh unit) — a browser
+        # OnTime source but no server configured (fresh unit) - a browser
         # error page is a terrible first impression; show the welcome screen
         url = "http://localhost:8080/welcome"
     elif source == "cleantimer":
@@ -1202,7 +1202,7 @@ def _open_window(source, display, hdmi_index):
 
 
 def _mark_profiles_clean():
-    """Chromium shows 'Restore pages?' if the profile says it crashed —
+    """Chromium shows 'Restore pages?' if the profile says it crashed -
     which it will after any hard kill. Rewrite the exit state before launch."""
     import glob
     for pref in glob.glob("/tmp/kiosk-*/Default/Preferences"):
@@ -1219,7 +1219,7 @@ def _kill_orphan_windows():
     """
     Kill any kiosk Chromium windows left over from a previous Flask instance.
     After a service restart our _win handles are gone, but the old windows
-    stay on screen and hold the profile lock — new launches with the same
+    stay on screen and hold the profile lock - new launches with the same
     user-data-dir get absorbed by the old instance and never appear.
     """
     try:
@@ -1236,18 +1236,18 @@ def _kill_orphan_windows():
 def launch_all_windows(force=True):
     """Read config and (re)open windows. force=True (boot, watchdog) relaunches
     every output. force=False (Save) relaunches ONLY the outputs whose resolved
-    target actually changed — so editing HDMI 2 leaves HDMI 1 running untouched."""
+    target actually changed - so editing HDMI 2 leaves HDMI 1 running untouched."""
     global _win, _win_sig
     config   = load_config()
     displays = get_displays(fresh=True)
 
     # Out-of-box: sources that need the (unconfigured) OnTime server show the
-    # welcome screen — but deliberately chosen non-OnTime sources (test
+    # welcome screen - but deliberately chosen non-OnTime sources (test
     # patterns, external, off) are honored as-is
     unconfigured = config.get("mode", "local") == "remote" and not config.get("ip")
 
     # An OnTime source with the server down must never hit chromium's error
-    # page — hold on the branded page; the watchdog restores when it answers
+    # page - hold on the branded page; the watchdog restores when it answers
     ip = "127.0.0.1" if config.get("mode", "local") == "local" else config.get("ip", "")
     sources = [config.get(f"hdmi{n}_source", "config" if n == 1 else "/timer") for n in (1, 2)]
     needs = any(_is_ontime_source(s) for s in sources)
@@ -1275,7 +1275,7 @@ def launch_all_windows(force=True):
             sig = (s, d["w"], d["h"], d["x"], d["y"], extra)
             alive = _win[i] is not None and _win[i].poll() is None
             if alive and _win_sig[i] == sig:
-                continue   # unchanged — leave this output alone
+                continue   # unchanged - leave this output alone
             _kill(_win[i])
             _win[i] = _open_window(s, d, n)
             _win_sig[i] = sig
@@ -1317,7 +1317,7 @@ def _hdmi_monitor():
         if curr != prev:
             print(f"[hdmi] display change detected: {prev} → {curr}")
             time.sleep(2)   # let X settle after hotplug
-            # a hot-plugged output is connected but has no mode — activate it
+            # a hot-plugged output is connected but has no mode - activate it
             # and apply configured res/rotation before opening windows on it,
             # verifying modes stuck (EDID may not be probed on first try)
             _resync_displays()
@@ -1379,20 +1379,20 @@ def _ontime_watchdog():
                 misses = 0
             if _wd_connected and misses >= 2:
                 if _blackout_active:
-                    print("[watchdog] OnTime offline but blackout active — leaving displays black")
+                    print("[watchdog] OnTime offline but blackout active - leaving displays black")
                 else:
-                    print("[watchdog] OnTime offline (2 checks) — switching to holding page")
+                    print("[watchdog] OnTime offline (2 checks) - switching to holding page")
                     _watchdog_override = True
                     threading.Thread(target=_launch_watchdog_windows, daemon=True).start()
                 _wd_connected = False
             if not connected and mode == "local" and _ontime_desired \
                     and ontime_installed() and not ontime_is_running():
-                # the server is supposed to be running and died — revive it.
+                # the server is supposed to be running and died - revive it.
                 # A deliberate Stop Server clears _ontime_desired and stays stopped.
-                print("[watchdog] local OnTime died — restarting it")
+                print("[watchdog] local OnTime died - restarting it")
                 start_local_ontime()
             elif not _wd_connected and connected:
-                print("[watchdog] OnTime back online — restoring windows")
+                print("[watchdog] OnTime back online - restoring windows")
                 _watchdog_override = False
                 if not _blackout_active:
                     threading.Thread(target=launch_all_windows, daemon=True).start()
@@ -1444,7 +1444,7 @@ def ontime_is_running():
     # Check our tracked process handle first
     if _ontime_proc is not None and _ontime_proc.poll() is None:
         return True
-    # Fall back to pgrep — catches OnTime running from a previous Flask instance
+    # Fall back to pgrep - catches OnTime running from a previous Flask instance
     # (e.g. after a Flask crash/restart where OnTime stayed alive as an orphan)
     try:
         r = subprocess.run(
@@ -1457,11 +1457,11 @@ def ontime_is_running():
 
 
 def _hide_ontime_windows():
-    """OnTime 4.7's --headless still opens its Electron editor window — a
+    """OnTime 4.7's --headless still opens its Electron editor window - a
     white window that lurks behind the kiosk and photobombs source switches.
     Unmap (hide) it; closing it would quit the app. Retries while the app
     finishes launching. Match by WM_CLASS (ontime/ontime-electron), never by
-    name — kiosk chromium windows showing OnTime views are titled
+    name - kiosk chromium windows showing OnTime views are titled
     "ontime - …" too, and a name match unmaps the kiosk itself."""
     script = (
         'AUTH=$(pgrep -af Xorg | grep -oE "\\-auth [^ ]+" | awk \'{print $2}\' | head -1); '
@@ -1506,7 +1506,7 @@ def start_local_ontime():
 
 def stop_local_ontime():
     global _ontime_proc, _ontime_desired
-    _ontime_desired = False   # deliberate stop — the watchdog must not revive it
+    _ontime_desired = False   # deliberate stop - the watchdog must not revive it
     save_config({"ontime_autostart": False})   # …and a power cycle must not either
     with _ontime_lock:
         _kill(_ontime_proc)
@@ -1538,7 +1538,7 @@ def install_ontime_server():
             return False, "No AppImage found in latest release"
 
         ONTIME_DIR.mkdir(exist_ok=True)
-        # stage everything BESIDE the live install — a bad download or a
+        # stage everything BESIDE the live install - a bad download or a
         # failed extract must never damage the version that is running
         new_bin = ONTIME_DIR / "ontime.AppImage.new"
         scratch = ONTIME_DIR / ".extract"
@@ -1574,7 +1574,7 @@ def install_ontime_server():
                             str(ONTIME_PREV / "version.txt"))
         shutil.move(str(new_bin), str(ONTIME_BIN))
         shutil.move(str(scratch / "squashfs-root"), str(ONTIME_ROOT))
-        # marker file — since 4.10 the app is packed in app.asar and there is
+        # marker file - since 4.10 the app is packed in app.asar and there is
         # no readable package.json in the tree
         (ONTIME_DIR / "version.txt").write_text(version.lstrip("v"))
         shutil.rmtree(scratch, ignore_errors=True)
@@ -1588,7 +1588,7 @@ def _ontime_prev_version_str():
 
 
 def _swap_ontime_prev():
-    """Exchange the live OnTime install with prev/ — used by revert (and by
+    """Exchange the live OnTime install with prev/ - used by revert (and by
     revert-of-revert, which brings the newer version back)."""
     tmp = ONTIME_DIR / ".swap"
     shutil.rmtree(tmp, ignore_errors=True)
@@ -1607,7 +1607,7 @@ def _swap_ontime_prev():
 
 
 def _backup_ontime_data():
-    """Snapshot the OnTime project data before an update — a new version may
+    """Snapshot the OnTime project data before an update - a new version may
     migrate the rundown database one-way."""
     try:
         src_dir = Path.home() / ".getontime"
@@ -1634,22 +1634,22 @@ def _wait_ontime_up(seconds):
 class OLEDDisplay:
     """Single adaptive status page on the 128x64 OLED. Shows the Downstage One
     mark at boot, hotspot credentials when the hotspot is up, and network +
-    OnTime status otherwise. Brand surface — same logic as the View's e-ink."""
+    OnTime status otherwise. Brand surface - same logic as the View's e-ink."""
 
     INTERVAL = 5
 
     def __init__(self):
         self._device = None
         self._stop   = threading.Event()
-        self._jitter = 0   # alternate 1px vertical shift — OLED burn-in relief
+        self._jitter = 0   # alternate 1px vertical shift - OLED burn-in relief
         self._hold_until = 0   # while set, the status loop must not paint over us
         self._page = 0         # 0 status · 1 big clock · 2 setup QR
         self._page_at = 0.0    # non-status pages revert to status after 60s
-        self._searching = False  # boot-time network hunt — show a live screen
+        self._searching = False  # boot-time network hunt - show a live screen
 
     def start(self):
         if not _OLED_LIB:
-            print("[oled] luma.oled not installed — skipping")
+            print("[oled] luma.oled not installed - skipping")
             return
         try:
             serial = luma_i2c(port=1, address=0x3C)
@@ -1667,7 +1667,7 @@ class OLEDDisplay:
             self._render()
             self._stop.wait(1 if self._searching else self.INTERVAL)
 
-    # ── Boot splash — the Downstage One mark ─────────────────────────────────
+    # ── Boot splash - the Downstage One mark ─────────────────────────────────
     def _splash(self):
         if not self._device:
             return
@@ -1686,7 +1686,7 @@ class OLEDDisplay:
             print(f"[oled] splash error: {e}")
 
     def shutdown_screen(self):
-        """Farewell frame at clean shutdown — Argon standby power keeps the
+        """Farewell frame at clean shutdown - Argon standby power keeps the
         OLED lit, so a powered-off unit reads as deliberately, safely off."""
         if not self._device:
             return
@@ -1737,9 +1737,9 @@ class OLEDDisplay:
                 if self._page == 2:
                     if self._page_qr(draw):
                         return
-                    self._page = 0   # QR unavailable — fall through to status
+                    self._page = 0   # QR unavailable - fall through to status
                 hs = hotspot_is_active()
-                # hotspot page only when it's the only way in — with ethernet
+                # hotspot page only when it's the only way in - with ethernet
                 # up, techs need the real address, not the fallback
                 if hs and not _real_network_ip():
                     self._page_hotspot(draw)
@@ -1758,7 +1758,7 @@ class OLEDDisplay:
         connected = check_ontime(ip, timeout=2) if ip else False
         net       = get_network_info()
 
-        # the panel notices a network change before anyone else — use that to
+        # the panel notices a network change before anyone else - use that to
         # re-probe portal/internet immediately instead of waiting the 2 min
         cur_net = (net["iface"], net["ip"])
         if cur_net != getattr(self, "_last_net", None):
@@ -1766,13 +1766,13 @@ class OLEDDisplay:
             _probe_async_if_stale(max_age=0)
 
         pw = _power_state()
-        # header corner: the clock — on a timer appliance, visibly-correct
+        # header corner: the clock - on a timer appliance, visibly-correct
         # time IS a health indicator (RTC + NTP at a glance). Temp only
         # earns the spot when it's actually a problem.
         temp = _cpu_temp() or ""
         m = re.match(r"(\d+)", temp)
         temp_c = int(m.group(1)) if m else 0
-        # 12-hour with a compact A/P suffix — "7:46P" fits the OLED header
+        # 12-hour with a compact A/P suffix - "7:46P" fits the OLED header
         # beside the title where "12:46 PM" would risk a collision
         clock = time.strftime("%-I:%M") + ("A" if time.localtime().tm_hour < 12 else "P")
         if pw["undervolt_now"]:
@@ -1788,11 +1788,11 @@ class OLEDDisplay:
             draw.text((127 - draw.textlength(right), 0 + j), right, fill=255)
         draw.line([(0, 12 + j), (127, 12 + j)], fill=255)
 
-        # setup address — the single most useful line on the box.
+        # setup address - the single most useful line on the box.
         # Right corner: how it's connected (full word if it fits, initial if not)
         addr = f"{net['ip']}:8080" if net["ip"] != "unknown" else "No network"
         tag = {"eth0": "ETH", "wlan0": "WIFI"}.get(net["iface"], "")
-        # a portaled WiFi address is a half-truth — say so right at the tag.
+        # a portaled WiFi address is a half-truth - say so right at the tag.
         # PORTAL is worth more than the port number: drop :8080 to fit the
         # full word instead of degrading to a cryptic "P"
         if tag == "WIFI" and _portal.get("detected") and _portal.get("iface") == "wlan0":
@@ -1819,11 +1819,11 @@ class OLEDDisplay:
             row = ot          # long remote IPs keep the line readable
         draw.text((0, 30 + j), row, fill=255)
 
-        # bottom line: the show, when there is one — live timer while
+        # bottom line: the show, when there is one - live timer while
         # playing/paused; otherwise Companion state (connection type moved
         # up beside the address)
-        # bottom line: what each output is feeding — the one fact the box
-        # does that nothing else on the panel says. "—" = no display attached
+        # bottom line: what each output is feeding - the one fact the box
+        # does that nothing else on the panel says. "-" = no display attached
         def _src_label(key):
             if not key:
                 return "?"
@@ -1845,7 +1845,7 @@ class OLEDDisplay:
         l1 = _src_label(config.get("hdmi1_source")) if hc.get("1") else "no disp"
         l2 = _src_label(config.get("hdmi2_source")) if hc.get("2") else "no disp"
         line = f"1:{l1} | 2:{l2}"
-        # portal with no internet still outranks — the person squinting at
+        # portal with no internet still outranks - the person squinting at
         # the panel in a hotel needs to know WHY nothing works
         if _portal.get("detected") and not _portal.get("internet"):
             eth_up = any(i["kind"] == "Ethernet" for i in get_all_interfaces())
@@ -1930,7 +1930,7 @@ class OLEDDisplay:
             return False
 
     def countdown(self, n, msg="Hold to shut down"):
-        """Full-screen text while the power button is held — 3, 2, 1, OFF."""
+        """Full-screen text while the power button is held - 3, 2, 1, OFF."""
         if not self._device:
             return
         self._hold_until = time.monotonic() + 2   # keep the status loop away
@@ -1957,14 +1957,14 @@ class OLEDDisplay:
             print(f"[oled] countdown: {e}")
 
     def confirm_off(self):
-        """The hold registered — big OFF, hands can let go. The farewell
+        """The hold registered - big OFF, hands can let go. The farewell
         screen replaces this as the system actually powers down."""
         self._hold_until = time.monotonic() + 30   # nothing paints over OFF
-        self.countdown("OFF", msg="Let go — shutting down")
+        self.countdown("OFF", msg="Let go - shutting down")
         self._hold_until = time.monotonic() + 30   # countdown() shortened it
 
     def resume(self):
-        """Countdown cancelled — hand the panel back to the status loop."""
+        """Countdown cancelled - hand the panel back to the status loop."""
         self._hold_until = 0
         self.force_refresh()
 
@@ -1997,7 +1997,7 @@ def _power_button_monitor():
     import struct
     dev = _find_power_button_device()
     if not dev:
-        print("[pwrbtn] no pwr_button input device — monitor disabled")
+        print("[pwrbtn] no pwr_button input device - monitor disabled")
         return
     fmt  = "llHHi"   # struct input_event, 64-bit
     size = struct.calcsize(fmt)
@@ -2017,7 +2017,7 @@ def _power_button_monitor():
             _, _, etype, code, value = struct.unpack(fmt, data)
             if etype != 1 or code != KEY_POWER or value != 1:
                 continue
-            # button down — count 3, 2, 1 on the OLED, watching for release
+            # button down - count 3, 2, 1 on the OLED, watching for release
             t0 = time.monotonic()
             cancelled = False
             shown = None
@@ -2042,13 +2042,13 @@ def _power_button_monitor():
                             break
             if cancelled:
                 if shown is None:
-                    print("[pwrbtn] short press — next OLED page")
+                    print("[pwrbtn] short press - next OLED page")
                     oled.cycle_page()
                 else:
-                    print("[pwrbtn] released early — shutdown cancelled")
+                    print("[pwrbtn] released early - shutdown cancelled")
                     oled.resume()
                 continue
-            print("[pwrbtn] 3 s hold — shutting down")
+            print("[pwrbtn] 3 s hold - shutting down")
             oled.confirm_off()
             _audit("SHUTDOWN", "front button 3 s hold")
             close_all_windows()
@@ -2121,7 +2121,7 @@ def save():
     if hdmi2_source == "external" and not hdmi2_ext:
         return jsonify({"ok": False, "error": "Enter a URL for HDMI 2's external viewer"})
 
-    # Only demand a reachable OnTime server when a chosen source needs one —
+    # Only demand a reachable OnTime server when a chosen source needs one -
     # test patterns / external / off / welcome work on an unconfigured unit
     needs_ontime = _is_ontime_source(hdmi1_source) or _is_ontime_source(hdmi2_source)
     if mode == "remote" and needs_ontime:
@@ -2140,10 +2140,10 @@ def save():
             time.sleep(3)
     elif ontime_is_running():
         # the mode IS the truth: Remote means the onboard server stands down.
-        # ontime_autostart is untouched — switching back to Local (or booting
+        # ontime_autostart is untouched - switching back to Local (or booting
         # in Local mode) brings it straight back; the rundown lives on disk.
         stop_local_ontime()
-        print("[save] remote mode — onboard OnTime stopped")
+        print("[save] remote mode - onboard OnTime stopped")
 
     history = _update_ip_history(ip) if mode == "remote" else load_config().get("ip_history", [])
     save_config({
@@ -2176,7 +2176,7 @@ def save():
 
 @app.route("/mode", methods=["POST"])
 def mode_route():
-    """Instant OnTime mode switch — the toggle is live, no Save & Apply.
+    """Instant OnTime mode switch - the toggle is live, no Save & Apply.
     Local: start the onboard server and point everything at it.
     Remote: verify the server answers, stand the onboard one down, connect."""
     data = request.get_json() or {}
@@ -2201,7 +2201,7 @@ def mode_route():
             stop_local_ontime()
         save_config({"mode": "remote", "ip": ip,
                      "ip_history": _update_ip_history(ip)})
-        message = f"Connected to {ip} — onboard server stopped"
+        message = f"Connected to {ip} - onboard server stopped"
     else:
         return jsonify({"ok": False, "error": "bad mode"})
     _audit("ONTIME-MODE", message)
@@ -2366,7 +2366,7 @@ def resync_displays():
 
 def _enforce_window_placement(settle=4, tries=3):
     """Chromium can ignore --window-position when two kiosk windows open
-    near-simultaneously — both land on one output, or they swap. Verify each
+    near-simultaneously - both land on one output, or they swap. Verify each
     window sits on its configured display and move it if not."""
     env = {**os.environ, "DISPLAY": ":0"}
     time.sleep(settle)
@@ -2381,7 +2381,7 @@ def _enforce_window_placement(settle=4, tries=3):
                 continue
             try:
                 # the window belongs to chromium's forked child, not our Popen
-                # pid — find it by its per-output profile dir instead
+                # pid - find it by its per-output profile dir instead
                 pid = subprocess.check_output(
                     ["pgrep", "-f", f"user-data-dir=/tmp/kiosk-hdmi{n}"],
                     text=True, timeout=5).split()[0]
@@ -2400,7 +2400,7 @@ def _enforce_window_placement(settle=4, tries=3):
                 x, y = int(gm.group(1)), int(gm.group(2))
                 if (x, y) == (d["x"], d["y"]):
                     continue
-                print(f"[wm] hdmi{n} window at {x},{y} — moving to {d['x']},{d['y']}")
+                print(f"[wm] hdmi{n} window at {x},{y} - moving to {d['x']},{d['y']}")
                 subprocess.run(["wmctrl", "-i", "-r", win, "-b", "remove,fullscreen"],
                                env=env, timeout=5)
                 subprocess.run(["xdotool", "windowmove", win, str(d["x"]), str(d["y"])],
@@ -2444,7 +2444,7 @@ def _mjpeg_stream(x, y, w, h, n=0):
         procs[:] = [p for p in procs if p.poll() is None]
         procs.append(proc)
         # a page refresh abandons its stream, but the server only notices on
-        # the next failed write — cap the grabs per output so zombies can't
+        # the next failed write - cap the grabs per output so zombies can't
         # pile up and starve the fresh stream
         while len(procs) > 2:
             old_p = procs.pop(0)
@@ -2478,7 +2478,7 @@ def _mjpeg_stream(x, y, w, h, n=0):
 
 @app.route("/stream/hdmi<int:n>")
 def stream_hdmi(n):
-    # fresh geometry — a cached entry can point the grab at a stale region
+    # fresh geometry - a cached entry can point the grab at a stale region
     # after a mode change or hot-plug
     d = next((x for x in get_displays(fresh=True) if x["port"] == n), None)
     if not d:
@@ -2500,7 +2500,7 @@ def _patch_worker(tested):
             _patch_state["message"] = "Downloading package lists…"
             subprocess.run(["sudo", "-E", "apt-get", "update"],
                            env=env, check=True, timeout=600, stdout=log, stderr=log)
-            _patch_state["message"] = "Installing tested patches — this can take several minutes…"
+            _patch_state["message"] = "Installing tested patches - this can take several minutes…"
             subprocess.run(
                 ["sudo", "-E", "apt-get", "-y",
                  "-o", "Dpkg::Options::=--force-confdef",
@@ -2515,7 +2515,7 @@ def _patch_worker(tested):
     except Exception as e:
         _audit("OS_PATCH", f"patch run FAILED: {e}")
         _patch_state.update(state="failed",
-                            message=f"Patch run failed: {e} — see patch.log in diagnostics")
+                            message=f"Patch run failed: {e} - see patch.log in diagnostics")
 
 
 @app.route("/system/patches/apply", methods=["POST"])
@@ -2547,7 +2547,7 @@ def get_timezone():
     return jsonify({"timezone": tz})
 
 
-# Full IANA list is ~600 entries of noise for a show device — offer the
+# Full IANA list is ~600 entries of noise for a show device - offer the
 # zones a touring/AV crew actually lands in, west to east.
 _CURATED_TIMEZONES = [
     "UTC",
@@ -2604,7 +2604,7 @@ def _apply_timezone(tz):
         ["sudo", "ln", "-sf", f"/usr/share/zoneinfo/{tz}", "/etc/localtime"],
         check=True, timeout=5,
     )
-    # our own process cached the old zone at startup — re-read it, or the
+    # our own process cached the old zone at startup - re-read it, or the
     # OLED clock (and any strftime) keeps rendering the previous timezone
     time.tzset()
 
@@ -2620,7 +2620,7 @@ def _reload_windows_when_ontime_back():
             if not _watchdog_override and not _blackout_active:
                 _refresh_windows()
             return
-    print("[timezone] OnTime not back after 45s — leaving watchdog to restore")
+    print("[timezone] OnTime not back after 45s - leaving watchdog to restore")
 
 
 def _apply_timezone_and_restart(tz):
@@ -2633,7 +2633,7 @@ def _apply_timezone_and_restart(tz):
                          daemon=True).start()
     else:
         # clock-bearing pages (Sync Clock, welcome) hold their startup
-        # timezone — relaunch so the new zone shows even with OnTime down
+        # timezone - relaunch so the new zone shows even with OnTime down
         threading.Thread(target=launch_all_windows, daemon=True).start()
 
 
@@ -2651,7 +2651,7 @@ def set_timezone():
 
 @app.route("/system/set-time", methods=["POST"])
 def system_set_time():
-    """Set system time from the browser's clock — covers venues with no
+    """Set system time from the browser's clock - covers venues with no
     internet (the Pi has no reliable time source there). Also writes the
     hardware RTC when one is present."""
     ms = (request.get_json() or {}).get("epoch_ms")
@@ -2711,7 +2711,7 @@ def _open_identify_window(display, label, idx, url=None):
 def displays_identify():
     """Flash a big number on each output for a few seconds, then restore.
     With {"screen": "info"} (fleet Identify) the outputs show the branded
-    Unit Info screen — name, address, serial — instead of bare numbers."""
+    Unit Info screen - name, address, serial - instead of bare numbers."""
     global _win
     info = (request.get_json(silent=True) or {}).get("screen") == "info"
     url  = "http://localhost:8080/welcome" if info else None
@@ -2732,7 +2732,7 @@ def displays_identify():
 @app.route("/displays/power", methods=["POST"])
 def displays_power():
     """Turn a physical HDMI output on/off (lets TVs/projectors sleep).
-    Live action — everything returns on reboot."""
+    Live action - everything returns on reboot."""
     data = request.get_json() or {}
     idx  = int(data.get("output", 1))
     on   = bool(data.get("on", True))
@@ -2793,7 +2793,7 @@ def system_shutdown():
 # ── Update check ──────────────────────────────────────────────────────────────
 
 # Strip dismissal: stored on the unit so it holds across every browser/device.
-# Keyed to version numbers — a newer release un-dismisses itself.
+# Keyed to version numbers - a newer release un-dismisses itself.
 _UPD_DISMISS_FILE = BASE_DIR / ".upd-dismissed"
 
 def _upd_dismissed():
@@ -2916,7 +2916,7 @@ def os_update():
             return jsonify({"ok": False, "message": "Release is missing templates/index.html"})
 
         # Guard against stale GitHub archive caches: the code inside the
-        # tarball must actually be the version the tag claims (this bit us —
+        # tarball must actually be the version the tag claims (this bit us -
         # a v1.1.0 archive once served v1.0.0 code).
         m = re.search(r'OS_VERSION = "([^"]+)"', (src_dir / "app.py").read_text())
         staged_ver = m.group(1) if m else None
@@ -2934,7 +2934,7 @@ def os_update():
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         )
         return jsonify({"ok": True, "from": OS_VERSION,
-                        "message": f"Updating to {tag} — service will restart"})
+                        "message": f"Updating to {tag} - service will restart"})
     except py_compile.PyCompileError as e:
         return jsonify({"ok": False, "message": f"Release failed validation: {e}"})
     except Exception as e:
@@ -2944,7 +2944,7 @@ def os_update():
 @app.route("/os/update-file", methods=["POST"])
 def os_update_file():
     """Offline update: install a release archive uploaded through the
-    browser — same staging, validation, swap, and auto-rollback as the
+    browser - same staging, validation, swap, and auto-rollback as the
     GitHub path. For venues with no internet."""
     import tarfile, py_compile
     f = request.files.get("release")
@@ -2964,7 +2964,7 @@ def os_update_file():
                         if (p / _OS_VARIANT / "app.py").exists()), None)
         if not src_dir:
             return jsonify({"ok": False,
-                            "message": f"Not a Downstage OS release — the archive has no {_OS_VARIANT}/app.py"})
+                            "message": f"Not a Downstage OS release - the archive has no {_OS_VARIANT}/app.py"})
         py_compile.compile(str(src_dir / "app.py"), doraise=True)
         if not (src_dir / "templates" / "index.html").exists():
             return jsonify({"ok": False, "message": "Archive is missing templates/index.html"})
@@ -2974,7 +2974,7 @@ def os_update_file():
             return jsonify({"ok": False, "message": "Archive has no OS_VERSION"})
         if not force and _version_tuple(ver) <= _version_tuple(OS_VERSION):
             return jsonify({"ok": False,
-                            "message": f"Archive is v{ver} — this unit already runs v{OS_VERSION}"})
+                            "message": f"Archive is v{ver} - this unit already runs v{OS_VERSION}"})
         tag = f"v{ver}"
         script = work / "swap.sh"
         script.write_text(_SWAP_SCRIPT.format(
@@ -2985,7 +2985,7 @@ def os_update_file():
              "bash", str(script)],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         )
-        return jsonify({"ok": True, "message": f"Installing {tag} — service will restart"})
+        return jsonify({"ok": True, "message": f"Installing {tag} - service will restart"})
     except py_compile.PyCompileError as e:
         return jsonify({"ok": False, "message": f"Archive failed validation: {e}"})
     except Exception as e:
@@ -2997,7 +2997,7 @@ def os_update_file():
 # ── fleet discovery: find other Downstage units on the LAN ───────────────────
 def _avahi_advertise():
     """Publish _downstage._tcp via an avahi service file (the daemon
-    auto-loads /etc/avahi/services — no avahi-utils needed)."""
+    auto-loads /etc/avahi/services - no avahi-utils needed)."""
     time.sleep(15)
     try:
         config = load_config()
@@ -3081,13 +3081,13 @@ def _do_discover():
 @app.route("/discover", methods=["POST"])
 def discover_units():
     """Sweep this unit's /24s for other Downstage units (identified by their
-    /status signature — works across firmware generations)."""
+    /status signature - works across firmware generations)."""
     return jsonify({"ok": True, **_do_discover()})
 
 
 @app.route("/discover/refresh", methods=["POST"])
 def discover_refresh():
-    """Freshen the cached units only — a handful of targeted probes, never a
+    """Freshen the cached units only - a handful of targeted probes, never a
     sweep. A cached unit that stops answering stays listed, marked loudly."""
     try:
         cache = json.loads(_FLEET_CACHE.read_text())
@@ -3137,7 +3137,7 @@ threading.Thread(target=_fleet_auto, daemon=True).start()
 
 
 # Last scan is remembered on the unit, so every browser sees the same list
-# after a refresh. A scan is always a manual, explicit sweep — no background
+# after a refresh. A scan is always a manual, explicit sweep - no background
 # probing of customer networks.
 _FLEET_CACHE = BASE_DIR / ".fleet-cache"
 
@@ -3171,8 +3171,8 @@ def _fleet_src_label(key):
 def _now_showing():
     config = load_config()
     hc = hdmi_connected()
-    l1 = _fleet_src_label(config.get("hdmi1_source")) if hc.get("1") else "\u2014"
-    l2 = _fleet_src_label(config.get("hdmi2_source")) if hc.get("2") else "\u2014"
+    l1 = _fleet_src_label(config.get("hdmi1_source")) if hc.get("1") else "-"
+    l2 = _fleet_src_label(config.get("hdmi2_source")) if hc.get("2") else "-"
     return f"1: {l1} \u00b7 2: {l2}"
 
 
@@ -3201,7 +3201,7 @@ def _health_summary():
 
 @app.route("/fleet/identify", methods=["POST"])
 def fleet_identify():
-    """Flash Identify on ANOTHER unit — proxied server-side because the
+    """Flash Identify on ANOTHER unit - proxied server-side because the
     browser can't POST cross-origin to a peer."""
     ip = str((request.get_json() or {}).get("ip", ""))
     try:
@@ -3236,7 +3236,7 @@ def power_ack():
 @app.route("/my-buttons")     # legacy alias
 @app.route("/wall")           # legacy alias
 def wall_page():
-    """My Buttons in a window of its own — a full-bleed emulator wrapper the
+    """My Buttons in a window of its own - a full-bleed emulator wrapper the
     UI opens as an OS popup, draggable to any display. Follows Satellite's
     remote Companion when it's serving."""
     config = load_config()
@@ -3247,7 +3247,7 @@ def wall_page():
         host = config["satellite_ip"]
     url = f"http://{host}:8000/emulator/{emu}"
     return f"""<!DOCTYPE html><html><head><meta charset="utf-8">
-<title>Virtual Deck — Downstage</title>
+<title>Virtual Deck - Downstage</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 @font-face {{ font-family:'Rajdhani'; font-weight:700; src:url('/static/fonts/rajdhani-700.woff2') format('woff2'); }}
@@ -3343,12 +3343,12 @@ iframe {{ border:0; width:100%; height:100%; display:block; background:#000; }}
   </div>
   <div class="tbtns">
     <button class="tbtn" onclick="refreshPv()" title="Re-arm both preview tiles">REFRESH</button>
-    <button class="tbtn bo" id="t-bo" onclick="boToggle()" title="Black out all displays — press again to resume">BLACKOUT</button>
+    <button class="tbtn bo" id="t-bo" onclick="boToggle()" title="Black out all displays - press again to resume">BLACKOUT</button>
   </div>
   <div class="tr-h" style="margin-top:6px">CONNECTIONS</div>
   <div class="st"><div class="dot" id="d-ot"></div><span id="t-ot">ONTIME</span></div>
   <div class="st"><div class="dot" id="d-cp"></div><span id="t-cp">COMPANION</span></div>
-  <div class="st"><div class="dot" id="d-net"></div><span id="t-net">&mdash;</span></div>
+  <div class="st"><div class="dot" id="d-net"></div><span id="t-net">-</span></div>
 </div></div>
 <script>
 let hiddenAt = null;
@@ -3423,21 +3423,21 @@ async function tick() {{
       const bar = document.getElementById('pb' + n);
       if (hc[n]) {{
         const nm = (d.hdmi_names || {{}})[n];
-        bar.className = 'pvbar ok'; bar.textContent = nm ? 'HDMI ' + n + ' — ' + nm : 'HDMI ' + n + ' — connected';
+        bar.className = 'pvbar ok'; bar.textContent = nm ? 'HDMI ' + n + ' - ' + nm : 'HDMI ' + n + ' - connected';
       }} else if (d.virtual_previews === false) {{
-        bar.className = 'pvbar virt'; bar.textContent = 'HDMI ' + n + ' — no display';
+        bar.className = 'pvbar virt'; bar.textContent = 'HDMI ' + n + ' - no display';
       }} else {{
-        bar.className = 'pvbar virt'; bar.textContent = 'HDMI ' + n + ' — virtual';
+        bar.className = 'pvbar virt'; bar.textContent = 'HDMI ' + n + ' - virtual';
       }}
     }}
     armPreviews(d);
     const ot = document.getElementById('d-ot');
     ot.className = 'dot ' + (d.connected ? 'ok' : 'bad');
-    document.getElementById('t-ot').textContent = 'ONTIME' + (d.connected ? '' : ' — OFFLINE');
+    document.getElementById('t-ot').textContent = 'ONTIME' + (d.connected ? '' : ' - OFFLINE');
     const remote = d.companion_remote && d.companion_remote.ok;
     const cp = document.getElementById('d-cp');
     cp.className = 'dot ' + ((d.companion_running || remote) ? 'ok' : 'bad');
-    document.getElementById('t-cp').textContent = 'COMPANION' + (remote ? ' — REMOTE' : (d.companion_running ? '' : ' — STOPPED'));
+    document.getElementById('t-cp').textContent = 'COMPANION' + (remote ? ' - REMOTE' : (d.companion_running ? '' : ' - STOPPED'));
     const bo = document.getElementById('t-bo');
     bo.classList.toggle('active', !!d.blackout);
     bo.textContent = d.blackout ? 'RESUME' : 'BLACKOUT';
@@ -3524,7 +3524,7 @@ def line_tone_route():
     if on:
         ok = _start_line_tone()
         return jsonify({"ok": ok, "on": _line_tone_on(),
-                        **({} if ok else {"error": "No audio device — is the case DAC enabled?"})})
+                        **({} if ok else {"error": "No audio device - is the case DAC enabled?"})})
     _stop_line_tone()
     return jsonify({"ok": True, "on": False})
 
@@ -3534,7 +3534,7 @@ def test_audio_cues():
     mode = load_config().get("audio_cues", "off")
     name = "tone-zero" if mode == "tones" else "five-minutes"
     if _audio_card() is None:
-        return jsonify({"ok": False, "error": "No audio device — is the case DAC enabled?"})
+        return jsonify({"ok": False, "error": "No audio device - is the case DAC enabled?"})
     return jsonify({"ok": _play_cue(name)})
 
 
@@ -3556,7 +3556,7 @@ def set_unit_name():
 
 @app.route("/source/url/<int:n>")
 def source_url_for_output(n):
-    """The URL output n is assigned — powers the UI's virtual preview when
+    """The URL output n is assigned - powers the UI's virtual preview when
     no physical display is attached. Mirrors the kiosk launcher's branches."""
     if n not in (1, 2):
         return jsonify({"ok": False}), 404
@@ -3590,7 +3590,7 @@ def source_url_for_output(n):
 
 @app.route("/qr.png")
 def qr_png():
-    """QR of this unit's URL — scan from the desktop page to open on a phone.
+    """QR of this unit's URL - scan from the desktop page to open on a phone.
     Graceful when python3-qrcode is absent (self-updated 1.x units): 404,
     and the UI simply doesn't show the chip."""
     try:
@@ -3599,7 +3599,7 @@ def qr_png():
     except Exception:
         return ("QR support not installed", 404)
     # always encode the raw IP, never the .local name the browser happens to
-    # be using — the scanner is a phone, and Android's mDNS is unreliable
+    # be using - the scanner is a phone, and Android's mDNS is unreliable
     ip = _real_network_ip()
     url = f"http://{ip}:8080/" if ip else f"http://{request.host}/"
     img = qrcode.make(url, box_size=5, border=2)
@@ -3611,7 +3611,7 @@ def qr_png():
 
 @app.route("/setup/complete", methods=["POST"])
 def setup_complete():
-    """First-run wizard finished (or skipped) — never show it again."""
+    """First-run wizard finished (or skipped) - never show it again."""
     config = load_config()
     config["setup_done"] = True
     save_config(config)
@@ -3620,7 +3620,7 @@ def setup_complete():
 
 # ── Factory profiles ─────────────────────────────────────────────────────────
 # The golden image ships WITHOUT OnTime/Companion (customer's click installs
-# them from official sources) — but WITH Downstage's default show profiles,
+# them from official sources) - but WITH Downstage's default show profiles,
 # captured from the bench by prepare-golden.sh. First install on a fresh unit
 # starts from those instead of an empty database. No seed dir = no-op.
 _SEED_DIR = Path("/home/pi/downstage-seed")
@@ -3679,13 +3679,13 @@ def ontime_install():
 
 def _relaunch_when_ontime_up():
     """Fast display recovery after Start Server: the watchdog polls every
-    30s, which reads as a stuck holding card — poll tightly instead and
+    30s, which reads as a stuck holding card - poll tightly instead and
     relaunch the moment the server answers."""
     global _watchdog_override, _wd_connected
     deadline = time.time() + 45
     while time.time() < deadline:
         if check_ontime("127.0.0.1", timeout=2):
-            print("[ontime] server answering — restoring displays now")
+            print("[ontime] server answering - restoring displays now")
             _watchdog_override = False
             _wd_connected = True
             if not _blackout_active:
@@ -3721,7 +3721,7 @@ def _do_ontime_update():
     _backup_ontime_data()
     ok, msg = install_ontime_server()
     if not ok:
-        # nothing was touched — the old version is still live
+        # nothing was touched - the old version is still live
         if was_running:
             start_local_ontime()
         raise RuntimeError(msg)
@@ -3729,15 +3729,15 @@ def _do_ontime_update():
     if was_running:
         start_local_ontime()
         if not _wait_ontime_up(30):
-            # the new build won't serve — put the old one back automatically
+            # the new build won't serve - put the old one back automatically
             stop_local_ontime()
             time.sleep(1)
             _swap_ontime_prev()
             start_local_ontime()
             healthy = _wait_ontime_up(30)
-            _audit("ONTIME", "update failed health check — auto-reverted")
-            note = "" if healthy else " (still not answering — check the log)"
-            raise RuntimeError(f"{msg} did not start — previous version restored{note}")
+            _audit("ONTIME", "update failed health check - auto-reverted")
+            note = "" if healthy else " (still not answering - check the log)"
+            raise RuntimeError(f"{msg} did not start - previous version restored{note}")
     threading.Thread(target=_check_updates_background, daemon=True).start()
 
 
@@ -3774,7 +3774,7 @@ _companion_install = {"state": "idle", "message": ""}   # idle|installing|done|f
 
 def _companion_install_worker():
     """Customer-initiated install using Bitfocus's official companion-pi
-    script — the unit ships without Companion; the end user's click fetches
+    script - the unit ships without Companion; the end user's click fetches
     it from the official source onto their device."""
     _companion_install["state"] = "installing"
     _companion_install["message"] = ""
@@ -3814,7 +3814,7 @@ def companion_emulator():
     return jsonify({"ok": True, "id": eid})
 
 
-# ── Companion Satellite — donate this unit's Stream Decks to a remote
+# ── Companion Satellite - donate this unit's Stream Decks to a remote
 # Companion (FOH laptop, another One). Satellite and the onboard Companion
 # can't share decks, so enabling one stands the other down.
 _satellite_install = {"state": "idle", "message": ""}
@@ -3842,7 +3842,7 @@ def satellite_is_running():
 
 
 def _satellite_install_worker():
-    """Customer-initiated install using Bitfocus's official script — same
+    """Customer-initiated install using Bitfocus's official script - same
     licensing posture as the Companion install."""
     _satellite_install["state"] = "installing"
     _satellite_install["message"] = ""
@@ -3898,7 +3898,7 @@ def _satellite_point_at(ip):
 
 
 def _satellite_version():
-    """Best-effort installed version — Satellite keeps a package.json in its
+    """Best-effort installed version - Satellite keeps a package.json in its
     install tree; absent or unreadable just means we don't show a number."""
     for p in ("/usr/local/src/companion-satellite/package.json",
               "/opt/companion-satellite/package.json",
@@ -3967,7 +3967,7 @@ def satellite_mode():
 
 @app.route("/satellite/restart", methods=["POST"])
 def satellite_restart():
-    """Satellite re-enumerates USB decks on startup — this IS its rescan."""
+    """Satellite re-enumerates USB decks on startup - this IS its rescan."""
     subprocess.run(["sudo", "systemctl", "restart", "satellite"], timeout=30,
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     ip = load_config().get("satellite_ip", "")
@@ -4043,7 +4043,7 @@ def companion_rescan_usb():
         return jsonify({"ok": False, "message": str(e)})
 
 
-# ── long-running job registry — one at a time, visible from anywhere ─────────
+# ── long-running job registry - one at a time, visible from anywhere ─────────
 # A slow updater used to block its HTTP request for minutes with zero feedback.
 # Jobs now run in a worker; the UI's persistent ribbon polls /jobs.
 
@@ -4089,7 +4089,7 @@ def companion_update():
     def work():
         # companion-update is already installed and handles stable/beta correctly.
         # Calling it with one arg (channel only, no version) lets it pick the
-        # latest from the bitfocus API — which also handles downgrades from beta.
+        # latest from the bitfocus API - which also handles downgrades from beta.
         subprocess.run(
             ["sudo", "companion-update", build],
             timeout=300, check=True,
@@ -4101,7 +4101,7 @@ def companion_update():
         threading.Thread(target=_check_updates_background, daemon=True).start()
 
     if not _start_job("companion-update", f"Updating Companion ({build})", work):
-        return jsonify({"ok": False, "message": "Another update is already running — see the status bar"})
+        return jsonify({"ok": False, "message": "Another update is already running - see the status bar"})
     return jsonify({"ok": True, "job": True})
 
 
@@ -4148,7 +4148,7 @@ def companion_revert():
         threading.Thread(target=_check_updates_background, daemon=True).start()
 
     if not _start_job("companion-revert", f"Reverting Companion to {prev}", work):
-        return jsonify({"ok": False, "message": "Another update is already running — see the status bar"})
+        return jsonify({"ok": False, "message": "Another update is already running - see the status bar"})
     return jsonify({"ok": True, "job": True, "message": prev})
 
 
@@ -4164,7 +4164,7 @@ def companion_set_channel():
 
 # ── Hotspot ───────────────────────────────────────────────────────────────────
 # Fallback access point (SSID/password come from the per-unit build log via
-# config.json). Auto-starts at boot ONLY if the unit finds no network at all —
+# config.json). Auto-starts at boot ONLY if the unit finds no network at all -
 # solves first-boot setup at a venue with no known WiFi. Never auto-starts
 # after a network has been seen, so a mid-show WiFi blip can't hijack the radio.
 
@@ -4172,7 +4172,7 @@ HOTSPOT_CON = "downstage-hotspot"
 
 
 def _real_network_ip():
-    """First non-hotspot, non-loopback IPv4 — None when the hotspot is the
+    """First non-hotspot, non-loopback IPv4 - None when the hotspot is the
     only network. Used by the front panel to decide which page matters."""
     try:
         out = subprocess.check_output(["ip", "-4", "-o", "addr", "show"],
@@ -4223,7 +4223,7 @@ def start_hotspot():
 
 
 def stop_hotspot():
-    # NB: do NOT run `nmcli device connect wlan0` here — that reactivates the
+    # NB: do NOT run `nmcli device connect wlan0` here - that reactivates the
     # most recent profile on the radio, which is the hotspot itself. Once the
     # hotspot is down, NetworkManager rejoins known WiFi on its own.
     r = subprocess.run(["sudo", "nmcli", "connection", "down", HOTSPOT_CON],
@@ -4279,7 +4279,7 @@ _hunt_lock = threading.Lock()
 
 def _network_supervisor():
     """Boot handles the first hunt; this catches connectivity LOST at
-    runtime — two 20s strikes with no real network and no hotspot re-runs
+    runtime - two 20s strikes with no real network and no hotspot re-runs
     the searching -> scan -> hotspot flow."""
     strikes = 0
     while True:
@@ -4323,7 +4323,7 @@ def _hotspot_fallback(grace=8):
 def _hotspot_fallback_inner(grace):
     def _real_ip():
         ip = get_network_info()["ip"]
-        # link-local (direct cable) is a control path, not a network — the
+        # link-local (direct cable) is a control path, not a network - the
         # hotspot should still come up alongside it
         return ip != "unknown" and not ip.startswith("169.254.")
 
@@ -4332,9 +4332,9 @@ def _hotspot_fallback_inner(grace):
     if not config.get("hotspot_auto", True) or hotspot_is_active():
         return
     if _real_ip():
-        return       # already on a network — nothing to do, no "searching" shown
+        return       # already on a network - nothing to do, no "searching" shown
 
-    # genuinely no network — light the OLED "Searching" screen for the WHOLE
+    # genuinely no network - light the OLED "Searching" screen for the WHOLE
     # hunt so the wait is always visible, not just the brief scan
     oled._searching = True
     ok = False   # defined before the try: the idle-retry loop below reads it
@@ -4352,7 +4352,7 @@ def _hotspot_fallback_inner(grace):
             # hotspot instead of hunting for absent home networks for minutes.
             try:
                 _, visible = _scan_wifi()
-                # NB: saved entries are NM connection NAMES — this match works
+                # NB: saved entries are NM connection NAMES - this match works
                 # because wifi_connect names every profile after its SSID
                 in_range = ({n["ssid"].lower() for n in visible}
                             & {x.lower() for x in saved})
@@ -4420,7 +4420,7 @@ nmcli -t -f NAME,TYPE connection show | grep ':802-11-wireless$' | cut -d: -f1 |
 rm -rf /home/pi/.config/ontime-electron
 rm -rf {app}/.backup
 rm -f  {app}/ontime.log {app}/kiosk.log {app}/.update-result
-# factory config — keep unit identity + update repo only
+# factory config - keep unit identity + update repo only
 python3 - << 'PY'
 import json
 cfg = json.load(open("{app}/config.json"))
@@ -4443,7 +4443,7 @@ def system_factory_reset():
         script.write_text(_FACTORY_RESET_SCRIPT.format(app=_OS_APPDIR))
         script.chmod(0o755)
         subprocess.Popen(["systemd-run", "--user", "--collect", f"--unit=ds-factory-{int(time.time())}", "bash", str(script)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        return jsonify({"ok": True, "message": "Factory reset started — the unit will reboot"})
+        return jsonify({"ok": True, "message": "Factory reset started - the unit will reboot"})
     except Exception as e:
         return jsonify({"ok": False, "message": str(e)})
 
@@ -4462,7 +4462,7 @@ def diagnostics():
     cfg = load_config()
     cfg.pop("hotspot_pass", None)
     # external viewer URLs may carry private tokens (stagetimer signatures,
-    # api keys) — keep the destination, drop the query string
+    # api keys) - keep the destination, drop the query string
     for k in list(cfg):
         if k.endswith("external_url") and isinstance(cfg[k], str) and "?" in cfg[k]:
             base, _, q = cfg[k].partition("?")
@@ -4479,7 +4479,7 @@ def diagnostics():
                    sh("nmcli connection show") + "\n=== wifi ===\n" +
                    sh("nmcli -t -f active,ssid,signal dev wifi 2>/dev/null | head -20"))
         z.writestr("system.txt", sh("uptime") + sh("free -m") + sh("df -h /") +
-                   # vcgencmd needs root on this image (/dev/vcio perms) —
+                   # vcgencmd needs root on this image (/dev/vcio perms) -
                    # temp via sysfs, the rest via sudo, or support flies blind
                    f"cpu_temp: {_cpu_temp() or 'unavailable'}\n" +
                    sh("sudo vcgencmd measure_volts 2>/dev/null") +
@@ -4513,7 +4513,7 @@ def diagnostics():
 
 # ── Network (static IP) ───────────────────────────────────────────────────────
 # Configuring the IP of the interface you're reachable through is risky: a
-# wrong setting strands the unit. So every apply arms a revert timer — the UI
+# wrong setting strands the unit. So every apply arms a revert timer - the UI
 # must reconnect and confirm within the window, or the previous config is
 # restored automatically (the "reload in 5" pattern from managed switches).
 
@@ -4523,7 +4523,7 @@ _net_revert = {"event": None, "snapshot": None, "conn": None}
 
 
 def _default_conn():
-    """(connection-name, iface) carrying the default route — the one the user
+    """(connection-name, iface) carrying the default route - the one the user
     is most likely reaching the unit through."""
     try:
         route = subprocess.check_output(["ip", "route", "show", "default"],
@@ -4559,7 +4559,7 @@ def _conn_ipv4(conn):
 
 def _conn_for_iface(iface):
     """Connection to configure for a chosen interface. The active connection
-    wins, except ethernet's link-local fallback profile — a static belongs on
+    wins, except ethernet's link-local fallback profile - a static belongs on
     the REAL wired profile, and targeting the saved profile also covers the
     no-DHCP venue where the port never came up on its own."""
     try:
@@ -4621,7 +4621,7 @@ def _apply_ipv4(conn, method, addr=None, gw=None, dns=None):
 def _revert_worker(conn, snapshot, event):
     if event.wait(90):
         return   # confirmed in time
-    print("[network] not confirmed in 90s — reverting")
+    print("[network] not confirmed in 90s - reverting")
     try:
         method = snapshot.get("ipv4.method", "auto")
         _apply_ipv4(conn, method,
@@ -4747,7 +4747,7 @@ def wifi_status():
     try:
         current, networks = _scan_wifi()
         if hotspot:
-            # The AP shows up as the "active" network — it isn't a client
+            # The AP shows up as the "active" network - it isn't a client
             # connection, so report no current network and keep the list
             # pickable (selecting one triggers the stop-hotspot-and-join flow)
             config   = load_config()
@@ -4759,7 +4759,7 @@ def wifi_status():
         return jsonify({"ok": True, "hotspot": hotspot, "current": current,
                         "networks": networks, "saved": _saved_wifi_profiles()})
     except Exception as e:
-        # scan can fail in AP mode on some chips — still report hotspot state
+        # scan can fail in AP mode on some chips - still report hotspot state
         return jsonify({"ok": hotspot, "hotspot": hotspot,
                         "current": None, "networks": [], "error": str(e)})
 
@@ -4768,14 +4768,14 @@ def wifi_status():
 def wifi_scan():
     hotspot = hotspot_is_active()
     try:
-        # Best-effort rescan — in AP mode the radio often can't actively scan;
+        # Best-effort rescan - in AP mode the radio often can't actively scan;
         # fall back to the cached list rather than failing the request.
         try:
             subprocess.run(["sudo", "nmcli", "dev", "wifi", "rescan"], timeout=10,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             time.sleep(2)
         except subprocess.TimeoutExpired:
-            print("[wifi] rescan timed out (AP mode) — serving cached list")
+            print("[wifi] rescan timed out (AP mode) - serving cached list")
         current, networks = _scan_wifi()
         if hotspot:
             hs_ssid  = load_config().get("hotspot_ssid", "")
@@ -4792,7 +4792,7 @@ def wifi_scan():
 # ── WiFi-join safety net + captive portal detection (born at a Hilton) ──────
 # The one-way-door trap: joining a venue network from hotspot mode kills the
 # hotspot (single radio). If the new network is portaled/isolated/wrong, the
-# unit is stranded. Cure: a dead-man timer — if nobody reaches this UI within
+# unit is stranded. Cure: a dead-man timer - if nobody reaches this UI within
 # the window after a hotspot-initiated join, drop the join and restore the
 # hotspot.
 
@@ -4816,10 +4816,10 @@ def _arm_wifi_deadman(ssid, window=180):
         _wifi_deadman["armed"] = False
         # any UI request after the join completed proves someone can reach us
         if _last_request_ts > _wifi_deadman["since"] + 5:
-            print(f"[wifi] deadman disarmed — UI reached after joining '{ssid}'")
+            print(f"[wifi] deadman disarmed - UI reached after joining '{ssid}'")
             return
         print(f"[wifi] nobody reached the UI within {window}s of joining "
-              f"'{ssid}' — dropping it and restoring the hotspot")
+              f"'{ssid}' - dropping it and restoring the hotspot")
         try:
             subprocess.run(["sudo", "nmcli", "con", "mod", ssid,
                             "connection.autoconnect", "no"],
@@ -4838,7 +4838,7 @@ _portal = {"detected": False, "iface": "", "checked": 0, "internet": None}
 def _probe_portal():
     """Portal signature (captured live at a Hilton/Meraki): plain-HTTP probe
     that should 204 comes back as a redirect to an auth host instead."""
-    # judge EVERY up interface — a dual-homed unit can have a portal on the
+    # judge EVERY up interface - a dual-homed unit can have a portal on the
     # WiFi leg while ethernet has clean internet, and both facts matter
     detected, piface, internet = False, "", False
     for iface in ("wlan0", "eth0"):
@@ -4905,7 +4905,7 @@ def _one_active_ssid():
 # A unit that auto-joined a remembered hotel SSID can end up wifi-only behind
 # a captive portal: no internet, and (with client isolation) no reachable UI.
 # If that state holds and nobody is using the UI, drop the portal network and
-# raise the hotspot — control beats a dead network. The SSID is blocked from
+# raise the hotspot - control beats a dead network. The SSID is blocked from
 # auto-rejoin until ethernet returns or a human picks a network.
 _portal_blocked_ssids = set()
 
@@ -4921,7 +4921,7 @@ def _stranded_watch():
                 continue
             if any(i["kind"] == "Ethernet" for i in get_all_interfaces()):
                 if _portal_blocked_ssids:
-                    print("[stranded] ethernet back — portal SSID block cleared")
+                    print("[stranded] ethernet back - portal SSID block cleared")
                 _portal_blocked_ssids.clear()
                 strikes = 0
                 continue
@@ -4935,7 +4935,7 @@ def _stranded_watch():
                 continue
             strikes = 0
             ssid = _one_active_ssid()
-            _audit("PORTAL-RESCUE", f"portal-only and unreached — dropping '{ssid}'")
+            _audit("PORTAL-RESCUE", f"portal-only and unreached - dropping '{ssid}'")
             if ssid:
                 _portal_blocked_ssids.add(ssid)
                 subprocess.run(["sudo", "nmcli", "connection", "down", ssid],
@@ -4952,8 +4952,8 @@ threading.Thread(target=_stranded_watch, daemon=True).start()
 
 # ── Failsafe SD sync ──────────────────────────────────────────────────────────
 # The internal microSD is a dormant bootable copy of the golden image. Once a
-# day (and on demand) we copy the LIVE show state onto it — kiosk config,
-# OnTime projects, Companion config+modules, WiFi profiles — so an NVMe
+# day (and on demand) we copy the LIVE show state onto it - kiosk config,
+# OnTime projects, Companion config+modules, WiFi profiles - so an NVMe
 # failure at showtime boots into tonight's setup, not factory emptiness.
 # rsync --delete keeps only the most recent state; a sync never runs when the
 # unit is already running FROM the SD.
@@ -4962,7 +4962,7 @@ _failsafe = {"last": 0.0, "result": None}
 _FAILSAFE_MNT = "/mnt/failsafe-sd"
 _FAILSAFE_STAMP = BASE_DIR / ".failsafe-last"
 
-try:   # survive app restarts — the sync record is truth, not session state
+try:   # survive app restarts - the sync record is truth, not session state
     _failsafe["last"] = float(_FAILSAFE_STAMP.read_text().strip())
     _failsafe["result"] = "ok"
 except Exception:
@@ -4973,7 +4973,7 @@ def _failsafe_sync_once():
         root = subprocess.run(["findmnt", "-n", "-o", "SOURCE", "/"],
                               capture_output=True, text=True, timeout=10).stdout.strip()
         if "nvme" not in root:
-            return "running from the failsafe SD — sync skipped"
+            return "running from the failsafe SD - sync skipped"
         if not os.path.exists("/dev/mmcblk0p2"):
             return "no failsafe SD present"
         subprocess.run(["sudo", "mkdir", "-p", _FAILSAFE_MNT], check=True, timeout=10)
@@ -4998,7 +4998,7 @@ def _failsafe_sync_once():
                     continue
                 r = subprocess.run(["sudo", "rsync", "-a", "--delete", src, dst],
                                    capture_output=True, text=True, timeout=600)
-                # 23/24 = some files vanished mid-copy (live system) — retry once
+                # 23/24 = some files vanished mid-copy (live system) - retry once
                 if r.returncode in (23, 24):
                     r = subprocess.run(["sudo", "rsync", "-a", "--delete", src, dst],
                                        capture_output=True, text=True, timeout=600)
@@ -5082,7 +5082,7 @@ def _failsafe_loop():
             if r != "ok":
                 raise RuntimeError(r)
         if not _start_job("failsafe-sync", "Backing up show state to the failsafe SD", work):
-            print("[failsafe] daily sync deferred — another job running")
+            print("[failsafe] daily sync deferred - another job running")
             time.sleep(3600)
             continue
         time.sleep(86400)
@@ -5123,7 +5123,7 @@ def wifi_connect():
             time.sleep(3)   # let the radio switch back to client mode
 
         if password:
-            # Explicit profile with key-mgmt set — `nmcli dev wifi connect`
+            # Explicit profile with key-mgmt set - `nmcli dev wifi connect`
             # generates a profile netplan's NM backend rejects
             # ("802-11-wireless-security.key-mgmt: property is missing")
             subprocess.run(["sudo", "nmcli", "connection", "delete", ssid],
@@ -5145,17 +5145,17 @@ def wifi_connect():
         msg = (result.stdout + result.stderr).strip()
 
         if not ok and hotspot_was_active:
-            print(f"[wifi] join failed — restarting hotspot ({msg})")
+            print(f"[wifi] join failed - restarting hotspot ({msg})")
             start_hotspot()
-            msg += " — hotspot restarted so the device stays reachable"
+            msg += " - hotspot restarted so the device stays reachable"
 
         if ok:
             threading.Thread(target=_probe_portal, daemon=True).start()
             if hotspot_was_active:
-                # the join killed the hotspot the user was connected through —
+                # the join killed the hotspot the user was connected through -
                 # if nobody reaches the UI on the new network, come back
                 _arm_wifi_deadman(ssid)
-                msg += (" — if nothing can reach the setup page within 3 minutes, "
+                msg += (" - if nothing can reach the setup page within 3 minutes, "
                         "the unit returns to its hotspot automatically")
 
         return jsonify({"ok": ok, "message": msg,
@@ -5163,7 +5163,7 @@ def wifi_connect():
     except subprocess.TimeoutExpired:
         if hotspot_was_active:
             start_hotspot()
-            return jsonify({"ok": False, "message": "Connection timed out — hotspot restarted"})
+            return jsonify({"ok": False, "message": "Connection timed out - hotspot restarted"})
         return jsonify({"ok": False, "message": "Connection timed out after 45s"})
     except Exception as e:
         return jsonify({"ok": False, "message": str(e)})
@@ -5226,7 +5226,7 @@ def _wids_for_output(n, env):
 @app.route("/blackout", methods=["POST"])
 def blackout():
     """Hide kiosk windows instead of replacing them. The desktop behind
-    them is a pure black void, so unmapping is an instant blackout — and the
+    them is a pure black void, so unmapping is an instant blackout - and the
     hidden windows keep their state for an instant restore. Pass
     {"output": 1|2} to black out a single display; no body blacks out all."""
     global _blackout_active
@@ -5275,7 +5275,7 @@ def blackout_clear():
             subprocess.run(["xdotool", "windowmap", wid],
                            env=env, timeout=3, check=True)
             # unmap withdrew the window, so openbox forgot its fullscreen
-            # state — without this it comes back decorated (title bar)
+            # state - without this it comes back decorated (title bar)
             subprocess.run(["wmctrl", "-i", "-r", wid, "-b", "add,fullscreen"],
                            env=env, timeout=3, check=True)
             del _blackout_hidden[wid]
@@ -5296,7 +5296,7 @@ def blackout_clear():
 
 @app.route("/displays/swap", methods=["POST"])
 def displays_swap():
-    """Swap HDMI 1 and 2 — source, external URL, and custom-timer settings.
+    """Swap HDMI 1 and 2 - source, external URL, and custom-timer settings.
     Applies immediately (no Save); resolution/rotation stay with the glass."""
     config  = load_config()
     keys    = ["source", "external_url"] + [
@@ -5320,7 +5320,7 @@ def displays_swap():
 
 @app.route("/displays/testcard", methods=["POST"])
 def displays_testcard():
-    """Temporarily show the test card on one output — a live action that
+    """Temporarily show the test card on one output - a live action that
     never touches the saved source. {"output": 1|2, "on": true|false}."""
     data = request.get_json(silent=True) or {}
     n    = _parse_output(data) or 1
@@ -5335,7 +5335,7 @@ def displays_testcard():
                 i = n - 1
                 _kill(_win[i])
                 _win[i] = _open_window("pattern-card", d, n)
-                _win_sig[i] = None   # not the configured target — restore relaunches
+                _win_sig[i] = None   # not the configured target - restore relaunches
             _testcard_override.add(n)
         else:
             _testcard_override.discard(n)
@@ -5355,7 +5355,7 @@ def identify_page(label):
     label = re.sub(r"[^A-Za-z0-9 ]", "", label)[:12]
     # colour identity matches the config UI: HDMI 1 light blue, HDMI 2 green
     colour = {"1": "#2E90D9"}.get(label, "#12A95C")
-    # unit identity, so Identify answers "which box is this" — not just
+    # unit identity, so Identify answers "which box is this" - not just
     # "which output" (matches the View, and the System-tab hint's promise)
     uname = load_config().get("unit_name", "") or socket.gethostname()
     uname = re.sub(r"[^A-Za-z0-9 ._-]", "", uname)[:24]
@@ -5414,7 +5414,7 @@ h1 span {{ color:#2FD97B; }}
   <div class="sub" id="ip"></div>
 </div>
 <div id="hs">
-  <div class="t">No network — join this WiFi</div>
+  <div class="t">No network - join this WiFi</div>
   <div class="v" id="hs-ssid"></div>
   <div class="v" style="color:#9AA4AD" id="hs-pass"></div>
   <div class="v" style="margin-top:0.6vh">10.42.0.1:8080</div>
@@ -5523,10 +5523,10 @@ function draw() {
       x.fillText((i+1) + "%", i*W/12 + W/24, H*0.91);
     }
   }
-  else {                                          // "card" — the full plate
+  else {                                          // "card" - the full plate
     grid("#3a3a3a"); circles();
     x.strokeStyle = "#fff"; x.lineWidth = 4;
-    x.strokeRect(2, 2, W-4, H-4);                 // outer frame — edge check
+    x.strokeRect(2, 2, W-4, H-4);                 // outer frame - edge check
     const bx = W*0.125, bw2 = W*0.75;
     const hues = ["#f00","#f80","#ff0","#8f0","#0f0","#0f8","#0ff","#08f","#00f","#80f","#f0f","#f08"];
     hues.forEach((c, i) => { x.fillStyle = c; x.fillRect(bx + i*bw2/12, H*0.2, bw2/12 - 4, H*0.11); });
@@ -5877,7 +5877,7 @@ def presets_delete():
 # Disclosed hardware-integrity + access log (documented in the user guide).
 # Records changes to the unit's hardware identity (storage, network, USB) and
 # access/power events, so an owner or support can tell if something changed.
-# Not usage tracking — it watches the machine's own composition, not what the
+# Not usage tracking - it watches the machine's own composition, not what the
 # operator does with it.
 
 AUDIT_LOG      = BASE_DIR / "audit.log"
@@ -5902,7 +5902,7 @@ def _hw_snapshot():
     # USB devices by vendor:product (Stream Deck, keyboards, adapters)
     snap["usb"] = sorted(l.split("ID ", 1)[-1].split()[0]
                          for l in sh("lsusb").splitlines() if " ID " in l)
-    # Pi board serial — the identity of the compute itself
+    # Pi board serial - the identity of the compute itself
     snap["board"] = sh("cat /proc/cpuinfo | grep -i serial | awk '{print $3}'")
     return snap
 
@@ -5933,7 +5933,7 @@ def _audit_boot_and_hw():
                 for added in b - a:
                     _audit("HW_ADDED", f"{cat}: {added}")
         else:
-            _audit("HW_BASELINE", "first boot — baseline recorded")
+            _audit("HW_BASELINE", "first boot - baseline recorded")
         AUDIT_BASELINE.write_text(json.dumps(now))
     except Exception as e:
         _audit("HW_ERROR", str(e))
@@ -5985,12 +5985,12 @@ def boot():
     if (mode == "local" and ontime_installed()
             and config.get("ontime_autostart", True)
             and not check_ontime("127.0.0.1", timeout=2)):
-        # decide by HTTP, not pgrep — on a service restart the old OnTime is
+        # decide by HTTP, not pgrep - on a service restart the old OnTime is
         # still dying when we check, pgrep sees it, and nothing starts a new
         # one. A deliberate Stop Server persists across power cycles.
         start_local_ontime()
     if ip:
-        # give OnTime a real chance to answer before windows point at it —
+        # give OnTime a real chance to answer before windows point at it -
         # a fixed sleep raced slow starts and parked chromium on an error page
         deadline = time.time() + 30
         while time.time() < deadline and not check_ontime(ip, timeout=2):
