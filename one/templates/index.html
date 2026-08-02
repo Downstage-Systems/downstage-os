@@ -2619,7 +2619,7 @@
     markDirty();
   }
   function syncCleanOptToggles() {
-    for (const name of ['freeze', 'hideprogress', 'hideclock', 'hidecards']) {
+    for (const name of ['freeze', 'hideprogress', 'hideclock', 'hidecards', 'hidephase']) {
       document.getElementById(`cleantimer-${name}-toggle`).className =
         'toggle ' + (ctOpts[activeHdmiTab][name] ? 'on' : '');
     }
