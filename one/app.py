@@ -3550,7 +3550,9 @@ async function armPreviews(d) {{
         const u = (s.url || '').replace('//localhost', '//' + location.hostname)
                                .replace('//127.0.0.1', '//' + location.hostname);
         const vf = document.createElement('div'); vf.className = 'vf';
-        const f = document.createElement('iframe'); f.src = u;
+        const f = document.createElement('iframe');
+        f.allow = "autoplay 'none'";
+        f.src = u + (u.includes('?') ? '&' : '?') + 'preview=1';
         vf.appendChild(f); box.appendChild(vf);
         const scale = box.getBoundingClientRect().width / 1280;
         f.style.transform = 'scale(' + scale + ')';
@@ -5653,9 +5655,11 @@ body { display:flex; flex-direction:column; align-items:center; justify-content:
 </div>
 <div class="meta"><span>SYNC + CLOCK · 1 Hz</span><span id="res"></span></div>
 <script>
+const MUTED = new URLSearchParams(location.search).has('preview');
 const ac = new (window.AudioContext || window.webkitAudioContext)();
 let lastSec = null;
 function beep(freq, vol) {
+  if (MUTED) return;
   const o = ac.createOscillator(), g = ac.createGain();
   o.frequency.value = freq; o.connect(g); g.connect(ac.destination);
   g.gain.setValueAtTime(vol, ac.currentTime);
@@ -5748,8 +5752,10 @@ function makeSprite(cls) {
   return im;
 }
 
+const MUTED = new URLSearchParams(location.search).has('preview');
 const ac = new (window.AudioContext || window.webkitAudioContext)();
 function blip(freq, dur, vol) {
+  if (MUTED) return;
   const o = ac.createOscillator(), g = ac.createGain();
   o.type = 'square'; o.frequency.value = freq;
   o.connect(g); g.connect(ac.destination);
