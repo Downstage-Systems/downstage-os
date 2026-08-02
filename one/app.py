@@ -5655,11 +5655,24 @@ body { display:flex; flex-direction:column; align-items:center; justify-content:
 .clock { font-family:'STMono',monospace; font-size:min(15vh, 13.5vw); color:#E8ECEF;
   line-height:1; font-variant-numeric:tabular-nums; }
 .clock small { font-size:min(5vh, 4.5vw); color:#9AA4AD; margin-left:1.5vh; }
-.beats { display:flex; align-items:center; gap:min(5vh, 4.5vw); margin-top:2vh; height:8vh; }
-.b { border-radius:50%; border:0.5vh solid #3a444d; width:min(4vh, 3.6vw); height:min(4vh, 3.6vw); }
-.b.lg { width:min(7.5vh, 6.5vw); height:min(7.5vh, 6.5vw); }
-.b.on { background:#fff; border-color:#fff; box-shadow:0 0 4vh rgba(255,255,255,0.8); }
-.b.lg.on { background:#2FD97B; border-color:#2FD97B; box-shadow:0 0 5vh rgba(47,217,123,0.9); }
+.av { width:min(86vw, 150vh); margin-top:1vh; }
+#zone { position:relative; height:min(20vh, 17vw); }
+#ball { position:absolute; left:50%; bottom:0; width:min(6.5vh, 5.5vw); height:min(6.5vh, 5.5vw);
+  border-radius:50%; background:#fff; transform:translateX(-50%);
+  box-shadow:0 0 3vh rgba(255,255,255,0.35); will-change:transform; }
+#floor { position:absolute; left:0; right:0; bottom:-0.6vh; height:0.55vh;
+  background:#2a323c; border-radius:0.3vh; }
+#floor.hit { background:#fff; box-shadow:0 0 2.5vh rgba(255,255,255,0.8); }
+.ruler { position:relative; height:min(12.5vh, 11.5vw); margin-top:2.4vh; }
+.tick { position:absolute; top:2.8vh; width:0.55vh; height:min(3.4vh, 3vw);
+  background:#F5A524; transform:translateX(-50%); border-radius:0.3vh; }
+.tick.major { height:min(5vh, 4.4vw); }
+.mk { position:absolute; top:0; width:6%; height:2.2vh; background:#fff;
+  border-radius:0.35vh; transform:translateX(-50%);
+  box-shadow:0 0 1.5vh rgba(255,255,255,0.5); will-change:left; }
+.rlab { position:absolute; top:min(8.6vh, 8vw); transform:translateX(-50%);
+  font-family:'STMono',monospace; font-size:min(3vh, 2.7vw); color:#F5A524;
+  white-space:nowrap; }
 .meta { position:fixed; bottom:3vh; width:100%; display:flex; justify-content:space-between;
   padding:0 4vh; font-family:'STMono',monospace; font-size:2vh; color:#5a646d; }
 .frame { position:fixed; inset:1.4vh; border:0.5vh solid #2FD97B; border-radius:2.2vh;
@@ -5669,14 +5682,17 @@ body { display:flex; flex-direction:column; align-items:center; justify-content:
 <svg class="mark" viewBox="0 0 96 96"><rect x="6" y="10" width="84" height="66" rx="10" fill="none" stroke="#e8ecef" stroke-width="7"/><rect x="20" y="54" width="40" height="9" rx="4.5" fill="#2fd97b"/><rect x="64" y="54" width="12" height="9" rx="4.5" fill="#e8ecef" opacity="0.28"/><rect x="20" y="83" width="26" height="7" rx="3.5" fill="#2fd97b"/><rect x="50" y="83" width="26" height="7" rx="3.5" fill="#2fd97b"/></svg>
 <div class="wm">DOWNSTAGE <b>SYNC</b></div>
 <div class="clock" id="clock">--:--:--</div>
-<div class="beats">
-  <div class="b lg" id="bL"></div>
-  <div class="b" id="b1"></div>
-  <div class="b" id="b2"></div>
-  <div class="b" id="b3"></div>
-  <div class="b lg" id="bR"></div>
+<div class="av">
+  <div id="zone"><div id="ball"></div><div id="floor"></div></div>
+  <div class="ruler" id="ruler">
+    <span class="rlab" style="left:0%">-1</span>
+    <span class="rlab" style="left:25%">10ths of a second</span>
+    <span class="rlab" style="left:50%">0</span>
+    <span class="rlab" style="left:75%">10ths of a second</span>
+    <span class="rlab" style="left:100%">1</span>
+  </div>
 </div>
-<div class="meta"><span>SYNC + CLOCK · 1 Hz</span><span id="res"></span></div>
+<div class="meta"><span>AV SYNC + CLOCK · 1 Hz</span><span id="res"></span></div>
 <script>
 const MUTED = new URLSearchParams(location.search).has('preview');
 const ac = new (window.AudioContext || window.webkitAudioContext)();
@@ -5689,6 +5705,29 @@ function beep(freq, vol) {
   g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.05);
   o.start(); o.stop(ac.currentTime + 0.06);
 }
+// AV-sync ruler: the ball lands on the floor at the top of every second -
+// the beep moment - and a white marker crosses 0 at that exact instant.
+// Freeze any frame and the nearest marker reads the offset in 10ths.
+const ruler = document.getElementById('ruler');
+for (let i = 0; i <= 20; i++) {
+  const t = document.createElement('div');
+  t.className = 'tick' + (i % 10 === 0 ? ' major' : '');
+  t.style.left = (i * 5) + '%';
+  ruler.appendChild(t);
+}
+const mks = [];
+for (let i = 0; i < 4; i++) {
+  const m = document.createElement('div');
+  m.className = 'mk';
+  ruler.appendChild(m);
+  mks.push(m);
+}
+const ball = document.getElementById('ball');
+const zone = document.getElementById('zone');
+const floorEl = document.getElementById('floor');
+let zoneH = 0;
+const measure = () => { zoneH = Math.max(0, zone.offsetHeight - ball.offsetHeight); };
+measure(); addEventListener('resize', measure);
 function frame() {
   const now = new Date();
   const p = n => String(n).padStart(2, '0');
@@ -5697,13 +5736,18 @@ function frame() {
   document.getElementById('clock').innerHTML =
     p(h12) + ':' + p(now.getMinutes()) + ':' + p(now.getSeconds()) +
     '<small>' + (h24 < 12 ? 'AM' : 'PM') + '</small>';
+  const f = now.getMilliseconds() / 1000;
+  const h = 4 * f * (1 - f);
+  const sq = (f < 0.05 || f > 0.95) ? ' scale(1.18, 0.78)' : '';
+  ball.style.transform = 'translateX(-50%) translateY(' + (-h * zoneH).toFixed(1) + 'px)' + sq;
+  floorEl.classList.toggle('hit', f < 0.1);
+  for (let i = 0; i < 4; i++) {
+    const pos = (i - 2) + f;
+    if (pos < -1.05 || pos > 1.05) { mks[i].style.display = 'none'; }
+    else { mks[i].style.display = ''; mks[i].style.left = ((pos + 1) / 2 * 100) + '%'; }
+  }
   const beat = now.getSeconds() % 4;
-  const on = now.getMilliseconds() < 120;
-  document.getElementById('bL').classList.toggle('on', on && beat === 0);
-  document.getElementById('bR').classList.toggle('on', on && beat === 0);
-  for (let i = 1; i < 4; i++)
-    document.getElementById('b' + i).classList.toggle('on', on && i === beat);
-  if (on && lastSec !== now.getSeconds()) {
+  if (f < 0.12 && lastSec !== now.getSeconds()) {
     lastSec = now.getSeconds();
     if (ac.state === 'running') beep(beat === 0 ? 1800 : 900, beat === 0 ? 0.6 : 0.4);
     else ac.resume();
