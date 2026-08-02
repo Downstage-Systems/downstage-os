@@ -3277,7 +3277,12 @@ iframe {{ border:0; width:100%; height:100%; display:block; background:#000; }}
 #tray {{ width:0; overflow:hidden; transition:width 0.2s; background:#101318;
   border-left:1px solid #2a323c; display:flex; flex-direction:column; }}
 #tray.on {{ width:260px; }}
-.tr-inner {{ width:260px; padding:12px; display:flex; flex-direction:column; gap:10px; }}
+.tr-inner {{ width:260px; padding:12px; display:flex; flex-direction:column; gap:10px;
+  flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; }}
+.tr-inner > * {{ flex-shrink:0; }}
+.tr-inner::-webkit-scrollbar {{ width:8px; }}
+.tr-inner::-webkit-scrollbar-thumb {{ background:#2a323c; border-radius:4px; }}
+.tr-inner::-webkit-scrollbar-thumb:hover {{ background:#3a444d; }}
 #split {{ display:none; width:9px; flex-shrink:0; cursor:col-resize; touch-action:none;
   position:relative; }}
 #split.on {{ display:block; }}
