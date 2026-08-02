@@ -3171,8 +3171,8 @@ def _fleet_src_label(key):
 def _now_showing():
     config = load_config()
     hc = hdmi_connected()
-    l1 = _fleet_src_label(config.get("hdmi1_source")) if hc.get("1") else "-"
-    l2 = _fleet_src_label(config.get("hdmi2_source")) if hc.get("2") else "-"
+    l1 = _fleet_src_label(config.get("hdmi1_source")) if hc.get("1") else "—"
+    l2 = _fleet_src_label(config.get("hdmi2_source")) if hc.get("2") else "—"
     return f"1: {l1} \u00b7 2: {l2}"
 
 
@@ -3247,7 +3247,7 @@ def wall_page():
         host = config["satellite_ip"]
     url = f"http://{host}:8000/emulator/{emu}"
     return f"""<!DOCTYPE html><html><head><meta charset="utf-8">
-<title>Virtual Deck - Downstage</title>
+<title>Virtual Deck — Downstage</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 @font-face {{ font-family:'Rajdhani'; font-weight:700; src:url('/static/fonts/rajdhani-700.woff2') format('woff2'); }}
@@ -3423,21 +3423,21 @@ async function tick() {{
       const bar = document.getElementById('pb' + n);
       if (hc[n]) {{
         const nm = (d.hdmi_names || {{}})[n];
-        bar.className = 'pvbar ok'; bar.textContent = nm ? 'HDMI ' + n + ' - ' + nm : 'HDMI ' + n + ' - connected';
+        bar.className = 'pvbar ok'; bar.textContent = nm ? 'HDMI ' + n + ' — ' + nm : 'HDMI ' + n + ' — connected';
       }} else if (d.virtual_previews === false) {{
-        bar.className = 'pvbar virt'; bar.textContent = 'HDMI ' + n + ' - no display';
+        bar.className = 'pvbar virt'; bar.textContent = 'HDMI ' + n + ' — no display';
       }} else {{
-        bar.className = 'pvbar virt'; bar.textContent = 'HDMI ' + n + ' - virtual';
+        bar.className = 'pvbar virt'; bar.textContent = 'HDMI ' + n + ' — virtual';
       }}
     }}
     armPreviews(d);
     const ot = document.getElementById('d-ot');
     ot.className = 'dot ' + (d.connected ? 'ok' : 'bad');
-    document.getElementById('t-ot').textContent = 'ONTIME' + (d.connected ? '' : ' - OFFLINE');
+    document.getElementById('t-ot').textContent = 'ONTIME' + (d.connected ? '' : ' — OFFLINE');
     const remote = d.companion_remote && d.companion_remote.ok;
     const cp = document.getElementById('d-cp');
     cp.className = 'dot ' + ((d.companion_running || remote) ? 'ok' : 'bad');
-    document.getElementById('t-cp').textContent = 'COMPANION' + (remote ? ' - REMOTE' : (d.companion_running ? '' : ' - STOPPED'));
+    document.getElementById('t-cp').textContent = 'COMPANION' + (remote ? ' — REMOTE' : (d.companion_running ? '' : ' — STOPPED'));
     const bo = document.getElementById('t-bo');
     bo.classList.toggle('active', !!d.blackout);
     bo.textContent = d.blackout ? 'RESUME' : 'BLACKOUT';

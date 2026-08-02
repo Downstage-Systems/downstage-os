@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Downstage View - Setup</title>
+  <title>Downstage View — Setup</title>
   <link rel="icon" type="image/svg+xml" href="/static/downstage-view-mark.svg">
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
   <meta name="apple-mobile-web-app-title" content="Downstage View">
@@ -1797,7 +1797,7 @@
             '<div class="fu-ip" onclick="copyIp(\'' + u.ip + '\')" title="Click to copy">' + u.ip + '</div>' +
             (u.kind ? '<div class="fu-sub">via ' + u.kind + '</div>' : '') + '</div>' +
           '<div><div class="fu-lbl">Showing</div>' +
-            '<div class="fu-val">' + (u.showing || '-') + '</div></div>' +
+            '<div class="fu-val">' + (u.showing || '—') + '</div></div>' +
           '<div><div class="fu-lbl">Status</div>' +
             '<div class="fu-val ' + (bad ? 'bad' : 'ok') + '">' + (bad ? u.health_why : 'All good') + '</div></div>' +
         '</div></div>';
@@ -1840,7 +1840,7 @@
   function renderOutputChain(d) {
     if (!d.output || !document.getElementById('ocn-hdmi')) return;
     const o = d.output;
-    const srcLabel = (typeof SOURCE_LABELS !== 'undefined' && SOURCE_LABELS[d.source]) || d.source || '-';
+    const srcLabel = (typeof SOURCE_LABELS !== 'undefined' && SOURCE_LABELS[d.source]) || d.source || '—';
     if (d.source === 'off') ocNode('ocn-content', '', 'Off');
     else ocNode('ocn-content', 'ok', srcLabel);
     ocNode('ocn-render', o.render.up ? 'ok' : 'bad',
@@ -1850,7 +1850,7 @@
                             : 'No display - check cable');
     const dn = o.display.name || o.display.mfr;
     ocNode('ocn-display', o.hdmi.connected ? 'ok' : '',
-           o.hdmi.connected ? (dn ? dn + ' detected' : 'Display detected') : '-');
+           o.hdmi.connected ? (dn ? dn + ' detected' : 'Display detected') : '—');
     // preview window: no-display graphic beats everything; else snapshot or prompt
     const img = document.getElementById('oc-snap-img');
     const nod = document.getElementById('oc-nodisp');
@@ -1948,7 +1948,7 @@
         } else if (d.wifi && d.wifi.up) {
           wp.style.display = '';
           wp.className = 'status-bar ' + (d.wifi.concern ? 'warn' : 'connected');
-          document.getElementById('wifi-pill-text').textContent = 'WIFI - ' + d.wifi.dbm + ' dBm';
+          document.getElementById('wifi-pill-text').textContent = 'WIFI — ' + d.wifi.dbm + ' dBm';
         } else wp.style.display = 'none';
       }
       const tp = document.getElementById('temp-pill');
@@ -1958,7 +1958,7 @@
           tp.style.display = t >= 70 ? '' : 'none';
           tp.className = 'status-bar ' + (t >= 80 ? 'disconnected' : 'warn');
           document.getElementById('temp-pill-text').textContent =
-            'TEMP - ' + t + '°C' + (t >= 80 ? ' HOT' : '');
+            'TEMP — ' + t + '°C' + (t >= 80 ? ' HOT' : '');
         }
       }
       const hsp = document.getElementById('hotspot-pill');
@@ -1966,7 +1966,7 @@
         if (d.hotspot_active) {
           hsp.style.display = '';
           hsp.className = 'status-bar warn';
-          document.getElementById('hotspot-pill-text').textContent = 'HOTSPOT - ON';
+          document.getElementById('hotspot-pill-text').textContent = 'HOTSPOT — ON';
         } else hsp.style.display = 'none';
       }
       const cq = document.getElementById('companion-quick');
@@ -2238,7 +2238,7 @@
   let hotspotPass   = '';
 
   function updateHotspotUI() {
-    document.getElementById('hotspot-ssid-label').textContent = hotspotSsid || '-';
+    document.getElementById('hotspot-ssid-label').textContent = hotspotSsid || '—';
     const state = document.getElementById('hotspot-state');
     state.textContent = hotspotActive ? 'On' : 'Off';
     state.classList.toggle('on', hotspotActive);
@@ -2397,7 +2397,7 @@
       if (ab) ab.disabled = d.available === false;
       if (d.available === false) showToast('No saved profile for that interface yet.', 'info');
       netMode = d.method === 'manual' ? 'manual' : 'auto';
-      const ifaceName = { eth0: 'Ethernet', wlan0: 'Wi-Fi' }[d.iface] || d.iface || '-';
+      const ifaceName = { eth0: 'Ethernet', wlan0: 'Wi-Fi' }[d.iface] || d.iface || '—';
       if (d.method === 'manual' && d.address) {
         const [ip, prefix] = d.address.split('/');
         document.getElementById('net-ip').value = ip || '';
@@ -2655,7 +2655,7 @@
 <script>
   function copyAddr() {
     const addr = 'http://' + window.location.host + '/';
-    const done = () => showToast('Address copied - ' + addr, 'success');
+    const done = () => showToast('Address copied — ' + addr, 'success');
     const pop = document.getElementById('qr-pop');
     if (pop.style.display === 'none') {
       const img = document.getElementById('qr-img');

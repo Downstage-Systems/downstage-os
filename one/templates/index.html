@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Downstage One - Setup</title>
+  <title>Downstage One — Setup</title>
   <link rel="icon" type="image/svg+xml" href="/static/downstage-one-mark.svg">
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
   <meta name="apple-mobile-web-app-title" content="Downstage One">
@@ -1752,12 +1752,12 @@
 
           <div class="source-chip" data-source="pattern-sync" onclick="selectSource(this)">
             <div class="source-chip-icon"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 18a8 8 0 110-16 8 8 0 010 16zm1-13h-2v6l5.2 3.1 1-1.6-4.2-2.5V7z"/></svg></div>
-            <span class="source-chip-label">Sync Clock - Video</span>
+            <span class="source-chip-label">Sync Clock — Video</span>
           </div>
 
           <div class="source-chip" data-source="pattern-dvd" onclick="selectSource(this)">
             <div class="source-chip-icon"><svg viewBox="0 0 24 24"><path d="M12 4C6.48 4 2 7.58 2 12s4.48 8 10 8 10-3.58 10-8-4.48-8-10-8zm0 11a3 3 0 110-6 3 3 0 010 6zm0-4a1 1 0 100 2 1 1 0 000-2z"/></svg></div>
-            <span class="source-chip-label">DVD - Video</span>
+            <span class="source-chip-label">DVD — Video</span>
           </div>
 
           <div class="source-group-label">System</div>
@@ -2440,7 +2440,7 @@
   }
   function copyAddr() {
     const addr = 'http://' + window.location.host + '/';
-    const done = () => showToast('Address copied - ' + addr, 'success');
+    const done = () => showToast('Address copied — ' + addr, 'success');
     // toggle the QR chip; hidden entirely if the unit lacks QR support
     const pop = document.getElementById('qr-pop');
     if (pop.style.display === 'none') {
@@ -2758,7 +2758,7 @@
             '<div class="fu-ip" onclick="copyIp(\'' + u.ip + '\')" title="Click to copy">' + u.ip + '</div>' +
             (u.kind ? '<div class="fu-sub">via ' + u.kind + '</div>' : '') + '</div>' +
           '<div><div class="fu-lbl">Showing</div>' +
-            '<div class="fu-val">' + (u.showing || '-') + '</div></div>' +
+            '<div class="fu-val">' + (u.showing || '—') + '</div></div>' +
           '<div><div class="fu-lbl">Status</div>' +
             '<div class="fu-val ' + (bad ? 'bad' : 'ok') + '">' + (bad ? u.health_why : 'All good') + '</div></div>' +
         '</div></div>';
@@ -2984,7 +2984,7 @@
           hp.classList.toggle('connected', !!d.hdmi_connected[n]);
           hp.classList.toggle('disconnected', !d.hdmi_connected[n]);
           document.getElementById('hdmi-pill-' + n + '-text').textContent =
-            'HDMI ' + n + ' - ' + (d.hdmi_connected[n] ? 'OK' : 'NO DISPLAY');
+            'HDMI ' + n + ' — ' + (d.hdmi_connected[n] ? 'OK' : 'NO DISPLAY');
         }
       }
       const uni = document.getElementById('unit-name-input');
@@ -2995,7 +2995,7 @@
         const remote = !companionRunning && !!window._compHost;
         cp.className = 'status-bar ' + ((companionRunning || remote) ? 'connected' : 'disconnected');
         document.getElementById('comp-pill-text').textContent =
-          'COMPANION' + (remote ? ' - REMOTE' : (companionRunning ? '' : ' - STOPPED'));
+          'COMPANION' + (remote ? ' — REMOTE' : (companionRunning ? '' : ' — STOPPED'));
         cp.title = remote ? 'Satellite is serving the Companion at ' + window._compHost : '';
       }
       const wp = document.getElementById('wifi-pill');
@@ -3007,7 +3007,7 @@
         } else if (d.wifi && d.wifi.up) {
           wp.style.display = '';
           wp.className = 'status-bar ' + (d.wifi.concern ? 'warn' : 'connected');
-          document.getElementById('wifi-pill-text').textContent = 'WIFI - ' + d.wifi.dbm + ' dBm';
+          document.getElementById('wifi-pill-text').textContent = 'WIFI — ' + d.wifi.dbm + ' dBm';
         } else wp.style.display = 'none';
       }
       const hsp = document.getElementById('hotspot-pill');
@@ -3015,7 +3015,7 @@
         if (d.hotspot_active) {
           hsp.style.display = '';
           hsp.className = 'status-bar warn';
-          document.getElementById('hotspot-pill-text').textContent = 'HOTSPOT - ON';
+          document.getElementById('hotspot-pill-text').textContent = 'HOTSPOT — ON';
         } else hsp.style.display = 'none';
       }
       const tp = document.getElementById('temp-pill');
@@ -3025,7 +3025,7 @@
           tp.style.display = t >= 70 ? '' : 'none';
           tp.className = 'status-bar ' + (t >= 80 ? 'disconnected' : 'warn');
           document.getElementById('temp-pill-text').textContent =
-            'TEMP - ' + t + '°C' + (t >= 80 ? ' HOT' : '');
+            'TEMP — ' + t + '°C' + (t >= 80 ? ' HOT' : '');
         }
       }
 
@@ -3345,7 +3345,7 @@
       const wasShown = r.className.includes('on');
       r.className = 'on ' + j.state;
       document.getElementById('job-label').textContent =
-        j.label + (j.state === 'done' ? ' - finished' : ` - FAILED${j.detail ? ': ' + j.detail : ''}`);
+        j.label + (j.state === 'done' ? ' — finished' : ` — FAILED${j.detail ? ': ' + j.detail : ''}`);
       document.getElementById('job-time').textContent = '';
       if (wasShown && j.state === 'done') { loadUpdateStatus(); }
     }
@@ -4056,7 +4056,7 @@
       if (ab) ab.disabled = d.available === false;
       if (d.available === false) showToast('No saved profile for that interface yet.', 'info');
       netMode = d.method === 'manual' ? 'manual' : 'auto';
-      const ifaceName = { eth0: 'Ethernet', wlan0: 'Wi-Fi' }[d.iface] || d.iface || '-';
+      const ifaceName = { eth0: 'Ethernet', wlan0: 'Wi-Fi' }[d.iface] || d.iface || '—';
       if (d.method === 'manual' && d.address) {
         const [ip, prefix] = d.address.split('/');
         document.getElementById('net-ip').value = ip || '';
@@ -4134,7 +4134,7 @@
   let hotspotPass   = '';
 
   function updateHotspotUI() {
-    document.getElementById('hotspot-ssid-label').textContent = hotspotSsid || '-';
+    document.getElementById('hotspot-ssid-label').textContent = hotspotSsid || '—';
     const state = document.getElementById('hotspot-state');
     state.textContent = hotspotActive ? 'On' : 'Off';
     state.classList.toggle('on', hotspotActive);
@@ -4401,7 +4401,7 @@
     if (connected) {
       bar.className = 'pv-bar ok';
       const nm = window._hdmiNames && window._hdmiNames[n];
-      bar.textContent = nm ? 'Connected - ' + nm : 'Display connected';
+      bar.textContent = nm ? 'Connected — ' + nm : 'Display connected';
       bar.title = 'Captured from the physical output - the preview trails the real screen by about a second.';
     } else if (window._virtualPreviews === false) {
       bar.className = 'pv-bar virt';
@@ -4527,7 +4527,7 @@
     }
     if (s.enabled && s.running) {
       badge.className = 'status-badge running'; badge.textContent = 'Serving ' + (s.ip || 'remote');
-      note.textContent = (s.version ? 'v' + s.version + ' - ' : '') +
+      note.textContent = (s.version ? 'v' + s.version + ' — ' : '') +
         'Decks belong to the remote Companion - onboard Companion is stood down';
       act.innerHTML = `
         <button class="btn-sm danger" onclick="setSatellite(false)">Disable - restore onboard Companion</button>
@@ -5186,7 +5186,7 @@
           'Update available: v' + (os.latest || '');
         document.getElementById('wiz-os-btn').style.display = '';
       } else {
-        wizRow('os', true, 'v' + (os.installed || '') + ' - up to date', null);
+        wizRow('os', true, 'v' + (os.installed || '') + ' — up to date', null);
       }
     } catch (e) {}
   }
