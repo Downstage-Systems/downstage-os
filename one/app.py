@@ -3873,6 +3873,14 @@ def _companion_install_worker():
                               detail="Starting the official installer…",
                               started=time.time())
     try:
+        # an interrupted earlier install can leave an orphaned companion
+        # group behind, which the official installer refuses to re-create -
+        # clear it so a retry always works
+        have_user = subprocess.run(["id", "companion"], capture_output=True).returncode == 0
+        have_group = subprocess.run(["getent", "group", "companion"],
+                                    capture_output=True).returncode == 0
+        if have_group and not have_user:
+            subprocess.run(["sudo", "groupdel", "companion"], capture_output=True, timeout=10)
         proc = subprocess.Popen(
             ["sudo", "bash", "-c",
              "curl -sL https://raw.githubusercontent.com/bitfocus/companion-pi/main/install.sh | bash"],
