@@ -1282,6 +1282,12 @@
         <div class="wdesc" id="wiz-companion-desc">Stream Deck control - skip it if you don't use one</div></div>
       <button class="btn-sm" id="wiz-companion-btn" onclick="wizInstallCompanion()">Install</button>
     </div>
+    <div class="wiz-row" id="wiz-satellite">
+      <span class="wdot"></span>
+      <div class="winfo"><div class="wname">Companion Satellite <span style="color:var(--muted);font-weight:400">(optional)</span></div>
+        <div class="wdesc" id="wiz-satellite-desc">Serve this unit's Stream Decks to a Companion elsewhere on the network - most shows skip this</div></div>
+      <button class="btn-sm" id="wiz-satellite-btn" onclick="wizInstallSatellite()">Install</button>
+    </div>
     <div class="wiz-warn"><b>Keep power connected</b> while anything is installing -
       each step takes a few minutes and finishes on its own.</div>
     <div class="wiz-foot">
@@ -5257,6 +5263,7 @@
       const d = await (await fetch('/status')).json();
       wizRow('ontime', d.ontime_installed, 'Installed and ready', null);
       wizRow('companion', d.companion_installed, 'Installed and ready', null);
+      wizRow('satellite', (d.satellite || {}).installed, 'Installed - enable it in Companion settings', null);
       const u = await (await fetch('/update-status')).json();
       const os = u.os || {};
       if (os.update_available) {
@@ -5323,6 +5330,37 @@
           companionInstalled = true; companionRunning = d.running;
           updateCompanionPanel();
         }
+        wizRefresh();
+      } catch (e) {}
+    }, 2500);
+  }
+  async function wizInstallSatellite() {
+    const b = document.getElementById('wiz-satellite-btn');
+    b.disabled = true; b.textContent = 'Installing…';
+    const row = document.getElementById('wiz-satellite');
+    const desc = document.getElementById('wiz-satellite-desc');
+    row.classList.add('busy');
+    const t0 = Date.now();
+    desc.innerHTML = '<span id="wiz-sat-line">Running the official installer…</span>' +
+                     '<div class="wizbar"><i></i></div>';
+    try { await fetch('/satellite/install', { method: 'POST' }); } catch (e) {}
+    const tick = setInterval(async () => {
+      try {
+        const d = await (await fetch('/satellite/status')).json();
+        if (d.install_state === 'installing') {
+          const el = document.getElementById('wiz-sat-line');
+          if (el) {
+            const sec = Math.floor((Date.now() - t0) / 1000);
+            el.textContent = 'Running the official installer…  ·  ' +
+              Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0');
+          }
+          return;
+        }
+        clearInterval(tick);
+        wizBusy('satellite', false);
+        b.disabled = false; b.textContent = 'Install';
+        if (d.install_state === 'failed')
+          showToast('Satellite install failed: ' + (d.install_message || ''), 'error');
         wizRefresh();
       } catch (e) {}
     }, 2500);
