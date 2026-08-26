@@ -13,7 +13,7 @@ from pathlib import Path
 import requests
 from flask import Flask, jsonify, render_template, request, send_file, Response
 
-OS_VERSION = "1.6.1"   # Downstage OS release - bump on tagged releases
+OS_VERSION = "1.6.2"   # Downstage OS release - bump on tagged releases
 OS_PRODUCT = "Downstage One"
 
 app = Flask(__name__)
@@ -1583,7 +1583,14 @@ def start_local_ontime():
     with _ontime_lock:
         if ontime_is_running():
             return True, "already running"
-        log = open(BASE_DIR / "ontime.log", "a")
+        # factory tooling has left root-owned log files behind before -
+        # reclaim rather than crash the whole start with PermissionError
+        try:
+            log = open(BASE_DIR / "ontime.log", "a")
+        except PermissionError:
+            subprocess.run(["sudo", "chown", "pi:pi", str(BASE_DIR / "ontime.log")],
+                           timeout=5)
+            log = open(BASE_DIR / "ontime.log", "a")
         # --disable-gpu: newer OnTime builds (4.10+) crash allocating GPU
         # buffers on the Pi even in headless mode (gbm dma_buf errors)
         _ontime_proc = subprocess.Popen(
