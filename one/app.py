@@ -2220,7 +2220,7 @@ def save():
         if not check_ontime(ip):
             return jsonify({"ok": False, "error": f"Cannot reach OnTime at {ip}:4001"})
 
-    if mode == "local":
+    if mode == "local" and needs_ontime:
         if not ontime_installed():
             return jsonify({"ok": False, "error": "OnTime is not installed yet"})
         if not ontime_is_running():
@@ -2228,7 +2228,7 @@ def save():
             if not ok:
                 return jsonify({"ok": False, "error": msg})
             time.sleep(3)
-    elif ontime_is_running():
+    elif mode != "local" and ontime_is_running():
         # the mode IS the truth: Remote means the onboard server stands down.
         # ontime_autostart is untouched - switching back to Local (or booting
         # in Local mode) brings it straight back; the rundown lives on disk.
