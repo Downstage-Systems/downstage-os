@@ -3790,8 +3790,14 @@ def ontime_install():
     ok, msg = install_ontime_server()
     if ok:
         _seed_ontime_profile()
+        # setup should end with a running server, not an installed-but-idle
+        # one - local mode only; remote units point at another brain
+        if load_config().get("mode", "local") == "local" and not ontime_is_running():
+            sok, _smsg = start_local_ontime()
+            if sok:
+                threading.Thread(target=_relaunch_when_ontime_up, daemon=True).start()
         threading.Thread(target=_check_updates_background, daemon=True).start()
-    return jsonify({"ok": ok, "message": msg})
+    return jsonify({"ok": ok, "message": msg, "running": ontime_is_running()})
 
 
 def _relaunch_when_ontime_up():
