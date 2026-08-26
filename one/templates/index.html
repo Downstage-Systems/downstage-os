@@ -1008,6 +1008,11 @@
     body[data-hdmi="1"] .source-chip.selected .source-chip-label { color: var(--hdmi1); }
 
     /* ── Right-click menu on the HDMI previews ── */
+    .wizbar { height:4px; background:var(--surface2); border-radius:2px;
+      overflow:hidden; margin-top:7px; }
+    .wizbar i { display:block; height:100%; width:40%; background:var(--accent);
+      border-radius:2px; animation:wizslide 1.4s ease-in-out infinite; }
+    @keyframes wizslide { 0% { margin-left:-40%; } 100% { margin-left:100%; } }
     .ctx-menu {
       position: fixed; z-index: 300; min-width: 215px;
       background: var(--surface2); border: 1px solid var(--border2);
@@ -5290,11 +5295,37 @@
   async function wizInstallCompanion() {
     const b = document.getElementById('wiz-companion-btn');
     b.disabled = true; b.textContent = 'Installing…';
-    wizBusy('companion', true, 'Running the official installer - a few minutes…');
-    await installCompanion();
-    wizBusy('companion', false);
-    b.disabled = false; b.textContent = 'Install';
-    wizRefresh();
+    const row = document.getElementById('wiz-companion');
+    const desc = document.getElementById('wiz-companion-desc');
+    row.classList.add('busy');
+    const t0 = Date.now();
+    desc.innerHTML = '<span id="wiz-comp-line">Starting the official installer…</span>' +
+                     '<div class="wizbar"><i></i></div>';
+    try { await fetch('/companion/install', { method: 'POST' }); } catch (e) {}
+    const tick = setInterval(async () => {
+      try {
+        const d = await (await fetch('/companion/status')).json();
+        if (d.install_state === 'installing') {
+          const el = document.getElementById('wiz-comp-line');
+          if (el) {
+            const sec = Math.floor((Date.now() - t0) / 1000);
+            const mm = Math.floor(sec / 60), ss = String(sec % 60).padStart(2, '0');
+            el.textContent = (d.install_detail || 'Working…') + '  ·  ' + mm + ':' + ss;
+          }
+          return;
+        }
+        clearInterval(tick);
+        wizBusy('companion', false);
+        b.disabled = false; b.textContent = 'Install';
+        if (d.install_state === 'failed') {
+          showToast('Companion install failed: ' + (d.install_message || ''), 'error');
+        } else {
+          companionInstalled = true; companionRunning = d.running;
+          updateCompanionPanel();
+        }
+        wizRefresh();
+      } catch (e) {}
+    }, 2500);
   }
   function wizOsUpdate() {
     wizFinish();          // wizard shouldn't hold the page hostage through a restart

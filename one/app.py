@@ -3861,21 +3861,36 @@ def ontime_revert():
 
 # ── Companion routes ──────────────────────────────────────────────────────────
 
-_companion_install = {"state": "idle", "message": ""}   # idle|installing|done|failed
+_companion_install = {"state": "idle", "message": "", "detail": "", "started": 0.0}
 
 
 def _companion_install_worker():
     """Customer-initiated install using Bitfocus's official companion-pi
     script - the unit ships without Companion; the end user's click fetches
-    it from the official source onto their device."""
-    _companion_install["state"] = "installing"
-    _companion_install["message"] = ""
+    it from the official source onto their device. Output streams into
+    install_detail so the UI can show live progress."""
+    _companion_install.update(state="installing", message="",
+                              detail="Starting the official installer…",
+                              started=time.time())
     try:
-        r = subprocess.run(
+        proc = subprocess.Popen(
             ["sudo", "bash", "-c",
              "curl -sL https://raw.githubusercontent.com/bitfocus/companion-pi/main/install.sh | bash"],
-            capture_output=True, text=True, timeout=1800,
-        )
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        tail = []
+        for line in proc.stdout:
+            line = line.strip()
+            if not line:
+                continue
+            tail.append(line)
+            tail = tail[-10:]
+            _companion_install["detail"] = line[:110]
+        rc = proc.wait(timeout=1800)
+
+        class r:
+            returncode = rc
+            stdout = "\n".join(tail)
+            stderr = ""
         if r.returncode == 0 and companion_is_installed(fresh=True):
             fresh = not list(
                 Path("/home/companion/.config/companion-nodejs").glob("v*/db.sqlite"))
@@ -4096,6 +4111,8 @@ def companion_status_route():
         "running":   companion_is_running(),
         "install_state":   _companion_install["state"],
         "install_message": _companion_install["message"],
+        "install_detail":  _companion_install.get("detail", ""),
+        "install_started": _companion_install.get("started", 0),
     })
 
 
