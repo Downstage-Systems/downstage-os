@@ -3106,7 +3106,12 @@
   async function saveAndConnect() {
     const ip = currentMode === 'remote' ? document.getElementById('ip').value.trim() : '127.0.0.1';
     if (currentMode === 'remote' && !ip) { showToast('Enter an IP address first.', 'error'); return; }
-    if (currentMode === 'local' && !ontimeInstalled) { showToast('Install OnTime first.', 'warning'); return; }
+    // only sources that actually render OnTime need it - Unit Info, test
+    // patterns, Config UI, External, Companion, and Off save fine without
+    const needsOT = s => !(['config', 'off', 'welcome', 'external', 'companion'].includes(s) || s.startsWith('pattern-'));
+    if (currentMode === 'local' && !ontimeInstalled && (needsOT(hdmi1Source) || needsOT(hdmi2Source))) {
+      showToast('Install OnTime first - the selected source needs it.', 'warning'); return;
+    }
     if (hdmi1Source === 'external' && !hdmi1ExternalUrl) { showToast('Enter a URL for HDMI 1\'s external viewer.', 'error'); return; }
     if (hdmi2Source === 'external' && !hdmi2ExternalUrl) { showToast('Enter a URL for HDMI 2\'s external viewer.', 'error'); return; }
 

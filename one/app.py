@@ -126,10 +126,13 @@ def load_config():
     data.setdefault("mode", "local")
     data.setdefault("ip", "")
     # Migrate old single-view format
+    had_old_view = "view" in data
     old_view = data.pop("view", "/timer")
     data.pop("swap_displays", None)
-    data.setdefault("hdmi1_source", "config")
-    data.setdefault("hdmi2_source", old_view)
+    # fresh units greet on both outputs: Unit Info shows the address and
+    # state before anything is installed or configured
+    data.setdefault("hdmi1_source", "welcome")
+    data.setdefault("hdmi2_source", old_view if had_old_view else "welcome")
     data.setdefault("ip_history",   [])
     data.setdefault("hdmi1_res",    "1920x1080")
     data.setdefault("hdmi2_res",    "1920x1080")
