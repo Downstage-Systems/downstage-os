@@ -241,6 +241,13 @@
     .emu-act svg { width:16px; height:16px; fill:var(--muted); display:block; }
     .emu-act:hover svg { fill:var(--text); }
     #emu-frame { flex:1; width:100%; border:0; background:#000; }
+    /* minimized tool dock: open tools stay one tap away anywhere in the UI */
+    #tool-dock { position:fixed; left:50%; transform:translateX(-50%); bottom:12px;
+      z-index:930; display:none; align-items:center; gap:5px; padding:6px 8px;
+      background:var(--surface); border:1px solid var(--violet-bd, var(--border2));
+      border-radius:12px; box-shadow:0 6px 24px rgba(0,0,0,0.55);
+      max-width:92vw; overflow-x:auto; }
+    #tool-dock.on { display:flex; }
     /* body freeze while a panel is open - iOS scrolls the page behind a
        fixed overlay unless the body itself is pinned */
     body.panel-open { position:fixed; left:0; right:0; overflow:hidden; }
@@ -1293,6 +1300,7 @@
   </div>
   <div id="emu-frames" style="flex:1; position:relative; background:#000"></div>
 </div>
+<div id="tool-dock"></div>
 <div id="conn-ribbon">
   <span class="cdot"></span>
   <span id="conn-label">Unit unreachable</span>
@@ -3474,6 +3482,7 @@
       document.body.style.top = `-${_panelScrollY}px`;
       document.body.classList.add('panel-open');
     }
+    renderToolDock();
   }
 
   // Hidden iframes get their canvas backing stores purged (Companion's
@@ -3522,6 +3531,7 @@
     if (_activePanel === k) _activePanel = Object.keys(_panels)[0] || null;
     if (!_activePanel) hidePanel();
     else renderPanelTabs();
+    renderToolDock();
   }
 
   function hidePanel() {
@@ -3531,6 +3541,46 @@
     window.scrollTo(0, _panelScrollY);
     for (const k of Object.keys(_panels)) {
       if (_panels[k].visible) { _panels[k].hiddenAt = Date.now(); _panels[k].visible = false; }
+    }
+    renderToolDock();
+  }
+
+  function showViewer(k) {
+    if (!_panels[k]) return;
+    _activePanel = k;
+    renderPanelTabs();
+    const ov = document.getElementById('emu-overlay');
+    if (!ov.classList.contains('on')) {
+      ov.classList.add('on');
+      _panelScrollY = window.scrollY;
+      document.body.style.top = `-${_panelScrollY}px`;
+      document.body.classList.add('panel-open');
+    }
+    renderToolDock();
+  }
+
+  // While tools are open but the viewer is hidden, their tabs dock at the
+  // bottom of the page - visible from any tab or Show Mode, one tap back in.
+  function renderToolDock() {
+    const dock = document.getElementById('tool-dock');
+    if (!dock) return;
+    const keys = Object.keys(_panels);
+    const on = keys.length > 0 &&
+      !document.getElementById('emu-overlay').classList.contains('on');
+    dock.classList.toggle('on', on);
+    dock.innerHTML = '';
+    if (!on) return;
+    for (const k of keys) {
+      const t = document.createElement('div');
+      t.className = 'emu-tab';
+      t.onclick = () => showViewer(k);
+      t.append(k);
+      const x = document.createElement('span');
+      x.className = 'etx'; x.textContent = '\u00d7';
+      x.title = 'Close this tool (its state is lost)';
+      x.onclick = (e) => { e.stopPropagation(); closePanelTab(k); };
+      t.appendChild(x);
+      dock.appendChild(t);
     }
   }
   const CLOSER_ALIAS = hidePanel;   // legacy name kept below
