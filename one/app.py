@@ -3755,9 +3755,34 @@ def _seed_companion_profile():
             subprocess.run(["sudo", "rm", "-f", str(db) + suf], timeout=10)
         subprocess.run(["sudo", "chown", "companion:companion", str(db)], timeout=10)
         subprocess.run(["sudo", "systemctl", "start", "companion"], timeout=30)
+        (_SEED_DIR / "companion" / ".seeded").touch()
         print("[companion] seeded factory profile")
     except Exception as e:
         print(f"[companion] profile seed failed: {e}")
+
+
+def _seed_companion_rearm():
+    """If the app restarted between the install finishing and Companion's
+    first start (power cycle, update), the seed never applied. On startup:
+    seed present, never applied, and no Companion db born yet -> arm the
+    seeder again. A unit with an existing db is a configured unit - mark
+    the seed consumed and never touch it."""
+    seed = _SEED_DIR / "companion" / "db.sqlite"
+    marker = _SEED_DIR / "companion" / ".seeded"
+    if not seed.is_file() or marker.exists():
+        return
+    if list(Path("/home/companion/.config/companion-nodejs").glob("v*/db.sqlite")):
+        try:
+            marker.touch()
+        except Exception:
+            pass
+        return
+    if companion_is_installed():
+        print("[companion] profile seed pending from an interrupted install - re-arming")
+        threading.Thread(target=_seed_companion_profile, daemon=True).start()
+
+
+threading.Thread(target=_seed_companion_rearm, daemon=True).start()
 
 
 @app.route("/ontime/install", methods=["POST"])
