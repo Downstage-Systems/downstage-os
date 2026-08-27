@@ -13,7 +13,7 @@ from pathlib import Path
 import requests
 from flask import Flask, jsonify, render_template, request, send_file, Response
 
-OS_VERSION = "1.6.3"   # Downstage OS release - bump on tagged releases
+OS_VERSION = "1.6.4"   # Downstage OS release - bump on tagged releases
 OS_PRODUCT = "Downstage One"
 
 app = Flask(__name__)
@@ -2073,10 +2073,62 @@ oled = OLEDDisplay()
 
 
 # ── Physical power button ─────────────────────────────────────────────────────
-# logind is set to HandlePowerKey=ignore so this thread is the sole consumer
-# of the front button: a 3 s hold shuts down, with a full-screen countdown on
-# the OLED; releasing early cancels. logind's HandlePowerKeyLongPress=poweroff
-# (5 s) remains as a failsafe if this process is ever dead.
+# The Argon ONE V5 front button (the OLED module is spring-mounted on it)
+# pulls GPIO 4 low while held - it never reaches the Pi's pwr_button input
+# device, so the line is watched directly: a tap flips OLED pages, a 3 s hold
+# counts down on the OLED and shuts down cleanly; releasing early cancels.
+# The pwr_button input device remains as a fallback for cases that wire the
+# button to the Pi's power pins. Argon's legacy daemon holds an exclusive
+# event claim on GPIO 4 (and its pulse decoder can't parse raw presses
+# anyway), so it is retired before the line is claimed.
+
+def _power_button_monitor():
+    subprocess.run(["sudo", "systemctl", "disable", "--now", "argononed"],
+                   capture_output=True, timeout=15)
+    # the Pi's own power button keeps working alongside the case button,
+    # with the same tap/hold behavior
+    threading.Thread(target=_power_button_monitor_inputdev, daemon=True).start()
+    try:
+        from gpiozero import Button
+        btn = Button(4)
+    except Exception as e:
+        print(f"[pwrbtn] GPIO4 unavailable ({e}) - pwr_button device only")
+        return
+    print("[pwrbtn] monitoring GPIO4 (Argon V5 front button)")
+    while True:
+        try:
+            btn.wait_for_press()
+            t0 = time.monotonic()
+            shown = None
+            while btn.is_pressed:
+                held = time.monotonic() - t0
+                if held >= 3.0:
+                    break
+                # grace window: a short press flips OLED pages; the countdown
+                # only starts once the hold is clearly deliberate
+                if held >= 0.45:
+                    n = 3 - int(held)
+                    if n != shown:
+                        oled.countdown(n)
+                        shown = n
+                time.sleep(0.05)
+            if btn.is_pressed:
+                print("[pwrbtn] 3 s hold - shutting down")
+                oled.confirm_off()
+                _audit("SHUTDOWN", "front button 3 s hold")
+                close_all_windows()
+                subprocess.Popen(["sudo", "poweroff"])
+                return
+            if shown is None:
+                print("[pwrbtn] short press - next OLED page")
+                oled.cycle_page()
+            else:
+                print("[pwrbtn] released early - shutdown cancelled")
+                oled.resume()
+        except Exception as e:
+            print(f"[pwrbtn] error: {e}")
+            time.sleep(2)
+
 
 def _find_power_button_device():
     try:
@@ -2089,7 +2141,7 @@ def _find_power_button_device():
     return None
 
 
-def _power_button_monitor():
+def _power_button_monitor_inputdev():
     import select
     import struct
     dev = _find_power_button_device()
