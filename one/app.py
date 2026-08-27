@@ -3775,6 +3775,17 @@ def _seed_companion_profile():
         for suf in ("-wal", "-shm"):
             subprocess.run(["sudo", "rm", "-f", str(db) + suf], timeout=10)
         subprocess.run(["sudo", "chown", "companion:companion", str(db)], timeout=10)
+        # the profile references connection modules Companion downloads on
+        # demand - ship them alongside so the seeded connections work
+        # offline, out of the box, with no "install missing versions" click
+        seed_mods = _SEED_DIR / "companion" / "modules"
+        if seed_mods.is_dir():
+            subprocess.run(["sudo", "cp", "-r", str(seed_mods) + "/.",
+                            "/home/companion/.config/companion-nodejs/modules/"],
+                           timeout=120)
+            subprocess.run(["sudo", "chown", "-R", "companion:companion",
+                            "/home/companion/.config/companion-nodejs/modules"],
+                           timeout=30)
         subprocess.run(["sudo", "systemctl", "start", "companion"], timeout=30)
         (_SEED_DIR / "companion" / ".seeded").touch()
         print("[companion] seeded factory profile")
