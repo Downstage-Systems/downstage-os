@@ -3930,7 +3930,14 @@ def _companion_install_worker():
                 continue
             tail.append(line)
             tail = tail[-10:]
-            _companion_install["detail"] = line[:110]
+            # the official installer ends with terminal-operator advice
+            # ("sudo systemctl start companion") - the wizard handles all of
+            # that itself, so translate rather than parrot
+            low = line.lower()
+            if "sudo" in low or "systemctl" in low or "companion-update" in low:
+                _companion_install["detail"] = "Finishing up - starting Companion…"
+            else:
+                _companion_install["detail"] = line[:110]
         rc = proc.wait(timeout=1800)
 
         class r:
