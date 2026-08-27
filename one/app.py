@@ -3739,6 +3739,20 @@ def _seed_ontime_profile():
         return False
 
 
+def _companion_dbs():
+    """Companion's versioned db files, found AS ROOT: modern adduser makes
+    /home/companion 0700, so a pi-side glob is blind - which silently
+    skipped the factory profile seed on fresh installs (found on 0002)."""
+    try:
+        out = subprocess.check_output(
+            ["sudo", "sh", "-c",
+             "ls -1 /home/companion/.config/companion-nodejs/v*/db.sqlite 2>/dev/null"],
+            text=True, timeout=10)
+        return [Path(l) for l in out.splitlines() if l.strip()]
+    except Exception:
+        return []
+
+
 def _seed_companion_profile():
     """Runs after a FIRST Companion install: wait for its initial start to
     create the versioned config, then swap in the factory db and restart."""
@@ -3747,7 +3761,7 @@ def _seed_companion_profile():
     if not seed.is_file():
         return
     for _ in range(45):
-        dbs = sorted(base.glob("v*/db.sqlite"))
+        dbs = sorted(_companion_dbs())
         if dbs:
             break
         time.sleep(2)
@@ -3778,7 +3792,7 @@ def _seed_companion_rearm():
     marker = _SEED_DIR / "companion" / ".seeded"
     if not seed.is_file() or marker.exists():
         return
-    if list(Path("/home/companion/.config/companion-nodejs").glob("v*/db.sqlite")):
+    if _companion_dbs():
         try:
             marker.touch()
         except Exception:
@@ -3938,6 +3952,7 @@ def _companion_install_worker():
                 _companion_install["detail"] = "Finishing up - starting Companion…"
             else:
                 _companion_install["detail"] = line[:110]
+        _companion_install["detail"] = "Starting Companion and loading the Downstage profile…"
         rc = proc.wait(timeout=1800)
 
         class r:
@@ -3945,8 +3960,7 @@ def _companion_install_worker():
             stdout = "\n".join(tail)
             stderr = ""
         if r.returncode == 0 and companion_is_installed(fresh=True):
-            fresh = not list(
-                Path("/home/companion/.config/companion-nodejs").glob("v*/db.sqlite"))
+            fresh = not _companion_dbs()
             subprocess.run(["sudo", "systemctl", "enable", "--now", "companion"],
                            timeout=30, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             if fresh:
