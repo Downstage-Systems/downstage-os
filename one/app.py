@@ -4078,6 +4078,23 @@ def satellite_is_running():
         return False
 
 
+def _satellite_group_guard():
+    """Units whose Satellite was installed before the cross-enroll fix have
+    satellite's udev rule owning every Elgato hidraw node with the companion
+    user locked out - decks vanish from Companion even with Satellite off
+    (found live on 0001 after its first show). Idempotent, so it simply
+    re-asserts the peace on every boot."""
+    try:
+        if not satellite_is_installed():
+            return
+        subprocess.run(["sudo", "usermod", "-aG", "satellite", "companion"],
+                       timeout=10, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(["sudo", "usermod", "-aG", "companion", "satellite"],
+                       timeout=10, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception as e:
+        print(f"[satellite] group guard: {e}")
+
+
 def _satellite_install_worker():
     """Customer-initiated install using Bitfocus's official script - same
     licensing posture as the Companion install."""
@@ -6329,6 +6346,7 @@ if __name__ == "__main__":
     threading.Thread(target=_cpu_sampler,     daemon=True).start()
     threading.Thread(target=_hotspot_fallback, daemon=True).start()
     threading.Thread(target=_power_button_monitor, daemon=True).start()
+    threading.Thread(target=_satellite_group_guard, daemon=True).start()
     def _on_sigterm(signum, frame):
         # A service stop during system shutdown is our last chance to own
         # the panel. Reboot leaves the panel alone; poweroff gets the
