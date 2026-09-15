@@ -753,6 +753,8 @@
       padding:5px 10px; cursor:pointer; }
     .fleet-btn:hover { border-color:var(--muted2); }
     .fleet-card { margin:0 0 6px; }
+    .cue-swatch { display:inline-block; border-radius:8px; border:1px solid var(--border2); box-shadow:inset 0 0 0 2px rgba(0,0,0,.35); }
+    .cue-swatch.lit { box-shadow:0 0 12px 2px color-mix(in srgb, currentColor 0%, transparent), inset 0 0 0 2px rgba(255,255,255,.12); }
     .if-mini { display:flex; background:var(--surface2); border:1px solid var(--border2);
       border-radius:7px; padding:2px; gap:2px; }
     .if-mini button { background:none; border:none; border-radius:5px; color:var(--muted);
@@ -2309,6 +2311,8 @@
 <div class="toast" id="toast"></div>
 
 <script>
+  window._myIp = '{{ local_ip }}';   // this unit's LAN address, for fleet cards
+
   // ── IP History ───────────────────────────────────────────────────────────────
   const IP_HISTORY = {{ ip_history | tojson }};
 
@@ -2760,6 +2764,7 @@
       box.innerHTML = d.units.map(u => {
         const nm = u.name || u.product;
         const bad = u.health_ok === false;
+        if (u.product === 'Cue') return renderCueCard(u, nm, bad);
         return '<div class="fu-card ' + (bad ? 'bad' : 'ok') + '">' +
         '<div class="fu-head">' +
           '<span class="idot' + (bad ? ' bad' : '') + '"></span>' +
@@ -2796,6 +2801,52 @@
           : Math.round(age / 86400) + ' days ago');
       } else fts.textContent = '';
     }
+  }
+  // Cue lights: the swatch IS the tally - the colour the light shows right
+  // now. Adopt points a light at this unit's Companion when it's aimed at
+  // something else (or nothing).
+  function renderCueCard(u, nm, bad) {
+    const c = u.cue || {};
+    const col = /^#[0-9a-f]{6}$/i.test(u.showing || '') ? u.showing : '#000000';
+    const lit = col.toLowerCase() !== '#000000';
+    const myIp = (window._myIp || '');
+    const aimedHere = c.host && (c.host === myIp || c.host === location.hostname ||
+                                 c.host === location.hostname + '.local');
+    const adopt = !aimedHere
+      ? '<button class="fleet-btn" onclick="cueAdopt(\'' + u.ip + '\')" title="Point this light at this unit\'s Companion">Adopt</button>' : '';
+    return '<div class="fu-card ' + (bad ? 'bad' : 'ok') + '">' +
+      '<div class="fu-head">' +
+        '<span class="idot' + (bad ? ' bad' : '') + '"></span>' +
+        '<span class="ithumb cue-swatch' + (lit ? ' lit' : '') + '" style="background:' + col + '" title="Showing ' + col + '"></span>' +
+        '<div class="fu-id">' +
+          '<div class="fu-name">' + nm + '<span class="fu-prod">Cue</span></div>' +
+          '<div class="fu-serial">' + u.serial + ' · fw ' + (u.version || '?') + (c.board ? ' · ' + c.board : '') + '</div>' +
+        '</div>' +
+        '<div class="fu-btns">' + adopt +
+          '<button class="fleet-btn" onclick="openPanel(\'http://' + u.ip + '/\', \'' + nm + '\')">Open</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="fu-meta">' +
+        '<div><div class="fu-lbl">Address</div>' +
+          '<div class="fu-ip" onclick="copyIp(\'' + u.ip + '\')" title="Click to copy">' + u.ip + '</div>' +
+          (c.rssi ? '<div class="fu-sub">' + (c.ssid ? c.ssid + ' · ' : '') + c.rssi + ' dBm</div>' : '') + '</div>' +
+        '<div><div class="fu-lbl">Companion</div>' +
+          '<div class="fu-val">' + (c.host ? (aimedHere ? 'This unit' : c.host) : '—') +
+            (c.companion_version ? '<div class="fu-sub">v' + c.companion_version + '</div>' : '') + '</div></div>' +
+        '<div><div class="fu-lbl">Status</div>' +
+          '<div class="fu-val ' + (bad ? 'bad' : 'ok') + '">' + (bad ? u.health_why : (lit ? 'Live · showing ' + col : 'Live · dark')) + '</div></div>' +
+      '</div></div>';
+  }
+  async function cueAdopt(ip) {
+    try {
+      const d = await (await fetch('/fleet/cue/adopt', { method: 'POST',
+        headers: {'Content-Type':'application/json'}, body: JSON.stringify({ ip }) })).json();
+      showToast(d.ok ? 'Light is switching to this unit\'s Companion - it restarts in a moment.'
+                     : 'Could not adopt: ' + (d.error || 'no answer'), d.ok ? 'success' : 'error');
+      if (d.ok) setTimeout(async () => {
+        try { renderFleet(await (await fetch('/discover/refresh', { method: 'POST' })).json()); } catch (e) {}
+      }, 8000);
+    } catch (e) { showToast('Adopt failed.', 'error'); }
   }
   async function fleetScan() {
     const btn = document.getElementById('fleet-scan-btn');

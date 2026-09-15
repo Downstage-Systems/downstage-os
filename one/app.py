@@ -3173,6 +3173,38 @@ def _avahi_advertise():
 threading.Thread(target=_avahi_advertise, daemon=True).start()
 
 
+def _probe_cue(ip, timeout=0.6):
+    """A Downstage Cue light answers /status on port 80 with its Satellite
+    DEVICEID (DSCUE-xxxxxx). Its Companion link state stands in for health:
+    a light that isn't live can't show a cue."""
+    try:
+        r = requests.get(f"http://{ip}/status", timeout=timeout)
+        d = r.json()
+        cid = str(d.get("id", ""))
+        if not cid.startswith("DSCUE-"):
+            return None
+        state = str(d.get("companion", ""))
+        if d.get("setup"):
+            why = "In setup mode"
+        elif state == "live":
+            why = ""
+        elif not d.get("host"):
+            why = "No Companion host set"
+        else:
+            why = "Finding Companion" if state else "Companion link down"
+        return {"ip": ip, "serial": cid, "product": "Cue",
+                "version": d.get("firmware", ""), "kind": "",
+                "name": d.get("label", ""), "showing": d.get("color", "") or "",
+                "health_ok": state == "live", "health_why": why,
+                "upd": False, "primary": True,
+                "cue": {"host": d.get("host", ""), "port": d.get("port", 16622),
+                        "board": d.get("board", ""), "rssi": d.get("rssi", 0),
+                        "ssid": d.get("ssid", ""), "state": state,
+                        "companion_version": d.get("companionVersion", "")}}
+    except Exception:
+        return None
+
+
 def _probe_unit(ip, timeout=0.6):
     try:
         r = requests.get(f"http://{ip}:8080/status", timeout=timeout)
@@ -3189,9 +3221,12 @@ def _probe_unit(ip, timeout=0.6):
                     "health_why": (d.get("health") or {}).get("why", ""),
                     "upd": bool(d.get("os_update_available")),
                     "primary": d.get("primary_ip", "") in ("", ip)}
+    except requests.exceptions.ConnectTimeout:
+        return None          # nobody home - don't spend a second probe on it
     except Exception:
         pass
-    return None
+    # a host that refused 8080 is alive: it may be a Cue light on port 80
+    return _probe_cue(ip, timeout)
 
 
 def _do_discover():
@@ -3346,6 +3381,28 @@ def _health_summary():
     except Exception:
         pass
     return {"ok": not probs, "why": " \u00b7 ".join(probs)}
+
+
+@app.route("/fleet/cue/adopt", methods=["POST"])
+def fleet_cue_adopt():
+    """Point a Cue light at THIS unit's Companion. Proxied server-side (the
+    browser can't POST cross-origin to the light). The light's /adopt only
+    touches its Companion target - WiFi and label stay as they were."""
+    ip = str((request.get_json() or {}).get("ip", ""))
+    try:
+        ipaddress.ip_address(ip)
+    except Exception:
+        return jsonify({"ok": False, "error": "bad ip"}), 400
+    me = get_local_ip()
+    if not me or me == "unknown":
+        return jsonify({"ok": False, "error": "this unit has no LAN address yet"})
+    try:
+        r = requests.post(f"http://{ip}/adopt", data={"host": me, "port": "16622"}, timeout=6)
+        if r.ok:
+            return jsonify({"ok": True, "host": me})
+        return jsonify({"ok": False, "error": f"light answered {r.status_code}"})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)[:120]})
 
 
 @app.route("/fleet/identify", methods=["POST"])
