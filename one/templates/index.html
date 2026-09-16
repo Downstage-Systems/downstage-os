@@ -755,6 +755,7 @@
     .fleet-card { margin:0 0 6px; }
     .fu-head .cue-swatch { display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:8px; border:1px solid var(--border2); box-shadow:inset 0 0 0 2px rgba(0,0,0,.35); }
     .cue-cam { font-family:var(--mono); font-size:15px; color:var(--muted2); }
+    .cue-rename { margin-left:6px; padding:1px 6px; font-size:11px; line-height:1.4; color:var(--muted); }
     .cuel-seg { display:inline-flex; gap:0; margin-right:6px; align-self:center; }
     .cuel-seg .fleet-btn { margin-left:0; border-radius:0; }
     .cuel-seg .fleet-btn:first-child { border-radius:6px 0 0 6px; }
@@ -2846,10 +2847,12 @@
         '<span class="ithumb cue-swatch' + (lit ? ' lit' : '') + '" style="background:' + col + '" title="Showing ' + col + '">' +
           (cam !== null && !lit ? '<span class="cue-cam">' + cam + '</span>' : '') + '</span>' +
         '<div class="fu-id">' +
-          '<div class="fu-name">' + nm + '<span class="fu-prod">Cue' + (cam !== null ? ' · CAM ' + cam : '') + '</span></div>' +
+          '<div class="fu-name">' + nm + '<span class="fu-prod">Cue' + (cam !== null ? ' · CAM ' + cam : '') + '</span>' +
+            '<button class="fleet-btn cue-rename" onclick="cueRename(\'' + u.ip + '\',\'' + (u.name || '').replace(/'/g, '') + '\')" title="Rename this light - the name shows here and on Companion\'s Surfaces page">&#9998;</button></div>' +
           '<div class="fu-serial">' + u.serial + ' · fw ' + (u.version || '?') + (c.board ? ' · ' + c.board : '') + '</div>' +
         '</div>' +
         '<div class="fu-btns">' + modeSeg +
+          '<button class="fleet-btn" onclick="cueIdentify(\'' + u.ip + '\')" title="Blink this light white for five seconds">ID</button>' +
           '<button class="fleet-btn" onclick="openPanel(\'http://' + u.ip + '/\', \'' + nm + '\')">Open</button>' +
         '</div>' +
       '</div>' +
@@ -2869,6 +2872,25 @@
   function fmtLeft(ms) {
     const s = Math.ceil(Math.abs(ms) / 1000);
     return (ms < 0 ? '-' : '') + Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  }
+  async function cueIdentify(ip) {
+    try {
+      const d = await (await fetch('/fleet/identify', { method: 'POST',
+        headers: {'Content-Type':'application/json'}, body: JSON.stringify({ ip, product: 'Cue' }) })).json();
+      showToast(d.ok ? 'That light is blinking white.' : 'Could not reach that light.', d.ok ? 'info' : 'error');
+    } catch (e) { showToast('Identify failed.', 'error'); }
+  }
+  async function cueRename(ip, current) {
+    const label = prompt('Name for this light (shows here and in Companion):', current || '');
+    if (label === null) return;
+    try {
+      const d = await (await fetch('/fleet/cue/label', { method: 'POST',
+        headers: {'Content-Type':'application/json'}, body: JSON.stringify({ ip, label: label.trim() }) })).json();
+      showToast(d.ok ? 'Renamed - the light restarts to register its new name.' : 'Rename failed: ' + (d.error || 'no answer'), d.ok ? 'success' : 'error');
+      if (d.ok) setTimeout(async () => {
+        try { renderFleet(await (await fetch('/discover/refresh', { method: 'POST' })).json()); } catch (e) {}
+      }, 9000);
+    } catch (e) { showToast('Rename failed.', 'error'); }
   }
   async function cueAlert(on) {
     try {

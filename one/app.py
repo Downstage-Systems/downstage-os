@@ -3604,6 +3604,23 @@ def fleet_cue_adopt():
         return jsonify({"ok": False, "error": str(e)[:120]})
 
 
+@app.route("/fleet/cue/label", methods=["POST"])
+def fleet_cue_label():
+    """Rename a Cue light from the fleet card. The light restarts to
+    re-register under the new name (it shows in Companion's surface name)."""
+    d = request.get_json() or {}
+    ip, label = str(d.get("ip", "")), str(d.get("label", ""))[:24]
+    try:
+        ipaddress.ip_address(ip)
+    except Exception:
+        return jsonify({"ok": False, "error": "bad ip"}), 400
+    try:
+        r = requests.post(f"http://{ip}/label", data={"label": label}, timeout=6)
+        return jsonify({"ok": r.ok, "label": label})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)[:120]})
+
+
 @app.route("/fleet/identify", methods=["POST"])
 def fleet_identify():
     """Flash Identify on ANOTHER unit - proxied server-side because the
@@ -3613,6 +3630,13 @@ def fleet_identify():
         ipaddress.ip_address(ip)
     except Exception:
         return jsonify({"ok": False, "error": "bad ip"}), 400
+    # a Cue light: white blink for five seconds, on its own port 80
+    if str((request.get_json() or {}).get("product", "")) == "Cue":
+        try:
+            r = requests.post(f"http://{ip}/identify", timeout=4)
+            return jsonify({"ok": r.ok})
+        except Exception as e:
+            return jsonify({"ok": False, "error": str(e)[:120]})
     for path in ("/output/identify", "/displays/identify"):
         try:
             r = requests.post(f"http://{ip}:8080{path}", timeout=4,
