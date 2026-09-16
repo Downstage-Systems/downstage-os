@@ -755,11 +755,11 @@
     .fleet-card { margin:0 0 6px; }
     .fu-head .cue-swatch { display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:8px; border:1px solid var(--border2); box-shadow:inset 0 0 0 2px rgba(0,0,0,.35); }
     .cue-cam { font-family:var(--mono); font-size:15px; color:var(--muted2); }
-    .cue-seg { display:inline-flex; gap:0; margin-right:6px; }
-    .cue-seg .fleet-btn { margin-left:0; border-radius:0; }
-    .cue-seg .fleet-btn:first-child { border-radius:6px 0 0 6px; }
-    .cue-seg .fleet-btn:last-child { border-radius:0 6px 6px 0; border-left:none; }
-    .cue-seg .fleet-btn.on { color:var(--accent); border-color:var(--accent); }
+    .cuel-seg { display:inline-flex; gap:0; margin-right:6px; align-self:center; }
+    .cuel-seg .fleet-btn { margin-left:0; border-radius:0; }
+    .cuel-seg .fleet-btn:first-child { border-radius:6px 0 0 6px; }
+    .cuel-seg .fleet-btn:last-child { border-radius:0 6px 6px 0; border-left:none; }
+    .cuel-seg .fleet-btn.on { color:var(--accent); border-color:var(--accent); }
     #cue-alert-btn.alerting { background:var(--red); color:#fff; }
     .cue-swatch.lit { box-shadow:0 0 12px 2px color-mix(in srgb, currentColor 0%, transparent), inset 0 0 0 2px rgba(255,255,255,.12); }
     .if-mini { display:flex; background:var(--surface2); border:1px solid var(--border2);
@@ -2836,7 +2836,7 @@
                       danger:'Danger', flash:'Final seconds', over:"Time's up", alert:'ALERT' }[H.phase] || 'Timer';
     const leftTxt = H.left_ms ? ' · ' + fmtLeft(H.left_ms) : '';
     const modeSeg =
-      '<span class="cue-seg">' +
+      '<span class="cuel-seg">' +
         '<button class="fleet-btn' + (timer ? ' on' : '') + '" onclick="cueAdopt(\'' + u.ip + '\',\'timer\')" title="Follow this unit\'s timer - no Companion needed">Timer</button>' +
         '<button class="fleet-btn' + (aimedHere && !timer ? ' on' : '') + '" onclick="cueAdopt(\'' + u.ip + '\',\'tally\')" title="Mirror a Companion button on this unit">Tally</button>' +
       '</span>';
