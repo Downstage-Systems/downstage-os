@@ -3143,6 +3143,201 @@ def os_update_file():
 
 # ── Local OnTime routes ───────────────────────────────────────────────────────
 
+# ── Cue host: Downstage Cue lights aimed at THIS unit ────────────────────────
+# A light is a Satellite-protocol client that paints whatever colour its host
+# sends. Companion is one host (tally); this is the other: a tiny server on
+# its own port that speaks the same handful of lines and colours the light
+# from OnTime's timer - green running, amber warning, red danger, flashing in
+# the final seconds, solid red at time's up, dim while paused, dark when
+# stopped (the light shows its camera digit or idle dot). No Companion in the
+# loop; a light that never meets a One still works with Companion as before.
+# PATTERN= on KEY-STATE is a Downstage extension the firmware understands
+# (0.3.0+) and Companion never sends.
+
+CUE_HOST_PORT = 16640
+CUE_GREEN, CUE_AMBER, CUE_RED, CUE_OVER, CUE_OFF = "#2fd97b", "#f5a524", "#e5484d", "#ff2a30", "#000000"
+_cue_lock = threading.Lock()
+_cue_clients = {}          # socket -> {"id": DEVICEID, "ip": str, "sent": last line}
+_cue_alert = {"on": False}
+_cue_timer = {"at": 0.0, "val": None}
+_cue_view = {"phase": "stopped", "left_ms": 0, "color": CUE_OFF}
+
+
+def _cue_dim(hexcol, k):
+    r, g, b = (int(hexcol[i:i + 2], 16) for i in (1, 3, 5))
+    return "#%02x%02x%02x" % (int(r * k), int(g * k), int(b * k))
+
+
+def _cue_poll_ontime():
+    """OnTime's timer, fresh enough for a 2 Hz flash. Sub-second timeout so
+    a wedged OnTime can't stall the host."""
+    now = time.time()
+    if now - _cue_timer["at"] < 0.2:
+        return _cue_timer["val"]
+    val = None
+    try:
+        r = requests.get("http://127.0.0.1:4001/api/poll", timeout=0.6)
+        t = r.json()["payload"]["timer"]
+        val = {"playback": t.get("playback"), "phase": t.get("phase"), "current": t.get("current")}
+    except Exception:
+        pass
+    _cue_timer.update(at=now, val=val)
+    return val
+
+
+def _cue_color(now):
+    """(colour, pattern) for every timer light right now."""
+    if _cue_alert["on"]:
+        _cue_view.update(phase="alert")
+        return CUE_RED, "alert"
+    t = _cue_poll_ontime()
+    if not t or t.get("playback") in (None, "armed", "stop"):
+        _cue_view.update(phase="stopped", left_ms=0, color=CUE_OFF)
+        return CUE_OFF, ""
+    phase, left = t.get("phase") or "default", t.get("current") or 0
+    base = {"warning": CUE_AMBER, "danger": CUE_RED, "overtime": CUE_OVER}.get(phase, CUE_GREEN)
+    if t.get("playback") == "pause":
+        _cue_view.update(phase="paused", left_ms=left, color=base)
+        return _cue_dim(base, 0.35), ""
+    if phase == "overtime" or left <= 0:
+        _cue_view.update(phase="over", left_ms=left, color=CUE_OVER)
+        return CUE_OVER, ""
+    if phase == "danger" and left <= 5000:
+        _cue_view.update(phase="flash", left_ms=left, color=CUE_RED)
+        return (CUE_RED if int(now * 4) % 2 else _cue_dim(CUE_RED, 0.08)), ""
+    _cue_view.update(phase={"warning": "warning", "danger": "danger"}.get(phase, "running"),
+                     left_ms=left, color=base)
+    return base, ""
+
+
+def _cue_host_state():
+    with _cue_lock:
+        lights = [{"id": c["id"], "ip": c["ip"]} for c in _cue_clients.values() if c.get("id")]
+    return {"port": CUE_HOST_PORT, "alert": _cue_alert["on"], "lights": lights, **_cue_view}
+
+
+def _cue_send(sock, line):
+    try:
+        sock.sendall((line + "\n").encode())
+        return True
+    except Exception:
+        return False
+
+
+def _cue_serve(sock, addr):
+    """One light. Speaks the Satellite subset the firmware uses."""
+    ip = addr[0]
+    with _cue_lock:
+        _cue_clients[sock] = {"id": "", "ip": ip, "sent": ""}
+    _cue_send(sock, f"BEGIN CompanionVersion=DownstageOne/{OS_VERSION} ApiVersion=1.7.0")
+    buf = b""
+    try:
+        sock.settimeout(15)
+        while True:
+            data = sock.recv(1024)
+            if not data:
+                break
+            buf += data
+            while b"\n" in buf:
+                raw, buf = buf.split(b"\n", 1)
+                line = raw.decode("utf-8", "replace").strip()
+                if not line:
+                    continue
+                cmd = line.split(" ", 1)[0]
+                if cmd == "PING":
+                    _cue_send(sock, "PONG" + line[4:])
+                elif cmd == "ADD-DEVICE":
+                    m = re.search(r"DEVICEID=(\S+)", line)
+                    dev = m.group(1) if m else ip
+                    with _cue_lock:
+                        _cue_clients[sock]["id"] = dev
+                    _cue_send(sock, f"ADD-DEVICE OK DEVICEID={dev}")
+                    _cue_send(sock, f"BRIGHTNESS DEVICEID={dev} VALUE=100")
+                    print(f"[cue] {dev} joined from {ip}")
+                elif cmd == "KEY-PRESS":
+                    if "PRESSED=true" in line or "PRESSED=1" in line:
+                        print(f"[cue] press from {ip}")
+                elif cmd == "REMOVE-DEVICE":
+                    break
+    except Exception:
+        pass
+    with _cue_lock:
+        c = _cue_clients.pop(sock, None)
+    if c and c.get("id"):
+        print(f"[cue] {c['id']} left")
+    try:
+        sock.close()
+    except Exception:
+        pass
+
+
+def _cue_broadcast_loop():
+    """Push the colour to every light when it changes, and at least every
+    3 s so the firmware's 7 s silence rule never fires."""
+    last_all = 0.0
+    while True:
+        try:
+            now = time.time()
+            color, pattern = _cue_color(now)
+            force = now - last_all > 3
+            with _cue_lock:
+                items = list(_cue_clients.items())
+            for sock, c in items:
+                if not c.get("id"):
+                    continue
+                line = f"KEY-STATE DEVICEID={c['id']} KEY=0 TYPE=BUTTON COLOR={color}"
+                if pattern:
+                    line += f" PATTERN={pattern}"
+                line += " PRESSED=0"
+                if force or line != c.get("sent"):
+                    if _cue_send(sock, line):
+                        c["sent"] = line
+            if force:
+                last_all = now
+        except Exception as e:
+            print(f"[cue] broadcast: {e}")
+        time.sleep(0.1)
+
+
+def _cue_host():
+    try:
+        srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        srv.bind(("0.0.0.0", CUE_HOST_PORT))
+        srv.listen(8)
+    except Exception as e:
+        print(f"[cue] host not started: {e}")
+        return
+    print(f"[cue] host listening on {CUE_HOST_PORT}")
+    threading.Thread(target=_cue_broadcast_loop, daemon=True).start()
+    while True:
+        try:
+            sock, addr = srv.accept()
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            threading.Thread(target=_cue_serve, args=(sock, addr), daemon=True).start()
+        except Exception as e:
+            print(f"[cue] accept: {e}")
+            time.sleep(1)
+
+
+threading.Thread(target=_cue_host, daemon=True).start()
+
+
+@app.route("/fleet/cue/state")
+def fleet_cue_state():
+    return jsonify({"ok": True, **_cue_host_state()})
+
+
+@app.route("/fleet/cue/alert", methods=["POST"])
+def fleet_cue_alert():
+    """Alert every timer light (red pulse until cleared) - the stage
+    manager's 'look at me'."""
+    on = bool((request.get_json() or {}).get("on", True))
+    _cue_alert["on"] = on
+    _audit("CUE_ALERT", "on" if on else "off")
+    return jsonify({"ok": True, "alert": on})
+
+
 # ── fleet discovery: find other Downstage units on the LAN ───────────────────
 def _avahi_advertise():
     """Publish _downstage._tcp via an avahi service file (the daemon
@@ -3200,6 +3395,7 @@ def _probe_cue(ip, timeout=0.6):
                 "cue": {"host": d.get("host", ""), "port": d.get("port", 16622),
                         "board": d.get("board", ""), "rssi": d.get("rssi", 0),
                         "ssid": d.get("ssid", ""), "state": state,
+                        "camera": d.get("camera", -1),
                         "companion_version": d.get("companionVersion", "")}}
     except Exception:
         return None
@@ -3266,7 +3462,7 @@ def _do_discover():
 def discover_units():
     """Sweep this unit's /24s for other Downstage units (identified by their
     /status signature - works across firmware generations)."""
-    return jsonify({"ok": True, **_do_discover()})
+    return jsonify({"ok": True, "cue_host": _cue_host_state(), **_do_discover()})
 
 
 @app.route("/discover/refresh", methods=["POST"])
@@ -3293,7 +3489,7 @@ def discover_refresh():
         _FLEET_CACHE.write_text(json.dumps(cache))
     except Exception:
         pass
-    return jsonify({"ok": True, **cache})
+    return jsonify({"ok": True, "cue_host": _cue_host_state(), **cache})
 
 
 def _fleet_auto():
@@ -3328,9 +3524,9 @@ _FLEET_CACHE = BASE_DIR / ".fleet-cache"
 @app.route("/discover/last")
 def discover_last():
     try:
-        return jsonify({"ok": True, **json.loads(_FLEET_CACHE.read_text())})
+        return jsonify({"ok": True, "cue_host": _cue_host_state(), **json.loads(_FLEET_CACHE.read_text())})
     except Exception:
-        return jsonify({"ok": True, "units": [], "ts": None})
+        return jsonify({"ok": True, "units": [], "ts": None, "cue_host": _cue_host_state()})
 
 
 _FLEET_SRC_LABELS = {
@@ -3396,10 +3592,13 @@ def fleet_cue_adopt():
     me = get_local_ip()
     if not me or me == "unknown":
         return jsonify({"ok": False, "error": "this unit has no LAN address yet"})
+    # tally = this unit's Companion; timer = this unit's own Cue host
+    mode = str((request.get_json() or {}).get("mode", "tally"))
+    port = CUE_HOST_PORT if mode == "timer" else 16622
     try:
-        r = requests.post(f"http://{ip}/adopt", data={"host": me, "port": "16622"}, timeout=6)
+        r = requests.post(f"http://{ip}/adopt", data={"host": me, "port": str(port)}, timeout=6)
         if r.ok:
-            return jsonify({"ok": True, "host": me})
+            return jsonify({"ok": True, "host": me, "port": port, "mode": mode})
         return jsonify({"ok": False, "error": f"light answered {r.status_code}"})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)[:120]})
