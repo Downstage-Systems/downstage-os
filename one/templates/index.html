@@ -621,6 +621,22 @@
     .btn-ghost:hover:not(:disabled) { background: var(--border2); color: var(--text); }
 
     /* ── Toast ── */
+    /* A Cue light seen over Bluetooth: not on the network yet, so it cannot
+       appear as an ordinary fleet card. Deliberately a banner and not a
+       modal - a light being plugged in must never interrupt a show. */
+    .ble-banner { display:none; margin:0 0 12px; padding:11px 13px; border-radius:9px;
+      background:var(--green-bg); border:1px solid var(--green-bd); }
+    .ble-banner.on { display:block; }
+    .ble-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .ble-row + .ble-row { margin-top:9px; padding-top:9px; border-top:1px solid var(--green-bd); }
+    .ble-ic { width:9px; height:9px; border-radius:50%; background:var(--green); flex-shrink:0;
+      animation: blepulse 1.8s ease-in-out infinite; }
+    @keyframes blepulse { 0%,100% { opacity:1 } 50% { opacity:0.35 } }
+    .ble-txt { flex:1; min-width:180px; font-size:13px; color:var(--text); }
+    .ble-txt b { color:var(--green); }
+    .ble-sub { display:block; font-size:11.5px; color:var(--muted); margin-top:2px; }
+    .ble-btns { display:flex; gap:6px; }
+
     .toast {
       position: fixed; left: 50%; bottom: 18px;
       transform: translateX(-50%) translateY(90px);
@@ -1964,6 +1980,7 @@
             <button class="btn-sm" id="fleet-scan-btn" onclick="fleetScan()">Scan for Units</button>
           </div>
         </div>
+        <div class="ble-banner" id="ble-banner"></div>
         <div id="fleet-panel" class="iface-panel" style="margin-bottom:0">
           <div class="iface-none">Press Scan to look for other Downstage units.</div>
         </div>
@@ -2923,6 +2940,86 @@
   (async () => {   // last scan is remembered on the unit - show it on load
     try { renderFleet(await (await fetch('/discover/last')).json()); } catch (e) {}
   })();
+  // ---- Cue lights over Bluetooth -------------------------------------
+  // A light that is not on a network yet cannot be found by an IP sweep, so
+  // it announces itself over BLE instead. Scanning only runs while this tab
+  // is open: the Pi shares one radio between WiFi and Bluetooth, and a light
+  // being unboxed is not worth slowing the show network for.
+  window._bleDismissed = window._bleDismissed || {};
+
+  function bleEsc(v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, c =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  function renderBleBanner(d) {
+    const box = document.getElementById('ble-banner');
+    if (!box) return;
+    const offer = d.offer || {};
+    const news = (d.units || []).filter(u => !u.adopted && !window._bleDismissed[u.address]);
+    if (!news.length) { box.className = 'ble-banner'; box.innerHTML = ''; return; }
+    box.className = 'ble-banner on';
+    box.innerHTML = news.map(u => {
+      const where = offer.ssid
+        ? 'Join it to <b>' + bleEsc(offer.ssid) + '</b> and point it at this unit'
+        : 'This unit is not on WiFi and its hotspot is off, so there is no network to hand over';
+      return '<div class="ble-row">' +
+        '<span class="ble-ic"></span>' +
+        '<span class="ble-txt">New Cue light nearby: <b>' + bleEsc(u.id) + '</b>' +
+          '<span class="ble-sub">' + where + '.</span></span>' +
+        '<span class="ble-btns">' +
+          '<button class="fleet-btn" onclick="bleIdentify(\'' + u.address + '\')" ' +
+            'title="Blink this light white">ID</button>' +
+          (offer.ssid ? '<button class="btn-sm" onclick="bleAdopt(\'' + u.address + '\')">Set up</button>' : '') +
+          '<button class="fleet-btn" onclick="bleDismiss(\'' + u.address + '\')">Dismiss</button>' +
+        '</span></div>';
+    }).join('');
+  }
+
+  function bleDismiss(addr) {
+    window._bleDismissed[addr] = true;
+    renderBleBanner(window._bleLast || {});
+  }
+
+  async function bleIdentify(addr) {
+    try {
+      const r = await (await fetch('/fleet/cue/ble-identify', { method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: addr }) })).json();
+      showToast(r.ok ? 'That light is blinking.' : (r.error || 'Could not reach it.'),
+                r.ok ? 'info' : 'error');
+    } catch (e) { showToast('Could not reach it.', 'error'); }
+  }
+
+  async function bleAdopt(addr) {
+    showToast('Setting up the light\u2026', 'info');
+    try {
+      const r = await (await fetch('/fleet/cue/ble-adopt', { method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: addr, mode: 'tally' }) })).json();
+      if (r.ok) {
+        window._bleDismissed[addr] = true;
+        renderBleBanner(window._bleLast || {});
+        showToast('Sent. It will join ' + r.ssid + ' and appear below in a moment.', 'success');
+        setTimeout(fleetScan, 12000);
+      } else {
+        showToast(r.error || 'The light did not take it.', 'error');
+      }
+    } catch (e) { showToast('The light did not take it.', 'error'); }
+  }
+
+  setInterval(async () => {
+    const pane = document.getElementById('tpane-network');
+    if (!pane || pane.offsetParent === null) return;
+    try {
+      const d = await (await fetch('/fleet/cue/ble-scan', { method: 'POST',
+        headers: { 'Content-Type': 'application/json' }, body: '{}' })).json();
+      if (!d.available) return;          // no bluetooth on this unit: stay quiet
+      window._bleLast = d;
+      renderBleBanner(d);
+    } catch (e) {}
+  }, 30000);
+
   // while the Network tab is open, freshen the CACHED units (targeted probes,
   // never a sweep) so health / showing / versions stay live
   setInterval(async () => {

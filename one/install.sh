@@ -21,12 +21,20 @@ sudo apt-get install -y \
     chromium \
     ffmpeg \
     unclutter \
-    xdotool
+    xdotool \
+    bluez
 
 # luma.oled (OLED driver for Argon ONE V5 display)
 echo "[2/6] Installing luma.oled..."
 pip3 install --break-system-packages luma.oled 2>/dev/null \
     || pip3 install luma.oled
+
+# bleak (BLE onboarding for Cue lights). Optional: app.py runs without it,
+# it just reports no lights nearby.
+pip3 install --break-system-packages bleak 2>/dev/null \
+    || pip3 install bleak \
+    || echo "  bleak not installed - BLE onboarding will be unavailable"
+sudo systemctl enable --now bluetooth 2>/dev/null || true
 
 # Passwordless sudo for kiosk user (required for timezone, reboot, companion)
 echo "[3/6] Configuring passwordless sudo and USB permissions..."

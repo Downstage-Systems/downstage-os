@@ -13,6 +13,8 @@ from pathlib import Path
 import requests
 from flask import Flask, jsonify, render_template, request, send_file, Response
 
+import cue_ble   # BLE onboarding for Cue lights; degrades to a no-op without bluetooth
+
 OS_VERSION = "1.6.4"   # Downstage OS release - bump on tagged releases
 OS_PRODUCT = "Downstage One"
 
@@ -3619,6 +3621,86 @@ def fleet_cue_label():
         return jsonify({"ok": r.ok, "label": label})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)[:120]})
+
+
+def _ble_offer():
+    """Which network a BLE-adopted light should be put on, and how it reaches
+    Companion once it is there. The hotspot wins when it is up: that is the
+    case where the One IS the network and there is nothing else to join."""
+    config = load_config()
+    me = get_local_ip()
+    if hotspot_is_active():
+        return {
+            "ssid": config.get("hotspot_ssid", ""),
+            "pass": config.get("hotspot_pass", ""),
+            "source": "hotspot",
+            "host": me,
+        }
+    info = get_network_info()
+    ssid = info.get("ssid") or ""
+    if not ssid:
+        return {"ssid": "", "pass": "", "source": "none", "host": me}
+    psk = ""
+    try:
+        r = subprocess.run(
+            ["sudo", "nmcli", "-s", "-g", "802-11-wireless-security.psk",
+             "connection", "show", ssid],
+            capture_output=True, text=True, timeout=6)
+        if r.returncode == 0:
+            psk = r.stdout.strip()
+    except Exception as e:
+        print(f"[ble] psk lookup failed: {e}")
+    return {"ssid": ssid, "pass": psk, "source": "wifi", "host": me}
+
+
+@app.route("/fleet/cue/ble-scan", methods=["POST"])
+def fleet_cue_ble_scan():
+    """Cue lights advertising over BLE - ones that are not on a network yet,
+    or have lost theirs. Cheap: the advertisement alone says whether a light
+    is already spoken for, so nothing is connected to just to list it."""
+    force = bool((request.get_json() or {}).get("force"))
+    units, err = cue_ble.scan(force=force)
+    return jsonify({"ok": not err, "error": err, "units": units,
+                    "offer": _ble_offer(), "available": cue_ble.BLE_AVAILABLE})
+
+
+@app.route("/fleet/cue/ble-adopt", methods=["POST"])
+def fleet_cue_ble_adopt():
+    """Hand a light the WiFi credentials and the Companion address over BLE.
+    The light saves them and restarts onto the network - after which it is an
+    ordinary fleet card and BLE goes quiet."""
+    d = request.get_json() or {}
+    address = str(d.get("address", ""))
+    if not address:
+        return jsonify({"ok": False, "error": "no device"}), 400
+    offer = _ble_offer()
+    ssid = str(d.get("ssid") or offer["ssid"])
+    password = d.get("pass")
+    password = offer["pass"] if password is None else str(password)
+    if not ssid:
+        return jsonify({"ok": False, "error":
+                        "this unit is not on WiFi and its hotspot is off, so there "
+                        "is no network to hand over"})
+    mode = str(d.get("mode", "tally"))
+    port = CUE_HOST_PORT if mode == "timer" else 16622
+    host = offer["host"]
+    if not host or host == "unknown":
+        return jsonify({"ok": False, "error": "this unit has no address yet"})
+    ok, err, info = cue_ble.adopt(address, ssid, password, host, port,
+                                  label=str(d.get("label", ""))[:24],
+                                  camera=d.get("camera"))
+    return jsonify({"ok": ok, "error": err, "ssid": ssid, "host": host,
+                    "port": port, "mode": mode, "info": info})
+
+
+@app.route("/fleet/cue/ble-identify", methods=["POST"])
+def fleet_cue_ble_identify():
+    """Blink a light white before adopting it - which one is this?"""
+    address = str((request.get_json() or {}).get("address", ""))
+    if not address:
+        return jsonify({"ok": False, "error": "no device"}), 400
+    ok, err = cue_ble.command(address, "identify")
+    return jsonify({"ok": ok, "error": err})
 
 
 @app.route("/fleet/identify", methods=["POST"])
