@@ -636,6 +636,15 @@
     .ble-txt b { color:var(--green); }
     .ble-sub { display:block; font-size:11.5px; color:var(--muted); margin-top:2px; }
     .ble-btns { display:flex; gap:6px; }
+    /* The same news on any other page: a quiet strip at the bottom, never a
+       modal, and it stays out of Show Mode's way by sitting above the toast. */
+    .ble-notice { display:none; position:fixed; left:50%; transform:translateX(-50%);
+      bottom:16px; z-index:60; align-items:center; gap:10px; padding:9px 12px;
+      border-radius:10px; background:var(--green-bg); border:1px solid var(--green-bd);
+      box-shadow:0 8px 24px rgba(0,0,0,0.45); font-size:13px; color:var(--text);
+      max-width:min(560px, calc(100vw - 24px)); }
+    .ble-notice.on { display:flex; }
+    .ble-notice b { color:var(--green); }
 
     .toast {
       position: fixed; left: 50%; bottom: 18px;
@@ -2335,6 +2344,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
+<div class="ble-notice" id="ble-notice"></div>
 
 <script>
   window._myIp = '{{ local_ip }}';   // this unit's LAN address, for fleet cards
@@ -2976,9 +2986,38 @@
     }).join('');
   }
 
+  function renderBleNotice(d) {
+    const el = document.getElementById('ble-notice');
+    if (!el) return;
+    const news = (d.units || []).filter(u => !u.adopted && !window._bleDismissed[u.address]);
+    const pane = document.getElementById('tpane-network');
+    const looking = pane && pane.offsetParent !== null;   // already on the Network tab
+    if (!news.length || looking) { el.classList.remove('on'); return; }
+    const who = news.length === 1 ? bleEsc(news[0].id) : news.length + ' Cue lights';
+    el.innerHTML = '<span class="ble-ic"></span><span>' +
+      (news.length === 1 ? 'Cue light <b>' + who + '</b> needs a network' : who + ' need a network') +
+      '</span><button class="btn-sm" onclick="bleGoSetUp()">Set up</button>' +
+      '<button class="fleet-btn" onclick="bleDismissAll()">Dismiss</button>';
+    el.classList.add('on');
+  }
+
+  function bleGoSetUp() {
+    setViewMode('full');
+    showSetupTab('network');
+    document.getElementById('ble-notice')?.classList.remove('on');
+    document.getElementById('ble-banner')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function bleDismissAll() {
+    for (const u of (window._bleLast || {}).units || []) window._bleDismissed[u.address] = true;
+    renderBleNotice(window._bleLast || {});
+    renderBleBanner(window._bleLast || {});
+  }
+
   function bleDismiss(addr) {
     window._bleDismissed[addr] = true;
     renderBleBanner(window._bleLast || {});
+    renderBleNotice(window._bleLast || {});
   }
 
   async function bleIdentify(addr) {
@@ -3008,17 +3047,20 @@
     } catch (e) { showToast('The light did not take it.', 'error'); }
   }
 
-  setInterval(async () => {
-    const pane = document.getElementById('tpane-network');
-    if (!pane || pane.offsetParent === null) return;
+  // The unit watches for lights over Bluetooth on its own, so this poll is
+  // cheap and runs on every page - a light that needs a network says so
+  // wherever you happen to be, not only on the Network tab.
+  async function bleTick() {
     try {
-      const d = await (await fetch('/fleet/cue/ble-scan', { method: 'POST',
-        headers: { 'Content-Type': 'application/json' }, body: '{}' })).json();
+      const d = await (await fetch('/fleet/cue/ble-latest')).json();
       if (!d.available) return;          // no bluetooth on this unit: stay quiet
       window._bleLast = d;
       renderBleBanner(d);
+      renderBleNotice(d);
     } catch (e) {}
-  }, 30000);
+  }
+  setInterval(bleTick, 30000);
+  bleTick();
 
   // while the Network tab is open, freshen the CACHED units (targeted probes,
   // never a sweep) so health / showing / versions stay live

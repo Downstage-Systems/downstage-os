@@ -3325,6 +3325,34 @@ def _cue_host():
 threading.Thread(target=_cue_host, daemon=True).start()
 
 
+@app.route("/cue/directory")
+def cue_directory():
+    """Where a Cue light should look for Companion. A light asks this unit
+    instead of carrying a hardcoded address, so a Companion that moves - a
+    laptop that joined a different network, a new DHCP lease - stops being
+    the operator's problem.
+
+    The answer is whichever Companion THIS unit is living with: the one it
+    is pointed at as a Satellite surface if that is set up and answering,
+    otherwise its own. A unit with neither says so, and the light keeps what
+    it had."""
+    config = load_config()
+    me = get_local_ip()
+    remote = config.get("satellite_ip", "")
+    if config.get("satellite_enabled") and remote and _satellite_companion_ok(remote):
+        host, source = remote, "satellite"
+    elif companion_is_running() and me and me != "unknown":
+        host, source = me, "local"
+    else:
+        return jsonify({"ok": False, "error": "no Companion here",
+                        "name": config.get("hostname", "") or socket.gethostname(),
+                        "serial": config.get("serial", "")})
+    return jsonify({"ok": True, "host": host, "port": 16622, "source": source,
+                    "timer_host": me, "timer_port": CUE_HOST_PORT,
+                    "name": config.get("hostname", "") or socket.gethostname(),
+                    "serial": config.get("serial", "")})
+
+
 @app.route("/fleet/cue/state")
 def fleet_cue_state():
     return jsonify({"ok": True, **_cue_host_state()})
@@ -3623,6 +3651,30 @@ def fleet_cue_label():
         return jsonify({"ok": False, "error": str(e)[:120]})
 
 
+def _last_used_wifi():
+    """The most recently used saved WiFi network, hotspot excluded."""
+    try:
+        r = subprocess.run(["nmcli", "-t", "-f", "NAME,TYPE,TIMESTAMP", "connection", "show"],
+                           capture_output=True, text=True, timeout=6)
+        best, best_at = "", -1
+        for line in r.stdout.splitlines():
+            parts = line.split(":")
+            if len(parts) < 3 or parts[1] != "802-11-wireless":
+                continue
+            if parts[0] == "downstage-hotspot":
+                continue
+            try:
+                at = int(parts[2])
+            except ValueError:
+                continue
+            if at > best_at:
+                best, best_at = parts[0], at
+        return best
+    except Exception as e:
+        print(f"[ble] saved wifi lookup: {e}")
+        return ""
+
+
 def _ble_offer():
     """Which network a BLE-adopted light should be put on, and how it reaches
     Companion once it is there. The hotspot wins when it is up: that is the
@@ -3638,6 +3690,13 @@ def _ble_offer():
         }
     info = get_network_info()
     ssid = info.get("ssid") or ""
+    source = "wifi"
+    if not ssid:
+        # A unit on ethernet has no WiFi of its own, but a show One usually
+        # knows the venue network from an earlier visit - hand over the most
+        # recently used saved one rather than leaving the light stranded.
+        ssid = _last_used_wifi()
+        source = "saved"
     if not ssid:
         return {"ssid": "", "pass": "", "source": "none", "host": me}
     psk = ""
@@ -3650,7 +3709,34 @@ def _ble_offer():
             psk = r.stdout.strip()
     except Exception as e:
         print(f"[ble] psk lookup failed: {e}")
-    return {"ssid": ssid, "pass": psk, "source": "wifi", "host": me}
+    return {"ssid": ssid, "pass": psk, "source": source, "host": me}
+
+
+def _ble_watch():
+    """A Cue only advertises over BLE while it is off its network - out of the
+    box, or after losing it. Watching for that in the background (rather than
+    only while somebody has the Network tab open) is what lets any page say
+    "there is a light here that needs a network"."""
+    time.sleep(40)                       # let boot settle first
+    while True:
+        try:
+            if cue_ble.BLE_AVAILABLE:
+                cue_ble.scan(force=True)
+        except Exception as e:
+            print(f"[cue] ble watch: {e}")
+        time.sleep(45)
+
+
+threading.Thread(target=_ble_watch, daemon=True).start()
+
+
+@app.route("/fleet/cue/ble-latest")
+def fleet_cue_ble_latest():
+    """The watcher's last look. Cheap enough for every page to poll - it never
+    starts a scan of its own."""
+    units, err = cue_ble.cached()
+    return jsonify({"ok": not err, "error": err, "units": units,
+                    "offer": _ble_offer(), "available": cue_ble.BLE_AVAILABLE})
 
 
 @app.route("/fleet/cue/ble-scan", methods=["POST"])

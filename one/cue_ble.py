@@ -84,6 +84,12 @@ def scan(force=False):
         return _last["units"], _last["error"]
 
 
+def cached():
+    """What the last scan saw, without starting one. Returns (units, error)."""
+    with _lock:
+        return _last["units"], _last["error"]
+
+
 async def _write(address, uuid, payload, read_back=False):
     async with BleakClient(address, timeout=15.0) as client:
         await client.write_gatt_char(uuid, payload.encode(), response=True)
