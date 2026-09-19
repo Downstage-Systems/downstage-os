@@ -3651,28 +3651,48 @@ def fleet_cue_label():
         return jsonify({"ok": False, "error": str(e)[:120]})
 
 
-def _last_used_wifi():
-    """The most recently used saved WiFi network, hotspot excluded."""
+def _wifi_psk(ssid):
+    """The saved password for a network this unit knows, or empty."""
+    if not ssid:
+        return ""
+    try:
+        r = subprocess.run(
+            ["sudo", "nmcli", "-s", "-g", "802-11-wireless-security.psk",
+             "connection", "show", ssid],
+            capture_output=True, text=True, timeout=6)
+        if r.returncode == 0:
+            return r.stdout.strip()
+    except Exception as e:
+        print(f"[ble] psk lookup failed: {e}")
+    return ""
+
+
+def _saved_wifi():
+    """Saved WiFi networks, most recently used first, as (ssid, source)."""
+    out = []
     try:
         r = subprocess.run(["nmcli", "-t", "-f", "NAME,TYPE,TIMESTAMP", "connection", "show"],
                            capture_output=True, text=True, timeout=6)
-        best, best_at = "", -1
+        rows = []
         for line in r.stdout.splitlines():
             parts = line.split(":")
-            if len(parts) < 3 or parts[1] != "802-11-wireless":
-                continue
-            if parts[0] == "downstage-hotspot":
+            if len(parts) < 3 or parts[1] != "802-11-wireless" or parts[0] == "downstage-hotspot":
                 continue
             try:
-                at = int(parts[2])
+                rows.append((int(parts[2]), parts[0]))
             except ValueError:
-                continue
-            if at > best_at:
-                best, best_at = parts[0], at
-        return best
+                pass
+        rows.sort(reverse=True)
+        out = [(name, "saved") for _, name in rows]
     except Exception as e:
         print(f"[ble] saved wifi lookup: {e}")
-        return ""
+    return out
+
+
+def _last_used_wifi():
+    """The most recently used saved WiFi network, hotspot excluded."""
+    saved = _saved_wifi()
+    return saved[0][0] if saved else ""
 
 
 def _ble_offer():
@@ -3699,17 +3719,22 @@ def _ble_offer():
         source = "saved"
     if not ssid:
         return {"ssid": "", "pass": "", "source": "none", "host": me}
-    psk = ""
-    try:
-        r = subprocess.run(
-            ["sudo", "nmcli", "-s", "-g", "802-11-wireless-security.psk",
-             "connection", "show", ssid],
-            capture_output=True, text=True, timeout=6)
-        if r.returncode == 0:
-            psk = r.stdout.strip()
-    except Exception as e:
-        print(f"[ble] psk lookup failed: {e}")
-    return {"ssid": ssid, "pass": psk, "source": source, "host": me}
+    return {"ssid": ssid, "pass": _wifi_psk(ssid), "source": source, "host": me}
+
+
+def _ble_offer_public():
+    """The offer as the browser sees it: no password, plus every network this
+    unit could hand over so the operator can pick one. A wired unit at a new
+    venue often knows none of them - hence "Other network" in the picker."""
+    offer = _ble_offer()
+    names, seen = [], set()
+    for ssid, source in _saved_wifi() + ([(load_config().get("hotspot_ssid", ""), "hotspot")]
+                                         if load_config().get("hotspot_ssid") else []):
+        if ssid and ssid not in seen:
+            seen.add(ssid)
+            names.append({"ssid": ssid, "source": source})
+    return {"ssid": offer["ssid"], "source": offer["source"], "host": offer["host"],
+            "networks": names}
 
 
 def _ble_watch():
@@ -3736,7 +3761,7 @@ def fleet_cue_ble_latest():
     starts a scan of its own."""
     units, err = cue_ble.cached()
     return jsonify({"ok": not err, "error": err, "units": units,
-                    "offer": _ble_offer(), "available": cue_ble.BLE_AVAILABLE})
+                    "offer": _ble_offer_public(), "available": cue_ble.BLE_AVAILABLE})
 
 
 @app.route("/fleet/cue/ble-scan", methods=["POST"])
@@ -3747,7 +3772,7 @@ def fleet_cue_ble_scan():
     force = bool((request.get_json() or {}).get("force"))
     units, err = cue_ble.scan(force=force)
     return jsonify({"ok": not err, "error": err, "units": units,
-                    "offer": _ble_offer(), "available": cue_ble.BLE_AVAILABLE})
+                    "offer": _ble_offer_public(), "available": cue_ble.BLE_AVAILABLE})
 
 
 @app.route("/fleet/cue/ble-adopt", methods=["POST"])
@@ -3762,7 +3787,11 @@ def fleet_cue_ble_adopt():
     offer = _ble_offer()
     ssid = str(d.get("ssid") or offer["ssid"])
     password = d.get("pass")
-    password = offer["pass"] if password is None else str(password)
+    if password is None:
+        # a network the operator picked carries ITS password, not the one
+        # this unit happens to be on
+        password = offer["pass"] if ssid == offer["ssid"] else _wifi_psk(ssid)
+    password = str(password)
     if not ssid:
         return jsonify({"ok": False, "error":
                         "this unit is not on WiFi and its hotspot is off, so there "
