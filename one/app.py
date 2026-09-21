@@ -3380,6 +3380,7 @@ def cue_directory():
                     "timer_host": me, "timer_port": CUE_HOST_PORT,
                     "control": bool(config.get("cue_control")),
                     "clock": f"{lt.tm_hour:02d}:{lt.tm_min:02d}:{lt.tm_sec:02d}",
+                    "utc_offset_min": int((lt.tm_gmtoff or 0) // 60),
                     "name": config.get("hostname", "") or socket.gethostname(),
                     "serial": config.get("serial", "")})
 
