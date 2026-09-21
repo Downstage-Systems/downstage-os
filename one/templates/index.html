@@ -3023,7 +3023,7 @@
     // A Cue only advertises over BLE while it is OFF its network, so an
     // "adopted" one here is a light that has lost the network it knows -
     // just as worth surfacing as one out of the box, with different words.
-    const news = (d.units || []).filter(u => !window._bleDismissed[u.address]);
+    const news = (d.units || []).filter(u => !u.online && !window._bleDismissed[u.address]);   // an online light keeping Bluetooth up needs nothing
     if (!news.length) { box.className = 'ble-banner'; box.innerHTML = ''; return; }
     box.className = 'ble-banner on';
     box.innerHTML = news.map(u => {
@@ -3050,7 +3050,7 @@
   function renderBleNotice(d) {
     const el = document.getElementById('ble-notice');
     if (!el) return;
-    const news = (d.units || []).filter(u => !window._bleDismissed[u.address]);
+    const news = (d.units || []).filter(u => !u.online && !window._bleDismissed[u.address]);   // an online light keeping Bluetooth up needs nothing
     const pane = document.getElementById('tpane-network');
     const looking = pane && pane.offsetParent !== null;   // already on the Network tab
     if (!news.length || looking) { el.classList.remove('on'); return; }

@@ -38,7 +38,8 @@ def _decode_mfr(data):
     blob = (data or {}).get(0xFFFF)
     if not blob or len(blob) < 4 or blob[0:2] != b"DS":
         return {}
-    return {"adopted": bool(blob[2] & 0x01), "camera": blob[3]}
+    # bit 1: the light is ON its network right now and only staying visible
+    return {"adopted": bool(blob[2] & 0x01), "online": bool(blob[2] & 0x02), "camera": blob[3]}
 
 
 async def _scan(seconds=SCAN_SECONDS):
@@ -56,6 +57,7 @@ async def _scan(seconds=SCAN_SECONDS):
             "product": "Cue",
             "via": "ble",
             "adopted": None,
+            "online": False,
             "camera": None,
         }
         unit.update(_decode_mfr(adv.manufacturer_data))
