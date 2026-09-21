@@ -3179,8 +3179,11 @@ def _cue_poll_ontime():
     val = None
     try:
         r = requests.get("http://127.0.0.1:4001/api/poll", timeout=0.6)
-        t = r.json()["payload"]["timer"]
-        val = {"playback": t.get("playback"), "phase": t.get("phase"), "current": t.get("current")}
+        payload = r.json()["payload"]
+        t = payload["timer"]
+        val = {"playback": t.get("playback"), "phase": t.get("phase"), "current": t.get("current"),
+               "duration": t.get("duration"),
+               "title": ((payload.get("eventNow") or {}).get("title") or "")}
     except Exception:
         pass
     _cue_timer.update(at=now, val=val)
@@ -3210,6 +3213,30 @@ def _cue_color(now):
     _cue_view.update(phase={"warning": "warning", "danger": "danger"}.get(phase, "running"),
                      left_ms=left, color=base)
     return base, ""
+
+
+def _cue_extras():
+    """The clock in words, for lights with a face that can show them (the
+    round Cue). Rides on the same KEY-STATE line as more of the Downstage
+    extension: a grid light reads the colour and ignores the rest."""
+    t = _cue_timer.get("val")
+    if _cue_alert["on"] or not t or t.get("playback") in (None, "armed", "stop"):
+        return ""
+    left = int(t.get("current") or 0)
+    dur = int(t.get("duration") or 0)
+    secs = abs(left) // 1000
+    if secs >= 3600:
+        text = f"{secs // 3600}:{secs % 3600 // 60:02d}:{secs % 60:02d}"
+    else:
+        text = f"{secs // 60}:{secs % 60:02d}"
+    if left < 0:
+        text = "-" + text
+    progress = max(0, min(100, round(100 * left / dur))) if dur > 0 and left > 0 else 0
+    title = "".join(c for c in (t.get("title") or "") if 32 <= ord(c) < 127 and c not in '"\\')[:27]
+    out = f" TIME={text} PROGRESS={progress}"
+    if title:
+        out += f' TITLE="{title}"'
+    return out
 
 
 def _cue_host_state():
@@ -3290,6 +3317,7 @@ def _cue_broadcast_loop():
                 line = f"KEY-STATE DEVICEID={c['id']} KEY=0 TYPE=BUTTON COLOR={color}"
                 if pattern:
                     line += f" PATTERN={pattern}"
+                line += _cue_extras()
                 line += " PRESSED=0"
                 if force or line != c.get("sent"):
                     if _cue_send(sock, line):
