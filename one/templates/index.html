@@ -1991,6 +1991,7 @@
           <div class="section-label" style="margin:0">Downstage Units on This Network</div>
           <div class="fleet-hdr-right">
             <span class="fleet-ts" id="fleet-ts"></span>
+            <button class="btn-sm" id="cue-ctl-btn" onclick="cueControlToggle()" title="Let Cue lights with a screen start, pause and step this unit's timer. Off unless you turn it on.">Lights control timer: off</button>
             <button class="btn-sm" id="cue-alert-btn" style="display:none; border-color:var(--red); color:var(--red)" title="Every light following this unit's timer pulses red until cleared">Alert timer lights</button>
             <button class="btn-sm" id="fleet-scan-btn" onclick="fleetScan()">Scan for Units</button>
           </div>
@@ -2967,6 +2968,26 @@
     return String(v == null ? '' : v).replace(/[&<>"']/g, c =>
       ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
+
+  // Cue lights with a face can drive the timer - only if somebody says so here
+  async function cueControlPaint() {
+    try {
+      const d = await (await fetch('/fleet/cue/control-allowed')).json();
+      const b = document.getElementById('cue-ctl-btn');
+      if (!b) return;
+      b.textContent = 'Lights control timer: ' + (d.on ? 'on' : 'off');
+      b.style.borderColor = d.on ? 'var(--green)' : '';
+      b.style.color = d.on ? 'var(--green)' : '';
+      b.dataset.on = d.on ? '1' : '';
+    } catch (e) {}
+  }
+  async function cueControlToggle() {
+    const b = document.getElementById('cue-ctl-btn');
+    await fetch('/fleet/cue/control-allowed', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ on: !b.dataset.on }) });
+    cueControlPaint();
+  }
+  cueControlPaint();
 
   function bleNetPicker(addr, offer) {
     // every network this unit could hand over, plus one the operator types

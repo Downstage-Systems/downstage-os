@@ -3375,10 +3375,53 @@ def cue_directory():
         return jsonify({"ok": False, "error": "no Companion here",
                         "name": config.get("hostname", "") or socket.gethostname(),
                         "serial": config.get("serial", "")})
+    lt = time.localtime()
     return jsonify({"ok": True, "host": host, "port": 16622, "source": source,
                     "timer_host": me, "timer_port": CUE_HOST_PORT,
+                    "control": bool(config.get("cue_control")),
+                    "clock": f"{lt.tm_hour:02d}:{lt.tm_min:02d}:{lt.tm_sec:02d}",
                     "name": config.get("hostname", "") or socket.gethostname(),
                     "serial": config.get("serial", "")})
+
+
+# What a Cue light may ask OnTime to do, and how OnTime spells it. Closed
+# list on purpose: a light can run the timer, never reach past it.
+CUE_CONTROL = {
+    "start": "start", "pause": "pause", "next": "start/next", "previous": "start/previous",
+    "plus1": "addtime/add/60000", "minus1": "addtime/remove/60000",
+}
+
+
+@app.route("/cue/control", methods=["POST"])
+def cue_control():
+    """A Cue light with a face driving this unit's timer. OFF unless the
+    operator turned it on here - a touchscreen on a camera that can stop the
+    show clock has to be something somebody chose, not something that ships."""
+    if not load_config().get("cue_control"):
+        return jsonify({"ok": False, "error": "not allowed"}), 403
+    action = (request.form.get("action") or (request.get_json(silent=True) or {}).get("action") or "").strip()
+    who = request.remote_addr
+    if action in ("alert", "clear"):
+        _cue_alert["on"] = action == "alert"
+        print(f"[cue] {who}: {action}")
+        return jsonify({"ok": True, "action": action})
+    path = CUE_CONTROL.get(action)
+    if not path:
+        return jsonify({"ok": False, "error": "unknown action"}), 400
+    try:
+        r = requests.get(f"http://127.0.0.1:4001/api/{path}", timeout=1.5)
+        print(f"[cue] {who}: {action} -> {r.status_code}")
+        return jsonify({"ok": r.ok, "action": action})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)[:80]}), 502
+
+
+@app.route("/fleet/cue/control-allowed", methods=["GET", "POST"])
+def fleet_cue_control_allowed():
+    if request.method == "POST":
+        on = bool((request.get_json(silent=True) or {}).get("on"))
+        save_config({"cue_control": on})
+    return jsonify({"ok": True, "on": bool(load_config().get("cue_control"))})
 
 
 @app.route("/fleet/cue/state")
