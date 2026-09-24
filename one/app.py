@@ -3555,6 +3555,8 @@ def _probe_cue(ip, timeout=0.6):
 def _cue_model(model):
     """"Downstage Cue 360" -> "Cue 360"; lights before 0.50 say nothing: "Cue"."""
     m = str(model or "").strip()
+    if m == "Downstage Cue OG":   # the Atom, renamed Cue Mini (2026-09-24); older light firmware says OG
+        return "Cue Mini"
     return m[len("Downstage "):] if m.startswith("Downstage ") else (m or "Cue")
 
 

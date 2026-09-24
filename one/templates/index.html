@@ -761,6 +761,8 @@
     .fu-head .ithumb { height:34px; width:auto; flex-shrink:0; }
     .fu-id { min-width:0; }
     .fu-name { font:700 13.5px var(--font-display); letter-spacing:0.04em; color:var(--text); }
+    /* the lineup icons (Design, Downstage Cue assets/icons): outline glyphs in currentColor */
+    .cue-icon { width:18px; height:18px; vertical-align:-4px; margin-right:6px; color:var(--amber); flex:none; }
     .fu-prod { font-size:9.5px; color:var(--muted2); letter-spacing:0.09em;
       margin-left:7px; text-transform:uppercase; }
     .fu-serial { font-family:var(--font-mono); font-size:10.5px; color:var(--muted2); margin-top:2px; }
@@ -1288,6 +1290,36 @@
   </style>
 </head>
 <body>
+<!-- Downstage Cue lineup icons (Downstage Cue repo, assets/icons/cue-icons.svg): 24 grid, 1.6 stroke, currentColor -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <symbol id="icon-cue-mini" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <title>Cue Mini</title>
+    <rect x="5.2" y="5.2" width="13.6" height="13.6" rx="3.2"/>
+    <g fill="currentColor" stroke="none">
+      <circle cx="8.8" cy="8.8" r="1.05"/><circle cx="12" cy="8.8" r="1.05"/><circle cx="15.2" cy="8.8" r="1.05"/>
+      <circle cx="8.8" cy="12" r="1.05"/><circle cx="12" cy="12" r="1.05"/><circle cx="15.2" cy="12" r="1.05"/>
+      <circle cx="8.8" cy="15.2" r="1.05"/><circle cx="12" cy="15.2" r="1.05"/><circle cx="15.2" cy="15.2" r="1.05"/>
+    </g>
+  </symbol>
+  <symbol id="icon-cue-round" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <title>Downstage Cue</title>
+    <circle cx="12" cy="12" r="8.8"/>
+    <circle cx="12" cy="12" r="5.6"/>
+    <circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/>
+  </symbol>
+  <symbol id="icon-cue-360" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <title>Cue 360</title>
+    <rect x="4.6" y="8.4" width="14.8" height="11.2" rx="2.6"/>
+    <rect x="8.8" y="4.4" width="6.4" height="4.6" rx="1.5"/>
+    <g fill="currentColor" stroke="none">
+      <circle cx="8.4" cy="12.4" r="0.95"/><circle cx="12" cy="12.4" r="0.95"/><circle cx="15.6" cy="12.4" r="0.95"/>
+      <circle cx="8.4" cy="15.9" r="0.95"/><circle cx="12" cy="15.9" r="0.95"/><circle cx="15.6" cy="15.9" r="0.95"/>
+    </g>
+  </symbol>
+</svg>
 <div id="ptr-spin"><svg viewBox="0 0 24 24"><path d="M12 4l-6 6h4v6h4v-6h4l-6-6z"/></svg></div>
 
 <div id="job-ribbon">
@@ -2881,6 +2913,8 @@
     const mirror = (L.show || 'mirror') !== 'own';
     const carried = (L.guests || []).length;
     const model = u.model || 'Cue';
+    // which of the three: the Mini (Atom), the 360 (8x8 tile), else the round Cue
+    const icon = /360/.test(model) ? 'icon-cue-360' : /Mini|OG/.test(model) ? 'icon-cue-mini' : 'icon-cue-round';
     const modeSeg = noIp ? '' :
       '<span class="cuel-seg">' +
         '<button class="fleet-btn' + (timer ? ' on' : '') + '" onclick="cueAdopt(\'' + u.ip + '\',\'timer\')" title="Follow this unit\'s timer - no Companion needed">Timer</button>' +
@@ -2892,7 +2926,7 @@
         '<span class="ithumb cue-swatch' + (lit ? ' lit' : '') + '" style="background:' + col + '" title="Showing ' + col + '">' +
           (cam !== null && !lit ? '<span class="cue-cam">' + cam + '</span>' : '') + '</span>' +
         '<div class="fu-id">' +
-          '<div class="fu-name">' + nm + '<span class="fu-prod">' + model + (cam !== null ? ' · CAM ' + cam : '') +
+          '<div class="fu-name"><svg class="cue-icon" aria-hidden="true"><use href="#' + icon + '"/></svg>' + nm + '<span class="fu-prod">' + model + (cam !== null ? ' · CAM ' + cam : '') +
             (c.talent ? ' · TALENT' : '') + '</span>' +
             (noIp ? '' : '<button class="fleet-btn cue-rename" onclick="cueRename(\'' + u.ip + '\',\'' + (u.name || '').replace(/'/g, '') + '\')" title="Rename this light - the name shows here and on Companion\'s Surfaces page">&#9998;</button>') + '</div>' +
           '<div class="fu-serial">' + u.serial + (u.version ? ' · fw ' + u.version : '') + (c.board ? ' · ' + c.board : '') + '</div>' +
