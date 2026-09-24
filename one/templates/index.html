@@ -2952,8 +2952,8 @@
     const icon = /360/.test(model) ? 'icon-cue-360' : /Mini|OG/.test(model) ? 'icon-cue-mini' : 'icon-cue-round';
     const modeSeg = noIp ? '' :
       '<span class="cuel-seg">' +
-        '<button class="fleet-btn' + (timer ? ' on' : '') + '" onclick="cueAdopt(\'' + u.ip + '\',\'timer\')" title="Follow this unit\'s timer - no Companion needed">Timer</button>' +
-        '<button class="fleet-btn' + (aimedHere && !timer ? ' on' : '') + '" onclick="cueAdopt(\'' + u.ip + '\',\'tally\')" title="Mirror a Companion button on this unit">Tally</button>' +
+        '<button class="fleet-btn' + (timer ? ' on' : '') + '" onclick="cueAdopt(\'' + u.ip + '\',\'timer\',' + !!(L.relayed || L.waiting) + ')" title="Follow this One\'s timer - no Companion needed">Use One\'s Timer</button>' +
+        '<button class="fleet-btn' + (aimedHere && !timer && !L.relayed ? ' on' : '') + '" onclick="cueAdopt(\'' + u.ip + '\',\'tally\',' + !!(L.relayed || L.waiting) + ')" title="Point this light at this One\'s Companion: its address and port go to the light, which restarts onto it">Use One\'s Companion</button>' +
       '</span>';
     return '<div class="fu-card ' + (bad ? 'bad' : 'ok') + '">' +
       '<div class="fu-head">' +
@@ -3060,11 +3060,15 @@
       try { renderFleet(await (await fetch('/discover/last')).json()); } catch (e) {}
     } catch (e) { showToast('Alert failed.', 'error'); }
   }
-  async function cueAdopt(ip, mode) {
+  async function cueAdopt(ip, mode, linked) {
     mode = mode || 'tally';
+    // a linked light takes its tally through its Cue and never uses its own
+    // Companion address: switching it means unlinking it too
+    if (linked && !confirm('This light is linked over CueLink. Using this One\'s ' + (mode === 'timer' ? 'timer' : 'Companion') +
+                           ' unlinks it, so it stops mirroring its Cue. Go ahead?')) return;
     try {
       const d = await (await fetch('/fleet/cue/adopt', { method: 'POST',
-        headers: {'Content-Type':'application/json'}, body: JSON.stringify({ ip, mode }) })).json();
+        headers: {'Content-Type':'application/json'}, body: JSON.stringify({ ip, mode, unlink: !!linked }) })).json();
       showToast(d.ok ? (mode === 'timer' ? 'Light now follows this unit\'s timer - it restarts in a moment.'
                                          : 'Light is switching to this unit\'s Companion - it restarts in a moment.')
                      : 'Could not adopt: ' + (d.error || 'no answer'), d.ok ? 'success' : 'error');

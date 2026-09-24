@@ -3858,9 +3858,14 @@ def fleet_cue_adopt():
     mode = str((request.get_json() or {}).get("mode", "tally"))
     port = CUE_HOST_PORT if mode == "timer" else 16622
     try:
-        r = requests.post(f"http://{ip}/adopt", data={"host": me, "port": str(port)}, timeout=6)
+        data = {"host": me, "port": str(port)}
+        if (request.get_json() or {}).get("unlink"):   # a linked light takes its tally through its Cue: let go of it
+            data["unlink"] = "1"
+        r = requests.post(f"http://{ip}/adopt", data=data, timeout=6)
         if r.ok:
-            return jsonify({"ok": True, "host": me, "port": port, "mode": mode})
+            _audit("CUE_ADOPT", f"{ip} -> {me}:{port}")
+            return jsonify({"ok": True, "host": me, "port": port, "mode": mode,
+                            "unlinked": bool((r.json() if r.content else {}).get("unlinked"))})
         return jsonify({"ok": False, "error": f"light answered {r.status_code}"})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)[:120]})
