@@ -2870,7 +2870,18 @@
     const hostTxt = { stopped:'Timer idle', running:'Running', paused:'Paused', warning:'Warning',
                       danger:'Danger', flash:'Final seconds', over:"Time's up", alert:'ALERT' }[H.phase] || 'Timer';
     const leftTxt = H.left_ms ? ' · ' + fmtLeft(H.left_ms) : '';
-    const modeSeg =
+    // CueLink (light firmware 0.53+): linked through another Cue - mirroring
+    // its tally, or its own Companion button with that Cue as a hub - or a
+    // Cue carrying others. A light linked with no WiFi has no address at all;
+    // it is listed from the Cue that carries it.
+    const L = c.link || {};
+    const linked = !!L.relayed;
+    const noIp = !!L.no_ip;
+    const via = L.via_name || L.via || '';
+    const mirror = (L.show || 'mirror') !== 'own';
+    const carried = (L.guests || []).length;
+    const model = u.model || 'Cue';
+    const modeSeg = noIp ? '' :
       '<span class="cuel-seg">' +
         '<button class="fleet-btn' + (timer ? ' on' : '') + '" onclick="cueAdopt(\'' + u.ip + '\',\'timer\')" title="Follow this unit\'s timer - no Companion needed">Timer</button>' +
         '<button class="fleet-btn' + (aimedHere && !timer ? ' on' : '') + '" onclick="cueAdopt(\'' + u.ip + '\',\'tally\')" title="Mirror a Companion button on this unit">Tally</button>' +
@@ -2881,25 +2892,34 @@
         '<span class="ithumb cue-swatch' + (lit ? ' lit' : '') + '" style="background:' + col + '" title="Showing ' + col + '">' +
           (cam !== null && !lit ? '<span class="cue-cam">' + cam + '</span>' : '') + '</span>' +
         '<div class="fu-id">' +
-          '<div class="fu-name">' + nm + '<span class="fu-prod">Cue' + (cam !== null ? ' · CAM ' + cam : '') + '</span>' +
-            '<button class="fleet-btn cue-rename" onclick="cueRename(\'' + u.ip + '\',\'' + (u.name || '').replace(/'/g, '') + '\')" title="Rename this light - the name shows here and on Companion\'s Surfaces page">&#9998;</button></div>' +
-          '<div class="fu-serial">' + u.serial + ' · fw ' + (u.version || '?') + (c.board ? ' · ' + c.board : '') + '</div>' +
+          '<div class="fu-name">' + nm + '<span class="fu-prod">' + model + (cam !== null ? ' · CAM ' + cam : '') +
+            (c.talent ? ' · TALENT' : '') + '</span>' +
+            (noIp ? '' : '<button class="fleet-btn cue-rename" onclick="cueRename(\'' + u.ip + '\',\'' + (u.name || '').replace(/'/g, '') + '\')" title="Rename this light - the name shows here and on Companion\'s Surfaces page">&#9998;</button>') + '</div>' +
+          '<div class="fu-serial">' + u.serial + (u.version ? ' · fw ' + u.version : '') + (c.board ? ' · ' + c.board : '') + '</div>' +
         '</div>' +
         '<div class="fu-btns">' + modeSeg +
+          (noIp ? '' :
           '<button class="fleet-btn" onclick="cueIdentify(\'' + u.ip + '\')" title="Blink this light white for five seconds">ID</button>' +
-          '<button class="fleet-btn" onclick="openPanel(\'http://' + u.ip + '/\', \'' + nm + '\')">Open</button>' +
+          '<button class="fleet-btn" onclick="openPanel(\'http://' + u.ip + '/\', \'' + nm + '\')">Open</button>') +
         '</div>' +
       '</div>' +
       '<div class="fu-meta">' +
         '<div><div class="fu-lbl">Address</div>' +
-          '<div class="fu-ip" onclick="copyIp(\'' + u.ip + '\')" title="Click to copy">' + u.ip + '</div>' +
-          (c.rssi ? '<div class="fu-sub">' + (c.ssid ? c.ssid + ' · ' : '') + c.rssi + ' dBm</div>' : '') + '</div>' +
-        '<div><div class="fu-lbl">' + (timer ? 'Following' : 'Companion') + '</div>' +
-          '<div class="fu-val">' + (timer ? 'This unit\'s timer' : (c.host ? (aimedHere ? 'This unit' : c.host) : '—')) +
-            (!timer && c.companion_version ? '<div class="fu-sub">v' + c.companion_version + '</div>' : '') + '</div></div>' +
+          (noIp ? '<div class="fu-val">No WiFi</div><div class="fu-sub">reached through ' + via + '</div>'
+                : '<div class="fu-ip" onclick="copyIp(\'' + u.ip + '\')" title="Click to copy">' + u.ip + '</div>' +
+                  (c.rssi ? '<div class="fu-sub">' + (c.ssid ? c.ssid + ' · ' : '') + c.rssi + ' dBm</div>' : '')) + '</div>' +
+        (linked
+          ? '<div><div class="fu-lbl">CueLink</div>' +
+              '<div class="fu-val">Linked to ' + via + '</div>' +
+              '<div class="fu-sub">' + (mirror ? 'Mirroring its tally' : 'Its own Companion button, through it') + '</div></div>'
+          : '<div><div class="fu-lbl">' + (timer ? 'Following' : 'Companion') + '</div>' +
+              '<div class="fu-val">' + (timer ? 'This unit\'s timer' : (c.host ? (aimedHere ? 'This unit' : c.host) : '—')) +
+                (!timer && c.companion_version ? '<div class="fu-sub">v' + c.companion_version + '</div>' : '') +
+                (carried ? '<div class="fu-sub">Carrying ' + carried + ' over CueLink</div>' : '') + '</div></div>') +
         '<div><div class="fu-lbl">Status</div>' +
           '<div class="fu-val ' + (bad ? 'bad' : 'ok') + '">' + (bad ? u.health_why
               : timer ? hostTxt + leftTxt
+              : linked && mirror ? (lit ? 'Live · mirroring ' + col : 'Live · mirroring, dark')
               : (lit ? 'Live · showing ' + col : 'Live · dark')) + '</div></div>' +
       '</div></div>';
   }

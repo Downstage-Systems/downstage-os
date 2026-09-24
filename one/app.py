@@ -3481,15 +3481,23 @@ def _probe_cue(ip, timeout=0.6):
         if not cid.startswith("DSCUE-"):
             return None
         state = str(d.get("companion", ""))
+        link = d.get("link") or {}
+        relayed = bool(link.get("relayed"))
+        waiting = link.get("mode") == "chosen" and not relayed
         if d.get("setup"):
             why = "In setup mode"
         elif state == "live":
             why = ""
+        elif waiting:
+            why = "Waiting for its Cue (CueLink)"
+        elif relayed:
+            why = "Its Cue has lost Companion"
         elif not d.get("host"):
             why = "No Companion host set"
         else:
             why = "Finding Companion" if state else "Companion link down"
         return {"ip": ip, "serial": cid, "product": "Cue",
+                "model": _cue_model(d.get("model", "")),
                 "version": d.get("firmware", ""), "kind": "",
                 "name": d.get("label", ""), "showing": d.get("color", "") or "",
                 "health_ok": state == "live", "health_why": why,
@@ -3498,9 +3506,64 @@ def _probe_cue(ip, timeout=0.6):
                         "board": d.get("board", ""), "rssi": d.get("rssi", 0),
                         "ssid": d.get("ssid", ""), "state": state,
                         "camera": d.get("camera", -1),
-                        "companion_version": d.get("companionVersion", "")}}
+                        "companion_version": d.get("companionVersion", ""),
+                        "talent": bool(d.get("talent")),
+                        # CueLink (light firmware 0.53+): linked through a Cue,
+                        # or a Cue carrying others - some of which have no WiFi
+                        # of their own and so never answer a sweep
+                        "link": {"relayed": relayed, "waiting": waiting,
+                                 "via": link.get("via", "") or link.get("chosen", ""),
+                                 "show": link.get("show", "mirror"),
+                                 "guests": link.get("guests") or [{"id": g, "mirror": True} for g in link.get("carrying", [])],
+                                 "nearby": [{"id": n.get("id", ""), "label": n.get("label", ""),
+                                             "model": n.get("model", "")} for n in link.get("nearby", [])]}}}
     except Exception:
         return None
+
+
+def _cue_model(model):
+    """"Downstage Cue 360" -> "Cue 360"; lights before 0.50 say nothing: "Cue"."""
+    m = str(model or "").strip()
+    return m[len("Downstage "):] if m.startswith("Downstage ") else (m or "Cue")
+
+
+def _add_carried_cues(units, prev=None):
+    """A light linked over CueLink with no WiFi of its own has no address, so
+    the sweep cannot find it - but the Cue carrying it can: list it under that
+    Cue instead of letting it look lost. Lights found by address get the
+    carrying Cue's name for their "linked to" line."""
+    # where each light was last seen with an address: a light listed only
+    # through its Cue keeps that, so the next refresh can find it again the
+    # moment it answers (a single missed probe must not make it "no WiFi")
+    last_ip = {u["serial"]: (u.get("ip") or u.get("last_ip", "")) for u in (prev or []) if u.get("serial")}
+    names = {u["serial"]: (u.get("name") or f'{u.get("model") or u.get("product", "")} {u["serial"][-4:]}'.strip())
+             for u in units}
+    have = {u["serial"] for u in units}
+    extra = []
+    for u in units:
+        lk = ((u.get("cue") or {}).get("link") or {})
+        near = {n["id"]: n for n in lk.get("nearby", [])}
+        for g in lk.get("guests", []):
+            gid = g.get("id", "")
+            if not gid or gid in have:
+                continue
+            n = near.get(gid, {})
+            mirror = bool(g.get("mirror", True))
+            extra.append({"ip": "", "last_ip": last_ip.get(gid, ""), "serial": gid, "product": "Cue",
+                          "model": _cue_model(n.get("model", "")),
+                          "version": "", "kind": "", "name": n.get("label", ""),
+                          "showing": u.get("showing", "") if mirror else "",
+                          "health_ok": True, "health_why": "", "upd": False,
+                          "cue": {"camera": -1, "link": {"relayed": True, "via": u["serial"],
+                                                          "via_name": names.get(u["serial"], u["serial"]),
+                                                          "show": "mirror" if mirror else "own",
+                                                          "no_ip": True}}})
+            have.add(gid)
+    for u in units:
+        lk = ((u.get("cue") or {}).get("link") or {})
+        if lk.get("via"):
+            lk["via_name"] = names.get(lk["via"], lk["via"])
+    return units + extra
 
 
 def _probe_unit(ip, timeout=0.6):
@@ -3545,6 +3608,21 @@ def _do_discover():
         for res in ex.map(_probe_unit, sorted(ips)):
             if res:
                 found.append(res)
+    # A Cue light can take ~0.5 s just to refuse port 8080, and the sweep
+    # gives up at 0.6 - a busy one went missing (2026-09-24). Lights the last
+    # sweep knew get a direct, more patient look before they are dropped.
+    try:
+        prev = json.loads(_FLEET_CACHE.read_text()).get("units", [])
+    except Exception:
+        prev = []
+    got = {u["serial"] for u in found}
+    again = [u.get("ip") or u.get("last_ip") for u in prev if u.get("product") == "Cue"
+             and (u.get("ip") or u.get("last_ip")) and u.get("serial") not in got]
+    if again:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as ex:
+            for res in ex.map(lambda ip: _probe_cue(ip, 1.5), again):
+                if res:
+                    found.append(res)
     best = {}
     for u in found:
         key = u["serial"] or u["ip"]
@@ -3552,6 +3630,7 @@ def _do_discover():
             best[key] = u
     found = [{k: v for k, v in u.items() if k != "primary"}
              for u in best.values()]
+    found = _add_carried_cues(found, prev)
     cache = {"units": found, "ts": time.time()}
     try:
         _FLEET_CACHE.write_text(json.dumps(cache))
@@ -3577,6 +3656,14 @@ def discover_refresh():
         return jsonify({"ok": True, "units": [], "ts": None})
     fresh = []
     for u in cache.get("units", []):
+        if not u.get("ip"):
+            # a light reached only over CueLink: try where it last had an
+            # address; if it does not answer there, its Cue lists it below
+            p = _probe_cue(u["last_ip"], 1.5) if u.get("last_ip") else None
+            if p and p["serial"] == u.get("serial"):
+                p.pop("primary", None)
+                fresh.append(p)
+            continue
         p = _probe_unit(u["ip"], timeout=1.5)
         if p:
             p.pop("primary", None)
@@ -3586,7 +3673,7 @@ def discover_refresh():
             gone.update(health_ok=False, health_why="Not responding",
                         showing="", upd=False)
             fresh.append(gone)
-    cache["units"] = fresh
+    cache["units"] = _add_carried_cues(fresh, cache.get("units", []))
     try:
         _FLEET_CACHE.write_text(json.dumps(cache))
     except Exception:
