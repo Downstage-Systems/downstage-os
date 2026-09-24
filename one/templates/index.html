@@ -2898,6 +2898,12 @@
           '<div class="fu-serial">' + u.serial + (u.version ? ' · fw ' + u.version : '') + (c.board ? ' · ' + c.board : '') + '</div>' +
         '</div>' +
         '<div class="fu-btns">' + modeSeg +
+          (L.share === true || L.share === false
+            ? '<button class="fleet-btn' + (L.share ? ' on' : '') + '" onclick="cueShare(\'' + u.ip + '\',' + !L.share + ')" title="On: a light held against this Cue also gets its WiFi (sealed) and joins it. Off: holding a light here only links it.">Share WiFi' + (L.share ? ': on' : '') + '</button>'
+            : '') +
+          (noIp && L.via_ip
+            ? '<button class="fleet-btn" onclick="cueSendWifi(\'' + L.via_ip + '\',\'' + u.serial + '\')" title="Ask its Cue to hand it the network, so it joins and shows up here with an address">Send WiFi</button>'
+            : '') +
           (noIp ? '' :
           '<button class="fleet-btn" onclick="cueIdentify(\'' + u.ip + '\')" title="Blink this light white for five seconds">ID</button>' +
           '<button class="fleet-btn" onclick="openPanel(\'http://' + u.ip + '/\', \'' + nm + '\')">Open</button>') +
@@ -2926,6 +2932,26 @@
   function fmtLeft(ms) {
     const s = Math.ceil(Math.abs(ms) / 1000);
     return (ms < 0 ? '-' : '') + Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  }
+  async function cueShare(ip, on) {
+    try {
+      const d = await (await fetch('/fleet/cue/share', { method: 'POST',
+        headers: {'Content-Type':'application/json'}, body: JSON.stringify({ ip, on }) })).json();
+      showToast(d.ok ? (d.share ? 'WiFi sharing on: a light held against that Cue gets its network.' : 'WiFi sharing off: holding a light there only links it.')
+                     : 'Could not reach that Cue.', d.ok ? 'info' : 'error');
+      renderFleet(await (await fetch('/discover/refresh', { method: 'POST' })).json());
+    } catch (e) { showToast('Could not change sharing.', 'error'); }
+  }
+  async function cueSendWifi(cueIp, id) {
+    showToast('Asking its Cue to send the network...', 'info');
+    try {
+      const d = await (await fetch('/fleet/cue/send-wifi', { method: 'POST',
+        headers: {'Content-Type':'application/json'}, body: JSON.stringify({ ip: cueIp, id }) })).json();
+      showToast(d.ok ? 'Sent - it should join and show up with an address in a few seconds.' : 'Not sent: ' + (d.result || d.error || 'no answer'), d.ok ? 'success' : 'error');
+      if (d.ok) setTimeout(async () => {
+        try { renderFleet(await (await fetch('/discover', { method: 'POST' })).json()); } catch (e) {}
+      }, 8000);
+    } catch (e) { showToast('Send failed.', 'error'); }
   }
   async function cueIdentify(ip) {
     try {

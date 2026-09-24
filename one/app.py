@@ -3425,6 +3425,35 @@ def fleet_cue_control_allowed():
     return jsonify({"ok": True, "on": bool(load_config().get("cue_control"))})
 
 
+@app.route("/fleet/cue/share", methods=["POST"])
+def fleet_cue_share():
+    """WiFi sharing on a Cue (light fw 0.63+): off by default - holding a light
+    against the Cue only links it. On, the light also gets the Cue's network,
+    sealed (X25519 + AES-GCM), and joins it."""
+    b = request.get_json(silent=True) or {}
+    ip = str(b.get("ip", ""))
+    try:
+        r = requests.post(f"http://{ip}/link", data={"share": "1" if b.get("on") else "0"}, timeout=4)
+        return jsonify({"ok": True, "share": bool(r.json().get("share"))})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
+
+@app.route("/fleet/cue/send-wifi", methods=["POST"])
+def fleet_cue_send_wifi():
+    """Ask a Cue to hand its network to a light it carries - the One pushes to
+    the Cue, the Cue pushes to the light over CueLink."""
+    b = request.get_json(silent=True) or {}
+    ip, light = str(b.get("ip", "")), str(b.get("id", ""))
+    try:
+        requests.post(f"http://{ip}/link", data={"sharewith": light}, timeout=4)
+        time.sleep(4)   # the exchange takes a second or two; say how it went
+        res = requests.get(f"http://{ip}/link", timeout=3).json().get("shareResult", "")
+        return jsonify({"ok": res.startswith("shared"), "result": res})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
+
 @app.route("/fleet/cue/state")
 def fleet_cue_state():
     return jsonify({"ok": True, **_cue_host_state()})
@@ -3514,6 +3543,8 @@ def _probe_cue(ip, timeout=0.6):
                         "link": {"relayed": relayed, "waiting": waiting,
                                  "via": link.get("via", "") or link.get("chosen", ""),
                                  "show": link.get("show", "mirror"),
+                                 "share": link.get("share"),   # a Cue only (fw 0.63+): hands its WiFi to a light held against it
+                                 "share_result": link.get("shareResult", ""),
                                  "guests": link.get("guests") or [{"id": g, "mirror": True} for g in link.get("carrying", [])],
                                  "nearby": [{"id": n.get("id", ""), "label": n.get("label", ""),
                                              "model": n.get("model", "")} for n in link.get("nearby", [])]}}}
@@ -3536,6 +3567,7 @@ def _add_carried_cues(units, prev=None):
     # through its Cue keeps that, so the next refresh can find it again the
     # moment it answers (a single missed probe must not make it "no WiFi")
     last_ip = {u["serial"]: (u.get("ip") or u.get("last_ip", "")) for u in (prev or []) if u.get("serial")}
+    ips = {u["serial"]: u.get("ip", "") for u in units}
     names = {u["serial"]: (u.get("name") or f'{u.get("model") or u.get("product", "")} {u["serial"][-4:]}'.strip())
              for u in units}
     have = {u["serial"] for u in units}
@@ -3556,6 +3588,7 @@ def _add_carried_cues(units, prev=None):
                           "health_ok": True, "health_why": "", "upd": False,
                           "cue": {"camera": -1, "link": {"relayed": True, "via": u["serial"],
                                                           "via_name": names.get(u["serial"], u["serial"]),
+                                                          "via_ip": u.get("ip", ""),
                                                           "show": "mirror" if mirror else "own",
                                                           "no_ip": True}}})
             have.add(gid)
@@ -3563,6 +3596,7 @@ def _add_carried_cues(units, prev=None):
         lk = ((u.get("cue") or {}).get("link") or {})
         if lk.get("via"):
             lk["via_name"] = names.get(lk["via"], lk["via"])
+            lk["via_ip"] = ips.get(lk["via"], "")
     return units + extra
 
 
