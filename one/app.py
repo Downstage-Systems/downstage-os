@@ -3425,6 +3425,39 @@ def fleet_cue_control_allowed():
     return jsonify({"ok": True, "on": bool(load_config().get("cue_control"))})
 
 
+def _cue_link_post(ip, data):
+    r = requests.post(f"http://{ip}/link", data=data, timeout=4)
+    return r.json()
+
+
+@app.route("/fleet/cue/link", methods=["POST"])
+def fleet_cue_link():
+    """CueLink from a light's card: link it through a Cue (id), unlink it
+    (off), how it shows while linked (show: mirror|own), CueLink on or off
+    (enabled), or - for a light with no WiFi, reached only through its Cue -
+    ask that Cue to let it go (release, sent to the Cue's address)."""
+    b = request.get_json(silent=True) or {}
+    ip = str(b.get("ip", ""))
+    if b.get("id"):
+        data = {"mode": "peer", "id": str(b["id"])}
+        if b.get("channel"):   # where that Cue is: a light on another channel moves there to find it
+            data["channel"] = str(int(b["channel"]))
+    elif "show" in b:
+        data = {"show": "own" if b.get("show") == "own" else "mirror"}
+    elif "enabled" in b:
+        data = {"enabled": "1" if b.get("enabled") else "0"}
+    elif b.get("release"):
+        data = {"release": str(b["release"])}
+    else:
+        data = {"mode": "off"}
+    try:
+        d = _cue_link_post(ip, data)
+        _audit("CUE_LINK", f"{ip} {data}")
+        return jsonify({"ok": True, "relayed": d.get("relayed"), "enabled": d.get("enabled")})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
+
 @app.route("/fleet/cue/share", methods=["POST"])
 def fleet_cue_share():
     """WiFi sharing on a Cue (light fw 0.63+): off by default - holding a light
@@ -3546,8 +3579,12 @@ def _probe_cue(ip, timeout=0.6):
                                  "share": link.get("share"),   # a Cue only (fw 0.63+): hands its WiFi to a light held against it
                                  "share_result": link.get("shareResult", ""),
                                  "guests": link.get("guests") or [{"id": g, "mirror": True} for g in link.get("carrying", [])],
+                                 "enabled": link.get("enabled", True),
+                                 "channel": link.get("channel", 0),
+                                 "chosen": link.get("chosen", ""),
                                  "nearby": [{"id": n.get("id", ""), "label": n.get("label", ""),
-                                             "model": n.get("model", "")} for n in link.get("nearby", [])]}}}
+                                             "model": n.get("model", ""), "face": bool(n.get("face")),
+                                             "carrier": bool(n.get("carrier"))} for n in link.get("nearby", [])]}}}
     except Exception:
         return None
 

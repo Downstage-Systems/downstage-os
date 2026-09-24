@@ -762,6 +762,9 @@
     .fu-id { min-width:0; }
     .fu-name { font:700 13.5px var(--font-display); letter-spacing:0.04em; color:var(--text); }
     /* the lineup icons (Design, Downstage Cue assets/icons): outline glyphs in currentColor */
+    .cuel-ctl { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:10px; padding-top:10px; border-top:1px solid var(--border); }
+    .cuel-ctl .fu-lbl { margin-right:4px; }
+    .cuel-ctl select { background:var(--surface2); color:var(--text); border:1px solid var(--border2); border-radius:8px; padding:6px 8px; font:600 12px var(--font-display); letter-spacing:.04em; }
     .cue-icon { width:18px; height:18px; vertical-align:-4px; margin-right:6px; color:var(--amber); flex:none; }
     .fu-prod { font-size:9.5px; color:var(--muted2); letter-spacing:0.09em;
       margin-left:7px; text-transform:uppercase; }
@@ -2831,6 +2834,12 @@
   }
   function renderFleet(d) {
     const box = document.getElementById('fleet-panel');
+    // Cues on the network that can carry another light (round Cues answer
+    // "share"): every card's Link picker offers them, not only the ones that
+    // light hears right now - one on another channel hears none
+    window._fleetCues = (d.units || []).filter(u => u.product === 'Cue' && u.ip && u.health_ok &&
+        u.cue && u.cue.link && (u.cue.link.share === true || u.cue.link.share === false))
+      .map(u => ({ id: u.serial, name: u.name || (u.model + ' ' + u.serial.slice(-4)), channel: u.cue.link.channel || 0 }));
     if (d.cue_host) window._cueHost = d.cue_host;
     const al = document.getElementById('cue-alert-btn');
     if (al) {
@@ -2913,6 +2922,31 @@
     const mirror = (L.show || 'mirror') !== 'own';
     const carried = (L.guests || []).length;
     const model = u.model || 'Cue';
+    // CueLink controls (light fw 0.65+ says "enabled"; older lights get none)
+    const heard = (L.nearby || []).filter(n => n.face && n.carrier && n.id !== u.serial)
+      .map(n => ({ id: n.id, name: n.label || n.model.replace('Downstage ', '') + ' ' + n.id.slice(-4), channel: 0, heard: true }));
+    const cues = heard.concat((window._fleetCues || []).filter(f => f.id !== u.serial && !heard.some(h => h.id === f.id)));
+    heard.forEach(h => { const f = (window._fleetCues || []).find(x => x.id === h.id); if (f) h.channel = f.channel; });
+    const q = s => String(s).replace(/'/g, '');
+    let ctl = '';
+    if (L.enabled === false) {
+      ctl = '<span class="fu-sub">CueLink is off</span>' +
+            '<button class="fleet-btn" onclick="cueLinkCmd(\'' + u.ip + '\',{enabled:true})">Turn on</button>';
+    } else if (L.relayed || L.waiting) {
+      ctl = (L.waiting && !L.relayed ? '<span class="fu-sub">Waiting for ' + q(L.via_name || L.chosen || 'its Cue') + '</span>' : '') +
+            (noIp ? '' : '<span class="cuel-seg">' +
+              '<button class="fleet-btn' + (mirror ? ' on' : '') + '" onclick="cueLinkCmd(\'' + u.ip + '\',{show:\'mirror\'})" title="Show the Cue\'s tally">Mirror</button>' +
+              '<button class="fleet-btn' + (!mirror ? ' on' : '') + '" onclick="cueLinkCmd(\'' + u.ip + '\',{show:\'own\'})" title="Its own Companion button, with the Cue as a hub">Own</button></span>') +
+            '<button class="fleet-btn" onclick="cueLinkCmd(\'' + (noIp ? L.via_ip : u.ip) + '\',' +
+              (noIp ? '{release:\'' + u.serial + '\'}' : '{off:true}') + ',\'Unlink ' + q(nm) + '? It goes back to its own connection' + (noIp ? ' - it has no WiFi, so it will be dark until it has.' : '.') + '\')">Unlink</button>';
+    } else if (!(L.guests || []).length && cues.length && !noIp) {
+      ctl = '<select onchange="if (this.value) cueLinkCmd(\'' + u.ip + '\',{id:this.value.split(\'|\')[0],channel:+this.value.split(\'|\')[1]})"><option value="">Link to a Cue&hellip;</option>' +
+            cues.map(n => '<option value="' + n.id + '|' + (n.channel || 0) + '">' + q(n.name) +
+              (n.heard ? '' : ' - not heard here' + (n.channel ? ', moves to ch ' + n.channel : '')) + '</option>').join('') + '</select>';
+    }
+    if (!noIp && L.enabled === true)
+      ctl += '<button class="fleet-btn" onclick="cueLinkCmd(\'' + u.ip + '\',{enabled:false},\'Turn CueLink off on ' + q(nm) + '? It stops linking and carrying; a light it carries loses its tally path.\')">CueLink off</button>';
+    const ctlRow = (L.enabled !== undefined || noIp) && ctl ? '<div class="cuel-ctl"><span class="fu-lbl">CueLink</span>' + ctl + '</div>' : '';
     // which of the three: the Mini (Atom), the 360 (8x8 tile), else the round Cue
     const icon = /360/.test(model) ? 'icon-cue-360' : /Mini|OG/.test(model) ? 'icon-cue-mini' : 'icon-cue-round';
     const modeSeg = noIp ? '' :
@@ -2961,11 +2995,22 @@
               : timer ? hostTxt + leftTxt
               : linked && mirror ? (lit ? 'Live · mirroring ' + col : 'Live · mirroring, dark')
               : (lit ? 'Live · showing ' + col : 'Live · dark')) + '</div></div>' +
-      '</div></div>';
+      '</div>' + ctlRow + '</div>';
   }
   function fmtLeft(ms) {
     const s = Math.ceil(Math.abs(ms) / 1000);
     return (ms < 0 ? '-' : '') + Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  }
+  async function cueLinkCmd(ip, body, confirmText) {
+    if (confirmText && !confirm(confirmText)) return;
+    try {
+      const d = await (await fetch('/fleet/cue/link', { method: 'POST',
+        headers: {'Content-Type':'application/json'}, body: JSON.stringify(Object.assign({ ip }, body)) })).json();
+      showToast(d.ok ? 'Done - the card updates in a moment.' : 'Could not reach that light: ' + (d.error || ''), d.ok ? 'info' : 'error');
+      if (d.ok) setTimeout(async () => {
+        try { renderFleet(await (await fetch('/discover/refresh', { method: 'POST' })).json()); } catch (e) {}
+      }, 3000);
+    } catch (e) { showToast('CueLink change failed.', 'error'); }
   }
   async function cueShare(ip, on) {
     try {
