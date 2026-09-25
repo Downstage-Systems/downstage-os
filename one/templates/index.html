@@ -2935,7 +2935,12 @@
             '<button class="fleet-btn" onclick="cueLinkCmd(\'' + u.ip + '\',{enabled:true})">Turn on</button>';
     } else if (L.relayed || L.waiting) {
       ctl = (L.waiting && !L.relayed ? '<span class="fu-sub">Waiting for ' + q(L.via_name || L.chosen || 'its Cue') + '</span>' : '') +
-            (noIp ? '' : '<span class="cuel-seg">' +
+            // Mirror / Own: asked of the Cue carrying it (fw 0.73+), which reaches a
+            // light with no WiFi too; the light's own page only if its Cue has no address here
+            (L.relayed && L.via_ip ? '<span class="cuel-seg">' +
+              '<button class="fleet-btn' + (mirror ? ' on' : '') + '" onclick="cueLinkCmd(\'' + L.via_ip + '\',{guest:\'' + u.serial + '\',mirror:true})" title="Show the Cue\'s tally">Mirror</button>' +
+              '<button class="fleet-btn' + (!mirror ? ' on' : '') + '" onclick="cueLinkCmd(\'' + L.via_ip + '\',{guest:\'' + u.serial + '\',mirror:false})" title="Its own Companion button, with the Cue as a hub">Own</button></span>'
+            : noIp ? '' : '<span class="cuel-seg">' +
               '<button class="fleet-btn' + (mirror ? ' on' : '') + '" onclick="cueLinkCmd(\'' + u.ip + '\',{show:\'mirror\'})" title="Show the Cue\'s tally">Mirror</button>' +
               '<button class="fleet-btn' + (!mirror ? ' on' : '') + '" onclick="cueLinkCmd(\'' + u.ip + '\',{show:\'own\'})" title="Its own Companion button, with the Cue as a hub">Own</button></span>') +
             '<button class="fleet-btn" onclick="cueLinkCmd(\'' + (noIp ? L.via_ip : u.ip) + '\',' +

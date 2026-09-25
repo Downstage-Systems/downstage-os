@@ -3433,7 +3433,8 @@ def _cue_link_post(ip, data):
 @app.route("/fleet/cue/link", methods=["POST"])
 def fleet_cue_link():
     """CueLink from a light's card: link it through a Cue (id), unlink it
-    (off), how it shows while linked (show: mirror|own), CueLink on or off
+    (off), how it shows while linked (guest + mirror, asked of its Cue; or
+    show: mirror|own, asked of the light), CueLink on or off
     (enabled), or - for a light with no WiFi, reached only through its Cue -
     ask that Cue to let it go (release, sent to the Cue's address)."""
     b = request.get_json(silent=True) or {}
@@ -3442,6 +3443,19 @@ def fleet_cue_link():
         data = {"mode": "peer", "id": str(b["id"])}
         if b.get("channel"):   # where that Cue is: a light on another channel moves there to find it
             data["channel"] = str(int(b["channel"]))
+    elif b.get("guest"):
+        # sent to the Cue carrying it (light fw 0.73+): works for a light with
+        # no WiFi of its own too, and the Cue's answer says whether it took it
+        guest, want = str(b["guest"]), bool(b.get("mirror"))
+        try:
+            d = _cue_link_post(ip, {"guestmode": guest, "mirror": "1" if want else "0"})
+            g = next((x for x in d.get("guests", []) if x.get("id") == guest), None)
+            if g is None or bool(g.get("mirror")) != want:
+                return jsonify({"ok": False, "error": "that Cue did not take it - it needs firmware 0.73 or later"})
+            _audit("CUE_LINK", f"{ip} guest {guest} {'mirror' if want else 'own'}")
+            return jsonify({"ok": True})
+        except Exception as e:
+            return jsonify({"ok": False, "error": str(e)})
     elif "show" in b:
         data = {"show": "own" if b.get("show") == "own" else "mirror"}
     elif "enabled" in b:
