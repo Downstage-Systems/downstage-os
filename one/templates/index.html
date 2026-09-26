@@ -889,14 +889,19 @@
       background:rgba(5,6,8,0); backdrop-filter:blur(0); transition:background .22s, backdrop-filter .22s; }
     .fx-sheet.open { background:rgba(5,6,8,.62); backdrop-filter:blur(6px); }
     .fx-sheet[hidden] { display:none; }
+    .fx-panel { overscroll-behavior:contain; }   /* the end of its scroll does not carry on into the page */
+    html.fx-locked, html.fx-locked body { overflow:hidden; }
     .fx-panel { --tally:#07090b; --ink:#5b6670; position:relative; width:min(560px, 100%); max-height:calc(100vh - 40px); overflow:auto;
       background:var(--surface); border:1px solid var(--border2); border-radius:18px; box-shadow:0 24px 60px rgba(0,0,0,.55);
       transform:translateY(14px) scale(.98); opacity:0; transition:transform .22s cubic-bezier(.2,.8,.2,1), opacity .22s, --tally .45s; }
     .fx-sheet.open .fx-panel { transform:none; opacity:1; }
     .fx-panel.air { box-shadow:0 24px 60px rgba(0,0,0,.55), 0 0 0 1px color-mix(in srgb, var(--tally) 55%, transparent), 0 0 40px -10px var(--tally); }
-    .fx-x { position:absolute; top:10px; right:12px; z-index:3; width:32px; height:32px; border-radius:50%; border:1px solid var(--border2);
-      background:rgba(11,13,16,.7); color:var(--muted); font-size:18px; line-height:1; cursor:pointer; }
-    .fx-x:hover { color:var(--text); border-color:var(--muted2); }
+    /* the page's button rule pads 12 x 20 and fills svgs: undone here, or the circle squashes to an oval */
+    .fx-x { position:absolute; top:12px; right:12px; z-index:3; width:34px; height:34px; min-width:34px; padding:0; flex:none;
+      display:grid; place-items:center; border-radius:50%; border:1px solid var(--border2);
+      background:rgba(11,13,16,.75); color:var(--muted); cursor:pointer; backdrop-filter:blur(4px); }
+    .fx-x svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; }
+    .fx-x:hover { color:var(--text); border-color:var(--muted2); background:var(--surface2); }
     .fx-hero { display:flex; gap:16px; align-items:center; padding:16px 18px; border-bottom:1px solid var(--border); }
     .fx-stage.big { width:150px; height:150px; flex:none; border-radius:14px; border:1px solid var(--border); }
     .fx-stage.big .fx-art { width:128px; height:128px; }
@@ -2173,9 +2178,10 @@
           <div class="iface-none">Press Scan to look for other Downstage units.</div>
         </div>
       </div>
-        <div id="fx-sheet" class="fx-sheet" hidden onclick="if (event.target === this) fxClose()">
+        <div id="fx-sheet" class="fx-sheet" hidden onclick="if (event.target === this) fxClose()"
+             ontouchmove="if (event.target === this) event.preventDefault()">
           <div class="fx-panel" role="dialog" aria-modal="true" aria-label="Unit">
-            <button class="fx-x" onclick="fxClose()" aria-label="Close">&times;</button>
+            <button class="fx-x" onclick="fxClose()" aria-label="Close"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2 2l10 10M12 2L2 12"/></svg></button>
             <div id="fx-panel-body"></div>
           </div>
         </div>
@@ -3170,8 +3176,22 @@
     }
   }
   // ---- a unit's sheet: everything you can do to it -------------------------
+  // The page behind stays put while a sheet is open (Rob, 2026-09-26); the
+  // scrollbar's width goes to padding so nothing jumps sideways
+  function fxLock(on) {
+    const de = document.documentElement;
+    if (on && !de.classList.contains('fx-locked')) {
+      const sw = window.innerWidth - de.clientWidth;
+      de.classList.add('fx-locked');
+      if (sw > 0) document.body.style.paddingRight = sw + 'px';
+    } else if (!on) {
+      de.classList.remove('fx-locked');
+      document.body.style.paddingRight = '';
+    }
+  }
   function fxOpen(key) {
     _fxOpen = key;
+    fxLock(true);
     const s = document.getElementById('fx-sheet');
     s.hidden = false;
     requestAnimationFrame(() => s.classList.add('open'));
@@ -3180,6 +3200,7 @@
   function fxClose() {
     const s = document.getElementById('fx-sheet');
     s.classList.remove('open');
+    fxLock(false);
     setTimeout(() => { if (!s.classList.contains('open')) s.hidden = true; }, 220);
     const card = document.querySelector('.fx-card[data-key="' + CSS.escape(_fxOpen || '') + '"]');
     _fxOpen = null;
