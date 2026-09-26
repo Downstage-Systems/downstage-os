@@ -3584,6 +3584,8 @@ def _probe_cue(ip, timeout=0.6):
                         "camera": d.get("camera", -1),
                         "companion_version": d.get("companionVersion", ""),
                         "talent": bool(d.get("talent")),
+                        # a light with a battery says how full (the Camera does); -1 none
+                        "battery": d.get("battery", -1), "charging": bool(d.get("charging")),
                         # CueLink (light firmware 0.53+): linked through a Cue,
                         # or a Cue carrying others - some of which have no WiFi
                         # of their own and so never answer a sweep
