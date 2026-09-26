@@ -3436,7 +3436,7 @@
     const g = _fxGrid;
     if (!g) return;
     g.sel = { page: g.page, row: r, col: c };
-    fxGridCells();
+    fxGridMarks();
     fxGridFoot();
   }
   async function fxGridPoll() {
@@ -3448,13 +3448,16 @@
       if (g !== _fxGrid) return;
       if (d.page === g.page && d.rows === g.rows && d.cols === g.cols) {
         if (d.full) g.cells = {};
-        (d.buttons || []).forEach(b => { g.cells[b.row + '/' + b.col] = b; });
+        const changed = (d.buttons || []).map(b => { g.cells[b.row + '/' + b.col] = b; return b.row + '/' + b.col; });
         g.rev = d.rev || 0;
         g.companion = d.companion || g.companion;
-        const was = g.err;
+        const was = g.err, wasLoading = g.loading;
         g.err = d.error || '';
         g.loading = false;
-        if (was !== g.err) fxGridFrame(); else fxGridCells();
+        if (was !== g.err) fxGridFrame();
+        else if (d.full) fxGridCells();
+        else if (changed.length) fxGridPatch(changed);   // only what changed: the rest of the images stay put
+        if (wasLoading) fxGridFoot();
       }
     } catch (e) {
       if (g !== _fxGrid) return;
@@ -3493,22 +3496,51 @@
             '<div class="fx-gfoot" id="fx-gfoot"></div>');
     if (!off && !g.err) { fxGridCells(); fxGridFoot(); }
   }
-  function fxGridCells() {
+  function fxCellClass(g, r, c) {
+    const b = g.cells[r + '/' + c];
+    const sel = g.sel && g.sel.page === g.page && g.sel.row === r && g.sel.col === c;
+    const cur = g.cur && g.cur.page === g.page && g.cur.row === r && g.cur.col === c;
+    return 'fx-cell' + (sel ? ' sel' : '') + (cur ? ' cur' : '') + (b && b.pressed ? ' down' : '') + (b && b.type !== 'BUTTON' ? ' nav' : '');
+  }
+  function fxCellFace(g, r, c) {
+    const b = g.cells[r + '/' + c];
+    const cur = g.cur && g.cur.page === g.page && g.cur.row === r && g.cur.col === c;
+    return (!b ? '<span class="fx-cell-wait"></span>'
+      : b.img && b.fmt === 'png' ? '<img src="data:image/png;base64,' + b.img + '" alt="">'
+      : '<span class="fx-cell-txt" style="background:' + fxEsc(b.color || '#000') + ';color:' + fxEsc(b.textcolor || '#fff') + '">' + fxEsc(b.text || '') + '</span>') +
+      (cur ? '<span class="fx-cur">NOW</span>' : '');
+  }
+  function fxGridCells() {   // the whole grid: when it opens, or a page or size change
     const g = _fxGrid, box = document.getElementById('fx-gcells');
     if (!g || !box) return;
     let h = '';
-    for (let r = 0; r < g.rows; r++) for (let c = 0; c < g.cols; c++) {
-      const b = g.cells[r + '/' + c];
-      const sel = g.sel && g.sel.page === g.page && g.sel.row === r && g.sel.col === c;
-      const cur = g.cur && g.cur.page === g.page && g.cur.row === r && g.cur.col === c;
-      const face = !b ? '<span class="fx-cell-wait"></span>'
-        : b.img && b.fmt === 'png' ? '<img src="data:image/png;base64,' + b.img + '" alt="">'
-        : '<span class="fx-cell-txt" style="background:' + fxEsc(b.color || '#000') + ';color:' + fxEsc(b.textcolor || '#fff') + '">' + fxEsc(b.text || '') + '</span>';
-      h += '<button class="fx-cell' + (sel ? ' sel' : '') + (cur ? ' cur' : '') + (b && b.pressed ? ' down' : '') + (b && b.type !== 'BUTTON' ? ' nav' : '') +
-           '" onclick="fxGridPick(' + r + ',' + c + ')" title="Page ' + g.page + ', row ' + (r + 1) + ', column ' + (c + 1) + '">' + face +
-           (cur ? '<span class="fx-cur">NOW</span>' : '') + '</button>';
-    }
+    for (let r = 0; r < g.rows; r++) for (let c = 0; c < g.cols; c++)
+      h += '<button class="' + fxCellClass(g, r, c) + '" data-rc="' + r + '/' + c + '" onclick="fxGridPick(' + r + ',' + c + ')"' +
+           ' title="Page ' + g.page + ', row ' + (r + 1) + ', column ' + (c + 1) + '">' + fxCellFace(g, r, c) + '</button>';
     box.innerHTML = h;
+  }
+  function fxGridPatch(keys) {   // just these cells: a clock ticking on one button leaves the other 31 alone
+    const g = _fxGrid, box = document.getElementById('fx-gcells');
+    if (!g || !box) return;
+    keys.forEach(k => {
+      const el = box.querySelector('[data-rc="' + k + '"]');
+      if (!el) return;
+      const [r, c] = k.split('/').map(Number);
+      el.className = fxCellClass(g, r, c);
+      el.innerHTML = fxCellFace(g, r, c);
+    });
+  }
+  function fxGridMarks() {   // the chosen and current rings only, no images touched
+    const g = _fxGrid, box = document.getElementById('fx-gcells');
+    if (!g || !box) return;
+    box.querySelectorAll('.fx-cell').forEach(el => {
+      const [r, c] = el.dataset.rc.split('/').map(Number);
+      el.className = fxCellClass(g, r, c);
+      const cur = g.cur && g.cur.page === g.page && g.cur.row === r && g.cur.col === c;
+      const tag = el.querySelector('.fx-cur');
+      if (cur && !tag) el.insertAdjacentHTML('beforeend', '<span class="fx-cur">NOW</span>');
+      if (!cur && tag) tag.remove();
+    });
   }
   function fxGridFoot() {
     const g = _fxGrid, foot = document.getElementById('fx-gfoot');
@@ -3534,7 +3566,7 @@
       if (!d.ok) return;
       g.cur = { page: s.page, row: s.row, col: s.col };
       g.sel = null;
-      fxGridCells();
+      fxGridMarks();
       fxGridFoot();
       setTimeout(async () => { try { renderFleet(await (await fetch('/discover/refresh', { method: 'POST' })).json()); } catch (e) {} }, 9000);
     } catch (e) { showToast('Could not reach the One.', 'error'); }

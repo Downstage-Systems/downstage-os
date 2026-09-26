@@ -12,8 +12,13 @@ The Subscriptions API is off by default in Companion: Settings > Satellite >
 a moment. A Companion without it answers "Subscriptions not enabled", which
 is passed on to the page as it is.
 
-One session per Companion (host, port); it closes itself after a quiet
-spell with nobody polling. Rows and columns are zero-based, pages one-based.
+One session - one Satellite connection - per Companion page being looked
+at (host, port, page, rows, cols): two people on different pages, or with
+different grid sizes, each have their own and never pull the other's page
+away (Rob, 2026-09-26: the page loaded, then started loading again, while a
+second viewer flipped the shared one back and forth). A session closes
+itself after a quiet spell with nobody polling. Rows and columns are
+zero-based, pages one-based.
 """
 
 import base64
@@ -22,6 +27,7 @@ import threading
 import time
 
 _IDLE_CLOSE_S = 45       # nobody has polled for this long: close
+_MAX_SESSIONS = 6        # pages open at once, across every viewer; the least recently polled goes
 _PING_EVERY_S = 2        # the Satellite API asks for a ping every couple of seconds
 _BITMAP_PX = 72
 
@@ -212,20 +218,23 @@ class _Session:
 
 def grid(host, port, page, rows, cols, since=0, wait=0.0):
     """What the page needs: the buttons changed since `since` (all of them for 0)."""
-    key = (host, int(port))
+    key = (host, int(port), page, rows, cols)
     with _lock:
         s = _sessions.get(key)
         if s is None or not s.alive:
             s = _Session(host, int(port))
+            s.show(page, rows, cols)
             _sessions[key] = s
+            since = 0   # a new connection: its revisions start again
         for k, other in list(_sessions.items()):   # tidy away the ones nobody polls
             if other is not s and (not other.alive or time.time() - other.polled > _IDLE_CLOSE_S):
                 other.alive = False
                 _sessions.pop(k, None)
+        while len(_sessions) > _MAX_SESSIONS:
+            k = min((k for k in _sessions if _sessions[k] is not s), key=lambda k: _sessions[k].polled)
+            _sessions.pop(k).alive = False
     s.polled = time.time()
-    fresh = page != s.page or rows != s.rows or cols != s.cols
-    s.show(page, rows, cols)
-    if fresh:
+    if since > s.rev:   # revisions from a connection that has since been replaced
         since = 0
     if wait:   # the first look: give Companion a moment to send the page
         end = time.time() + wait
