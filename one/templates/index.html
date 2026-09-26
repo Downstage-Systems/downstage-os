@@ -947,6 +947,36 @@
       .fx-card, .fx-art, .fx-panel, .fx-sheet { transition:none; }
       .fx-new, .fx-card.air .fx-stage::before, .fx-panel.air .fx-stage::before { animation:none; }
     }
+    /* Show Mode: the units as mini cards under Quick Actions */
+    .show-units { display:none; }
+    body.show-mode .show-units.has { display:block; margin:-4px 0 22px; }
+    .su-row { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+    .su-card { --tally:#07090b; --ink:#5b6670; display:flex; align-items:center; gap:10px; min-width:150px; max-width:210px; flex:0 1 auto;
+      padding:6px 12px 6px 6px; border-radius:12px; background:var(--surface2); border:1px solid var(--border2); cursor:pointer;
+      transition:--tally .45s ease, border-color .18s, transform .15s, box-shadow .25s; outline:none; }
+    .su-card:hover { transform:translateY(-1px); border-color:#3a4450; }
+    .su-card:focus-visible { border-color:var(--accent); }
+    .su-card.lit { border-color:color-mix(in srgb, var(--tally) 45%, var(--border2)); }
+    .su-card.air { box-shadow:0 0 0 1px color-mix(in srgb, var(--tally) 60%, transparent), 0 0 18px -6px var(--tally); }
+    .su-card.bad { border-color:rgba(229,72,77,.5); }
+    .su-art { position:relative; width:44px; height:44px; flex:none; border-radius:9px; overflow:hidden; display:grid; place-items:center;
+      background:radial-gradient(120% 90% at 50% 0%, #1b2129 0%, #0d1014 70%); }
+    .su-art::before { content:''; position:absolute; inset:-40%; opacity:0; transition:opacity .45s;
+      background:radial-gradient(circle, color-mix(in srgb, var(--tally) 60%, transparent) 0%, transparent 45%); }
+    .su-card.lit .su-art::before { opacity:1; }
+    .su-card.air .su-art::before { animation:fxBreathe 2.6s ease-in-out infinite; }
+    .su-art .fx-art { width:42px; height:42px; filter:drop-shadow(0 3px 5px rgba(0,0,0,.5)); }
+    .su-art .fx-img { max-height:30px; max-width:40px; }
+    .su-card.lit .fx-frame { opacity:1; } .su-card.air .fx-frame { stroke-width:5; }
+    .su-card:not(.lit) .fx-num { fill:#5b6670; } .su-card.lit .fx-led { fill:var(--tally); }
+    .su-card.lit .fx-art .fx-frame ~ .fx-num { fill:var(--tally); }
+    .su-txt { min-width:0; display:flex; flex-direction:column; gap:1px; text-align:left; }
+    .su-name { font:700 13px var(--font-display); letter-spacing:.04em; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .su-state { font:600 9.5px var(--font-display); letter-spacing:.1em; text-transform:uppercase; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .su-state.air { color:#ff6b70; } .su-state.pv { color:var(--accent); } .su-state.bad { color:#f2555a; } .su-state.tm { color:var(--amber); }
+    .su-dot { position:absolute; top:4px; left:4px; width:6px; height:6px; border-radius:50%; background:var(--accent); z-index:1; }
+    .su-card.bad .su-dot { background:#f2555a; }
+    @media (prefers-reduced-motion: reduce) { .su-card { transition:none; } .su-card.air .su-art::before { animation:none; } }
     /* choosing a light's button on a live picture of a Companion page */
     .fx-pick { width:100%; display:flex; align-items:center; gap:14px; text-align:left; padding:12px 14px; border-radius:12px;
       background:linear-gradient(135deg, rgba(47,217,123,.10), rgba(46,144,217,.08)); border:1px solid rgba(47,217,123,.35);
@@ -1715,6 +1745,10 @@
           <svg viewBox="0 0 24 24"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg>
           Power Off</button>
       </div>
+
+      <!-- Show Mode: every Downstage unit as a mini card, a tap from its sheet
+           (Rob, 2026-09-26) -->
+      <div class="show-units" id="show-units"><div class="su-row" id="su-row"></div></div>
 
       <!-- My Buttons, live on the Show Mode page - the button wall under the
            tiles, no overlay hop -->
@@ -3220,6 +3254,7 @@
       [...grid.children].forEach(el => { if (!keep.has(el.dataset.key)) { delete _fxInner[el.dataset.key]; el.remove(); } });
     }
     if (_fxOpen) fxSheet();
+    renderShowUnits(d.units || []);
     const fts = document.getElementById('fleet-ts');
     if (fts) {
       if (d.ts) {
@@ -3231,7 +3266,54 @@
       } else fts.textContent = '';
     }
   }
+  // Show Mode's bar: the same units, small - the device in its live colour,
+  // its name and one line of state; a tap opens its sheet
+  const _suInner = {};
+  function renderShowUnits(units) {
+    const wrap = document.getElementById('show-units'), row = document.getElementById('su-row');
+    if (!wrap || !row) return;
+    wrap.classList.toggle('has', units.length > 0);
+    const keep = new Set();
+    units.forEach((u, idx) => {
+      const card = fxCard(u), key = card.key;
+      keep.add(key);
+      const bad = u.health_ok === false;
+      let art, name, state, cls;
+      if (u.product === 'Cue') {
+        const i = cueInfo(u), t = fxTally(i.col);
+        art = fxArt(i);
+        name = i.name;
+        [state, cls] = bad ? [u.health_why || 'Not live', 'bad'] : t === 'program' ? ['On air', 'air'] : t === 'preview' ? ['Preview', 'pv']
+          : i.timer ? [cueTimerText(), 'tm'] : [(i.cam !== null ? 'Cam ' + i.cam + ' · ' : '') + (i.lit ? 'Live' : 'Standby'), ''];
+      } else {
+        art = '<img class="fx-img" src="/static/unit-' + ((u.product || '').toLowerCase() === 'view' ? 'view' : 'one') + '.png" alt="">';
+        name = u.name || u.product;
+        [state, cls] = bad ? [u.health_why || 'Needs a look', 'bad'] : [u.product + ' · all good', ''];
+      }
+      const inner = '<div class="su-art"><span class="su-dot"></span>' + art + '</div>' +
+        '<div class="su-txt"><div class="su-name">' + fxEsc(name) + '</div><div class="su-state ' + cls + '">' + fxEsc(state) + '</div></div>';
+      let el = row.querySelector(':scope > [data-key="' + CSS.escape(key) + '"]');
+      if (!el) {
+        el = document.createElement('div');
+        el.dataset.key = key;
+        el.tabIndex = 0;
+        el.setAttribute('role', 'button');
+        el.onclick = () => fxOpen(key);
+        el.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fxOpen(key); } };
+      }
+      el.className = 'su-card ' + card.cls;
+      el.title = name + ' - tap for its settings';
+      el.style.setProperty('--tally', card.tally);
+      el.style.setProperty('--ink', card.ink);
+      if (_suInner[key] !== inner) { el.innerHTML = inner; _suInner[key] = inner; }
+      if (row.children[idx] !== el) row.insertBefore(el, row.children[idx] || null);
+    });
+    [...row.children].forEach(el => { if (!keep.has(el.dataset.key)) { delete _suInner[el.dataset.key]; el.remove(); } });
+  }
   // ---- a unit's sheet: everything you can do to it -------------------------
+  // The sheet sits on the page itself, not in the Network tab, so Show Mode's
+  // bar can open it too (that tab is hidden there)
+  (() => { const s = document.getElementById('fx-sheet'); if (s && s.parentElement !== document.body) document.body.appendChild(s); })();
   // The page behind stays put while a sheet is open (Rob, 2026-09-26); the
   // scrollbar's width goes to padding so nothing jumps sideways
   function fxLock(on) {
@@ -3850,14 +3932,16 @@
   // never a sweep) so health / tally colour / versions stay live
   setInterval(async () => {
     const pane = document.getElementById('tpane-network');
-    if (!pane || pane.offsetParent === null || document.hidden) return;   // not in a hidden browser tab: the One probes every light each tick
+    const showing = document.body.classList.contains('show-mode') || (pane && pane.offsetParent !== null);   // the Network tab, or Show Mode's bar
+    if (!showing || document.hidden) return;   // not in a hidden browser tab: the One probes every light each tick
     try { renderFleet(await (await fetch('/discover/refresh', { method: 'POST' })).json()); } catch (e) {}
   }, 5000);   // 5 s, not 60: the cards show each light's tally live (Rob, 2026-09-26)
   // timer lights change by the second - refresh the host state (cheap, no
   // probes) every 2 s while the Network tab is open
   setInterval(async () => {
     const pane = document.getElementById('tpane-network');
-    if (!pane || pane.offsetParent === null || !window._cueHost || !(window._cueHost.lights || []).length) return;
+    const showing = document.body.classList.contains('show-mode') || (pane && pane.offsetParent !== null);
+    if (!showing || document.hidden || !window._cueHost || !(window._cueHost.lights || []).length) return;
     try {
       const st = await (await fetch('/fleet/cue/state')).json();
       const last = await (await fetch('/discover/last')).json();
