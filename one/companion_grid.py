@@ -169,8 +169,14 @@ class _Session:
                      "color": str(a.get("COLOR", "")), "textcolor": str(a.get("TEXTCOLOR", "")),
                      "text": _b64text(a["TEXT"]) if "TEXT" in a else ""}
                 if "BITMAP" in a:
-                    b["img"] = str(a["BITMAP"])
-                    b["fmt"] = self.fmt
+                    img = str(a["BITMAP"])
+                    # a PNG comes as a whole data: URL (Companion 5.0); raw RGB as bare base64
+                    if img.startswith("data:"):
+                        b["fmt"] = "png"
+                        img = img.split(",", 1)[1] if "," in img else ""
+                    else:
+                        b["fmt"] = self.fmt
+                    b["img"] = img
                 self.buttons[(r, c)] = b
                 self.cv.notify_all()
 
