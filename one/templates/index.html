@@ -936,6 +936,8 @@
     .fx-btn.on { color:var(--accent); border-color:var(--accent); }
     .fx-btn.warn { color:var(--amber); border-color:rgba(245,165,36,.45); }
     .fx-btn.ghost { color:var(--muted); }
+    .fx-forget { margin-right:auto; }   /* off to the left, away from the everyday buttons */
+    .fx-forget:hover { color:#f2555a; border-color:rgba(229,72,77,.5); }
     @media (max-width: 560px) {
       .fx-sheet { padding:0; align-items:flex-end; }
       .fx-panel { width:100%; max-height:92vh; border-radius:18px 18px 0 0; }
@@ -3108,6 +3110,10 @@
       timer: aimedHere && +c.port === (H.port || 16640),
       cam: (c.camera !== undefined && c.camera !== null && +c.camera >= 0) ? +c.camera : null,
       kind: /camera|pro/i.test(model) ? 'camera' : /360/.test(model) ? '360' : /mini|og/i.test(model) ? 'mini' : 'round',
+      // the panel it actually has (light fw 0.77.3+). A Mini and a 360 can
+      // share a board now, so the model name no longer says how many LEDs.
+      grid: (c.grid && +c.grid.cols > 0 && +c.grid.rows > 0)
+              ? { cols: +c.grid.cols, rows: +c.grid.rows } : null,
       linked: !!L.relayed, noIp: !!L.no_ip, via: L.via_name || L.via || '',
       mirror: (L.show || 'mirror') !== 'own', carried: (L.guests || []).length,
       name: u.name || (model + ' ' + String(u.serial || '').slice(-4)),
@@ -3124,10 +3130,21 @@
     const num = i.cam !== null ? String(i.cam) : '';
     const face = 'style="fill:var(--tally)"';
     const numTxt = (x, y, size) => num ? '<text x="' + x + '" y="' + y + '" class="fx-num" style="font-size:' + size + 'px">' + num + '</text>' : '';
-    const dots = (n, x0, step, r) => {
+    // An LED panel centred in the body: pitch comes from the longer side, so
+    // a dense 8x8 and a sparse 5x5 both sit inside the same glass. The grid
+    // comes off the light; the numbers here are only the fallback for lights
+    // before 0.77.3, which never reported one.
+    const g = i.grid || {};
+    const leds = (gw, defCols, defRows) => {
+      const cols = g.cols || defCols, rows = g.rows || defRows;
+      const n = Math.max(cols, rows);
+      const step = n > 1 ? (gw * 0.74) / (n - 1) : 0;
+      const r = Math.max(1, step * 0.345);
+      const x0 = 60 - step * (cols - 1) / 2, y0 = 60 - step * (rows - 1) / 2;
       let s = '';
-      for (let y = 0; y < n; y++) for (let x = 0; x < n; x++)
-        s += '<circle cx="' + (x0 + x * step) + '" cy="' + (x0 + y * step) + '" r="' + r + '" class="fx-led"/>';
+      for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++)
+        s += '<circle cx="' + (x0 + x * step).toFixed(1) + '" cy="' + (y0 + y * step).toFixed(1) +
+             '" r="' + r.toFixed(1) + '" class="fx-led"/>';
       return s;
     };
     if (i.kind === 'camera') return '<svg class="fx-art" viewBox="0 0 120 120" aria-hidden="true">' +
@@ -3138,10 +3155,10 @@
       '<rect x="52" y="96" width="16" height="3" rx="1.5" class="fx-port"/></svg>';
     if (i.kind === '360') return '<svg class="fx-art" viewBox="0 0 120 120" aria-hidden="true">' +
       '<rect x="18" y="18" width="84" height="84" rx="14" class="fx-body"/>' +
-      '<rect x="24" y="24" width="72" height="72" rx="9" class="fx-glass"/>' + dots(8, 32.6, 7.8, 2.7) + '</svg>';
+      '<rect x="24" y="24" width="72" height="72" rx="9" class="fx-glass"/>' + leds(72, 8, 8) + '</svg>';
     if (i.kind === 'mini') return '<svg class="fx-art" viewBox="0 0 120 120" aria-hidden="true">' +
       '<rect x="31" y="31" width="58" height="58" rx="10" class="fx-body"/>' +
-      '<rect x="36" y="36" width="48" height="48" rx="6" class="fx-glass"/>' + dots(5, 43, 8.5, 2.9) + '</svg>';
+      '<rect x="36" y="36" width="48" height="48" rx="6" class="fx-glass"/>' + leds(48, 5, 5) + '</svg>';
     return '<svg class="fx-art" viewBox="0 0 120 120" aria-hidden="true">' +
       '<circle cx="60" cy="60" r="52" class="fx-body"/>' +
       '<circle cx="60" cy="60" r="45" class="fx-glass"/>' +
@@ -3375,6 +3392,7 @@
           fxRow('Software', 'v' + fxEsc(u.version) + (u.upd ? ' <span class="fx-chip warn">update</span>' : '')) +
         '</div></div>' +
         '<div class="fx-actions">' +
+          '<button class="fx-btn ghost fx-forget" onclick="fleetForget(\'' + u.serial + '\',\'' + q(nm) + '\',' + !bad + ')">Remove from this list</button>' +
           '<button class="fx-btn" onclick="fleetIdentify(\'' + u.ip + '\')">Identify</button>' +
           '<button class="fx-btn primary" onclick="openPanel(\'http://' + u.ip + ':8080\', \'' + q(nm) + '\')">Open its page</button></div>';
       return;
@@ -3450,9 +3468,11 @@
         fxRow('Status', '<span class="' + (bad ? 'fx-bad' : 'fx-ok') + '">' + fxEsc(status) + '</span>') +
         fxRow('Firmware', fxEsc(u.version || '-') + '<div class="fu-sub">' + fxEsc(u.serial) + (c.board ? ' · ' + fxEsc(c.board) : '') + '</div>') +
       '</div></div>' +
-      (i.noIp ? '' : '<div class="fx-actions">' +
+      '<div class="fx-actions">' +
+        '<button class="fx-btn ghost fx-forget" onclick="fleetForget(\'' + u.serial + '\',\'' + q(nm) + '\',' + !bad + ')">Remove from this list</button>' +
+        (i.noIp ? '' :
         '<button class="fx-btn" onclick="cueIdentify(\'' + u.ip + '\')" title="Blink it white for five seconds">Identify</button>' +
-        '<button class="fx-btn primary" onclick="openPanel(\'http://' + u.ip + '/\', \'' + q(nm) + '\')">Open its page</button></div>');
+        '<button class="fx-btn primary" onclick="openPanel(\'http://' + u.ip + '/\', \'' + q(nm) + '\')">Open its page</button>') + '</div>';
   }
   // ---- Choosing a light's Companion button, on a live picture of the page ----
   // (Rob, 2026-09-26.) The One follows every button of the page through
@@ -3651,6 +3671,19 @@
       fxGridMarks();
       fxGridFoot();
       setTimeout(async () => { try { renderFleet(await (await fetch('/discover/refresh', { method: 'POST' })).json()); } catch (e) {} }, 9000);
+    } catch (e) { showToast('Could not reach the One.', 'error'); }
+  }
+  async function fleetForget(serial, name, live) {
+    if (!confirm('Remove ' + name + ' from this list?' + (live
+        ? '\n\nIt is answering right now, so it will be found again at the next scan (or, if a Cue carries it, at the next refresh).'
+        : '\n\nIf it comes back on the network, a scan finds it again.'))) return;
+    try {
+      const d = await (await fetch('/fleet/forget', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ serial }) })).json();
+      if (!d.ok) { showToast('Not removed: ' + (d.error || 'no answer'), 'error'); return; }
+      fxClose();
+      renderFleet(d);
+      showToast(name + ' removed from the list.', 'success');
     } catch (e) { showToast('Could not reach the One.', 'error'); }
   }
   async function cueFollowOff(ip, name) {

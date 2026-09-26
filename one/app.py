@@ -3944,6 +3944,28 @@ def fleet_cue_adopt():
         return jsonify({"ok": False, "error": str(e)[:120]})
 
 
+@app.route("/fleet/forget", methods=["POST"])
+def fleet_forget():
+    """Take a unit off this One's list of units ({serial}). Only the list: a
+    unit still on the network is found again by the next sweep, and a light
+    a Cue carries comes back with that Cue's next refresh. For the dead and
+    the unplugged (Rob, 2026-09-26: "allow me to remove a unit")."""
+    serial = str((request.get_json() or {}).get("serial", ""))
+    if not serial:
+        return jsonify({"ok": False, "error": "no serial"}), 400
+    try:
+        cache = json.loads(_FLEET_CACHE.read_text())
+    except Exception:
+        return jsonify({"ok": True, "units": [], "ts": None})
+    before = len(cache.get("units", []))
+    cache["units"] = [u for u in cache.get("units", []) if u.get("serial") != serial]
+    try:
+        _FLEET_CACHE.write_text(json.dumps(cache))
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)[:120]})
+    return jsonify({"ok": True, "removed": before - len(cache["units"]), "cue_host": _cue_host_state(), **cache})
+
+
 @app.route("/fleet/cue/follow", methods=["POST"])
 def fleet_cue_follow():
     """A light follows the Companion button chosen on the page's live grid
