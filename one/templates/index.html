@@ -988,6 +988,14 @@
     .fx-cell.nav { opacity:.85; }
     .fx-gfoot { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:4px 16px 16px; min-height:52px; }
     .fx-gsel { font:700 15px var(--font-display); letter-spacing:.05em; color:var(--accent); }
+    .fx-cell.cur { border-color:#2e90d9; box-shadow:0 0 0 2px #2e90d9; }
+    .fx-cur { position:absolute; left:50%; bottom:3px; transform:translateX(-50%); font:700 8.5px var(--font-display); letter-spacing:.1em;
+      color:#fff; background:#2e90d9; border-radius:4px; padding:1px 5px; }
+    .fx-gblock { font-size:12px; color:var(--amber); max-width:52%; text-align:right; line-height:1.4; }
+    .fx-follow { margin:10px 0 0; }
+    .fx-warn-t { color:var(--amber); font-size:12px; }
+    .fx-link-btn { display:inline; padding:0; margin-left:6px; background:none; border:none; color:var(--accent); font:600 12px var(--font-body);
+      text-transform:none; letter-spacing:0; text-decoration:underline; text-underline-offset:3px; cursor:pointer; }
     .fx-gmsg { margin:18px 16px 16px; padding:16px 18px; border:1px solid rgba(245,165,36,.4); border-radius:12px; background:rgba(245,165,36,.06); }
     .fx-gmsg-t { font:700 16px var(--font-display); letter-spacing:.04em; color:var(--amber); margin-bottom:6px; }
     .fx-gmsg p { font-size:13px; color:var(--text); margin:0 0 8px; line-height:1.5; }
@@ -3339,7 +3347,14 @@
         '<button class="fx-pick" onclick="fxGridOpen(\'' + u.serial + '\')">' +
           '<span class="fx-pick-ic" aria-hidden="true">' + '<i></i>'.repeat(8) + '</span>' +
           '<span><b>Choose on the page</b><span>a live picture of Companion\'s buttons - tap the one this light shows</span></span>' +
-          '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M5 2l5 5-5 5"/></svg></button></div>' : '') +
+          '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M5 2l5 5-5 5"/></svg></button>' +
+        (c.follow && c.follow.on
+          ? '<p class="fx-note fx-follow">Follows <b>page ' + c.follow.page + ', row ' + (c.follow.row + 1) + ', column ' + (c.follow.col + 1) + '</b>' +
+              ' <span class="fx-mono">(' + c.follow.page + '/' + c.follow.row + '/' + c.follow.col + ')</span>' +
+              (c.follow.note ? '<br><span class="fx-warn-t">' + fxEsc(c.follow.note) + ' - it is a surface until then.</span>' : '') +
+              ' <button class="fx-link-btn" onclick="cueFollowOff(\'' + u.ip + '\',\'' + q(nm) + '\')">Let Companion place it</button></p>'
+          : c.follow ? '<p class="fx-note fx-follow">Companion places it: a surface on Companion\'s Surfaces page.</p>' : '') +
+        '</div>' : '') +
       ((L.enabled !== undefined || i.noIp) ? '<div class="fx-sec"><div class="fx-h">CueLink</div>' +
         // the link's own buttons and these share one row
         (link.includes('id="fx-link-btns"') ? link.replace(/<\/div>$/, shareBtn + offBtn + '</div>')
@@ -3380,8 +3395,14 @@
     if (!where) { showToast('This light has no Companion address yet.', 'error'); return; }
     let size = [4, 8];
     try { const v = JSON.parse(localStorage.getItem('fx-grid-size') || 'null'); if (Array.isArray(v)) size = v; } catch (e) {}
-    _fxGrid = { key, host: where.host, port: where.port, page: 1, rows: size[0], cols: size[1],
-                rev: 0, cells: {}, sel: null, err: '', loading: true, name: cueInfo(u).name };
+    const i = cueInfo(u), f = i.c.follow;
+    _fxGrid = { key, ip: u.ip, host: where.host, port: where.port, page: f && f.on ? f.page : 1, rows: size[0], cols: size[1],
+                rev: 0, cells: {}, sel: null, err: '', loading: true, name: i.name,
+                cur: f && f.on ? { page: f.page, row: f.row, col: f.col } : null,
+                // why "Use this button" cannot work for this light, if it cannot
+                block: i.linked || i.L.waiting ? 'Linked through a Cue, it takes its tally from the Cue. Unlink it to have it follow a button.'
+                     : i.noIp ? 'It has no WiFi of its own yet.'
+                     : !f ? 'Its firmware is too old to follow a button - update it to 0.77 or later.' : '' };
     document.querySelector('#fx-sheet .fx-panel').classList.add('wide');
     fxGridFrame();
     fxGridPoll();
@@ -3479,11 +3500,13 @@
     for (let r = 0; r < g.rows; r++) for (let c = 0; c < g.cols; c++) {
       const b = g.cells[r + '/' + c];
       const sel = g.sel && g.sel.page === g.page && g.sel.row === r && g.sel.col === c;
+      const cur = g.cur && g.cur.page === g.page && g.cur.row === r && g.cur.col === c;
       const face = !b ? '<span class="fx-cell-wait"></span>'
         : b.img && b.fmt === 'png' ? '<img src="data:image/png;base64,' + b.img + '" alt="">'
         : '<span class="fx-cell-txt" style="background:' + fxEsc(b.color || '#000') + ';color:' + fxEsc(b.textcolor || '#fff') + '">' + fxEsc(b.text || '') + '</span>';
-      h += '<button class="fx-cell' + (sel ? ' sel' : '') + (b && b.pressed ? ' down' : '') + (b && b.type !== 'BUTTON' ? ' nav' : '') +
-           '" onclick="fxGridPick(' + r + ',' + c + ')" title="Page ' + g.page + ', row ' + (r + 1) + ', column ' + (c + 1) + '">' + face + '</button>';
+      h += '<button class="fx-cell' + (sel ? ' sel' : '') + (cur ? ' cur' : '') + (b && b.pressed ? ' down' : '') + (b && b.type !== 'BUTTON' ? ' nav' : '') +
+           '" onclick="fxGridPick(' + r + ',' + c + ')" title="Page ' + g.page + ', row ' + (r + 1) + ', column ' + (c + 1) + '">' + face +
+           (cur ? '<span class="fx-cur">NOW</span>' : '') + '</button>';
     }
     box.innerHTML = h;
   }
@@ -3494,8 +3517,36 @@
     foot.innerHTML = s
       ? '<div><div class="fx-gsel">Page ' + s.page + ' · Row ' + (s.row + 1) + ' · Column ' + (s.col + 1) + '</div>' +
           '<div class="fx-mono">Companion location ' + s.page + '/' + s.row + '/' + s.col + '</div></div>' +
-        '<button class="fx-btn primary" disabled title="The lights learn to follow a chosen button in their next firmware">Use this button</button>'
-      : '<div class="fx-dim">Tap the button this light should show.' + (g.loading ? ' Loading the page&hellip;' : '') + '</div>';
+        (g.block ? '<div class="fx-gblock">' + fxEsc(g.block) + '</div>'
+                 : '<button class="fx-btn primary" onclick="fxGridUse()">Use this button</button>')
+      : '<div class="fx-dim">' + (g.cur ? 'It follows the button marked NOW. ' : '') + 'Tap the button this light should show.' +
+          (g.loading ? ' Loading the page&hellip;' : '') + '</div>';
+  }
+  async function fxGridUse() {
+    const g = _fxGrid;
+    if (!g || !g.sel) return;
+    const s = g.sel;
+    try {
+      const d = await (await fetch('/fleet/cue/follow', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ip: g.ip, page: s.page, row: s.row, col: s.col }) })).json();
+      showToast(d.ok ? g.name + ' restarts and follows page ' + s.page + ', row ' + (s.row + 1) + ', column ' + (s.col + 1) + '.'
+                     : 'Not changed: ' + (d.error || 'no answer'), d.ok ? 'success' : 'error');
+      if (!d.ok) return;
+      g.cur = { page: s.page, row: s.row, col: s.col };
+      g.sel = null;
+      fxGridCells();
+      fxGridFoot();
+      setTimeout(async () => { try { renderFleet(await (await fetch('/discover/refresh', { method: 'POST' })).json()); } catch (e) {} }, 9000);
+    } catch (e) { showToast('Could not reach the One.', 'error'); }
+  }
+  async function cueFollowOff(ip, name) {
+    if (!confirm('Let Companion place ' + name + ' again? It restarts and shows up on Companion\'s Surfaces page, where you give it a page and offset.')) return;
+    try {
+      const d = await (await fetch('/fleet/cue/follow', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ip, off: true }) })).json();
+      showToast(d.ok ? name + ' restarts as a Companion surface.' : 'Not changed: ' + (d.error || 'no answer'), d.ok ? 'success' : 'error');
+      if (d.ok) setTimeout(async () => { try { renderFleet(await (await fetch('/discover/refresh', { method: 'POST' })).json()); } catch (e) {} }, 9000);
+    } catch (e) { showToast('Could not reach the One.', 'error'); }
   }
   function fmtLeft(ms) {
     const s = Math.ceil(Math.abs(ms) / 1000);

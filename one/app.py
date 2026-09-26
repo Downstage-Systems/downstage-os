@@ -3606,6 +3606,8 @@ def _probe_cue(ip, timeout=0.6):
                         "talent": bool(d.get("talent")),
                         # a light with a battery says how full (the Camera does); -1 none
                         "battery": d.get("battery", -1), "charging": bool(d.get("charging")),
+                        # the Companion button it follows (light fw 0.77+; absent before)
+                        "follow": d.get("follow"),
                         # CueLink (light firmware 0.53+): linked through a Cue,
                         # or a Cue carrying others - some of which have no WiFi
                         # of their own and so never answer a sweep
@@ -3906,6 +3908,33 @@ def fleet_cue_adopt():
             return jsonify({"ok": True, "host": me, "port": port, "mode": mode,
                             "unlinked": bool((r.json() if r.content else {}).get("unlinked"))})
         return jsonify({"ok": False, "error": f"light answered {r.status_code}"})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)[:120]})
+
+
+@app.route("/fleet/cue/follow", methods=["POST"])
+def fleet_cue_follow():
+    """A light follows the Companion button chosen on the page's live grid
+    ({ip, page, row, col}, row and col from 0), or goes back to being a
+    surface Companion places ({ip, off: true}). The light restarts to take it."""
+    d = request.get_json() or {}
+    ip = str(d.get("ip", ""))
+    try:
+        ipaddress.ip_address(ip)
+    except Exception:
+        return jsonify({"ok": False, "error": "bad ip"}), 400
+    if d.get("off"):
+        form = {"off": "1"}
+    else:
+        try:
+            form = {"page": int(d["page"]), "row": int(d["row"]), "col": int(d["col"])}
+        except (KeyError, TypeError, ValueError):
+            return jsonify({"ok": False, "error": "page, row and col"}), 400
+    try:
+        r = requests.post(f"http://{ip}/follow", data=form, timeout=6)
+        if r.status_code == 404:
+            return jsonify({"ok": False, "error": "This light's firmware is too old to follow a button (needs 0.77)"})
+        return jsonify({"ok": r.ok, **(r.json() if r.ok else {"error": r.text[:120]})})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)[:120]})
 
