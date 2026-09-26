@@ -3637,8 +3637,8 @@ def _cue_model(model):
     # older light firmware reports the names these models shipped under
     if m == "Downstage Cue OG":     # the Atom, renamed Cue Mini (2026-09-24)
         return "Cue Mini"
-    if m == "Downstage Cue Pro":    # renamed Cue Camera (2026-09-26, light fw 0.76.1)
-        return "Cue Camera"
+    if m in ("Downstage Cue Pro", "Downstage Cue Camera"):
+        return "Cue Lite"           # Pro -> Camera -> Lite, both renamed 2026-09-26
     return m[len("Downstage "):] if m.startswith("Downstage ") else (m or "Cue")
 
 
