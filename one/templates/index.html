@@ -3439,10 +3439,10 @@
           (i.noIp ? '' : '<button class="fx-edit" onclick="cueRename(\'' + u.ip + '\',\'' + q(u.name || '') + '\')" title="Rename - shows here and on Companion\'s Surfaces page">&#9998;</button>') + '</div>' +
           '<div class="fx-sub">' + fxEsc(i.model) + (i.cam !== null ? ' · CAM ' + i.cam : '') + (c.talent ? ' · TALENT' : '') + '</div>' +
           '<div class="fx-chips">' + cueChips(u, i, bad).join('') + '</div></div></div>' +
-      (i.noIp ? '' :
-      '<div class="fx-sec"><div class="fx-h">Tally from</div><div class="fx-seg">' +
-        '<button class="' + (i.aimedHere && !i.timer && !i.linked ? 'on' : '') + '" onclick="cueAdopt(\'' + u.ip + '\',\'tally\',' + !!(i.linked || L.waiting) + ')"><b>This One\'s Companion</b><span>its address goes to the light</span></button>' +
-        '<button class="' + (i.timer ? 'on' : '') + '" onclick="cueAdopt(\'' + u.ip + '\',\'timer\',' + !!(i.linked || L.waiting) + ')"><b>This One\'s timer</b><span>no Companion needed</span></button></div></div>') +
+      // No "Tally from" choice any more (Rob, 2026-09-26): a Cue picks up this
+      // One's timer by itself, a swipe from its tally, so no light needs to be
+      // driven by the timer. Pointing a light at this One's Companion - for a
+      // Companion that runs here - is a link in Details instead.
       (cueCompanionOf(u) ? '<div class="fx-sec"><div class="fx-h">Companion button</div>' +
         '<button class="fx-pick" onclick="fxGridOpen(\'' + u.serial + '\')">' +
           '<span class="fx-pick-ic" aria-hidden="true">' + '<i></i>'.repeat(8) + '</span>' +
@@ -3463,8 +3463,11 @@
         fxRow('Address', i.noIp ? 'No WiFi<div class="fu-sub">reached through ' + fxEsc(fxShort(i.via)) + '</div>'
           : '<span class="fu-ip" onclick="copyIp(\'' + u.ip + '\')" title="Click to copy">' + fxEsc(u.ip) + '</span>' +
             (c.rssi ? '<div class="fu-sub">' + fxEsc(c.ssid ? c.ssid + ' · ' : '') + c.rssi + ' dBm</div>' : '')) +
-        fxRow(i.timer ? 'Following' : 'Companion', i.timer ? 'This unit\'s timer' : i.linked ? 'Through ' + fxEsc(fxShort(i.via))
+        fxRow(i.timer ? 'Following' : 'Companion', (i.timer ? 'This unit\'s timer' : i.linked ? 'Through ' + fxEsc(fxShort(i.via))
           : fxEsc(c.host ? (i.aimedHere ? 'This unit' : c.host) : '-') + (c.companion_version ? '<div class="fu-sub">v' + fxEsc(c.companion_version) + '</div>' : '')) +
+          // for a Companion running on this One: point the light here (a light on the old timer mode comes back to Companion this way too)
+          (!i.noIp && !i.linked && (i.timer || !i.aimedHere)
+            ? '<div><button class="fx-link-btn" style="margin:4px 0 0" onclick="cueAdopt(\'' + u.ip + '\',\'tally\',' + !!L.waiting + ')">Use this One\'s Companion</button></div>' : '')) +
         fxRow('Status', '<span class="' + (bad ? 'fx-bad' : 'fx-ok') + '">' + fxEsc(status) + '</span>') +
         fxRow('Firmware', fxEsc(u.version || '-') + '<div class="fu-sub">' + fxEsc(u.serial) + (c.board ? ' · ' + fxEsc(c.board) : '') + '</div>') +
       '</div></div>' +
