@@ -3608,6 +3608,10 @@ def _probe_cue(ip, timeout=0.6):
                         "battery": d.get("battery", -1), "charging": bool(d.get("charging")),
                         # the Companion button it follows (light fw 0.77+; absent before)
                         "follow": d.get("follow"),
+                        # LED boards say their panel size (light fw 0.77.3+):
+                        # {"cols": n, "rows": n}. Screens send none. Board no
+                        # longer implies it - a Mini and a 360 can share one.
+                        "grid": d.get("grid"),
                         # CueLink (light firmware 0.53+): linked through a Cue,
                         # or a Cue carrying others - some of which have no WiFi
                         # of their own and so never answer a sweep
@@ -3760,6 +3764,31 @@ def discover_units():
     return jsonify({"ok": True, "cue_host": _cue_host_state(), **_do_discover()})
 
 
+_CUE_NAME_MISS = {}   # serial -> when looking it up by name last found nothing
+
+
+def _cue_by_name(serial):
+    """A light's address from its own mDNS name, downstage-cue-<last four of
+    its id>.local, or None. For a light listed only through the Cue carrying
+    it: once it has WiFi (a share, Send WiFi) it answers there, and a refresh
+    finds it without waiting for a sweep (Rob, 2026-09-26: a Mini sent WiFi
+    still showed "No WiFi" here). A miss is remembered for 30 s, so a light
+    with no WiFi at all costs a refresh nothing."""
+    if not serial or time.time() - _CUE_NAME_MISS.get(serial, 0) < 30:
+        return None
+    name = f"downstage-cue-{serial[-4:].lower()}.local"
+    try:
+        r = subprocess.run(["getent", "hosts", name], capture_output=True, text=True, timeout=1.5)
+        parts = r.stdout.split() if r.returncode == 0 else []
+        ip = parts[0] if parts and "." in parts[0] else ""
+    except Exception:
+        ip = ""
+    if not ip:
+        _CUE_NAME_MISS[serial] = time.time()
+        return None
+    return ip
+
+
 @app.route("/discover/refresh", methods=["POST"])
 def discover_refresh():
     """Freshen the cached units only - a handful of targeted probes, never a
@@ -3774,6 +3803,9 @@ def discover_refresh():
             # a light reached only over CueLink: try where it last had an
             # address; if it does not answer there, its Cue lists it below
             p = _probe_cue(u["last_ip"], 1.5) if u.get("last_ip") else None
+            if not (p and p["serial"] == u.get("serial")):   # or by its own name, if it has WiFi now
+                ip = _cue_by_name(u.get("serial", ""))
+                p = _probe_cue(ip, 1.5) if ip else None
             if p and p["serial"] == u.get("serial"):
                 p.pop("primary", None)
                 fresh.append(p)
