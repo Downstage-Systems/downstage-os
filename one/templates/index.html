@@ -3551,7 +3551,7 @@
   // never a sweep) so health / tally colour / versions stay live
   setInterval(async () => {
     const pane = document.getElementById('tpane-network');
-    if (!pane || pane.offsetParent === null) return;
+    if (!pane || pane.offsetParent === null || document.hidden) return;   // not in a hidden browser tab: the One probes every light each tick
     try { renderFleet(await (await fetch('/discover/refresh', { method: 'POST' })).json()); } catch (e) {}
   }, 5000);   // 5 s, not 60: the cards show each light's tally live (Rob, 2026-09-26)
   // timer lights change by the second - refresh the host state (cheap, no
