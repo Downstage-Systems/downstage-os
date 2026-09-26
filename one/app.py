@@ -14,6 +14,7 @@ import requests
 from flask import Flask, jsonify, render_template, request, send_file, Response
 
 import cue_ble   # BLE onboarding for Cue lights; degrades to a no-op without bluetooth
+import companion_grid   # a live picture of a Companion page, for choosing a light's button
 
 OS_VERSION = "1.6.4"   # Downstage OS release - bump on tagged releases
 OS_PRODUCT = "Downstage One"
@@ -3499,6 +3500,25 @@ def fleet_cue_send_wifi():
         return jsonify({"ok": res.startswith("shared"), "result": res})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)})
+
+
+@app.route("/companion/grid")
+def companion_grid_page():
+    """One Companion page as a live grid (companion_grid.py): the buttons that
+    changed since ?since=, all of them for 0. ?host/port is the Companion the
+    light uses - not necessarily this unit's."""
+    host = (request.args.get("host") or "").strip()
+    if not re.fullmatch(r"[A-Za-z0-9.\-:]{1,64}", host):
+        return jsonify({"ok": False, "error": "No Companion address"}), 400
+    try:
+        port = int(request.args.get("port", 16622))
+        page = max(1, min(99, int(request.args.get("page", 1))))
+        rows = max(1, min(16, int(request.args.get("rows", 4))))
+        cols = max(1, min(16, int(request.args.get("cols", 8))))
+        since = int(request.args.get("since", 0))
+    except ValueError:
+        return jsonify({"ok": False, "error": "Bad numbers"}), 400
+    return jsonify(companion_grid.grid(host, port, page, rows, cols, since, wait=2.5 if since == 0 else 0))
 
 
 @app.route("/fleet/cue/state")

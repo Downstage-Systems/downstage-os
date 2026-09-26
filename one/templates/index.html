@@ -947,6 +947,54 @@
       .fx-card, .fx-art, .fx-panel, .fx-sheet { transition:none; }
       .fx-new, .fx-card.air .fx-stage::before, .fx-panel.air .fx-stage::before { animation:none; }
     }
+    /* choosing a light's button on a live picture of a Companion page */
+    .fx-pick { width:100%; display:flex; align-items:center; gap:14px; text-align:left; padding:12px 14px; border-radius:12px;
+      background:linear-gradient(135deg, rgba(47,217,123,.10), rgba(46,144,217,.08)); border:1px solid rgba(47,217,123,.35);
+      color:var(--text); text-transform:none; letter-spacing:0; }
+    .fx-pick:hover { border-color:var(--accent); }
+    .fx-pick > span:nth-child(2) { display:flex; flex-direction:column; gap:2px; flex:1; min-width:0; }
+    .fx-pick b { font:700 14px var(--font-display); letter-spacing:.05em; text-transform:uppercase; }
+    .fx-pick > span:nth-child(2) > span { font:400 12px var(--font-body); color:var(--muted); white-space:normal; }
+    .fx-pick > svg { width:14px; height:14px; fill:none; stroke:var(--muted); stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
+    .fx-pick-ic { display:grid; grid-template-columns:repeat(4, 8px); gap:3px; flex:none; }
+    .fx-pick-ic i { width:8px; height:8px; border-radius:2px; background:#2a323b; }
+    .fx-pick-ic i:nth-child(2) { background:var(--red); } .fx-pick-ic i:nth-child(7) { background:var(--accent); }
+
+    .fx-panel.wide { width:min(820px, 100%); }
+    .fx-ghead { display:flex; align-items:center; gap:12px; padding:16px 58px 12px 16px; border-bottom:1px solid var(--border); }
+    .fx-back { width:34px; height:34px; min-width:34px; padding:0; flex:none; display:grid; place-items:center; border-radius:50%;
+      border:1px solid var(--border2); background:var(--surface2); color:var(--muted); cursor:pointer; }
+    .fx-back svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
+    .fx-back:hover { color:var(--text); border-color:var(--muted2); }
+    .fx-gbar { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 16px 0; }
+    .fx-pager { display:flex; align-items:center; gap:10px; font:600 13px var(--font-display); letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+    .fx-pager b { color:var(--text); font-size:16px; }
+    .fx-pager button { width:32px; height:32px; min-width:32px; padding:0; justify-content:center; border-radius:8px; border:1px solid var(--border2);
+      background:var(--surface2); color:var(--text); font-size:20px; line-height:1; }
+    .fx-gsize { background:var(--surface2); color:var(--text); border:1px solid var(--border2); border-radius:8px; padding:6px 8px; font:600 12px var(--font-display); letter-spacing:.04em; }
+    .fx-gwrap { padding:12px 16px; }
+    .fx-gcells { display:grid; gap:6px; padding:10px; background:#08090b; border:1px solid var(--border); border-radius:12px; }
+    .fx-cell { position:relative; aspect-ratio:1; min-width:0; padding:0; border-radius:7px; border:1px solid #20262d; background:#000;
+      overflow:hidden; cursor:pointer; display:block; transition:transform .12s, box-shadow .15s, border-color .15s; }
+    .fx-cell img, .fx-cell-txt { width:100%; height:100%; display:block; object-fit:cover; image-rendering:auto; }
+    .fx-cell-txt { display:flex; align-items:center; justify-content:center; text-align:center; font:600 10px var(--font-display);
+      padding:3px; overflow:hidden; white-space:normal; word-break:break-word; text-transform:none; letter-spacing:0; }
+    .fx-cell-wait { display:block; width:100%; height:100%; background:linear-gradient(110deg, #111418 30%, #1a1f25 50%, #111418 70%);
+      background-size:220% 100%; animation:fxShimmer 1.2s linear infinite; }
+    @keyframes fxShimmer { to { background-position:-120% 0; } }
+    .fx-cell:hover { transform:scale(1.06); z-index:1; border-color:var(--muted2); box-shadow:0 6px 16px rgba(0,0,0,.5); }
+    .fx-cell.down { box-shadow:inset 0 0 0 2px #fff; }
+    .fx-cell.sel { border-color:var(--accent); box-shadow:0 0 0 2px var(--accent), 0 0 18px rgba(47,217,123,.45); transform:scale(1.04); z-index:2; }
+    .fx-cell.nav { opacity:.85; }
+    .fx-gfoot { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:4px 16px 16px; min-height:52px; }
+    .fx-gsel { font:700 15px var(--font-display); letter-spacing:.05em; color:var(--accent); }
+    .fx-gmsg { margin:18px 16px 16px; padding:16px 18px; border:1px solid rgba(245,165,36,.4); border-radius:12px; background:rgba(245,165,36,.06); }
+    .fx-gmsg-t { font:700 16px var(--font-display); letter-spacing:.04em; color:var(--amber); margin-bottom:6px; }
+    .fx-gmsg p { font-size:13px; color:var(--text); margin:0 0 8px; line-height:1.5; }
+    .fx-gmsg p.fx-dim { color:var(--muted); }
+    .fx-btn:disabled { opacity:.45; cursor:not-allowed; transform:none; }
+    @media (max-width: 560px) { .fx-gcells { gap:4px; padding:6px; } .fx-cell { border-radius:5px; } }
+    @media (prefers-reduced-motion: reduce) { .fx-cell-wait { animation:none; } .fx-cell { transition:none; } }
     #fleet-panel .ivia { font-size:11px; color:var(--muted); }
     #fleet-panel .ibrk { display:none; }
     @media (max-width: 620px) {
@@ -3203,6 +3251,7 @@
     fxLock(false);
     setTimeout(() => { if (!s.classList.contains('open')) s.hidden = true; }, 220);
     const card = document.querySelector('.fx-card[data-key="' + CSS.escape(_fxOpen || '') + '"]');
+    if (_fxGrid) { clearTimeout(_fxGrid.timer); _fxGrid = null; document.querySelector('#fx-sheet .fx-panel').classList.remove('wide'); }
     _fxOpen = null;
     if (card) card.focus();
   }
@@ -3212,6 +3261,7 @@
     const u = (_fxData && _fxData.units || []).find(x => (x.serial || x.ip) === _fxOpen);
     const body = document.getElementById('fx-panel-body');
     if (!u) { if (first !== true) fxClose(); return; }
+    if (_fxGrid) return;   // choosing a button: the grid owns the sheet
     // someone is choosing from a list in the sheet: do not pull it from under them
     if (!first && body.contains(document.activeElement) && document.activeElement.tagName === 'SELECT') return;
     const card = fxCard(u);
@@ -3285,6 +3335,11 @@
       '<div class="fx-sec"><div class="fx-h">Tally from</div><div class="fx-seg">' +
         '<button class="' + (i.aimedHere && !i.timer && !i.linked ? 'on' : '') + '" onclick="cueAdopt(\'' + u.ip + '\',\'tally\',' + !!(i.linked || L.waiting) + ')"><b>This One\'s Companion</b><span>its address goes to the light</span></button>' +
         '<button class="' + (i.timer ? 'on' : '') + '" onclick="cueAdopt(\'' + u.ip + '\',\'timer\',' + !!(i.linked || L.waiting) + ')"><b>This One\'s timer</b><span>no Companion needed</span></button></div></div>') +
+      (cueCompanionOf(u) ? '<div class="fx-sec"><div class="fx-h">Companion button</div>' +
+        '<button class="fx-pick" onclick="fxGridOpen(\'' + u.serial + '\')">' +
+          '<span class="fx-pick-ic" aria-hidden="true">' + '<i></i>'.repeat(8) + '</span>' +
+          '<span><b>Choose on the page</b><span>a live picture of Companion\'s buttons - tap the one this light shows</span></span>' +
+          '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M5 2l5 5-5 5"/></svg></button></div>' : '') +
       ((L.enabled !== undefined || i.noIp) ? '<div class="fx-sec"><div class="fx-h">CueLink</div>' +
         // the link's own buttons and these share one row
         (link.includes('id="fx-link-btns"') ? link.replace(/<\/div>$/, shareBtn + offBtn + '</div>')
@@ -3301,6 +3356,146 @@
       (i.noIp ? '' : '<div class="fx-actions">' +
         '<button class="fx-btn" onclick="cueIdentify(\'' + u.ip + '\')" title="Blink it white for five seconds">Identify</button>' +
         '<button class="fx-btn primary" onclick="openPanel(\'http://' + u.ip + '/\', \'' + q(nm) + '\')">Open its page</button></div>');
+  }
+  // ---- Choosing a light's Companion button, on a live picture of the page ----
+  // (Rob, 2026-09-26.) The One follows every button of the page through
+  // Companion's Button Subscriptions API (/companion/grid) and draws them as
+  // Companion does; tap one to pick it. The picture is live: a button that
+  // changes in Companion changes here.
+  let _fxGrid = null;
+  const kGridSizes = [[4, 8, '8 × 4 (Companion)'], [3, 5, '5 × 3 (Stream Deck)'], [4, 4, '4 × 4'], [8, 8, '8 × 8']];
+  function cueCompanionOf(u) {   // the Companion this light's buttons live on
+    const i = cueInfo(u), c = i.c;
+    if (i.linked) {   // through a Cue: that Cue's Companion
+      const cue = ((_fxData && _fxData.units) || []).find(x => x.serial === i.L.via || x.serial === i.via);
+      if (cue && cue.cue && cue.cue.host) return { host: cue.cue.host, port: +cue.cue.port || 16622 };
+      return null;
+    }
+    if (i.timer) return { host: location.hostname, port: 16622 };   // on this One's timer: this One's Companion
+    return c.host ? { host: c.host, port: +c.port || 16622 } : null;
+  }
+  function fxGridOpen(key) {
+    const u = ((_fxData && _fxData.units) || []).find(x => (x.serial || x.ip) === key);
+    const where = u && cueCompanionOf(u);
+    if (!where) { showToast('This light has no Companion address yet.', 'error'); return; }
+    let size = [4, 8];
+    try { const v = JSON.parse(localStorage.getItem('fx-grid-size') || 'null'); if (Array.isArray(v)) size = v; } catch (e) {}
+    _fxGrid = { key, host: where.host, port: where.port, page: 1, rows: size[0], cols: size[1],
+                rev: 0, cells: {}, sel: null, err: '', loading: true, name: cueInfo(u).name };
+    document.querySelector('#fx-sheet .fx-panel').classList.add('wide');
+    fxGridFrame();
+    fxGridPoll();
+  }
+  function fxGridClose() {
+    if (_fxGrid) clearTimeout(_fxGrid.timer);
+    _fxGrid = null;
+    document.querySelector('#fx-sheet .fx-panel').classList.remove('wide');
+    if (_fxOpen) fxSheet(true);
+  }
+  function fxGridPage(d) {
+    const g = _fxGrid;
+    if (!g) return;
+    g.page = Math.max(1, Math.min(99, g.page + d));
+    g.rev = 0; g.cells = {}; g.loading = true;
+    clearTimeout(g.timer);
+    fxGridFrame();
+    fxGridPoll();
+  }
+  function fxGridSize(v) {
+    const g = _fxGrid;
+    if (!g) return;
+    const [r, c] = v.split('x').map(Number);
+    g.rows = r; g.cols = c; g.rev = 0; g.cells = {}; g.loading = true; g.sel = null;
+    try { localStorage.setItem('fx-grid-size', JSON.stringify([r, c])); } catch (e) {}
+    clearTimeout(g.timer);
+    fxGridFrame();
+    fxGridPoll();
+  }
+  function fxGridPick(r, c) {
+    const g = _fxGrid;
+    if (!g) return;
+    g.sel = { page: g.page, row: r, col: c };
+    fxGridCells();
+    fxGridFoot();
+  }
+  async function fxGridPoll() {
+    const g = _fxGrid;
+    if (!g) return;
+    try {
+      const q = new URLSearchParams({ host: g.host, port: g.port, page: g.page, rows: g.rows, cols: g.cols, since: g.rev });
+      const d = await (await fetch('/companion/grid?' + q)).json();
+      if (g !== _fxGrid) return;
+      if (d.page === g.page && d.rows === g.rows && d.cols === g.cols) {
+        if (d.full) g.cells = {};
+        (d.buttons || []).forEach(b => { g.cells[b.row + '/' + b.col] = b; });
+        g.rev = d.rev || 0;
+        g.companion = d.companion || g.companion;
+        const was = g.err;
+        g.err = d.error || '';
+        g.loading = false;
+        if (was !== g.err) fxGridFrame(); else fxGridCells();
+      }
+    } catch (e) {
+      if (g !== _fxGrid) return;
+      g.err = 'The One did not answer.';
+      fxGridFrame();
+    }
+    if (g === _fxGrid) g.timer = setTimeout(fxGridPoll, g.err ? 4000 : 800);
+  }
+  function fxGridFrame() {
+    const g = _fxGrid, body = document.getElementById('fx-panel-body');
+    if (!g) return;
+    const sizeKey = g.rows + 'x' + g.cols;
+    const off = g.err === 'subscriptions-off';
+    body.innerHTML =
+      '<div class="fx-ghead">' +
+        '<button class="fx-back" onclick="fxGridClose()" aria-label="Back"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M9 2L4 7l5 5"/></svg></button>' +
+        '<div><div class="fx-title">Choose its button</div>' +
+          '<div class="fx-sub">' + fxEsc(g.name) + ' · Companion at ' + fxEsc(g.host) + (g.companion ? ' · v' + fxEsc(g.companion.split('+')[0]) : '') + '</div></div></div>' +
+      (off
+        ? '<div class="fx-gmsg"><div class="fx-gmsg-t">Companion needs one setting first</div>' +
+            '<p>In Companion, open <b>Settings</b>, then <b>Satellite</b>, and turn on <b>Enable Button Subscriptions API</b>. ' +
+            'That lets the One show its pages here.</p>' +
+            '<p class="fx-dim">Companion reconnects every light for a moment when that setting changes, so not mid-show.</p>' +
+            '<div class="fx-actions left"><button class="fx-btn primary" onclick="_fxGrid.rev=0;clearTimeout(_fxGrid.timer);fxGridPoll()">It\'s on - try again</button></div></div>'
+        : g.err
+          ? '<div class="fx-gmsg"><div class="fx-gmsg-t">Can\'t show that page</div><p>' + fxEsc(g.err) + '</p>' +
+              '<div class="fx-actions left"><button class="fx-btn" onclick="_fxGrid.rev=0;clearTimeout(_fxGrid.timer);fxGridPoll()">Try again</button></div></div>'
+          : '<div class="fx-gbar">' +
+              '<div class="fx-pager"><button onclick="fxGridPage(-1)"' + (g.page <= 1 ? ' disabled' : '') + ' aria-label="Previous page">&lsaquo;</button>' +
+                '<span>Page <b>' + g.page + '</b></span>' +
+                '<button onclick="fxGridPage(1)"' + (g.page >= 99 ? ' disabled' : '') + ' aria-label="Next page">&rsaquo;</button></div>' +
+              '<select class="fx-gsize" onchange="fxGridSize(this.value)" title="Match Companion\'s grid size">' +
+                kGridSizes.map(s => '<option value="' + s[0] + 'x' + s[1] + '"' + (sizeKey === s[0] + 'x' + s[1] ? ' selected' : '') + '>' + s[2] + '</option>').join('') +
+              '</select></div>' +
+            '<div class="fx-gwrap"><div id="fx-gcells" class="fx-gcells" style="grid-template-columns:repeat(' + g.cols + ', minmax(0, 1fr))"></div></div>' +
+            '<div class="fx-gfoot" id="fx-gfoot"></div>');
+    if (!off && !g.err) { fxGridCells(); fxGridFoot(); }
+  }
+  function fxGridCells() {
+    const g = _fxGrid, box = document.getElementById('fx-gcells');
+    if (!g || !box) return;
+    let h = '';
+    for (let r = 0; r < g.rows; r++) for (let c = 0; c < g.cols; c++) {
+      const b = g.cells[r + '/' + c];
+      const sel = g.sel && g.sel.page === g.page && g.sel.row === r && g.sel.col === c;
+      const face = !b ? '<span class="fx-cell-wait"></span>'
+        : b.img && b.fmt === 'png' ? '<img src="data:image/png;base64,' + b.img + '" alt="">'
+        : '<span class="fx-cell-txt" style="background:' + fxEsc(b.color || '#000') + ';color:' + fxEsc(b.textcolor || '#fff') + '">' + fxEsc(b.text || '') + '</span>';
+      h += '<button class="fx-cell' + (sel ? ' sel' : '') + (b && b.pressed ? ' down' : '') + (b && b.type !== 'BUTTON' ? ' nav' : '') +
+           '" onclick="fxGridPick(' + r + ',' + c + ')" title="Page ' + g.page + ', row ' + (r + 1) + ', column ' + (c + 1) + '">' + face + '</button>';
+    }
+    box.innerHTML = h;
+  }
+  function fxGridFoot() {
+    const g = _fxGrid, foot = document.getElementById('fx-gfoot');
+    if (!g || !foot) return;
+    const s = g.sel;
+    foot.innerHTML = s
+      ? '<div><div class="fx-gsel">Page ' + s.page + ' · Row ' + (s.row + 1) + ' · Column ' + (s.col + 1) + '</div>' +
+          '<div class="fx-mono">Companion location ' + s.page + '/' + s.row + '/' + s.col + '</div></div>' +
+        '<button class="fx-btn primary" disabled title="The lights learn to follow a chosen button in their next firmware">Use this button</button>'
+      : '<div class="fx-dim">Tap the button this light should show.' + (g.loading ? ' Loading the page&hellip;' : '') + '</div>';
   }
   function fmtLeft(ms) {
     const s = Math.ceil(Math.abs(ms) / 1000);
