@@ -3109,7 +3109,7 @@
       c, L, col, lit: col !== '#000000', aimedHere, model,
       timer: aimedHere && +c.port === (H.port || 16640),
       cam: (c.camera !== undefined && c.camera !== null && +c.camera >= 0) ? +c.camera : null,
-      kind: /camera|pro/i.test(model) ? 'camera' : /360/.test(model) ? '360' : /mini|og/i.test(model) ? 'mini' : 'round',
+      kind: /lite|camera|pro/i.test(model) ? 'camera' : /360/.test(model) ? '360' : /mini|og/i.test(model) ? 'mini' : 'round',
       // the panel it actually has (light fw 0.77.3+). A Mini and a 360 can
       // share a board now, so the model name no longer says how many LEDs.
       grid: (c.grid && +c.grid.cols > 0 && +c.grid.rows > 0)
