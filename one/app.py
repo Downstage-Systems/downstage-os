@@ -3691,17 +3691,34 @@ def _add_carried_cues(units, prev=None):
                           "version": "", "kind": "", "name": n.get("label", ""),
                           "showing": u.get("showing", "") if mirror else "",
                           "health_ok": True, "health_why": "", "upd": False,
-                          "cue": {"camera": -1, "link": {"relayed": True, "via": u["serial"],
+                          # the button it follows as its own key, as its Cue says (both 0.80+)
+                          "cue": {"camera": -1, "follow": g.get("follow"),
+                                  "link": {"relayed": True, "via": u["serial"],
                                                           "via_name": names.get(u["serial"], u["serial"]),
                                                           "via_ip": u.get("ip", ""),
                                                           "show": "mirror" if mirror else "own",
+                                                          "cue_follows": "follow" in g,
                                                           "no_ip": True}}})
             have.add(gid)
+    guest_of = {}   # light -> its entry in the list of the Cue carrying it
     for u in units:
-        lk = ((u.get("cue") or {}).get("link") or {})
+        for g in (((u.get("cue") or {}).get("link") or {}).get("guests") or []):
+            if g.get("id"):
+                guest_of[g["id"]] = g
+    for u in units:
+        c = u.get("cue") or {}
+        lk = c.get("link") or {}
         if lk.get("via"):
             lk["via_name"] = names.get(lk["via"], lk["via"])
             lk["via_ip"] = ips.get(lk["via"], "")
+        g = guest_of.get(u.get("serial", ""))
+        if lk.get("relayed") and g is not None:
+            # A light with its own WiFi, carried: its Cue follows its button for
+            # it (both 0.80+), so whether that works is the Cue's to say
+            lk["cue_follows"] = "follow" in g
+            if "follow" in g and isinstance(c.get("follow"), dict):
+                c["follow"]["active"] = bool(g["follow"].get("active"))
+                c["follow"]["note"] = g["follow"].get("note", "")
     return units + extra
 
 
@@ -3998,7 +4015,12 @@ def fleet_forget():
 def fleet_cue_follow():
     """A light follows the Companion button chosen on the page's live grid
     ({ip, page, row, col}, row and col from 0), or goes back to being a
-    surface Companion places ({ip, off: true}). The light restarts to take it."""
+    surface Companion places ({ip, off: true}). The light restarts to take it.
+
+    A light linked through a Cue ({ip: the Cue's address, guest: the light's
+    id}, both on 0.80+) is told through that Cue - it may have no WiFi of its
+    own - and its Cue follows the button for it, at once. own: true first
+    switches it from mirroring the Cue to its own key."""
     d = request.get_json() or {}
     ip = str(d.get("ip", ""))
     try:
@@ -4012,6 +4034,23 @@ def fleet_cue_follow():
             form = {"page": int(d["page"]), "row": int(d["row"]), "col": int(d["col"])}
         except (KeyError, TypeError, ValueError):
             return jsonify({"ok": False, "error": "page, row and col"}), 400
+    guest = str(d.get("guest", ""))
+    if guest:
+        if not re.fullmatch(r"[A-Za-z0-9-]{1,15}", guest):
+            return jsonify({"ok": False, "error": "bad guest"}), 400
+        try:
+            if d.get("own"):
+                _cue_link_post(ip, {"guestmode": guest, "mirror": "0"})
+            lk = _cue_link_post(ip, {"guestfollow": guest, **form})
+            g = next((x for x in lk.get("guests", []) if x.get("id") == guest), None)
+            if g is None:
+                return jsonify({"ok": False, "error": "that Cue is not carrying it any more"})
+            if "follow" not in g:
+                return jsonify({"ok": False, "error": "it and its Cue both need firmware 0.80 or later"})
+            _audit("CUE_FOLLOW", f"{ip} guest {guest} {form}")
+            return jsonify({"ok": True, "live": True})
+        except Exception as e:
+            return jsonify({"ok": False, "error": str(e)[:120]})
     try:
         r = requests.post(f"http://{ip}/follow", data=form, timeout=6)
         if r.status_code == 404:

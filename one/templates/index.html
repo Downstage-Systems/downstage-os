@@ -1031,7 +1031,9 @@
     .fx-cell.down { box-shadow:inset 0 0 0 2px #fff; }
     .fx-cell.sel { border-color:var(--accent); box-shadow:0 0 0 2px var(--accent), 0 0 18px rgba(47,217,123,.45); transform:scale(1.04); z-index:2; }
     .fx-cell.nav { opacity:.85; }
-    .fx-gfoot { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:4px 16px 16px; min-height:52px; }
+    .fx-gfoot { display:flex; flex-direction:column; gap:12px; padding:4px 16px 16px; }
+    .fx-gfoot-row { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:52px; }
+    .fx-gmode { max-width:520px; }
     .fx-gsel { font:700 15px var(--font-display); letter-spacing:.05em; color:var(--accent); }
     .fx-cell.cur { border-color:#2e90d9; box-shadow:0 0 0 2px #2e90d9; }
     .fx-cur { position:absolute; left:50%; bottom:3px; transform:translateX(-50%); font:700 8.5px var(--font-display); letter-spacing:.1em;
@@ -3497,12 +3499,18 @@
           '<span class="fx-pick-ic" aria-hidden="true">' + '<i></i>'.repeat(8) + '</span>' +
           '<span><b>Choose on the page</b><span>a live picture of Companion\'s buttons - tap the one this light shows</span></span>' +
           '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M5 2l5 5-5 5"/></svg></button>' +
-        (c.follow && c.follow.on
+        (i.linked && i.mirror
+          ? '<p class="fx-note fx-follow">Mirrors <b>' + fxEsc(fxShort(i.via)) + '</b>: it shows that Cue\'s tally. Choose a button to make it its own key.</p>'
+          : c.follow && c.follow.on
           ? '<p class="fx-note fx-follow">Follows <b>page ' + c.follow.page + ', row ' + (c.follow.row + 1) + ', column ' + (c.follow.col + 1) + '</b>' +
               ' <span class="fx-mono">(' + c.follow.page + '/' + c.follow.row + '/' + c.follow.col + ')</span>' +
+              (i.linked ? ' through ' + fxEsc(fxShort(i.via)) : '') +
               (c.follow.note ? '<br><span class="fx-warn-t">' + fxEsc(c.follow.note) + ' - it is a surface until then.</span>' : '') +
-              ' <button class="fx-link-btn" onclick="cueFollowOff(\'' + u.ip + '\',\'' + q(nm) + '\')">Let Companion place it</button></p>'
-          : c.follow ? '<p class="fx-note fx-follow">Companion places it: a surface on Companion\'s Surfaces page.</p>' : '') +
+              ' <button class="fx-link-btn" onclick="cueFollowOff(' + (i.linked && L.via_ip
+                  ? '\'' + L.via_ip + '\',\'' + q(nm) + '\',\'' + u.serial + '\''
+                  : '\'' + u.ip + '\',\'' + q(nm) + '\'') + ')">Let Companion place it</button></p>'
+          : c.follow || i.linked ? '<p class="fx-note fx-follow">Companion places it: a surface on Companion\'s Surfaces page' +
+              (i.linked ? ', through ' + fxEsc(fxShort(i.via)) : '') + '.</p>' : '') +
         '</div>' : '') +
       ((L.enabled !== undefined || i.noIp) ? '<div class="fx-sec"><div class="fx-h">CueLink</div>' +
         // the link's own buttons and these share one row
@@ -3550,11 +3558,16 @@
     let size = [4, 8];
     try { const v = JSON.parse(localStorage.getItem('fx-grid-size') || 'null'); if (Array.isArray(v)) size = v; } catch (e) {}
     const i = cueInfo(u), f = i.c.follow;
+    // Linked through a Cue (0.80+ on both): Mirror shows the Cue's tally, Own key
+    // is its own button - which its Cue follows for it, chosen here
+    const viaCue = i.linked && !!i.L.via_ip;
     _fxGrid = { key, ip: u.ip, host: where.host, port: where.port, page: f && f.on ? f.page : 1, rows: size[0], cols: size[1],
                 rev: 0, cells: {}, sel: null, err: '', loading: true, name: i.name,
                 cur: f && f.on ? { page: f.page, row: f.row, col: f.col } : null,
+                viaCue, cueIp: i.L.via_ip || '', serial: u.serial, cueName: fxShort(i.via), mirror: i.mirror,
                 // why "Use this button" cannot work for this light, if it cannot
-                block: i.linked || i.L.waiting ? 'Linked through a Cue, it takes its tally from the Cue. Unlink it to have it follow a button.'
+                block: viaCue ? (i.L.cue_follows ? '' : 'Following a button through its Cue needs firmware 0.80 or later on both it and its Cue.')
+                     : i.linked || i.L.waiting ? 'Waiting for its Cue to come back.'
                      : i.noIp ? 'It has no WiFi of its own yet.'
                      : !f ? 'Its firmware is too old to follow a button - update it to 0.77 or later.' : '' };
     document.querySelector('#fx-sheet .fx-panel').classList.add('wide');
@@ -3700,29 +3713,54 @@
     const g = _fxGrid, foot = document.getElementById('fx-gfoot');
     if (!g || !foot) return;
     const s = g.sel;
-    foot.innerHTML = s
+    // linked through a Cue: how it shows, as on the Cue's own LINK menu
+    const mode = g.viaCue && !g.block
+      ? '<div class="fx-seg fx-gmode">' +
+          '<button class="' + (g.mirror ? 'on' : '') + '" onclick="fxGridMode(true)"><b>Mirror</b><span>shows ' + fxEsc(g.cueName) + '\'s tally</span></button>' +
+          '<button class="' + (!g.mirror ? 'on' : '') + '" onclick="fxGridMode(false)"><b>Own key</b><span>its own button, through ' + fxEsc(g.cueName) + '</span></button></div>'
+      : '';
+    foot.innerHTML = mode + '<div class="fx-gfoot-row">' + (s
       ? '<div><div class="fx-gsel">Page ' + s.page + ' · Row ' + (s.row + 1) + ' · Column ' + (s.col + 1) + '</div>' +
           '<div class="fx-mono">Companion location ' + s.page + '/' + s.row + '/' + s.col + '</div></div>' +
         (g.block ? '<div class="fx-gblock">' + fxEsc(g.block) + '</div>'
-                 : '<button class="fx-btn primary" onclick="fxGridUse()">Use this button</button>')
-      : '<div class="fx-dim">' + (g.cur ? 'It follows the button marked NOW. ' : '') + 'Tap the button this light should show.' +
-          (g.loading ? ' Loading the page&hellip;' : '') + '</div>';
+                 : '<button class="fx-btn primary" onclick="fxGridUse()">' + (g.viaCue && g.mirror ? 'Use as its own key' : 'Use this button') + '</button>')
+      : '<div class="fx-dim">' + (g.viaCue && g.mirror && !g.block ? 'It mirrors ' + fxEsc(g.cueName) + ' now. Tap a button to give it its own key instead.'
+          : (g.cur ? 'It follows the button marked NOW. ' : '') + 'Tap the button this light should show.') +
+          (g.loading ? ' Loading the page&hellip;' : '') + '</div>') + '</div>';
+  }
+  async function fxGridMode(mirror) {   // Mirror / Own key from the picker: asked of its Cue
+    const g = _fxGrid;
+    if (!g || g.mirror === mirror) return;
+    try {
+      const d = await (await fetch('/fleet/cue/link', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ip: g.cueIp, guest: g.serial, mirror }) })).json();
+      if (!d.ok) { showToast('Not changed: ' + (d.error || 'no answer'), 'error'); return; }
+      g.mirror = mirror;
+      fxGridFoot();
+      showToast(mirror ? g.name + ' mirrors ' + g.cueName + '.'
+                       : g.name + ' is its own key' + (g.cur ? ', following the button marked NOW.' : ' - a surface on Companion\'s Surfaces page until you pick a button.'), 'success');
+      setTimeout(async () => { try { renderFleet(await (await fetch('/discover/refresh', { method: 'POST' })).json()); } catch (e) {} }, 3000);
+    } catch (e) { showToast('Could not reach the One.', 'error'); }
   }
   async function fxGridUse() {
     const g = _fxGrid;
     if (!g || !g.sel) return;
     const s = g.sel;
     try {
+      const body = g.viaCue ? { ip: g.cueIp, guest: g.serial, own: g.mirror, page: s.page, row: s.row, col: s.col }
+                            : { ip: g.ip, page: s.page, row: s.row, col: s.col };
       const d = await (await fetch('/fleet/cue/follow', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ip: g.ip, page: s.page, row: s.row, col: s.col }) })).json();
-      showToast(d.ok ? g.name + ' restarts and follows page ' + s.page + ', row ' + (s.row + 1) + ', column ' + (s.col + 1) + '.'
+        body: JSON.stringify(body) })).json();
+      showToast(d.ok ? g.name + (d.live ? ' follows' : ' restarts and follows') + ' page ' + s.page + ', row ' + (s.row + 1) + ', column ' + (s.col + 1) +
+                         (g.viaCue ? ' through ' + g.cueName + '.' : '.')
                      : 'Not changed: ' + (d.error || 'no answer'), d.ok ? 'success' : 'error');
       if (!d.ok) return;
+      g.mirror = false;
       g.cur = { page: s.page, row: s.row, col: s.col };
       g.sel = null;
       fxGridMarks();
       fxGridFoot();
-      setTimeout(async () => { try { renderFleet(await (await fetch('/discover/refresh', { method: 'POST' })).json()); } catch (e) {} }, 9000);
+      setTimeout(async () => { try { renderFleet(await (await fetch('/discover/refresh', { method: 'POST' })).json()); } catch (e) {} }, g.viaCue ? 3000 : 9000);
     } catch (e) { showToast('Could not reach the One.', 'error'); }
   }
   async function fleetForget(serial, name, live) {
@@ -3738,13 +3776,14 @@
       showToast(name + ' removed from the list.', 'success');
     } catch (e) { showToast('Could not reach the One.', 'error'); }
   }
-  async function cueFollowOff(ip, name) {
-    if (!confirm('Let Companion place ' + name + ' again? It restarts and shows up on Companion\'s Surfaces page, where you give it a page and offset.')) return;
+  async function cueFollowOff(ip, name, guest) {   // guest: its id, ip its Cue's - told through the Cue carrying it
+    if (!confirm('Let Companion place ' + name + ' again? ' + (guest ? 'It' : 'It restarts and') +
+        ' shows up on Companion\'s Surfaces page, where you give it a page and offset.')) return;
     try {
       const d = await (await fetch('/fleet/cue/follow', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ip, off: true }) })).json();
-      showToast(d.ok ? name + ' restarts as a Companion surface.' : 'Not changed: ' + (d.error || 'no answer'), d.ok ? 'success' : 'error');
-      if (d.ok) setTimeout(async () => { try { renderFleet(await (await fetch('/discover/refresh', { method: 'POST' })).json()); } catch (e) {} }, 9000);
+        body: JSON.stringify(guest ? { ip, guest, off: true } : { ip, off: true }) })).json();
+      showToast(d.ok ? name + (guest ? ' is a Companion surface again.' : ' restarts as a Companion surface.') : 'Not changed: ' + (d.error || 'no answer'), d.ok ? 'success' : 'error');
+      if (d.ok) setTimeout(async () => { try { renderFleet(await (await fetch('/discover/refresh', { method: 'POST' })).json()); } catch (e) {} }, guest ? 3000 : 9000);
     } catch (e) { showToast('Could not reach the One.', 'error'); }
   }
   function fmtLeft(ms) {
