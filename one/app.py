@@ -3651,6 +3651,7 @@ def _probe_cue(ip, timeout=0.6):
                                  "via": link.get("via", "") or link.get("chosen", ""),
                                  "show": link.get("show", "mirror"),
                                  "share": link.get("share"),   # a Cue only (fw 0.63+): hands its WiFi to a light held against it
+                                 "max": link.get("max"),       # most lights it carries (fw 0.81+: a Cue 4, a Lite 1)
                                  "share_result": link.get("shareResult", ""),
                                  "guests": link.get("guests") or [{"id": g, "mirror": True} for g in link.get("carrying", [])],
                                  "enabled": link.get("enabled", True),

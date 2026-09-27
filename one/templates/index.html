@@ -3249,7 +3249,7 @@
     else chips.push(fxChip(i.lit ? 'Live' : 'Standby', 'ok'));
     if (i.linked) chips.push(fxChip('via ' + fxShort(i.via), 'link'));
     else if (i.L.waiting) chips.push(fxChip('waiting for ' + fxShort(i.L.via_name || i.L.chosen || 'its Cue'), 'warn'));
-    else if (i.carried) chips.push(fxChip('carrying ' + i.carried, 'link'));
+    else if (i.carried) chips.push(fxChip('carrying ' + i.carried + (+i.L.max > 1 ? ' of ' + i.L.max : ''), i.L.max && i.carried >= +i.L.max ? 'warn' : 'link'));
     if (i.c.talent) chips.push(fxChip('Talent', 'tal'));
     const m = cueShowMode(i);
     if (m === 'button') chips.push(fxChip('Button ' + cueLoc(i.c.follow), 'co'));
@@ -3302,7 +3302,10 @@
     // light hears right now - one on another channel hears none
     window._fleetCues = (d.units || []).filter(u => u.product === 'Cue' && u.ip && u.health_ok &&
         u.cue && u.cue.link && (u.cue.link.share === true || u.cue.link.share === false))
-      .map(u => ({ id: u.serial, name: u.name || (u.model + ' ' + u.serial.slice(-4)), channel: u.cue.link.channel || 0 }));
+      .map(u => ({ id: u.serial, name: u.name || (u.model + ' ' + u.serial.slice(-4)), channel: u.cue.link.channel || 0,
+                   // a Cue carrying all it can (fw 0.81+: four) turns a new light down
+                   full: +u.cue.link.max > 0 && (u.cue.link.guests || []).length >= +u.cue.link.max,
+                   count: (u.cue.link.guests || []).length, max: +u.cue.link.max || 0 }));
     if (d.cue_host) window._cueHost = d.cue_host;
     const al = document.getElementById('cue-alert-btn');
     if (al) {
@@ -3475,7 +3478,7 @@
     const heard = (L.nearby || []).filter(n => n.face && n.carrier && n.id !== u.serial)
       .map(n => ({ id: n.id, name: n.label || n.model.replace('Downstage ', '') + ' ' + n.id.slice(-4), channel: 0, heard: true }));
     const cues = heard.concat((window._fleetCues || []).filter(f => f.id !== u.serial && !heard.some(h => h.id === f.id)));
-    heard.forEach(h => { const f = (window._fleetCues || []).find(x => x.id === h.id); if (f) h.channel = f.channel; });
+    heard.forEach(h => { const f = (window._fleetCues || []).find(x => x.id === h.id); if (f) { h.channel = f.channel; h.full = f.full; h.count = f.count; h.max = f.max; } });
     let link = '';
     if (L.enabled === false) {
       link = '<p class="fx-note">CueLink is off on this light.</p><div class="fx-actions left"><button class="fx-btn" onclick="cueLinkCmd(\'' + u.ip + '\',{enabled:true})">Turn CueLink on</button></div>';
@@ -3486,7 +3489,8 @@
           '<button class="fx-btn warn" onclick="cueLinkCmd(\'' + (i.noIp ? L.via_ip : u.ip) + '\',' + (i.noIp ? '{release:\'' + u.serial + '\'}' : '{off:true}') +
             ',\'Unlink ' + q(nm) + '? It goes back to its own connection' + (i.noIp ? ' - it has no WiFi, so it will be dark until it has.' : '.') + '\')">Unlink</button></div>';
     } else {
-      link = (i.carried ? '<p class="fx-note">Carrying <b>' + i.carried + '</b> light' + (i.carried > 1 ? 's' : '') + ' over CueLink:</p>' +
+      link = (i.carried ? '<p class="fx-note">Carrying <b>' + i.carried + '</b> light' + (i.carried > 1 ? 's' : '') + ' over CueLink' +
+            (+L.max > 1 ? (i.carried >= +L.max ? ' - <b>full</b>, it takes no more' : ', room for ' + (L.max - i.carried) + ' more') : '') + ':</p>' +
           '<div class="fx-carried">' + (L.guests || []).map(g => {
             const gu = ((_fxData && _fxData.units) || []).find(x => x.serial === g.id);
             const near = (L.nearby || []).find(n => n.id === g.id);
@@ -3495,8 +3499,9 @@
           }).join('') + '</div>' : '') +
         (!i.carried && cues.length && !i.noIp
           ? '<select class="fx-select" onchange="if (this.value) cueLinkCmd(\'' + u.ip + '\',{id:this.value.split(\'|\')[0],channel:+this.value.split(\'|\')[1]})"><option value="">Link it through a Cue&hellip;</option>' +
-            cues.map(n => '<option value="' + n.id + '|' + (n.channel || 0) + '">' + fxEsc(q(n.name)) +
-              (n.heard ? '' : ' - not heard here' + (n.channel ? ', moves to ch ' + n.channel : '')) + '</option>').join('') + '</select>' : '') +
+            cues.map(n => '<option value="' + n.id + '|' + (n.channel || 0) + '"' + (n.full ? ' disabled' : '') + '>' + fxEsc(q(n.name)) +
+              (n.full ? ' - full (' + n.count + ' of ' + n.max + ')'
+                : n.heard ? '' : ' - not heard here' + (n.channel ? ', moves to ch ' + n.channel : '')) + '</option>').join('') + '</select>' : '') +
         (!i.carried && !cues.length ? '<p class="fx-note">Not linked. No Cue nearby to link through.</p>' : '');
     }
     const shareBtn = L.share === true || L.share === false
