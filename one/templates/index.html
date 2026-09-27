@@ -874,6 +874,7 @@
     .fx-chip.tm { color:var(--amber); border-color:rgba(245,165,36,.4); }
     .fx-chip.link { color:#8fd3ff; border-color:rgba(46,144,217,.45); }
     .fx-chip.warn { color:var(--amber); border-color:rgba(245,165,36,.45); }
+    .fx-chip.co { color:var(--text); border-color:var(--border2); }
     .fx-chip.tal { color:#ff8a8e; border-color:rgba(229,72,77,.45); }
     .fx-chip.bad { color:#f2555a; border-color:rgba(229,72,77,.5); white-space:normal; }
     .fx-foot { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:auto; padding-top:9px; }
@@ -929,6 +930,17 @@
     .fx-carried-row { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:7px 10px;
       background:var(--surface2); border:1px solid var(--border2); border-radius:9px; font:600 13px var(--font-display); letter-spacing:.04em; }
     .fx-seg { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .fx-seg.three { grid-template-columns:1fr 1fr 1fr; }
+    .fx-seg button[disabled] { opacity:.4; cursor:not-allowed; }
+    .fx-where { margin:0 0 10px; font-size:13px; line-height:1.5; color:var(--text); }
+    .fx-info-btn { display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; margin-left:8px; padding:0; border-radius:50%; border:1px solid var(--muted2); background:none;
+      color:var(--muted); font:700 11px var(--font-body); font-style:italic; text-transform:none; letter-spacing:0; cursor:pointer; vertical-align:1px; }
+    .fx-info-btn:hover, .explain .fx-info-btn { color:var(--accent); border-color:var(--accent); }
+    .fx-explain { display:none; margin-top:10px; padding:10px 12px; border-radius:10px; background:var(--surface2); border:1px solid var(--border2);
+      font-size:12px; line-height:1.5; color:var(--muted); }
+    .fx-explain p { margin:0 0 6px; } .fx-explain p:last-child { margin:0; }
+    .fx-explain b { color:var(--text); }
+    .explain .fx-explain { display:block; }
     .fx-seg button { text-align:left; background:var(--surface2); border:1px solid var(--border2); border-radius:10px; padding:10px 12px;
       color:var(--text); cursor:pointer; display:flex; flex-direction:column; gap:2px; transition:border-color .15s, background .15s; }
     .fx-seg button b { font:700 13px var(--font-display); letter-spacing:.04em; }
@@ -958,7 +970,7 @@
       .fx-panel { width:100%; max-height:92vh; border-radius:18px 18px 0 0; }
       .fx-hero { flex-direction:column; text-align:center; }
       .fx-title { justify-content:center; } .fx-hero .fx-chips { justify-content:center; }
-      .fx-seg, .fx-grid2 { grid-template-columns:1fr; }
+      .fx-seg, .fx-seg.three, .fx-grid2 { grid-template-columns:1fr; }
     }
     @media (prefers-reduced-motion: reduce) {
       .fx-card, .fx-art, .fx-panel, .fx-sheet { transition:none; }
@@ -1035,7 +1047,6 @@
     .fx-cell.nav { opacity:.85; }
     .fx-gfoot { display:flex; flex-direction:column; gap:12px; padding:4px 16px 16px; }
     .fx-gfoot-row { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:52px; }
-    .fx-gmode { max-width:520px; }
     .fx-gsel { font:700 15px var(--font-display); letter-spacing:.05em; color:var(--accent); }
     .fx-cell.cur { border-color:#2e90d9; box-shadow:0 0 0 2px #2e90d9; }
     .fx-cur { position:absolute; left:50%; bottom:3px; transform:translateX(-50%); font:700 8.5px var(--font-display); letter-spacing:.1em;
@@ -3218,6 +3229,17 @@
     const vals = (i.L.guests || []).map(g => ((i.L.nearby || []).find(n => n.id === g.id) || {}).rssi).filter(v => v);
     return vals.length ? Math.min(...vals) : null;
   }
+  // Where a light lives in Companion (Rob, 2026-09-27: "i was confused as to
+  // why the device wasnt showing up in my companion surfaces"): following one
+  // chosen button, a surface Companion places, or mirroring its Cue.
+  function cueShowMode(i) {
+    const f = i.c.follow;
+    if (i.timer) return 'timer';
+    if (i.linked && i.mirror) return 'mirror';
+    if (f && f.on) return 'button';
+    return 'surface';
+  }
+  function cueLoc(f) { return f.page + '/' + f.row + '/' + f.col; }
   function cueChips(u, i, bad) {
     const t = fxTally(i.col), chips = [];
     if (bad) chips.push(fxChip(u.health_why || 'Not live', 'bad'));
@@ -3229,6 +3251,10 @@
     else if (i.L.waiting) chips.push(fxChip('waiting for ' + fxShort(i.L.via_name || i.L.chosen || 'its Cue'), 'warn'));
     else if (i.carried) chips.push(fxChip('carrying ' + i.carried, 'link'));
     if (i.c.talent) chips.push(fxChip('Talent', 'tal'));
+    const m = cueShowMode(i);
+    if (m === 'button') chips.push(fxChip('Button ' + cueLoc(i.c.follow), 'co'));
+    else if (m === 'mirror') chips.push(fxChip('Mirror', 'co'));
+    else if (m === 'surface' && (i.c.host || i.linked)) chips.push(fxChip('Surface', 'co'));
     return chips;
   }
   // A card: { key, cls, tally, ink, inner } - the element is kept between refreshes
@@ -3454,12 +3480,7 @@
     if (L.enabled === false) {
       link = '<p class="fx-note">CueLink is off on this light.</p><div class="fx-actions left"><button class="fx-btn" onclick="cueLinkCmd(\'' + u.ip + '\',{enabled:true})">Turn CueLink on</button></div>';
     } else if (i.linked || L.waiting) {
-      const target = L.relayed && L.via_ip ? L.via_ip : u.ip;
-      const arg = on => L.relayed && L.via_ip ? "{guest:'" + u.serial + "',mirror:" + on + '}' : "{show:'" + (on ? 'mirror' : 'own') + "'}";
       link = '<p class="fx-note">' + (i.linked ? 'Linked through <b>' + fxEsc(fxShort(i.via)) + '</b> ' + fxSignal(cueLinkRssi(u, L.via || i.via)) : 'Waiting for <b>' + fxEsc(fxShort(L.via_name || L.chosen || 'its Cue')) + '</b> to come back.') + '</p>' +
-        (i.linked && (L.via_ip || !i.noIp) ? '<div class="fx-seg">' +
-          '<button class="' + (i.mirror ? 'on' : '') + '" onclick="cueLinkCmd(\'' + target + '\',' + arg(true) + ')"><b>Mirror</b><span>shows its Cue\'s tally</span></button>' +
-          '<button class="' + (!i.mirror ? 'on' : '') + '" onclick="cueLinkCmd(\'' + target + '\',' + arg(false) + ')"><b>Own key</b><span>its own Companion button</span></button></div>' : '') +
         '<div class="fx-actions left" id="fx-link-btns">' +
           (i.noIp && L.via_ip ? '<button class="fx-btn" onclick="cueSendWifi(\'' + L.via_ip + '\',\'' + u.serial + '\')" title="Ask its Cue to hand it the network">Send WiFi</button>' : '') +
           '<button class="fx-btn warn" onclick="cueLinkCmd(\'' + (i.noIp ? L.via_ip : u.ip) + '\',' + (i.noIp ? '{release:\'' + u.serial + '\'}' : '{off:true}') +
@@ -3496,24 +3517,7 @@
       // One's timer by itself, a swipe from its tally, so no light needs to be
       // driven by the timer. Pointing a light at this One's Companion - for a
       // Companion that runs here - is a link in Details instead.
-      (cueCompanionOf(u) ? '<div class="fx-sec"><div class="fx-h">Companion button</div>' +
-        '<button class="fx-pick" onclick="fxGridOpen(\'' + u.serial + '\')">' +
-          '<span class="fx-pick-ic" aria-hidden="true">' + '<i></i>'.repeat(8) + '</span>' +
-          '<span><b>Choose on the page</b><span>a live picture of Companion\'s buttons - tap the one this light shows</span></span>' +
-          '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M5 2l5 5-5 5"/></svg></button>' +
-        (i.linked && i.mirror
-          ? '<p class="fx-note fx-follow">Mirrors <b>' + fxEsc(fxShort(i.via)) + '</b>: it shows that Cue\'s tally. Choose a button to make it its own key.</p>'
-          : c.follow && c.follow.on
-          ? '<p class="fx-note fx-follow">Follows <b>page ' + c.follow.page + ', row ' + (c.follow.row + 1) + ', column ' + (c.follow.col + 1) + '</b>' +
-              ' <span class="fx-mono">(' + c.follow.page + '/' + c.follow.row + '/' + c.follow.col + ')</span>' +
-              (i.linked ? ' through ' + fxEsc(fxShort(i.via)) : '') +
-              (c.follow.note ? '<br><span class="fx-warn-t">' + fxEsc(c.follow.note) + ' - it is a surface until then.</span>' : '') +
-              ' <button class="fx-link-btn" title="It goes back to being a surface: set its page and offset on Companion\'s Surfaces page" onclick="cueFollowOff(' + (i.linked && L.via_ip
-                  ? '\'' + L.via_ip + '\',\'' + q(nm) + '\',\'' + u.serial + '\''
-                  : '\'' + u.ip + '\',\'' + q(nm) + '\'') + ')">Stop following this button</button></p>'
-          : c.follow || i.linked ? '<p class="fx-note fx-follow">Companion places it: a surface on Companion\'s Surfaces page' +
-              (i.linked ? ', through ' + fxEsc(fxShort(i.via)) : '') + '.</p>' : '') +
-        '</div>' : '') +
+      cueWhereSec(u, i) +
       ((L.enabled !== undefined || i.noIp) ? '<div class="fx-sec"><div class="fx-h">CueLink</div>' +
         // the link's own buttons and these share one row
         (link.includes('id="fx-link-btns"') ? link.replace(/<\/div>$/, shareBtn + offBtn + '</div>')
@@ -3535,6 +3539,77 @@
         (i.noIp ? '' :
         '<button class="fx-btn" onclick="cueIdentify(\'' + u.ip + '\')" title="Blink it white for five seconds">Identify</button>' +
         '<button class="fx-btn primary" onclick="openPanel(\'http://' + u.ip + '/\', \'' + q(nm) + '\')">Open its page</button>') + '</div>';
+  }
+  // ---- "In Companion": where the light lives there, and the switch ----
+  function cueWhereSec(u, i) {
+    const c = i.c, L = i.L, f = c.follow, m = cueShowMode(i), via = fxShort(i.via);
+    if (m === 'timer') return '<div class="fx-sec"><div class="fx-h">In Companion</div>' +
+      '<p class="fx-where">Not in Companion: it shows this One\'s timer.</p></div>';
+    if (!cueCompanionOf(u) && !i.linked) return '<div class="fx-sec"><div class="fx-h">In Companion</div>' +
+      '<p class="fx-where">Not pointed at a Companion yet.</p></div>';
+    const viaCue = i.linked && !!L.via_ip;
+    // what can be chosen: a button needs light firmware 0.77 (and 0.80 on both ends through a Cue)
+    const canButton = i.linked ? !!L.cue_follows : !!f;
+    const whyNot = i.linked ? 'Following a button through its Cue needs firmware 0.80 or later on both it and its Cue'
+                            : 'Its firmware is too old to follow a button - update it to 0.77 or later';
+    const canMirror = i.linked && (viaCue || !i.noIp);
+    let where;
+    if (m === 'mirror') where = 'Not in Companion: it shows what <b>' + fxEsc(via) + '</b> shows.';
+    else if (m === 'button') where = 'Follows button <b>' + cueLoc(f) + '</b> <span class="fx-dim">(page ' + f.page + ', row ' + (f.row + 1) + ', column ' + (f.col + 1) + ')</span>' +
+        (i.linked ? ' through ' + fxEsc(via) : '') + '. It <b>won\'t</b> appear on Companion\'s Surfaces page.' +
+        (f.note ? '<br><span class="fx-warn-t">' + fxEsc(f.note) + ' - it is a surface until then.</span>' : '');
+    else where = 'A surface on Companion\'s <b>Surfaces</b> page, listed as <b>' + fxEsc(u.serial) + '</b>' +
+        (i.linked ? ' (through ' + fxEsc(via) + ')' : '') + '. Set its page and offset there.';
+    const opt = (mode, title, sub, ok, why) => '<button class="' + (m === mode ? 'on' : '') + '"' + (ok ? '' : ' disabled title="' + fxEsc(why) + '"') +
+      ' onclick="cueShowAs(\'' + u.serial + '\',\'' + mode + '\')"><b>' + title + '</b><span>' + sub + '</span></button>';
+    return '<div class="fx-sec"><div class="fx-h">In Companion' +
+        '<button class="fx-info-btn" onclick="this.closest(\'.fx-sec\').classList.toggle(\'explain\')" aria-label="What is the difference?">i</button></div>' +
+      '<p class="fx-where">' + where + '</p>' +
+      '<div class="fx-seg' + (i.linked ? ' three' : '') + '">' +
+        (i.linked ? opt('mirror', 'Mirror its Cue', 'shows what ' + fxEsc(via) + ' shows', canMirror, 'Unreachable: no WiFi and no Cue address') : '') +
+        opt('button', 'A button', 'you pick it here', canButton, whyNot) +
+        opt('surface', 'Surface', 'placed in Companion', true, '') + '</div>' +
+      (m === 'button' ? '<div class="fx-actions left"><button class="fx-btn" onclick="fxGridOpen(\'' + u.serial + '\')">Change button</button></div>' : '') +
+      '<div class="fx-explain">' +
+        '<p><b>A button</b> - you pick one button here, on a live picture of a Companion page. The light shows that button, and pressing the light presses it. ' +
+          'Nothing to set up in Companion, and the light is <b>not</b> listed on its Surfaces page. Needs Companion 4.3 or later with Settings &gt; Satellite &gt; ' +
+          '<i>Enable Button Subscriptions API</i> on.</p>' +
+        '<p><b>Surface</b> - the light joins Companion like a Stream Deck and is listed on its Surfaces page as ' + fxEsc(u.serial) + ', where you give it a page and offset. ' +
+          'Works with any Companion version.</p>' +
+        (i.linked ? '<p><b>Mirror its Cue</b> - it shows exactly what ' + fxEsc(via) + ' shows. It is not in Companion at all.</p>' : '') +
+      '</div></div>';
+  }
+  async function cueShowAs(key, mode) {
+    const u = ((_fxData && _fxData.units) || []).find(x => (x.serial || x.ip) === key);
+    if (!u) return;
+    const i = cueInfo(u), L = i.L, c = i.c, cur = cueShowMode(i), nm = i.name;
+    if (mode === 'button') { fxGridOpen(key); return; }   // choosing the button is the change
+    if (mode === cur) return;
+    const viaCue = i.linked && !!L.via_ip;
+    const post = async (url, body) => (await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })).json();
+    const refresh = ms => setTimeout(async () => { try { renderFleet(await (await fetch('/discover/refresh', { method: 'POST' })).json()); } catch (e) {} }, ms);
+    try {
+      if (mode === 'mirror') {
+        const d = await post('/fleet/cue/link', viaCue ? { ip: L.via_ip, guest: u.serial, mirror: true } : { ip: u.ip, show: 'mirror' });
+        showToast(d.ok ? nm + ' now mirrors ' + fxShort(i.via) + '.' : 'Not changed: ' + (d.error || 'no answer'), d.ok ? 'success' : 'error');
+        if (d.ok) refresh(3000);
+        return;
+      }
+      // a surface: stop following a button, and stop mirroring
+      const restarts = !i.linked;
+      if (!confirm('Make ' + nm + ' a Companion surface?\n\nIt appears on Companion\'s Surfaces page as ' + u.serial +
+          ', where you give it a page and offset.' + (restarts ? ' It restarts to switch.' : ''))) return;
+      if (c.follow && c.follow.on) {
+        const d = await post('/fleet/cue/follow', viaCue ? { ip: L.via_ip, guest: u.serial, off: true, own: cur === 'mirror' } : { ip: u.ip, off: true });
+        if (!d.ok) { showToast('Not changed: ' + (d.error || 'no answer'), 'error'); return; }
+      }
+      if (cur === 'mirror' && !(viaCue && c.follow && c.follow.on)) {
+        const d = await post('/fleet/cue/link', viaCue ? { ip: L.via_ip, guest: u.serial, mirror: false } : { ip: u.ip, show: 'own' });
+        if (!d.ok) { showToast('Not changed: ' + (d.error || 'no answer'), 'error'); return; }
+      }
+      showToast(nm + (restarts ? ' restarts as a Companion surface.' : ' is a Companion surface - find ' + u.serial + ' on the Surfaces page.'), 'success');
+      refresh(restarts ? 9000 : 3000);
+    } catch (e) { showToast('Could not reach the One.', 'error'); }
   }
   // ---- Choosing a light's Companion button, on a live picture of the page ----
   // (Rob, 2026-09-26.) The One follows every button of the page through
@@ -3715,34 +3790,14 @@
     const g = _fxGrid, foot = document.getElementById('fx-gfoot');
     if (!g || !foot) return;
     const s = g.sel;
-    // linked through a Cue: how it shows, as on the Cue's own LINK menu
-    const mode = g.viaCue && !g.block
-      ? '<div class="fx-seg fx-gmode">' +
-          '<button class="' + (g.mirror ? 'on' : '') + '" onclick="fxGridMode(true)"><b>Mirror</b><span>shows ' + fxEsc(g.cueName) + '\'s tally</span></button>' +
-          '<button class="' + (!g.mirror ? 'on' : '') + '" onclick="fxGridMode(false)"><b>Own key</b><span>its own button, through ' + fxEsc(g.cueName) + '</span></button></div>'
-      : '';
-    foot.innerHTML = mode + '<div class="fx-gfoot-row">' + (s
+    foot.innerHTML = '<div class="fx-gfoot-row">' + (s
       ? '<div><div class="fx-gsel">Page ' + s.page + ' · Row ' + (s.row + 1) + ' · Column ' + (s.col + 1) + '</div>' +
           '<div class="fx-mono">Companion location ' + s.page + '/' + s.row + '/' + s.col + '</div></div>' +
         (g.block ? '<div class="fx-gblock">' + fxEsc(g.block) + '</div>'
-                 : '<button class="fx-btn primary" onclick="fxGridUse()">' + (g.viaCue && g.mirror ? 'Use as its own key' : 'Use this button') + '</button>')
-      : '<div class="fx-dim">' + (g.viaCue && g.mirror && !g.block ? 'It mirrors ' + fxEsc(g.cueName) + ' now. Tap a button to give it its own key instead.'
+                 : '<button class="fx-btn primary" onclick="fxGridUse()">' + 'Use this button' + '</button>')
+      : '<div class="fx-dim">' + (g.viaCue && g.mirror && !g.block ? 'It mirrors ' + fxEsc(g.cueName) + ' now. Pick a button and it follows that instead.'
           : (g.cur ? 'It follows the button marked NOW. ' : '') + 'Tap the button this light should show.') +
           (g.loading ? ' Loading the page&hellip;' : '') + '</div>') + '</div>';
-  }
-  async function fxGridMode(mirror) {   // Mirror / Own key from the picker: asked of its Cue
-    const g = _fxGrid;
-    if (!g || g.mirror === mirror) return;
-    try {
-      const d = await (await fetch('/fleet/cue/link', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ip: g.cueIp, guest: g.serial, mirror }) })).json();
-      if (!d.ok) { showToast('Not changed: ' + (d.error || 'no answer'), 'error'); return; }
-      g.mirror = mirror;
-      fxGridFoot();
-      showToast(mirror ? g.name + ' mirrors ' + g.cueName + '.'
-                       : g.name + ' is its own key' + (g.cur ? ', following the button marked NOW.' : ' - a surface on Companion\'s Surfaces page until you pick a button.'), 'success');
-      setTimeout(async () => { try { renderFleet(await (await fetch('/discover/refresh', { method: 'POST' })).json()); } catch (e) {} }, 3000);
-    } catch (e) { showToast('Could not reach the One.', 'error'); }
   }
   async function fxGridUse() {
     const g = _fxGrid;
@@ -3776,16 +3831,6 @@
       fxClose();
       renderFleet(d);
       showToast(name + ' removed from the list.', 'success');
-    } catch (e) { showToast('Could not reach the One.', 'error'); }
-  }
-  async function cueFollowOff(ip, name, guest) {   // guest: its id, ip its Cue's - told through the Cue carrying it
-    if (!confirm('Stop ' + name + ' following this button? ' + (guest ? 'It' : 'It restarts and') +
-        ' shows up on Companion\'s Surfaces page, where you give it a page and offset.')) return;
-    try {
-      const d = await (await fetch('/fleet/cue/follow', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(guest ? { ip, guest, off: true } : { ip, off: true }) })).json();
-      showToast(d.ok ? name + (guest ? ' is a Companion surface again.' : ' restarts as a Companion surface.') : 'Not changed: ' + (d.error || 'no answer'), d.ok ? 'success' : 'error');
-      if (d.ok) setTimeout(async () => { try { renderFleet(await (await fetch('/discover/refresh', { method: 'POST' })).json()); } catch (e) {} }, guest ? 3000 : 9000);
     } catch (e) { showToast('Could not reach the One.', 'error'); }
   }
   function fmtLeft(ms) {
