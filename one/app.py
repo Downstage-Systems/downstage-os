@@ -3184,7 +3184,10 @@ def _cue_poll_ontime():
         t = payload["timer"]
         val = {"playback": t.get("playback"), "phase": t.get("phase"), "current": t.get("current"),
                "duration": t.get("duration"),
-               "title": ((payload.get("eventNow") or {}).get("title") or "")}
+               "title": ((payload.get("eventNow") or {}).get("title") or ""),
+               # a Time of Day event: OnTime shows the clock, not a countdown
+               "timer_type": (payload.get("eventNow") or {}).get("timerType") or "",
+               "clock_ms": payload.get("clock")}
     except Exception:
         pass
     _cue_timer.update(at=now, val=val)
@@ -3221,7 +3224,24 @@ def _cue_extras():
     round Cue). Rides on the same KEY-STATE line as more of the Downstage
     extension: a grid light reads the colour and ignores the rest."""
     t = _cue_timer.get("val")
-    if _cue_alert["on"] or not t or t.get("playback") in (None, "armed", "stop"):
+    if _cue_alert["on"] or not t:
+        return ""   # OnTime not answering: no timer page on the lights
+    def hms(secs):
+        return f"{secs // 3600}:{secs % 3600 // 60:02d}:{secs % 60:02d}" if secs >= 3600 else f"{secs // 60}:{secs % 60:02d}"
+    tod = int(t["clock_ms"]) // 1000 % 86400 if t.get("clock_ms") is not None else None
+    # The timer page is always a swipe away on a Cue while this One's OnTime
+    # answers (Rob, 2026-09-26), whatever is loaded:
+    if t.get("timer_type") == "clock" and tod is not None:
+        # a Time of Day event - OnTime shows the clock, played or not. TOD is
+        # seconds since midnight for a Cue to format itself (12 / 24 h); TIME
+        # is the 24 h fallback for older light firmware.
+        return f" TIME={tod // 3600}:{tod % 3600 // 60:02d} PROGRESS=0 TOD={tod}"
+    if t.get("playback") in (None, "armed", "stop"):
+        dur = int(t.get("duration") or 0)
+        if t.get("playback") and dur > 0:   # a countdown loaded, not started: its length, HELD (not running)
+            return f" TIME={hms(dur // 1000)} PROGRESS=100 HELD=1"
+        if tod is not None:                  # nothing loaded: the time of day
+            return f" TIME={tod // 3600}:{tod % 3600 // 60:02d} PROGRESS=0 TOD={tod}"
         return ""
     left = int(t.get("current") or 0)
     dur = int(t.get("duration") or 0)
