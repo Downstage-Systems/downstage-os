@@ -3834,10 +3834,17 @@ def discover_refresh():
         if p:
             p.pop("primary", None)
             fresh.append(p)
+        elif int(u.get("misses", 0)) + 1 < 3:
+            # one slow answer is not a dead unit (Rob, 2026-09-26: a Cue on weak
+            # WiFi kept flashing "Not responding" on the bench): keep its last
+            # good card until three refreshes in a row have missed it
+            kept = dict(u)
+            kept["misses"] = int(u.get("misses", 0)) + 1
+            fresh.append(kept)
         else:
             gone = dict(u)
             gone.update(health_ok=False, health_why="Not responding",
-                        showing="", upd=False)
+                        showing="", upd=False, misses=int(u.get("misses", 0)) + 1)
             fresh.append(gone)
     cache["units"] = _add_carried_cues(fresh, cache.get("units", []))
     try:
