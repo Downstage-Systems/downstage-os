@@ -3506,9 +3506,9 @@
               ' <span class="fx-mono">(' + c.follow.page + '/' + c.follow.row + '/' + c.follow.col + ')</span>' +
               (i.linked ? ' through ' + fxEsc(fxShort(i.via)) : '') +
               (c.follow.note ? '<br><span class="fx-warn-t">' + fxEsc(c.follow.note) + ' - it is a surface until then.</span>' : '') +
-              ' <button class="fx-link-btn" onclick="cueFollowOff(' + (i.linked && L.via_ip
+              ' <button class="fx-link-btn" title="It goes back to being a surface: set its page and offset on Companion\'s Surfaces page" onclick="cueFollowOff(' + (i.linked && L.via_ip
                   ? '\'' + L.via_ip + '\',\'' + q(nm) + '\',\'' + u.serial + '\''
-                  : '\'' + u.ip + '\',\'' + q(nm) + '\'') + ')">Let Companion place it</button></p>'
+                  : '\'' + u.ip + '\',\'' + q(nm) + '\'') + ')">Stop following this button</button></p>'
           : c.follow || i.linked ? '<p class="fx-note fx-follow">Companion places it: a surface on Companion\'s Surfaces page' +
               (i.linked ? ', through ' + fxEsc(fxShort(i.via)) : '') + '.</p>' : '') +
         '</div>' : '') +
@@ -3777,7 +3777,7 @@
     } catch (e) { showToast('Could not reach the One.', 'error'); }
   }
   async function cueFollowOff(ip, name, guest) {   // guest: its id, ip its Cue's - told through the Cue carrying it
-    if (!confirm('Let Companion place ' + name + ' again? ' + (guest ? 'It' : 'It restarts and') +
+    if (!confirm('Stop ' + name + ' following this button? ' + (guest ? 'It' : 'It restarts and') +
         ' shows up on Companion\'s Surfaces page, where you give it a page and offset.')) return;
     try {
       const d = await (await fetch('/fleet/cue/follow', { method: 'POST', headers: { 'Content-Type': 'application/json' },
