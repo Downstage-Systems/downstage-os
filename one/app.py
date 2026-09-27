@@ -3447,8 +3447,20 @@ def fleet_cue_control_allowed():
 
 
 def _cue_link_post(ip, data):
-    r = requests.post(f"http://{ip}/link", data=data, timeout=4)
-    return r.json()
+    """A CueLink command to a light. Every one sets a state (link to, mirror,
+    follow, ...), so sending it twice is harmless - and a light on weak WiFi
+    can take seconds to answer, or miss one: the Cue at -81 dBm answered in
+    0.2 to 4.5 s, and a Companion reconnect holds its loop 3 s at a time
+    (Rob, 2026-09-26: two button picks failed at the old 4 s limit)."""
+    last = None
+    for attempt in range(2):
+        try:
+            r = requests.post(f"http://{ip}/link", data=data, timeout=7)
+            return r.json()
+        except (requests.Timeout, requests.ConnectionError) as e:
+            last = e
+            time.sleep(0.5)
+    raise RuntimeError(f"{ip} did not answer in time - its WiFi may be weak. Try again.") from last
 
 
 @app.route("/fleet/cue/link", methods=["POST"])
@@ -4052,7 +4064,7 @@ def fleet_cue_follow():
         except Exception as e:
             return jsonify({"ok": False, "error": str(e)[:120]})
     try:
-        r = requests.post(f"http://{ip}/follow", data=form, timeout=6)
+        r = requests.post(f"http://{ip}/follow", data=form, timeout=8)
         if r.status_code == 404:
             return jsonify({"ok": False, "error": "This light's firmware is too old to follow a button (needs 0.77)"})
         return jsonify({"ok": r.ok, **(r.json() if r.ok else {"error": r.text[:120]})})
