@@ -3646,7 +3646,8 @@ def _probe_cue(ip, timeout=0.6):
                                  "chosen": link.get("chosen", ""),
                                  "nearby": [{"id": n.get("id", ""), "label": n.get("label", ""),
                                              "model": n.get("model", ""), "face": bool(n.get("face")),
-                                             "carrier": bool(n.get("carrier"))} for n in link.get("nearby", [])]}}}
+                                             "carrier": bool(n.get("carrier")),
+                                             "rssi": n.get("rssi")} for n in link.get("nearby", [])]}}}
     except Exception:
         return None
 

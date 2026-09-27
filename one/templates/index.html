@@ -913,6 +913,10 @@
     .fx-h { font:600 10px var(--font-display); letter-spacing:.12em; text-transform:uppercase; color:var(--muted2); margin-bottom:9px; }
     .fx-note { font-size:12.5px; color:var(--muted); margin:0 0 10px; }
     .fx-note b { color:var(--text); font-weight:600; }
+    .fx-sigbars { vertical-align:-1px; margin-left:6px; }
+    .fx-carried { display:flex; flex-direction:column; gap:6px; margin:-4px 0 10px; }
+    .fx-carried-row { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:7px 10px;
+      background:var(--surface2); border:1px solid var(--border2); border-radius:9px; font:600 13px var(--font-display); letter-spacing:.04em; }
     .fx-seg { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
     .fx-seg button { text-align:left; background:var(--surface2); border:1px solid var(--border2); border-radius:10px; padding:10px 12px;
       color:var(--text); cursor:pointer; display:flex; flex-direction:column; gap:2px; transition:border-color .15s, background .15s; }
@@ -3119,6 +3123,23 @@
       name: u.name || (model + ' ' + String(u.serial || '').slice(-4)),
     };
   }
+  // CueLink signal between a light and the light it is linked with (Rob,
+  // 2026-09-26): how the light hears it, or - for a light with no WiFi, known
+  // only through its Cue - how its Cue hears the light
+  function cueLinkRssi(u, otherId) {
+    const mine = ((((u.cue || {}).link || {}).nearby) || []).find(n => n.id === otherId);
+    if (mine && mine.rssi) return mine.rssi;
+    const other = ((_fxData && _fxData.units) || []).find(x => x.serial === otherId);
+    const theirs = other && ((((other.cue || {}).link || {}).nearby) || []).find(n => n.id === u.serial);
+    return theirs && theirs.rssi ? theirs.rssi : null;
+  }
+  function fxSignal(rssi) {   // "-55 dBm" and four bars, lit by how strong
+    if (!rssi) return '';
+    const n = rssi > -55 ? 4 : rssi > -65 ? 3 : rssi > -75 ? 2 : 1;
+    let b = '<span class="fx-bars fx-sigbars">';
+    for (let k = 1; k <= 4; k++) b += '<i class="' + (k <= n ? 'on' : '') + '" style="height:' + (3 + k * 2.5) + 'px"></i>';
+    return b + '</span> <span class="fx-mono">' + rssi + ' dBm</span>';
+  }
   function cueTimerText() {
     const H = window._cueHost || {};
     return ({ stopped: 'Timer idle', running: 'Running', paused: 'Paused', warning: 'Warning', danger: 'Danger',
@@ -3409,7 +3430,7 @@
     } else if (i.linked || L.waiting) {
       const target = L.relayed && L.via_ip ? L.via_ip : u.ip;
       const arg = on => L.relayed && L.via_ip ? "{guest:'" + u.serial + "',mirror:" + on + '}' : "{show:'" + (on ? 'mirror' : 'own') + "'}";
-      link = '<p class="fx-note">' + (i.linked ? 'Linked through <b>' + fxEsc(fxShort(i.via)) + '</b>.' : 'Waiting for <b>' + fxEsc(fxShort(L.via_name || L.chosen || 'its Cue')) + '</b> to come back.') + '</p>' +
+      link = '<p class="fx-note">' + (i.linked ? 'Linked through <b>' + fxEsc(fxShort(i.via)) + '</b> ' + fxSignal(cueLinkRssi(u, L.via || i.via)) : 'Waiting for <b>' + fxEsc(fxShort(L.via_name || L.chosen || 'its Cue')) + '</b> to come back.') + '</p>' +
         (i.linked && (L.via_ip || !i.noIp) ? '<div class="fx-seg">' +
           '<button class="' + (i.mirror ? 'on' : '') + '" onclick="cueLinkCmd(\'' + target + '\',' + arg(true) + ')"><b>Mirror</b><span>shows its Cue\'s tally</span></button>' +
           '<button class="' + (!i.mirror ? 'on' : '') + '" onclick="cueLinkCmd(\'' + target + '\',' + arg(false) + ')"><b>Own key</b><span>its own Companion button</span></button></div>' : '') +
@@ -3418,7 +3439,13 @@
           '<button class="fx-btn warn" onclick="cueLinkCmd(\'' + (i.noIp ? L.via_ip : u.ip) + '\',' + (i.noIp ? '{release:\'' + u.serial + '\'}' : '{off:true}') +
             ',\'Unlink ' + q(nm) + '? It goes back to its own connection' + (i.noIp ? ' - it has no WiFi, so it will be dark until it has.' : '.') + '\')">Unlink</button></div>';
     } else {
-      link = (i.carried ? '<p class="fx-note">Carrying <b>' + i.carried + '</b> light' + (i.carried > 1 ? 's' : '') + ' over CueLink.</p>' : '') +
+      link = (i.carried ? '<p class="fx-note">Carrying <b>' + i.carried + '</b> light' + (i.carried > 1 ? 's' : '') + ' over CueLink:</p>' +
+          '<div class="fx-carried">' + (L.guests || []).map(g => {
+            const gu = ((_fxData && _fxData.units) || []).find(x => x.serial === g.id);
+            const near = (L.nearby || []).find(n => n.id === g.id);
+            const gname = gu ? cueInfo(gu).name : (near && near.label) || fxShort(g.id);
+            return '<div class="fx-carried-row"><span>' + fxEsc(gname) + '</span>' + fxSignal(near && near.rssi) + '</div>';
+          }).join('') + '</div>' : '') +
         (!i.carried && cues.length && !i.noIp
           ? '<select class="fx-select" onchange="if (this.value) cueLinkCmd(\'' + u.ip + '\',{id:this.value.split(\'|\')[0],channel:+this.value.split(\'|\')[1]})"><option value="">Link it through a Cue&hellip;</option>' +
             cues.map(n => '<option value="' + n.id + '|' + (n.channel || 0) + '">' + fxEsc(q(n.name)) +
