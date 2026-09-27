@@ -656,7 +656,9 @@
       position: fixed; left: 50%; bottom: 18px;
       transform: translateX(-50%) translateY(90px);
       width: calc(100% - 32px); max-width: 560px;
-      padding: 12px 16px; border-radius: 12px; z-index: 95;
+      /* above every sheet and dialog (the unit sheet is 900, the add-to-home
+         dialog 1000): a toast is the answer to what was just tapped in one */
+      padding: 12px 16px; border-radius: 12px; z-index: 1100;
       font-size: 13px; font-weight: 500;
       display: flex; align-items: flex-start; gap: 9px;
       border: 1px solid transparent;
