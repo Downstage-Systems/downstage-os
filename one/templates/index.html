@@ -882,8 +882,11 @@
     .fx-sig-one { display:inline-flex; align-items:center; gap:4px; }
     .fx-sig-ic { width:13px; height:13px; fill:none; stroke:var(--muted); stroke-width:1.6; stroke-linecap:round; }
     .fx-sig-ic circle[r="1.1"] { fill:var(--muted); stroke:none; }
-    .fx-sig-link .fx-sig-ic { stroke:var(--accent); }
-    .fx-sig-link .fx-bars i.on { background:var(--accent); }
+    /* CueLink signal is always CueLink green, wherever it shows (Rob, 2026-09-26);
+       WiFi bars stay grey */
+    .fx-sig-link .fx-sig-ic { stroke:var(--cuelink); }
+    .fx-sig-link .fx-bars i.on, .fx-bars.fx-sigbars i.on { background:var(--cuelink); }   /* more specific than the grey .fx-bars i.on below */
+    .fx-sigbars ~ .fx-mono { color:var(--cuelink); }
     .fx-bars i { width:3px; border-radius:1px; background:#2a323b; }
     .fx-bars i.on { background:var(--muted); }
     .fx-batt { display:inline-block; width:18px; height:9px; border:1.5px solid var(--muted2); border-radius:2px; position:relative; margin-right:-4px; }
@@ -919,6 +922,7 @@
     .fx-note { font-size:12.5px; color:var(--muted); margin:0 0 10px; }
     .fx-note b { color:var(--text); font-weight:600; }
     .fx-sigbars { vertical-align:-1px; margin-left:6px; }
+    :root { --cuelink: var(--accent); }   /* CueLink green: the link badge, the rings and every CueLink bar */
     .fx-carried { display:flex; flex-direction:column; gap:6px; margin:-4px 0 10px; }
     .fx-carried-row { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:7px 10px;
       background:var(--surface2); border:1px solid var(--border2); border-radius:9px; font:600 13px var(--font-display); letter-spacing:.04em; }
