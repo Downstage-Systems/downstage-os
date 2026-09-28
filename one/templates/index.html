@@ -1028,6 +1028,8 @@
     .fx-gbar { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 16px 0; }
     .fx-pager { display:flex; align-items:center; gap:10px; font:600 13px var(--font-display); letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
     .fx-pager b { color:var(--text); font-size:16px; }
+    .fx-gpage { max-width:260px; padding:6px 10px; border-radius:8px; border:1px solid var(--border2); background:var(--surface2); color:var(--text);
+      font:600 13px var(--font-display); letter-spacing:.04em; }
     .fx-pager button { width:32px; height:32px; min-width:32px; padding:0; justify-content:center; border-radius:8px; border:1px solid var(--border2);
       background:var(--surface2); color:var(--text); font-size:20px; line-height:1; }
     .fx-gsize { background:var(--surface2); color:var(--text); border:1px solid var(--border2); border-radius:8px; padding:6px 8px; font:600 12px var(--font-display); letter-spacing:.04em; }
@@ -3655,6 +3657,7 @@
     document.querySelector('#fx-sheet .fx-panel').classList.add('wide');
     fxGridFrame();
     fxGridPoll();
+    fxGridLoadPages(_fxGrid);
   }
   function fxGridClose() {
     if (_fxGrid) clearTimeout(_fxGrid.timer);
@@ -3715,6 +3718,37 @@
     }
     if (g === _fxGrid) g.timer = setTimeout(fxGridPoll, g.err ? 4000 : 800);
   }
+  // The page control: a menu of Companion's own page names when its HTTP API
+  // gives them (Rob, 2026-09-28), else plain numbers, with arrows either way
+  function fxGridPager(g) {
+    const last = g.pages && g.pages.length ? g.pages[g.pages.length - 1].page : 99;
+    const mid = g.pages && g.pages.length
+      ? '<select class="fx-gpage" onchange="fxGridGo(+this.value)" title="Companion page">' +
+          g.pages.map(p => '<option value="' + p.page + '"' + (p.page === g.page ? ' selected' : '') + '>' + p.page + ' · ' + fxEsc(p.name || ('Page ' + p.page)) + '</option>').join('') +
+          (g.pages.some(p => p.page === g.page) ? '' : '<option value="' + g.page + '" selected>' + g.page + '</option>') + '</select>'
+      : '<span>Page <b>' + g.page + '</b></span>';
+    return '<button onclick="fxGridPage(-1)"' + (g.page <= 1 ? ' disabled' : '') + ' aria-label="Previous page">&lsaquo;</button>' + mid +
+           '<button onclick="fxGridPage(1)"' + (g.page >= last ? ' disabled' : '') + ' aria-label="Next page">&rsaquo;</button>';
+  }
+  function fxGridPageName(g, n) {
+    const p = g.pages && g.pages.find(x => x.page === n);
+    return p && p.name ? p.name : '';
+  }
+  async function fxGridLoadPages(g) {
+    try {
+      const d = await (await fetch('/companion/pages?' + new URLSearchParams({ host: g.host }))).json();
+      if (g !== _fxGrid || !d.ok) return;
+      g.pages = d.pages;
+      const el = document.getElementById('fx-pager');
+      if (el) el.innerHTML = fxGridPager(g);
+      fxGridFoot();
+    } catch (e) {}
+  }
+  function fxGridGo(n) {   // straight to a page from the menu
+    const g = _fxGrid;
+    if (!g || n === g.page) return;
+    fxGridPage(n - g.page);
+  }
   function fxGridFrame() {
     const g = _fxGrid, body = document.getElementById('fx-panel-body');
     if (!g) return;
@@ -3735,9 +3769,7 @@
           ? '<div class="fx-gmsg"><div class="fx-gmsg-t">Can\'t show that page</div><p>' + fxEsc(g.err) + '</p>' +
               '<div class="fx-actions left"><button class="fx-btn" onclick="_fxGrid.rev=0;clearTimeout(_fxGrid.timer);fxGridPoll()">Try again</button></div></div>'
           : '<div class="fx-gbar">' +
-              '<div class="fx-pager"><button onclick="fxGridPage(-1)"' + (g.page <= 1 ? ' disabled' : '') + ' aria-label="Previous page">&lsaquo;</button>' +
-                '<span>Page <b>' + g.page + '</b></span>' +
-                '<button onclick="fxGridPage(1)"' + (g.page >= 99 ? ' disabled' : '') + ' aria-label="Next page">&rsaquo;</button></div>' +
+              '<div class="fx-pager" id="fx-pager">' + fxGridPager(g) + '</div>' +
               '<select class="fx-gsize" onchange="fxGridSize(this.value)" title="Match Companion\'s grid size">' +
                 kGridSizes.map(s => '<option value="' + s[0] + 'x' + s[1] + '"' + (sizeKey === s[0] + 'x' + s[1] ? ' selected' : '') + '>' + s[2] + '</option>').join('') +
               '</select></div>' +
@@ -3796,7 +3828,8 @@
     if (!g || !foot) return;
     const s = g.sel;
     foot.innerHTML = '<div class="fx-gfoot-row">' + (s
-      ? '<div><div class="fx-gsel">Page ' + s.page + ' · Row ' + (s.row + 1) + ' · Column ' + (s.col + 1) + '</div>' +
+      ? '<div><div class="fx-gsel">Page ' + s.page + (fxGridPageName(g, s.page) ? ' (' + fxEsc(fxGridPageName(g, s.page)) + ')' : '') +
+          ' · Row ' + (s.row + 1) + ' · Column ' + (s.col + 1) + '</div>' +
           '<div class="fx-mono">Companion location ' + s.page + '/' + s.row + '/' + s.col + '</div></div>' +
         (g.block ? '<div class="fx-gblock">' + fxEsc(g.block) + '</div>'
                  : '<button class="fx-btn primary" onclick="fxGridUse()">' + 'Use this button' + '</button>')

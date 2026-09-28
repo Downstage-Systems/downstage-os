@@ -11,6 +11,7 @@ import time
 from pathlib import Path
 
 import requests
+from concurrent.futures import ThreadPoolExecutor
 from flask import Flask, jsonify, render_template, request, send_file, Response
 
 import cue_ble   # BLE onboarding for Cue lights; degrades to a no-op without bluetooth
@@ -3574,6 +3575,54 @@ def companion_grid_page():
     except ValueError:
         return jsonify({"ok": False, "error": "Bad numbers"}), 400
     return jsonify(companion_grid.grid(host, port, page, rows, cols, since, wait=2.5 if since == 0 else 0))
+
+
+_page_names = {}   # host -> (fetched at, [{page, name}])
+
+
+@app.route("/companion/pages")
+def companion_page_names():
+    """The Companion's page names, for the button picker's page menu (Rob,
+    2026-09-28). The Satellite API does not carry them; Companion's HTTP API
+    does, as the internal variable page_number_<n>_name (checked on 5.0.6:
+    page 1 "Menu", page 6 "MITTI +XL"). Read until the first page that is not
+    there; kept 30 s. A Companion with its HTTP API off answers nothing, and
+    the picker keeps plain numbers."""
+    host = (request.args.get("host") or "").strip()
+    if not re.fullmatch(r"[A-Za-z0-9.\-:]{1,64}", host):
+        return jsonify({"ok": False, "error": "No Companion address"}), 400
+    try:
+        port = int(request.args.get("port", 8000))
+    except ValueError:
+        return jsonify({"ok": False, "error": "Bad port"}), 400
+    key = f"{host}:{port}"
+    hit = _page_names.get(key)
+    if hit and time.time() - hit[0] < 30:
+        return jsonify({"ok": True, "pages": hit[1]})
+
+    def one(n):
+        try:
+            r = requests.get(f"http://{host}:{port}/api/variable/internal/page_number_{n}_name/value", timeout=1.5)
+            return n, (r.text.strip() if r.status_code == 200 else None)
+        except Exception:
+            return n, None
+
+    pages = []
+    with ThreadPoolExecutor(max_workers=12) as ex:   # in batches, stopping at the first page that is not there
+        for start in range(1, 100, 12):
+            got = dict(ex.map(one, range(start, min(start + 12, 100))))
+            done = False
+            for n in range(start, min(start + 12, 100)):
+                if got.get(n) is None:
+                    done = True
+                    break
+                pages.append({"page": n, "name": got[n]})
+            if done:
+                break
+    if not pages:
+        return jsonify({"ok": False, "error": "Companion's HTTP API did not answer"})
+    _page_names[key] = (time.time(), pages)
+    return jsonify({"ok": True, "pages": pages})
 
 
 @app.route("/fleet/cue/state")
