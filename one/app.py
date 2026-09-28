@@ -3603,7 +3603,10 @@ def _probe_cue(ip, timeout=0.6):
     DEVICEID (DSCUE-xxxxxx). Its Companion link state stands in for health:
     a light that isn't live can't show a cue."""
     try:
-        r = requests.get(f"http://{ip}/status", timeout=timeout)
+        # "a One is here": a light following a Companion button (a One feature)
+        # counts this as seeing a One, even across a VLAN mDNS does not cross
+        # (light fw 0.83.0; without a One it turns back into a surface)
+        r = requests.get(f"http://{ip}/status", timeout=timeout, headers={"X-Downstage-One": "1"})
         d = r.json()
         cid = str(d.get("id", ""))
         if not cid.startswith("DSCUE-"):
