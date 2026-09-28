@@ -547,6 +547,28 @@ def get_local_ip():
     return get_network_info()["ip"]
 
 
+def _my_ip_toward(target):
+    """This unit's address on the same network as `target`, or None. A One can
+    sit on two networks at once (ethernet on one, WiFi on another); a light
+    must be given the address it can actually reach - Rob, 2026-09-28: "Use
+    this One's Companion" handed a Cue on R3 (192.168.10.x) the One's R3_HS
+    address (192.168.8.215), and the Cue walked off to R3_HS to find it."""
+    try:
+        t = ipaddress.ip_address(target)
+        out = subprocess.check_output(["ip", "-4", "-o", "addr", "show"], text=True, timeout=3)
+        for line in out.splitlines():
+            parts = line.split()
+            if "inet" not in parts:
+                continue
+            cidr = parts[parts.index("inet") + 1]
+            iface = ipaddress.ip_interface(cidr)
+            if not iface.ip.is_loopback and t in iface.network:
+                return str(iface.ip)
+    except Exception:
+        pass
+    return None
+
+
 def check_ontime(ip, timeout=3):
     try:
         r = requests.get(f"http://{ip}:4001/api/version", timeout=timeout)
@@ -3386,7 +3408,8 @@ def cue_directory():
     otherwise its own. A unit with neither says so, and the light keeps what
     it had."""
     config = load_config()
-    me = get_local_ip()
+    # the address on the network the light asked from (a One on two networks)
+    me = _my_ip_toward(request.remote_addr) or get_local_ip()
     remote = config.get("satellite_ip", "")
     if config.get("satellite_enabled") and remote and _satellite_companion_ok(remote):
         host, source = remote, "satellite"
@@ -3985,9 +4008,10 @@ def fleet_cue_adopt():
         ipaddress.ip_address(ip)
     except Exception:
         return jsonify({"ok": False, "error": "bad ip"}), 400
-    me = get_local_ip()
-    if not me or me == "unknown":
-        return jsonify({"ok": False, "error": "this unit has no LAN address yet"})
+    me = _my_ip_toward(ip)
+    if not me:
+        return jsonify({"ok": False, "error": "this One and the light are on different networks - put them on the same one first "
+                                              "(a WiFi share from a Cue on this One's network does it)"})
     # tally = this unit's Companion; timer = this unit's own Cue host
     mode = str((request.get_json() or {}).get("mode", "tally"))
     port = CUE_HOST_PORT if mode == "timer" else 16622
