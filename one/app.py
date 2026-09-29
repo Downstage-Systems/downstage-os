@@ -3708,6 +3708,13 @@ def _probe_cue(ip, timeout=0.6):
                 "cue": {"host": d.get("host", ""), "port": d.get("port", 16622),
                         "board": d.get("board", ""), "rssi": d.get("rssi", 0),
                         "ssid": d.get("ssid", ""), "state": state,
+                        # its WiFi channel (light fw 0.85+ says it in "chan", with
+                        # why it stays or moves; before that CueLink's channel is
+                        # the same thing on a light with WiFi): the One shows it and
+                        # warns when one network's lights sit on different channels,
+                        # where CueLink can't reach between them
+                        "wifi_ch": int((d.get("chan") or {}).get("channel") or link.get("channel") or 0),
+                        "chan_why": str((d.get("chan") or {}).get("why", "")),
                         "camera": d.get("camera", -1),
                         "companion_version": d.get("companionVersion", ""),
                         "talent": bool(d.get("talent")),
@@ -5068,6 +5075,38 @@ def satellite_is_running():
         return out == "active"
     except Exception:
         return False
+
+
+_ARP_CONF = "/etc/sysctl.d/90-downstage-arp.conf"
+_ARP_TEXT = ("# Downstage One: a One on Ethernet and WiFi of the same network answers\n"
+             "# ARP for each address only on its own interface (no ARP flux)\n"
+             "net.ipv4.conf.all.arp_ignore=1\n"
+             "net.ipv4.conf.all.arp_announce=2\n")
+
+
+def _arp_flux_guard():
+    """A One in a rack is usually on the router twice: a cable (where lights
+    reach Companion) and the same network's WiFi. Linux's default answers
+    "who has 192.168.10.224?" from both, so a light could learn the WiFi's
+    MAC for Companion's address and send its tally link through the air to
+    the One instead of down the cable - every packet crossing the busy 2.4 GHz
+    channel twice (found live on 0001 during a show, 2026-09-29: NetworkManager
+    logged the wired port answering for the WiFi's address; the lights dropped
+    Companion about 25 times that day). arp_ignore=1 answers only on the
+    interface that owns the address; arp_announce=2 sends ARP from it.
+    Idempotent: written once, loaded on every boot."""
+    try:
+        try:
+            have = open(_ARP_CONF).read()
+        except OSError:
+            have = ""
+        if have != _ARP_TEXT:
+            subprocess.run(["sudo", "tee", _ARP_CONF], input=_ARP_TEXT, text=True,
+                           timeout=10, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(["sudo", "sysctl", "-q", "-p", _ARP_CONF], timeout=10,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception as e:
+        print(f"[net] arp guard: {e}")
 
 
 def _satellite_group_guard():
@@ -7339,6 +7378,7 @@ if __name__ == "__main__":
     threading.Thread(target=_hotspot_fallback, daemon=True).start()
     threading.Thread(target=_power_button_monitor, daemon=True).start()
     threading.Thread(target=_satellite_group_guard, daemon=True).start()
+    threading.Thread(target=_arp_flux_guard, daemon=True).start()
     def _on_sigterm(signum, frame):
         # A service stop during system shutdown is our last chance to own
         # the panel. Reboot leaves the panel alone; poweroff gets the

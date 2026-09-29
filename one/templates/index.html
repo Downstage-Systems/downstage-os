@@ -627,6 +627,14 @@
     .ble-banner { display:none; margin:0 0 12px; padding:11px 13px; border-radius:9px;
       background:var(--green-bg); border:1px solid var(--green-bd); }
     .ble-banner.on { display:block; }
+    /* A network's lights split across WiFi channels (0.85 lights): amber, a banner, never a modal */
+    .fx-split { display:none; margin:0 0 12px; padding:11px 13px; border-radius:9px; font-size:13px; line-height:1.5;
+      background:rgba(245,165,36,.08); border:1px solid rgba(245,165,36,.4); }
+    .fx-split.on { display:block; }
+    .fx-split b { color:var(--amber); }
+    .fx-split .fu-sub { margin-top:4px; }
+    .fx-ch { font:600 10.5px var(--font-mono); color:var(--muted2); }
+    .fx-ch.odd { color:var(--amber); }
     .ble-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
     .ble-row + .ble-row { margin-top:9px; padding-top:9px; border-top:1px solid var(--green-bd); }
     .ble-ic { width:9px; height:9px; border-radius:50%; background:var(--green); flex-shrink:0;
@@ -813,6 +821,16 @@
     .fx-grid { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:12px; }
     @media (max-width: 760px) { .fx-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
     @media (max-width: 460px) { .fx-grid { grid-template-columns:1fr; } }
+    /* Lights linked over CueLink sit together in one CueLink-green box (Rob,
+       2026-09-28): the carrier first, then the lights it carries. The box
+       spans as many columns as it has lights, up to the grid's width, and
+       lays them out on the same columns inside. */
+    .fx-group { --gc:2; grid-column:span 2; position:relative; padding:7px; border-radius:18px;
+      border:1.5px solid var(--cuelink); background:color-mix(in srgb, var(--cuelink) 6%, transparent); }
+    .fx-group.g3 { --gc:3; grid-column:1 / -1; }
+    .fx-ggrid { display:grid; grid-template-columns:repeat(var(--gc), minmax(0, 1fr)); gap:10px; }
+    @media (max-width: 760px) { .fx-group.g3 { --gc:2; } }
+    @media (max-width: 460px) { .fx-group, .fx-group.g3 { --gc:1; grid-column:auto; } }
     .fx-card { --tally:#07090b; --ink:#5b6670; position:relative; display:flex; flex-direction:column;
       background:var(--surface2); border:1px solid var(--border2); border-radius:14px; overflow:hidden;
       cursor:pointer; outline:none; transition:--tally .45s ease, transform .18s ease, border-color .18s, box-shadow .25s; }
@@ -850,6 +868,16 @@
     .fx-art .fx-frame ~ .fx-num { fill:var(--tally); }
     .fx-card:not(.lit) .fx-art .fx-frame ~ .fx-num, .fx-panel:not(.lit) .fx-art .fx-frame ~ .fx-num { fill:#5b6670; }
     .fx-led { fill:#171c22; }
+    /* The Cue 360 in profile (Rob, 2026-09-28): the black tile, and its white
+       tower diffuser standing on it that lights in the tally colour and glows */
+    .fx-base { fill:#0b0d10; stroke:#2a323b; stroke-width:1.4; }
+    .fx-tower { fill:#d6dbe0; transition:fill .45s ease; }
+    .fx-tower-hi { fill:#fff; opacity:.28; }
+    .fx-card.lit .fx-tower, .fx-panel.lit .fx-tower, .su-card.lit .fx-tower { fill:var(--tally); }
+    /* its glow: the tower's outline in wide soft strokes (a filter on an SVG
+       shape is clipped to a box just past it, which showed as a square) */
+    .fx-tglow { fill:none; stroke:var(--tally); stroke-linejoin:round; opacity:0; transition:opacity .45s ease; }
+    .fx-card.lit .fx-tglow, .fx-panel.lit .fx-tglow, .su-card.lit .fx-tglow { opacity:1; }
     .fx-card.lit .fx-led, .fx-panel.lit .fx-led { fill:var(--tally); filter:drop-shadow(0 0 2px var(--tally)); }
     .fx-dot { position:absolute; top:11px; left:12px; z-index:2; width:8px; height:8px; border-radius:50%;
       background:var(--accent); box-shadow:0 0 8px rgba(47,217,123,.7); }
@@ -2296,6 +2324,7 @@
           </div>
         </div>
         <div class="ble-banner" id="ble-banner"></div>
+        <div class="fx-split" id="fleet-split"></div>
         <div id="fleet-panel" class="iface-panel" style="margin-bottom:0">
           <div class="iface-none">Press Scan to look for other Downstage units.</div>
         </div>
@@ -3200,9 +3229,16 @@
       '<rect x="35" y="23" width="50" height="64" rx="6" class="fx-frame" style="stroke:var(--tally)"/>' +
       numTxt(60, 56, 34) +
       '<rect x="52" y="96" width="16" height="3" rx="1.5" class="fx-port"/></svg>';
+    // the 360 from the side, to the case's proportions: a 33 x 12 mm tile, the
+    // 21 mm tower 10.8 mm proud with its 2 mm chamfer (cue-tile.scad)
     if (i.kind === '360') return '<svg class="fx-art" viewBox="0 0 120 120" aria-hidden="true">' +
-      '<rect x="18" y="18" width="84" height="84" rx="14" class="fx-body"/>' +
-      '<rect x="24" y="24" width="72" height="72" rx="9" class="fx-glass"/>' + leds(72, 8, 8) + '</svg>';
+      '<g transform="translate(60 60) scale(1.18) translate(-60 -60)">' +
+      [[26, .035], [21, .05], [16, .065], [12, .085], [8, .11], [4, .16]].map(([w, o]) =>
+        '<path d="M33 62 V36 L38.5 30.5 H81.5 L87 36 V62 Z" class="fx-tglow" style="stroke-width:' + w + 'px;stroke-opacity:' + o + '"/>').join('') +
+      '<path d="M33 62 V36 L38.5 30.5 H81.5 L87 36 V62 Z" class="fx-tower"/>' +
+      '<path d="M36 60 V37.5 L39.5 34 H44 V60 Z" class="fx-tower-hi"/>' +
+      '<rect x="16" y="59" width="88" height="31" rx="5" class="fx-base"/>' +
+      '<path d="M22 64 H98" class="fx-shine"/></g></svg>';
     if (i.kind === 'mini') return '<svg class="fx-art" viewBox="0 0 120 120" aria-hidden="true">' +
       '<rect x="31" y="31" width="58" height="58" rx="10" class="fx-body"/>' +
       '<rect x="36" y="36" width="48" height="48" rx="6" class="fx-glass"/>' + leds(48, 5, 5) + '</svg>';
@@ -3213,6 +3249,46 @@
       '<circle cx="60" cy="60" r="41" class="fx-ring"/>' +
       numTxt(60, 61, 40) +
       '<path d="M26 44 A38 38 0 0 1 60 22" class="fx-shine"/></svg>';
+  }
+  // WiFi channels (Rob, 2026-09-28: lights landing on different channels at a
+  // venue can't CueLink). Per network: the rig's channel is where most round
+  // Cues are (else most lights); a light elsewhere is "apart". Lights on
+  // different networks never count against each other.
+  let _fxApart = {};   // serial -> the rig's channel on its network
+  function fxChannels(units) {
+    const nets = {};
+    (units || []).forEach(u => {
+      const c = u.cue || {};
+      if (u.product !== 'Cue' || !u.ip || !c.ssid || !(+c.wifi_ch > 0)) return;
+      const n = nets[c.ssid] || (nets[c.ssid] = {});
+      (n[c.wifi_ch] || (n[c.wifi_ch] = [])).push(u);
+    });
+    _fxApart = {};
+    const splits = [];
+    Object.keys(nets).forEach(ssid => {
+      const chans = Object.keys(nets[ssid]).map(Number).sort((a, b) => a - b);
+      if (chans.length < 2) return;
+      const cues = ch => nets[ssid][ch].filter(u => cueInfo(u).kind === 'round').length;
+      let ref = chans[0];
+      chans.forEach(ch => {
+        const d = cues(ch) - cues(ref);
+        if (d > 0 || (d === 0 && nets[ssid][ch].length > nets[ssid][ref].length)) ref = ch;
+      });
+      chans.forEach(ch => { if (ch !== ref) nets[ssid][ch].forEach(u => { _fxApart[u.serial] = ref; }); });
+      splits.push({ ssid, ref, chans: chans.map(ch => ({ ch, names: nets[ssid][ch].map(u => cueInfo(u).name) })) });
+    });
+    return splits;
+  }
+  function fxSplitBanner(splits) {
+    const el = document.getElementById('fleet-split');
+    if (!el) return;
+    el.classList.toggle('on', splits.length > 0);
+    el.innerHTML = splits.map(s =>
+      '<div><b>Split across WiFi channels on ' + fxEsc(s.ssid) + '.</b> ' +
+        s.chans.map(c => 'Channel ' + c.ch + (c.ch === s.ref ? ' (the rig)' : '') + ': ' + c.names.map(fxEsc).join(', ')).join(' · ') + '</div>').join('') +
+      (splits.length ? '<div class="fu-sub">CueLink only reaches lights on the same channel. A linked light moves itself to its ' +
+        'Cue\'s channel once it has been dark for a minute; one that stays apart has no access point of this network on that ' +
+        'channel strong enough where it is.</div>' : '');
   }
   function fxChip(txt, cls) { return '<span class="fx-chip ' + cls + '">' + fxEsc(txt) + '</span>'; }
   function fxBars(rssi, what) {   // four bars, lit by how strong
@@ -3252,6 +3328,7 @@
     if (i.linked) chips.push(fxChip('via ' + fxShort(i.via), 'link'));
     else if (i.L.waiting) chips.push(fxChip('waiting for ' + fxShort(i.L.via_name || i.L.chosen || 'its Cue'), 'warn'));
     else if (i.carried) chips.push(fxChip('carrying ' + i.carried + (+i.L.max > 1 ? ' of ' + i.L.max : ''), i.L.max && i.carried >= +i.L.max ? 'warn' : 'link'));
+    if (_fxApart[u.serial]) chips.push(fxChip('Ch ' + i.c.wifi_ch + ', rig on ' + _fxApart[u.serial], 'warn'));
     if (i.c.talent) chips.push(fxChip('Talent', 'tal'));
     const m = cueShowMode(i);
     if (m === 'button') chips.push(fxChip('Button ' + cueLoc(i.c.follow), 'co'));
@@ -3289,7 +3366,8 @@
         '<div class="fx-sub">' + fxEsc(i.model) + (i.cam !== null ? ' · CAM ' + i.cam : '') + '</div>' +
         '<div class="fx-chips">' + chips.join('') + '</div>' +
         '<div class="fx-foot"><span class="fx-sig">' +
-          '<span class="fx-sig-one">' + kWifiIcon + (i.noIp ? '<span class="fx-dim">none</span>' : fxBars(i.c.rssi, 'WiFi')) + '</span>' +
+          '<span class="fx-sig-one">' + kWifiIcon + (i.noIp ? '<span class="fx-dim">none</span>' : fxBars(i.c.rssi, 'WiFi') +
+            (+i.c.wifi_ch > 0 ? '<span class="fx-ch' + (_fxApart[u.serial] ? ' odd' : '') + '" title="WiFi channel">ch ' + i.c.wifi_ch + '</span>' : '')) + '</span>' +
           (i.linked || i.carried ? '<span class="fx-sig-one fx-sig-link">' + kLinkIcon + fxBars(cueLinkSignal(u, i), i.linked ? 'CueLink to ' + fxShort(i.via) : 'CueLink, weakest carried light') + '</span>' : '') +
           batt + '</span>' +
           '<span class="fx-mono">' + fxEsc(u.version || '') + '</span></div></div>';
@@ -3309,6 +3387,7 @@
                    full: +u.cue.link.max > 0 && (u.cue.link.guests || []).length >= +u.cue.link.max,
                    count: (u.cue.link.guests || []).length, max: +u.cue.link.max || 0 }));
     if (d.cue_host) window._cueHost = d.cue_host;
+    fxSplitBanner(fxChannels(d.units));   // before the cards: they mark a light apart
     const al = document.getElementById('cue-alert-btn');
     if (al) {
       const H = d.cue_host || {};
@@ -3326,30 +3405,87 @@
       let grid = box.querySelector(':scope > .fx-grid');
       if (!grid) { box.innerHTML = '<div class="fx-grid"></div>'; grid = box.firstChild; }
       const keep = new Set();
-      d.units.forEach((u, idx) => {
-        const card = fxCard(u);
-        keep.add(card.key);
-        let el = grid.querySelector(':scope > [data-key="' + CSS.escape(card.key) + '"]');
-        if (!el) {
-          el = document.createElement('div');
-          el.dataset.key = card.key;
-          el.tabIndex = 0;
-          el.setAttribute('role', 'button');
-          el.onclick = () => fxOpen(card.key);
-          el.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fxOpen(card.key); } };
-          el.style.animationDelay = (idx * 45) + 'ms';
-          el.classList.add('fx-new');
+      // each slot of the grid: one card, or a CueLink group of cards in its own box
+      const slots = fxLinkSlots(d.units);
+      let idx = 0;
+      slots.forEach((slot, si) => {
+        let into = grid;
+        if (slot.group) {
+          const gk = 'grp:' + slot.units[0].serial;
+          keep.add(gk);
+          let g = grid.querySelector(':scope > [data-key="' + CSS.escape(gk) + '"]');
+          if (!g) {
+            g = document.createElement('div');
+            g.dataset.key = gk;
+            g.innerHTML = '<div class="fx-ggrid"></div>';
+          }
+          g.className = 'fx-group' + (slot.units.length >= 3 ? ' g3' : '');
+          g.title = 'Linked over CueLink';
+          if (grid.children[si] !== g) grid.insertBefore(g, grid.children[si] || null);
+          into = g.firstChild;
         }
-        el.className = 'fx-card ' + card.cls + (el.classList.contains('fx-new') ? ' fx-new' : '');
-        el.style.setProperty('--tally', card.tally);
-        el.style.setProperty('--ink', card.ink);
-        if (_fxInner[card.key] !== card.inner) { el.innerHTML = card.inner; _fxInner[card.key] = card.inner; }
-        if (grid.children[idx] !== el) grid.insertBefore(el, grid.children[idx] || null);
+        slot.units.forEach((u, ci) => {
+          const pos = slot.group ? ci : si;
+          fxPlaceCard(into, u, pos, idx++, keep);
+        });
       });
-      [...grid.children].forEach(el => { if (!keep.has(el.dataset.key)) { delete _fxInner[el.dataset.key]; el.remove(); } });
+      grid.querySelectorAll('[data-key]').forEach(el => {
+        if (!keep.has(el.dataset.key)) { delete _fxInner[el.dataset.key]; el.remove(); }
+      });
     }
     if (_fxOpen) fxSheet();
     renderShowUnits(d.units || []);
+    fxFleetTs(d);
+  }
+  // Group lights linked over CueLink: a carrier and every light it carries (or
+  // that says it is linked through it). The group takes the place of its first
+  // light in the list; inside, carriers first (a Cue before a Lite).
+  function fxLinkSlots(units) {
+    const at = {}, parent = {};
+    units.forEach(u => { if (u.serial) { at[u.serial] = u; parent[u.serial] = u.serial; } });
+    const root = id => { while (parent[id] !== id) id = parent[id] = parent[parent[id]]; return id; };
+    const join = (a, b) => { if (at[a] && at[b]) parent[root(a)] = root(b); };
+    units.forEach(u => {
+      const L = (u.cue || {}).link || {};
+      (L.guests || []).forEach(g => join(g.id, u.serial));
+      if (L.relayed && L.via) join(u.serial, L.via);
+    });
+    const members = {};
+    units.forEach(u => { if (u.serial) (members[root(u.serial)] = members[root(u.serial)] || []).push(u); });
+    const rank = u => { const L = (u.cue || {}).link || {}, k = cueInfo(u).kind;
+      return (L.guests || []).length ? (k === 'round' ? 0 : 1) : 2; };
+    const slots = [], done = new Set();
+    units.forEach(u => {
+      const m = u.serial ? members[root(u.serial)] : null;
+      if (!m || m.length < 2) { slots.push({ group: false, units: [u] }); return; }
+      const r = root(u.serial);
+      if (done.has(r)) return;
+      done.add(r);
+      slots.push({ group: true, units: m.slice().sort((a, b) => rank(a) - rank(b)) });   // stable: list order within a rank
+    });
+    return slots;
+  }
+  function fxPlaceCard(into, u, pos, idx, keep) {
+    const card = fxCard(u);
+    keep.add(card.key);
+    let el = document.querySelector('#fleet-panel [data-key="' + CSS.escape(card.key) + '"]');
+    if (!el) {
+      el = document.createElement('div');
+      el.dataset.key = card.key;
+      el.tabIndex = 0;
+      el.setAttribute('role', 'button');
+      el.onclick = () => fxOpen(card.key);
+      el.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fxOpen(card.key); } };
+      el.style.animationDelay = (idx * 45) + 'ms';
+      el.classList.add('fx-new');
+    }
+    el.className = 'fx-card ' + card.cls + (el.classList.contains('fx-new') ? ' fx-new' : '');
+    el.style.setProperty('--tally', card.tally);
+    el.style.setProperty('--ink', card.ink);
+    if (_fxInner[card.key] !== card.inner) { el.innerHTML = card.inner; _fxInner[card.key] = card.inner; }
+    if (into.children[pos] !== el) into.insertBefore(el, into.children[pos] || null);
+  }
+  function fxFleetTs(d) {
     const fts = document.getElementById('fleet-ts');
     if (fts) {
       if (d.ts) {
@@ -3532,7 +3668,8 @@
       '<div class="fx-sec"><div class="fx-h">Details</div><div class="fx-grid2">' +
         fxRow('Address', i.noIp ? 'No WiFi<div class="fu-sub">reached through ' + fxEsc(fxShort(i.via)) + '</div>'
           : '<span class="fu-ip" onclick="copyIp(\'' + u.ip + '\')" title="Click to copy">' + fxEsc(u.ip) + '</span>' +
-            (c.rssi ? '<div class="fu-sub">' + fxEsc(c.ssid ? c.ssid + ' · ' : '') + c.rssi + ' dBm</div>' : '')) +
+            (c.rssi ? '<div class="fu-sub">' + fxEsc(c.ssid ? c.ssid + ' · ' : '') + (+c.wifi_ch > 0 ? 'channel ' + c.wifi_ch + ' · ' : '') + c.rssi + ' dBm</div>' : '') +
+            (c.chan_why ? '<div class="fu-sub' + (_fxApart[u.serial] ? ' fx-warn-t' : '') + '">Channel: ' + fxEsc(c.chan_why) + '</div>' : '')) +
         fxRow(i.timer ? 'Following' : 'Companion', (i.timer ? 'This unit\'s timer' : i.linked ? 'Through ' + fxEsc(fxShort(i.via))
           : fxEsc(c.host ? (i.aimedHere ? 'This unit' : c.host) : '-') + (c.companion_version ? '<div class="fu-sub">v' + fxEsc(c.companion_version) + '</div>' : '')) +
           // for a Companion running on this One: point the light here (a light on the old timer mode comes back to Companion this way too)
