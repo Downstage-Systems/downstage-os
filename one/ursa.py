@@ -30,10 +30,14 @@ Safe by default (Coding Main's review, 2026-09-30):
   _audit - so when a shot changes mid-show the log says what touched it.
 - Pool polls cameras on background threads and serves the last answer:
   nothing a page asks for ever waits on a camera that has gone away.
-- A camera is known by the name it reports (/system/product deviceName, the
-  name in Blackmagic Camera Setup, which is also its .local address), not by
-  the address it was found at. Two cameras reporting one name (both left
-  as ursa-broadcast-g2) are flagged, not merged.
+- A camera is keyed by the address it is configured under on the One, and
+  labelled by the name it reports (deviceName, set in Blackmagic Camera
+  Setup). The API reports no serial or hardware id (/system/product has only
+  deviceName, productName, softwareVersion), and every camera ships with the
+  same name - so the name cannot be the key. A rename is cosmetic: same key,
+  same history. Cameras sharing a name all still work, with a clash message
+  that says what to fix. Configure each by IP, or by a .local name only once
+  it is unique: two cameras on one default name share one .local address.
 
 Standard library only (the One has requests; the bench Mac does not).
 """
@@ -297,9 +301,10 @@ class Pool:
     """The One's cameras, each polled on its own thread; everything a page asks
     for is the last answer, never a wait on the camera.
 
-    hosts: addresses or names to reach (cam1.local, 10.0.0.21). writes and
-    record come from the unit's config. snapshot() lists the cameras by the
-    name each reports; camera(name) gives the Camera to set things on."""
+    hosts: the configured addresses (10.0.0.21, cam1.local) - each one's key.
+    writes and record come from the unit's config. snapshot() lists them with
+    the name each reports as its label; camera(key) gives the Camera to set
+    things on (a unique reported name works too)."""
 
     STALE_S = 5.0
 
@@ -351,18 +356,24 @@ class Pool:
             if r.get("name"):
                 by_name.setdefault(r["name"], []).append(r["host"])
         for r in rows:
-            r["key"] = r.get("name") or r["host"]
+            r["key"] = r["host"]
+            r["label"] = r.get("name") or r["host"]
             r["stale"] = r["online"] and now - r.get("seen", 0) > self.STALE_S
             dup = by_name.get(r.get("name"), [])
             r["duplicate"] = dup if len(dup) > 1 else []
-        rows += [{"host": h, "key": h, "online": None, "stale": False, "duplicate": []} for h in pending]
-        return sorted(rows, key=lambda r: r["key"])
+            r["clash"] = (f'{len(dup)} cameras call themselves "{r["name"]}" - give each its own name in '
+                          f'Blackmagic Camera Setup (they still work here, by address)') if len(dup) > 1 else ""
+        rows += [{"host": h, "key": h, "label": h, "online": None, "stale": False, "duplicate": [], "clash": ""}
+                 for h in pending]
+        return sorted(rows, key=lambda r: (r["label"], r["key"]))
 
     def camera(self, key):
-        """The Camera for a name as it reports it (or a host not yet heard
-        from). None when unknown, or when two cameras claim that name."""
+        """The Camera for a key (its configured address), or for a reported
+        name that only one camera has. None when unknown or ambiguous."""
         with self._lock:
-            hits = [h for h, v in self._state.items() if v.get("name") == key] or ([key] if key in self._cams else [])
+            if key in self._cams:
+                return self._cams[key]
+            hits = [h for h, v in self._state.items() if v.get("name") == key]
             return self._cams[hits[0]] if len(hits) == 1 else None
 
     def stop(self):

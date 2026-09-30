@@ -117,25 +117,40 @@ time.sleep(1.0)
 t = time.time(); snap = pool.snapshot(); took = time.time() - t
 keys = [r["key"] for r in snap]
 check("pool: a snapshot never waits (%.0f ms)" % (took * 1000), took < 0.05)
-check("pool: cameras listed by the name they report", "cam1" in keys and "cam2" in keys)
+check("pool: keyed by address, labelled by the name each reports",
+      {(r["key"], r["label"]) for r in snap if r["online"]} == {(host, "cam1"), (host2, "cam2")})
 check("pool: the missing camera is listed offline by its address",
       any(r["key"] == "10.255.255.1" and r["online"] in (False, None) for r in snap))
-check("pool: read-only unless the config says writes", pool.camera("cam2").read_only is True)
+check("pool: a unique name finds its camera too", pool.camera("cam2") is pool.camera(host2))
+check("pool: read-only unless the config says writes", pool.camera(host2).read_only is True)
 try:
-    pool.camera("cam2").set_iso(800); check("pool: read-only camera refuses", False)
+    pool.camera(host2).set_iso(800); check("pool: read-only camera refuses", False)
 except ursa.ReadOnly:
     check("pool: read-only camera refuses", True)
-srv2.state["name"] = "cam1"                   # both left on one name
+srv2.state["name"] = "cam1"                   # both on one name, as cameras ship
 time.sleep(0.6)
 snap = pool.snapshot()
-check("pool: two cameras on one name are flagged", all(len(r["duplicate"]) == 2 for r in snap if r.get("name") == "cam1"))
-check("pool: ... and neither is handed out by that name", pool.camera("cam1") is None)
+pair = [r for r in snap if r.get("name") == "cam1"]
+check("pool: two cameras on one name: both flagged, with what to fix",
+      len(pair) == 2 and all(len(r["duplicate"]) == 2 and "Blackmagic Camera Setup" in r["clash"] for r in pair))
+check("pool: ... and both still reachable by address",
+      pool.camera(host) is not None and pool.camera(host2) is not None and pool.camera(host) is not pool.camera(host2))
+check("pool: ... the shared name alone is ambiguous", pool.camera("cam1") is None)
+srv2.state["name"] = "cam2-renamed"           # renamed in Setup while the pool runs
+srv2.state["iso"] = 1600
+time.sleep(0.6)
+snap = pool.snapshot()
+r2 = next(r for r in snap if r["key"] == host2)
+check("pool: renamed mid-run: same key, new label, state carried on",
+      r2["label"] == "cam2-renamed" and r2["iso"] == 1600 and r2["online"])
+check("pool: renamed mid-run: the clash clears on both",
+      all(not r["clash"] and not r["duplicate"] for r in snap if r["online"]))
 pool.set_hosts([host])
 check("pool: a camera taken out of the config goes", [r["host"] for r in pool.snapshot()] == [host])
 wpool = ursa.Pool([host], writes=True, audit=lambda ev, d: None, every=0.2)
 time.sleep(0.5)
 check("pool: writes when the config says so; record still off",
-      wpool.camera("cam1").read_only is False and wpool.camera("cam1").allow_record is False)
+      wpool.camera(host).read_only is False and wpool.camera(host).allow_record is False)
 pool.stop(); wpool.stop()
 
 srv.shutdown(); srv2.shutdown()
