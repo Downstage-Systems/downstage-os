@@ -38,6 +38,10 @@ Safe by default (Coding Main's review, 2026-09-30):
   same history. Cameras sharing a name all still work, with a clash message
   that says what to fix. Configure each by IP, or by a .local name only once
   it is unique: two cameras on one default name share one .local address.
+  Give each camera a DHCP reservation or a static address: a camera that
+  comes back from a power cycle on a new lease is a new, empty entry here,
+  and its old one sits offline. Deliberately not reconciled in code (it
+  would lean on the name, with all the ambiguity above).
 
 Standard library only (the One has requests; the bench Mac does not).
 """
