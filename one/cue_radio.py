@@ -123,7 +123,9 @@ def _read_port(port):
                     d = json.loads(line)
                 except ValueError:
                     continue   # the half line we opened into
-                if not ours and d.get("t") == "radio" and d.get("fw") == "bench-radio":
+                # "bench-radio" is the listen-only firmware, "one-radio" the
+                # one that can carry lights; both speak this line protocol
+                if not ours and d.get("t") == "radio" and d.get("fw") in ("bench-radio", "one-radio"):
                     ours = True
                     with _lock:
                         _fd = fd
@@ -189,7 +191,16 @@ def state():
             "connected": _state["connected"],
             "port": _state["port"],
             "channel": st.get("realCh") or st.get("ch"),
-            "mode": st.get("mode", ""),
+            # what the radio is doing: "listen" or "carry" (one-radio only)
+            "mode": st.get("mode", "") if st.get("fw") == "one-radio" else "listen",
+            # how it picks a channel: sweep / auto / hold. The listen-only
+            # firmware puts this in "mode"; one-radio moved it to "tune".
+            "tune": st.get("tune") or (st.get("mode", "") if st.get("fw") != "one-radio" else ""),
+            "firmware": st.get("fw", ""), "radio_version": st.get("version", ""),
+            "carrying": st.get("lights"), "guests": st.get("guests") or [],
+            "companion": st.get("companion", ""), "network": st.get("network", ""),
+            "id": st.get("id", ""), "label": st.get("label", ""), "max": st.get("max"),
+            "up": st.get("up"),
             "frames_seen": st.get("seen", 0),
             "dropped": st.get("dropped", 0),
             "heard": heard,

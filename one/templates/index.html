@@ -3427,7 +3427,8 @@
     if (!box) return;
     box.hidden = !(r && r.connected);
     if (box.hidden) return;
-    const mode = r.mode === 'hold' ? 'held' : r.mode === 'sweep' ? 'looking on every channel' : 'following the lights';
+    const tune = r.tune || r.mode;   // the listen-only firmware called it mode
+    const mode = tune === 'hold' ? 'held' : tune === 'sweep' ? 'looking on every channel' : 'following the lights';
     document.getElementById('fx-radio-st').textContent = 'channel ' + (r.channel || '-') + ' · ' + mode;
     const sel = document.getElementById('fx-radio-ch');
     if (document.activeElement !== sel) sel.value = r.mode === 'hold' ? 'ch ' + r.channel : 'auto';
