@@ -3759,6 +3759,42 @@ def _cue_model(model):
     return m[len("Downstage "):] if m.startswith("Downstage ") else (m or "Cue")
 
 
+def _add_radio_cues(units):
+    """The CueLink radio hears every light on the air, whether or not it has
+    WiFi. A light already on the list gains its air level; one that answers
+    nobody over IP becomes a card of its own, so a light with no network is
+    visible instead of absent. Read-only for now - controls arrive when the
+    One can carry lights itself."""
+    try:
+        heard = cue_radio.state().get("heard") or []
+    except Exception:
+        return units
+    if not heard:
+        return units
+    by_serial = {u.get("serial"): u for u in units if u.get("serial")}
+    for h in heard:
+        hid = str(h.get("id") or "")
+        if not hid:
+            continue
+        air = {"rssi": h.get("rssi"), "channel": h.get("channel"),
+               "gone": bool(h.get("gone")), "age": h.get("age"),
+               "carrier": bool(h.get("carrier")), "guests": h.get("guests") or 0,
+               "sharing": bool(h.get("sharing"))}
+        u = by_serial.get(hid)
+        if u is not None:
+            u.setdefault("cue", {})["air"] = air     # on the network AND on the air
+            continue
+        units.append({"ip": "", "serial": hid, "product": "Cue",
+                      "model": _cue_model(h.get("model", "")),
+                      "version": "", "kind": "", "name": h.get("label", ""),
+                      "showing": "", "health_ok": True, "health_why": "",
+                      "upd": False, "primary": True,
+                      "cue": {"camera": -1, "air": air, "radio_only": True,
+                              "link": {"no_ip": True}}})
+        by_serial[hid] = units[-1]
+    return units
+
+
 def _add_carried_cues(units, prev=None):
     """A light linked over CueLink with no WiFi of its own has no address, so
     the sweep cannot find it - but the Cue carrying it can: list it under that
@@ -3883,6 +3919,7 @@ def _do_discover():
     found = [{k: v for k, v in u.items() if k != "primary"}
              for u in best.values()]
     found = _add_carried_cues(found, prev)
+    found = _add_radio_cues(found)
     cache = {"units": found, "ts": time.time()}
     try:
         _FLEET_CACHE.write_text(json.dumps(cache))
@@ -3960,7 +3997,7 @@ def discover_refresh():
             gone.update(health_ok=False, health_why="Not responding",
                         showing="", upd=False, misses=int(u.get("misses", 0)) + 1)
             fresh.append(gone)
-    cache["units"] = _add_carried_cues(fresh, cache.get("units", []))
+    cache["units"] = _add_radio_cues(_add_carried_cues(fresh, cache.get("units", [])))
     try:
         _FLEET_CACHE.write_text(json.dumps(cache))
     except Exception:

@@ -852,6 +852,11 @@
     .fx-card.lit { border-color:color-mix(in srgb, var(--tally) 38%, var(--border2)); }
     .fx-card.air { box-shadow:0 0 0 1px color-mix(in srgb, var(--tally) 55%, transparent), 0 0 26px -6px var(--tally); }
     .fx-card.bad { border-color:rgba(229,72,77,.5); }
+    /* a light the radio has stopped hearing: still listed, visibly not answering */
+    .fx-card.stale { opacity:.55; }
+    .fx-card.stale:hover { opacity:1; }
+    .fx-note { margin:6px 0 0; font-size:11.5px; line-height:1.35; color:var(--muted); }
+    .fx-sig-air { color:var(--cuelink, #2FD97B); }
     .fx-new { animation:fxIn .45s cubic-bezier(.2,.8,.2,1) both; }
     @keyframes fxIn { from { opacity:0; transform:translateY(10px) scale(.98); } }
     .fx-stage { position:relative; height:136px; display:flex; align-items:center; justify-content:center;
@@ -3194,6 +3199,8 @@
       grid: (c.grid && +c.grid.cols > 0 && +c.grid.rows > 0)
               ? { cols: +c.grid.cols, rows: +c.grid.rows } : null,
       linked: !!L.relayed, noIp: !!L.no_ip, via: L.via_name || L.via || '',
+      // what the One's CueLink radio hears of this light, if it has one
+      air: c.air || null, radioOnly: !!c.radio_only,
       mirror: (L.show || 'mirror') !== 'own', carried: (L.guests || []).length,
       name: u.name || (model + ' ' + String(u.serial || '').slice(-4)),
     };
@@ -3207,6 +3214,13 @@
     const other = ((_fxData && _fxData.units) || []).find(x => x.serial === otherId);
     const theirs = other && ((((other.cue || {}).link || {}).nearby) || []).find(n => n.id === u.serial);
     return theirs && theirs.rssi ? theirs.rssi : null;
+  }
+  // how long ago, in the fewest words: the radio gives seconds
+  function fxAge(sec) {
+    const n = Math.round(+sec || 0);
+    if (n < 90) return n + ' s ago';
+    if (n < 5400) return Math.round(n / 60) + ' min ago';
+    return Math.round(n / 3600) + ' h ago';
   }
   function fxSignal(rssi) {   // "-55 dBm" and four bars, lit by how strong
     if (!rssi) return '';
@@ -3345,6 +3359,7 @@
     else if (t === 'preview') chips.push(fxChip('Preview', 'pv'));
     else if (i.timer) chips.push(fxChip(cueTimerText(), 'tm'));
     else chips.push(fxChip(i.lit ? 'Live' : 'Standby', 'ok'));
+    if (i.radioOnly) chips.push(fxChip(i.air && i.air.gone ? 'Last heard ' + fxAge(i.air.age) : 'Heard over CueLink', i.air && i.air.gone ? 'warn' : 'link'));
     if (i.linked) chips.push(fxChip('via ' + fxShort(i.via), 'link'));
     else if (i.L.waiting) chips.push(fxChip('waiting for ' + fxShort(i.L.via_name || i.L.chosen || 'its Cue'), 'warn'));
     else if (i.carried) chips.push(fxChip('carrying ' + i.carried + (+i.L.max > 1 ? ' of ' + i.L.max : ''), i.L.max && i.carried >= +i.L.max ? 'warn' : 'link'));
@@ -3385,13 +3400,18 @@
       '<div class="fx-info"><div class="fx-name">' + fxEsc(i.name) + '</div>' +
         '<div class="fx-sub">' + fxEsc(i.model) + (i.cam !== null ? ' · CAM ' + i.cam : '') + '</div>' +
         '<div class="fx-chips">' + chips.join('') + '</div>' +
+        (i.radioOnly ? '<div class="fx-note">Heard over CueLink - not on Wi-Fi. The One can see it; linking comes with the One carrying lights.</div>' : '') +
         '<div class="fx-foot"><span class="fx-sig">' +
+          (i.air ? '<span class="fx-sig-one fx-sig-air" title="Heard by this One\'s CueLink radio">' + kLinkIcon +
+             fxBars(i.air.rssi, 'CueLink air') +
+             (+i.air.channel > 0 ? '<span class="fx-ch" title="CueLink channel">ch ' + i.air.channel + '</span>' : '') + '</span>' : '') +
           '<span class="fx-sig-one">' + kWifiIcon + (i.noIp ? '<span class="fx-dim">none</span>' : fxBars(i.c.rssi, 'WiFi') +
             (+i.c.wifi_ch > 0 ? '<span class="fx-ch' + (_fxApart[u.serial] ? ' odd' : '') + '" title="WiFi channel">ch ' + i.c.wifi_ch + '</span>' : '')) + '</span>' +
           (i.linked || i.carried ? '<span class="fx-sig-one fx-sig-link">' + kLinkIcon + fxBars(cueLinkSignal(u, i), i.linked ? 'CueLink to ' + fxShort(i.via) : 'CueLink, weakest carried light') + '</span>' : '') +
           batt + '</span>' +
           '<span class="fx-mono">' + fxEsc(u.version || '') + '</span></div></div>';
-    return { key, cls: [bad ? 'bad' : '', t === 'program' ? 'air' : '', i.lit ? 'lit' : ''].join(' ').trim(),
+    return { key, cls: [bad ? 'bad' : '', t === 'program' ? 'air' : '', i.lit ? 'lit' : '',
+                        i.air && i.air.gone ? 'stale' : ''].join(' ').trim(),
              tally: i.lit ? i.col : '#07090b', ink: i.lit ? fxInk(i.col) : '#5b6670', inner };
   }
   // CueLink radio: a USB ESP32 on this One hears every light's own radio - level,
