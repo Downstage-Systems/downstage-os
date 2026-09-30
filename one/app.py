@@ -3243,13 +3243,27 @@ def _cue_color(now):
     return base, ""
 
 
+def _one_clock():
+    """The One's wall clock, seconds since midnight, on every line. A light
+    has no RTC and no guaranteed NTP, so the One is the clock in the room.
+    Deliberately not TOD: the timer parser reads TOD as "a Time of Day event
+    is loaded", which is a different fact."""
+    lt = time.localtime()
+    return f" ONECLOCK={lt.tm_hour * 3600 + lt.tm_min * 60 + lt.tm_sec}"
+
+
 def _cue_extras():
     """The clock in words, for lights with a face that can show them (the
     round Cue). Rides on the same KEY-STATE line as more of the Downstage
     extension: a grid light reads the colour and ignores the rest."""
     t = _cue_timer.get("val")
-    if _cue_alert["on"] or not t:
-        return ""   # OnTime not answering: no timer page on the lights
+    if not t:
+        # OnTime is not answering. Say so rather than simply omitting TIME:
+        # absence cannot be told from "this firmware sends no timer", and a
+        # display on a desk must say why it is blank.
+        return " NOTIMER=1"
+    if _cue_alert["on"]:
+        return ""   # the alert owns the face; the timer is still fine
     def hms(secs):
         return f"{secs // 3600}:{secs % 3600 // 60:02d}:{secs % 60:02d}" if secs >= 3600 else f"{secs // 60}:{secs % 60:02d}"
     tod = int(t["clock_ms"]) // 1000 % 86400 if t.get("clock_ms") is not None else None
@@ -3363,6 +3377,7 @@ def _cue_broadcast_loop():
                 if pattern:
                     line += f" PATTERN={pattern}"
                 line += _cue_extras()
+                line += _one_clock()
                 line += " PRESSED=0"
                 if force or line != c.get("sent"):
                     if _cue_send(sock, line):
