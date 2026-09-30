@@ -3425,6 +3425,10 @@ def cue_directory():
     return jsonify({"ok": True, "host": host, "port": 16622, "source": source,
                     "timer_host": me, "timer_port": CUE_HOST_PORT,
                     "control": bool(config.get("cue_control")),
+                    # "Use a Cue as this One's display": a Hub Cue that finds
+                    # this One on WiFi but hears no radio can then say which
+                    # of the two it is - no radio, or hub service turned off
+                    "hub": bool(config.get("cue_hub")),
                     "clock": f"{lt.tm_hour:02d}:{lt.tm_min:02d}:{lt.tm_sec:02d}",
                     "utc_offset_min": int((lt.tm_gmtoff or 0) // 60),
                     "name": config.get("hostname", "") or socket.gethostname(),
@@ -3469,6 +3473,24 @@ def fleet_cue_control_allowed():
         on = bool((request.get_json(silent=True) or {}).get("on"))
         save_config({"cue_control": on})
     return jsonify({"ok": True, "on": bool(load_config().get("cue_control"))})
+
+
+@app.route("/fleet/cue/hub-allowed", methods=["GET", "POST"])
+def fleet_cue_hub_allowed():
+    """"Use a Cue as this One's display." Separate from "let lights link to
+    this One": one is about adopting other people's tally lights, the other
+    about a Cue the owner deliberately put on their desk. Both off out of the
+    box, so a One ships silent - hub service beacons, and a One whose owner
+    has asked for neither must put nothing on the air."""
+    if request.method == "POST":
+        on = bool((request.get_json(silent=True) or {}).get("on"))
+        was = bool(load_config().get("cue_hub"))
+        save_config({"cue_hub": on})
+        if on != was:
+            _audit("CUE_HUB", "on" if on else "off")
+            # the answer a Cue reads over WiFi must not wait for a restart
+            threading.Thread(target=lambda: _avahi_advertise(0), daemon=True).start()
+    return jsonify({"ok": True, "on": bool(load_config().get("cue_hub"))})
 
 
 def _cue_link_post(ip, data):
@@ -3642,10 +3664,12 @@ def fleet_cue_alert():
 
 
 # ── fleet discovery: find other Downstage units on the LAN ───────────────────
-def _avahi_advertise():
+def _avahi_advertise(delay=15):
     """Publish _downstage._tcp via an avahi service file (the daemon
-    auto-loads /etc/avahi/services - no avahi-utils needed)."""
-    time.sleep(15)
+    auto-loads /etc/avahi/services - no avahi-utils needed). Called again
+    when a published fact changes, so the record does not go stale until the
+    next restart."""
+    time.sleep(delay)
     try:
         config = load_config()
         xml = ('<?xml version="1.0" standalone="no"?><!DOCTYPE service-group '
@@ -3653,6 +3677,7 @@ def _avahi_advertise():
                '  <name replace-wildcards="yes">%h</name>\n'
                '  <service><type>_downstage._tcp</type><port>8080</port>\n'
                f'    <txt-record>serial={config.get("serial", "")}</txt-record>\n'
+               f'    <txt-record>hub={1 if config.get("cue_hub") else 0}</txt-record>\n'
                '  </service>\n</service-group>\n')
         cur = ""
         try:
