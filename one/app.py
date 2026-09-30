@@ -3779,19 +3779,36 @@ def _add_radio_cues(units):
         air = {"rssi": h.get("rssi"), "channel": h.get("channel"),
                "gone": bool(h.get("gone")), "age": h.get("age"),
                "carrier": bool(h.get("carrier")), "guests": h.get("guests") or 0,
-               "sharing": bool(h.get("sharing"))}
+               "sharing": bool(h.get("sharing")),
+               # radio fw 0.88+: in setup mode and open to being handed a
+               # network. Absent on the listen-only firmware.
+               "setup": bool(h.get("setup"))}
         u = by_serial.get(hid)
         if u is not None:
             u.setdefault("cue", {})["air"] = air     # on the network AND on the air
             continue
+        # the beacon says which carrier holds it (radio fw 0.88+), so a light
+        # nobody can reach over IP still sits in its carrier's group
+        via = str(h.get("via") or "")
+        link = {"no_ip": True}
+        if via:
+            link.update(relayed=True, via=via)
         units.append({"ip": "", "serial": hid, "product": "Cue",
                       "model": _cue_model(h.get("model", "")),
                       "version": "", "kind": "", "name": h.get("label", ""),
                       "showing": "", "health_ok": True, "health_why": "",
                       "upd": False, "primary": True,
                       "cue": {"camera": -1, "air": air, "radio_only": True,
-                              "link": {"no_ip": True}}})
+                              "link": link}})
         by_serial[hid] = units[-1]
+    # name the carriers now they are all in the list, whichever order they
+    # were heard in
+    for u in units:
+        lk = (u.get("cue") or {}).get("link") or {}
+        if lk.get("via") and not lk.get("via_name"):
+            c = by_serial.get(lk["via"])
+            if c:
+                lk["via_name"] = c.get("name") or f'{c.get("model", "")} {lk["via"][-4:]}'.strip()
     return units
 
 

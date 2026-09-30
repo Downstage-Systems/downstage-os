@@ -3360,12 +3360,13 @@
     else if (i.timer) chips.push(fxChip(cueTimerText(), 'tm'));
     else chips.push(fxChip(i.lit ? 'Live' : 'Standby', 'ok'));
     if (i.radioOnly) chips.push(fxChip(i.air && i.air.gone ? 'Last heard ' + fxAge(i.air.age) : 'Heard over CueLink', i.air && i.air.gone ? 'warn' : 'link'));
+    if (i.air && i.air.setup) chips.push(fxChip('In setup', 'warn'));
     if (i.linked) chips.push(fxChip('via ' + fxShort(i.via), 'link'));
     else if (i.L.waiting) chips.push(fxChip('waiting for ' + fxShort(i.L.via_name || i.L.chosen || 'its Cue'), 'warn'));
     else if (i.carried) chips.push(fxChip('carrying ' + i.carried + (+i.L.max > 1 ? ' of ' + i.L.max : ''), i.L.max && i.carried >= +i.L.max ? 'warn' : 'link'));
     if (_fxApart[u.serial]) chips.push(fxChip('Ch ' + i.c.wifi_ch + ', rig on ' + _fxApart[u.serial], 'warn'));
     if (i.c.talent) chips.push(fxChip('Talent', 'tal'));
-    const m = cueShowMode(i);
+    const m = i.radioOnly ? '' : cueShowMode(i);   // over the air we cannot tell
     if (m === 'button') chips.push(fxChip('Button ' + cueLoc(i.c.follow), 'co'));
     else if (m === 'mirror') chips.push(fxChip('Mirror', 'co'));
     else if (m === 'surface' && (i.c.host || i.linked)) chips.push(fxChip('Surface', 'co'));
