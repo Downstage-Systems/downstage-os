@@ -759,6 +759,19 @@
                  background:var(--surface2); border:1px solid var(--border2); border-radius:9px; }
     .iface-row .ithumb { height:36px; width:auto; flex-shrink:0; }
     .fleet-ts { font-size:11px; color:var(--muted); padding-left:2px; }
+    /* CueLink radio (a USB ESP32 on the One, one/cue_radio.py): shown only while one is plugged in */
+    .fx-radio { margin-top:14px; padding:12px 14px; border:1px solid var(--border); border-radius:10px; background:var(--surface); }
+    .fx-radio-hdr { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+    .fx-radio-hdr select { margin-left:auto; background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:7px;
+                           font:600 12px var(--font-display); letter-spacing:.06em; padding:4px 8px; }
+    .fx-radio-row { display:grid; grid-template-columns:minmax(0,1fr) 44px 46px 62px minmax(0,1.2fr); gap:8px; align-items:center;
+                    padding:6px 0; border-top:1px solid var(--border); font:12px var(--font-mono); color:var(--muted); }
+    .fx-radio-row b { font:600 14px var(--font-display); letter-spacing:.04em; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .fx-radio-row.gone { opacity:.4; }
+    .fx-radio-row .lv-g { color:var(--green); } .fx-radio-row .lv-a { color:var(--amber); } .fx-radio-row .lv-r { color:var(--red); }
+    .fx-radio-air { margin-top:8px; max-height:140px; overflow:auto; font:11px var(--font-mono); color:var(--muted); }
+    .fx-radio-air div { padding:2px 0; overflow-wrap:anywhere; }
+    .fx-radio-air b { color:var(--text); font-weight:400; }
     .fleet-hdr-right { display:flex; align-items:center; gap:12px; }
     .idot.bad { background:#f2555a !important; box-shadow:0 0 7px rgba(229,72,77,0.6) !important; }
     .fu-card { background:var(--surface2); border:1px solid var(--border2);
@@ -2328,6 +2341,13 @@
         <div id="fleet-panel" class="iface-panel" style="margin-bottom:0">
           <div class="iface-none">Press Scan to look for other Downstage units.</div>
         </div>
+        <div class="fx-radio" id="fx-radio" hidden>
+          <div class="fx-radio-hdr"><div class="section-label" style="margin:0">CueLink Radio</div>
+            <span class="fleet-ts" id="fx-radio-st"></span>
+            <select id="fx-radio-ch" title="Auto follows the lights; a number holds that channel" onchange="fxRadioCh(this.value)"><option value="auto">Auto</option><option value="ch 1">Ch 1</option><option value="ch 2">Ch 2</option><option value="ch 3">Ch 3</option><option value="ch 4">Ch 4</option><option value="ch 5">Ch 5</option><option value="ch 6">Ch 6</option><option value="ch 7">Ch 7</option><option value="ch 8">Ch 8</option><option value="ch 9">Ch 9</option><option value="ch 10">Ch 10</option><option value="ch 11">Ch 11</option><option value="ch 12">Ch 12</option><option value="ch 13">Ch 13</option></select></div>
+          <div id="fx-radio-list"></div>
+          <div class="fx-radio-air" id="fx-radio-air"></div>
+        </div>
       </div>
         <div id="fx-sheet" class="fx-sheet" hidden onclick="if (event.target === this) fxClose()"
              ontouchmove="if (event.target === this) event.preventDefault()">
@@ -3374,6 +3394,56 @@
     return { key, cls: [bad ? 'bad' : '', t === 'program' ? 'air' : '', i.lit ? 'lit' : ''].join(' ').trim(),
              tally: i.lit ? i.col : '#07090b', ink: i.lit ? fxInk(i.col) : '#5b6670', inner };
   }
+  // CueLink radio: a USB ESP32 on this One hears every light's own radio - level,
+  // channel, what it carries - including lights with no WiFi. Hidden without one.
+  let _fxRadio = null;
+  function fxRadioName(id, label) {
+    const u = ((_fxData || {}).units || []).find(x => x.serial === id);
+    return u ? (u.name || (u.model + ' ' + String(u.serial).slice(-4))) : (label || String(id).slice(-6));
+  }
+  function renderRadio(r) {
+    _fxRadio = r;
+    const box = document.getElementById('fx-radio');
+    if (!box) return;
+    box.hidden = !(r && r.connected);
+    if (box.hidden) return;
+    const mode = r.mode === 'hold' ? 'held' : r.mode === 'sweep' ? 'looking on every channel' : 'following the lights';
+    document.getElementById('fx-radio-st').textContent = 'channel ' + (r.channel || '-') + ' · ' + mode;
+    const sel = document.getElementById('fx-radio-ch');
+    if (document.activeElement !== sel) sel.value = r.mode === 'hold' ? 'ch ' + r.channel : 'auto';
+    const units = (_fxData || {}).units || [];
+    const kinds = { 3: 'Cue', 2: 'Lite', 1: 'Light' };
+    const rows = (r.heard || []).map(h => {
+      const onNet = units.some(u => u.serial === h.id && u.ip);
+      const lv = h.rssi > -67 ? 'lv-g' : h.rssi > -80 ? 'lv-a' : 'lv-r';
+      const what = [h.guests ? 'carrying ' + h.guests : '', h.sharing ? 'sharing WiFi' : '',
+                    h.touching ? 'touching ' + fxRadioName(h.touching) : '', onNet ? '' : 'not on the network']
+                   .filter(Boolean).join(' · ');
+      return '<div class="fx-radio-row' + (h.gone ? ' gone' : '') + '"><b>' + fxEsc(fxRadioName(h.id, h.label)) + '</b><span>' + (kinds[h.rank] || '?') +
+        '</span><span>ch ' + fxEsc(h.channel) + '</span><span class="' + lv + '">' + Math.round(h.rssi) + ' dBm</span><span>' + fxEsc(what) + '</span></div>';
+    });
+    document.getElementById('fx-radio-list').innerHTML = rows.join('') ||
+      '<div class="iface-none" style="padding:6px 0">Listening. No lights heard yet.</div>';
+    const who = id => id === 'all' ? 'all' : fxRadioName(id);
+    const fr = (r.frames || []).filter(f => f.type !== 'line').slice(-12).reverse();
+    document.getElementById('fx-radio-air').innerHTML = fr.map(f =>
+      '<div>' + new Date(f.t * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' <b>' + fxEsc(f.type) + '</b> ' +
+      fxEsc(who(f.from)) + ' → ' + fxEsc(who(f.to)) + (f.text != null ? ' ' + fxEsc(String(f.text).slice(0, 48)) : '') + '</div>').join('');
+  }
+  async function fxRadioPoll() {
+    if (!document.hidden) {
+      try { renderRadio(await (await fetch('/fleet/cue/radio')).json()); } catch (e) {}
+    }
+    setTimeout(fxRadioPoll, (_fxRadio && _fxRadio.connected) ? 3000 : 10000);
+  }
+  async function fxRadioCh(cmd) {
+    try {
+      renderRadio(await (await fetch('/fleet/cue/radio', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cmd }) })).json());
+    } catch (e) {}
+    document.getElementById('fx-radio-ch').blur();
+  }
+  setTimeout(fxRadioPoll, 1500);
   function renderFleet(d) {
     _fxData = d;
     const box = document.getElementById('fleet-panel');

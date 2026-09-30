@@ -16,6 +16,7 @@ from flask import Flask, jsonify, render_template, request, send_file, Response
 
 import cue_ble   # BLE onboarding for Cue lights; degrades to a no-op without bluetooth
 import companion_grid   # a live picture of a Companion page, for choosing a light's button
+import cue_radio   # a USB CueLink radio (listen-only ESP32-S3), when one is plugged in
 
 OS_VERSION = "1.6.4"   # Downstage OS release - bump on tagged releases
 OS_PRODUCT = "Downstage One"
@@ -4277,6 +4278,18 @@ def _ble_watch():
 threading.Thread(target=_ble_watch, daemon=True).start()
 
 
+@app.route("/fleet/cue/radio", methods=["GET", "POST"])
+def fleet_cue_radio():
+    """What the USB CueLink radio hears: every light on the air with its level
+    and channel (WiFi or not), and the link traffic between them. POST
+    {"cmd": "auto" | "ch N"} sets the radio's channel. Empty, never an error,
+    with no radio plugged in."""
+    if request.method == "POST":
+        ok, err = cue_radio.send((request.get_json() or {}).get("cmd", ""))
+        return jsonify({"ok": ok, "error": err, **cue_radio.state()})
+    return jsonify({"ok": True, **cue_radio.state()})
+
+
 @app.route("/fleet/cue/ble-latest")
 def fleet_cue_ble_latest():
     """The watcher's last look. Cheap enough for every page to poll - it never
@@ -7379,6 +7392,10 @@ if __name__ == "__main__":
     threading.Thread(target=_power_button_monitor, daemon=True).start()
     threading.Thread(target=_satellite_group_guard, daemon=True).start()
     threading.Thread(target=_arp_flux_guard, daemon=True).start()
+    threading.Thread(target=lambda: cue_radio.udev_guard(
+        lambda *a, **k: subprocess.run(*a, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, **k)),
+        daemon=True).start()
+    cue_radio.start()
     def _on_sigterm(signum, frame):
         # A service stop during system shutdown is our last chance to own
         # the panel. Reboot leaves the panel alone; poweroff gets the
