@@ -9,6 +9,7 @@ import importlib.util
 import os
 import sys
 import threading
+import time
 import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -23,7 +24,7 @@ srv = mock.serve(0)
 port = srv.server_address[1]
 threading.Thread(target=srv.serve_forever, daemon=True).start()
 host = f"127.0.0.1:{port}"
-S = mock.Handler.state
+S = srv.state
 fails = []
 
 
@@ -51,8 +52,16 @@ except ursa.ReadOnly:
     check("read-only refuses a write", True)
 check("read-only: nothing reached the camera", S["calls"] == [])
 
-# settings are snapped or clamped to what the camera takes
-cam = ursa.Camera(host)
+# read-only is the default: a plain Camera cannot write
+try:
+    ursa.Camera(host).set_iso(800)
+    check("a Camera is read-only by default", False)
+except ursa.ReadOnly:
+    check("a Camera is read-only by default", True)
+
+# settings are snapped or clamped to what the camera takes; each write audited
+audit = []
+cam = ursa.Camera(host, read_only=False, audit=lambda ev, d: audit.append((ev, d)))
 check("ISO 750 goes as 800", cam.set_iso(750)["ok"] and S["iso"] == 800)
 check("ND 5 goes as the nearest stop", cam.set_nd(5)["ok"] and S["nd"] in (4.0, 6.0))
 check("WB 12000 K clamps to 10000", cam.set_wb(12000)["ok"] and S["wb"] == 10000)
@@ -76,9 +85,21 @@ check("look order: ND and ISO before the iris, colour last",
       order.index("/video/ndFilter") < order.index("/lens/iris") and order.index("/video/iso") < order.index("/lens/iris")
       and order[-2:] == ["/video/whiteBalance", "/video/whiteBalanceTint"])
 
-# record, and tally from the switcher
-check("record on", cam.record(True)["ok"] and cam.status()["recording"] is True)
-check("record off", cam.record(False)["ok"] and cam.status()["recording"] is False)
+check("every write audited (%d)" % len(audit), len(audit) == S.get("sent", 0))
+check("audit line says who, what and the answer",
+      all(ev == "CAMERA" for ev, _ in audit) and any("cam1 (" in d and "PUT /video/iso {\"iso\": 800} -> 204" in d for _, d in audit))
+check("the refused iris write is in the audit too", any("/lens/iris" in d and "-> 403" in d for _, d in audit))
+
+# record needs its own opt-in, even with writes on
+try:
+    cam.record(True)
+    check("record refused without allow_record", False)
+except ursa.RecordOff:
+    check("record refused without allow_record", True)
+check("... and nothing was sent", S["recording"] is False)
+rec = ursa.Camera(host, read_only=False, allow_record=True)
+check("record on", rec.record(True)["ok"] and cam.status()["recording"] is True)
+check("record off", rec.record(False)["ok"] and cam.status()["recording"] is False)
 urllib.request.urlopen(urllib.request.Request(f"http://{host}/mock/tally", data=b'{"status": "Program"}', method="POST"))
 check("tally reads Program", cam.status()["tally"] == "Program")
 
@@ -87,6 +108,36 @@ gone = ursa.Camera("127.0.0.1:9", timeout=0.5)
 st = gone.status()
 check("no camera: offline, all None", st["online"] is False and st["iso"] is None)
 
-srv.shutdown()
+# the pool: two cameras and one that is not there; answers never wait on a camera
+srv2 = mock.serve(0, name="cam2")
+threading.Thread(target=srv2.serve_forever, daemon=True).start()
+host2 = f"127.0.0.1:{srv2.server_address[1]}"
+pool = ursa.Pool([host, host2, "10.255.255.1"], every=0.2, timeout=0.5)
+time.sleep(1.0)
+t = time.time(); snap = pool.snapshot(); took = time.time() - t
+keys = [r["key"] for r in snap]
+check("pool: a snapshot never waits (%.0f ms)" % (took * 1000), took < 0.05)
+check("pool: cameras listed by the name they report", "cam1" in keys and "cam2" in keys)
+check("pool: the missing camera is listed offline by its address",
+      any(r["key"] == "10.255.255.1" and r["online"] in (False, None) for r in snap))
+check("pool: read-only unless the config says writes", pool.camera("cam2").read_only is True)
+try:
+    pool.camera("cam2").set_iso(800); check("pool: read-only camera refuses", False)
+except ursa.ReadOnly:
+    check("pool: read-only camera refuses", True)
+srv2.state["name"] = "cam1"                   # both left on one name
+time.sleep(0.6)
+snap = pool.snapshot()
+check("pool: two cameras on one name are flagged", all(len(r["duplicate"]) == 2 for r in snap if r.get("name") == "cam1"))
+check("pool: ... and neither is handed out by that name", pool.camera("cam1") is None)
+pool.set_hosts([host])
+check("pool: a camera taken out of the config goes", [r["host"] for r in pool.snapshot()] == [host])
+wpool = ursa.Pool([host], writes=True, audit=lambda ev, d: None, every=0.2)
+time.sleep(0.5)
+check("pool: writes when the config says so; record still off",
+      wpool.camera("cam1").read_only is False and wpool.camera("cam1").allow_record is False)
+pool.stop(); wpool.stop()
+
+srv.shutdown(); srv2.shutdown()
 print(f"\n{'ALL PASS' if not fails else str(len(fails)) + ' FAILED'}")
 sys.exit(1 if fails else 0)

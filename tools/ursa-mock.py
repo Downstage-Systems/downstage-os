@@ -115,6 +115,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(404)
         p = p[len(API):]
         s["calls"].append([method, p, body])
+        s["sent"] = s.get("sent", 0) + 1
         ok = lambda: self._send(204)
         if method == "PUT" and p == "/video/iso":
             if body.get("iso") not in CAPS["isos"]:
@@ -189,8 +190,12 @@ class Handler(BaseHTTPRequestHandler):
             self._set("POST")
 
 
-def serve(port=8811):
-    srv = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+def serve(port=8811, name="cam1"):
+    """One pretend camera with its own state (srv.state), so a test can run several."""
+    h = type("CamHandler", (Handler,), {"state": new_state(), "lock": threading.Lock()})
+    h.state["name"] = name
+    srv = ThreadingHTTPServer(("127.0.0.1", port), h)
+    srv.state = h.state
     return srv
 
 

@@ -19,8 +19,21 @@ What the API cannot do: set the camera's tally. /camera/tallyStatus is
 read-only (None, Preview, Program - from the switcher over SDI), so a Cue Lite
 can show it but the One cannot drive it.
 
-A Camera made with read_only=True refuses every write before it reaches the
-network: that is how a real camera is first looked at.
+Safe by default (Coding Main's review, 2026-09-30):
+- A Camera is read-only unless made with read_only=False: a write is refused
+  before it reaches the network. The One sets this per unit in its config,
+  never per request, so a bad caller cannot write to a camera.
+- Record is apart even then: start/stop needs allow_record=True (the One's
+  own opt-in, off until the operator turns it on) - a missed take cannot be
+  re-run.
+- Every write that goes out is reported to audit(event, detail) - the One's
+  _audit - so when a shot changes mid-show the log says what touched it.
+- Pool polls cameras on background threads and serves the last answer:
+  nothing a page asks for ever waits on a camera that has gone away.
+- A camera is known by the name it reports (/system/product deviceName, the
+  name in Blackmagic Camera Setup, which is also its .local address), not by
+  the address it was found at. Two cameras reporting one name (both left
+  as ursa-broadcast-g2) are flagged, not merged.
 
 Standard library only (the One has requests; the bench Mac does not).
 """
@@ -28,6 +41,7 @@ Standard library only (the One has requests; the bench Mac does not).
 import json
 import ssl
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -55,10 +69,17 @@ class ReadOnly(Exception):
     """A write asked of a camera opened read-only."""
 
 
+class RecordOff(Exception):
+    """Record start/stop asked of a camera without allow_record."""
+
+
 class Camera:
-    def __init__(self, host, read_only=False, scheme=None, timeout=TIMEOUT):
+    def __init__(self, host, read_only=True, allow_record=False, audit=None, scheme=None, timeout=TIMEOUT):
         self.host = host.strip().rstrip("/")
         self.read_only = read_only
+        self.allow_record = allow_record
+        self.audit = audit            # audit(event, detail) for every write sent
+        self.name = ""                # as the camera reports it, once it has answered
         self.scheme = scheme          # "https" or "http"; found on first contact when None
         self.timeout = timeout
         self._caps = None
@@ -96,6 +117,12 @@ class Camera:
 
     def _write(self, method, path, body=None):
         st, _ = self.request(method, path, body)
+        if self.audit:
+            try:
+                self.audit("CAMERA", f"{self.name or self.host} ({self.host}) {method} {path}"
+                                     f"{' ' + json.dumps(body) if body is not None else ''} -> {st or 'no answer'}")
+            except Exception:
+                pass
         return {"ok": st in (200, 204), "status": st, "path": path}
 
     # -- reading -----------------------------------------------------------
@@ -122,6 +149,8 @@ class Camera:
         batts = [b.get("chargeRemainingPercent") for b in power.get("batteries") or []
                  if b.get("chargeRemainingPercent") is not None]
         prod = got.get("/system/product")
+        if prod and prod.get("deviceName"):
+            self.name = prod["deviceName"]
         return {
             "host": self.host, "online": prod is not None or any(v is not None for v in got.values()),
             "name": g("/system/product", "deviceName"), "model": g("/system/product", "productName"),
@@ -228,6 +257,8 @@ class Camera:
         return self._write("PUT", "/lens/focus/doAutoFocus", {"position": {"x": x, "y": y}})
 
     def record(self, on=True):
+        if not self.allow_record:
+            raise RecordOff(f"record {'start' if on else 'stop'} refused: record control is off for {self.name or self.host}")
         return self._write("POST", "/transports/0/record" if on else "/transports/0/stop")
 
     def set_preset(self, name):
@@ -262,6 +293,82 @@ class Camera:
         return out
 
 
+class Pool:
+    """The One's cameras, each polled on its own thread; everything a page asks
+    for is the last answer, never a wait on the camera.
+
+    hosts: addresses or names to reach (cam1.local, 10.0.0.21). writes and
+    record come from the unit's config. snapshot() lists the cameras by the
+    name each reports; camera(name) gives the Camera to set things on."""
+
+    STALE_S = 5.0
+
+    def __init__(self, hosts, writes=False, record=False, audit=None, every=1.0, timeout=TIMEOUT):
+        self.writes, self.record, self.audit, self.every, self.timeout = writes, record, audit, every, timeout
+        self._lock = threading.Lock()
+        self._cams, self._state, self._threads = {}, {}, {}
+        self._stop = threading.Event()
+        self.set_hosts(hosts)
+
+    def set_hosts(self, hosts):
+        with self._lock:
+            want = [h.strip() for h in hosts if h and h.strip()]
+            for h in list(self._cams):
+                if h not in want:
+                    del self._cams[h]
+                    self._state.pop(h, None)
+            for h in want:
+                if h not in self._cams:
+                    self._cams[h] = Camera(h, read_only=not self.writes, allow_record=self.record,
+                                           audit=self.audit, timeout=self.timeout)
+                    t = threading.Thread(target=self._poll, args=(h,), daemon=True, name=f"ursa-{h}")
+                    self._threads[h] = t
+                    t.start()
+
+    def _poll(self, host):
+        while not self._stop.is_set():
+            with self._lock:
+                cam = self._cams.get(host)
+            if cam is None:
+                return                                   # taken out of the config
+            s = cam.status()
+            s["seen"] = time.time()
+            with self._lock:
+                if host in self._cams:
+                    prev = self._state.get(host) or {}
+                    if not s["online"] and prev.get("name"):  # keep who it was while it is away
+                        s = dict(prev, online=False, seen=prev.get("seen", 0))
+                    self._state[host] = s
+            self._stop.wait(self.every if s.get("online") else max(self.every, 3.0))
+
+    def snapshot(self):
+        now = time.time()
+        with self._lock:
+            rows = [dict(v, host=h) for h, v in self._state.items()]
+            pending = [h for h in self._cams if h not in self._state]
+        by_name = {}
+        for r in rows:
+            if r.get("name"):
+                by_name.setdefault(r["name"], []).append(r["host"])
+        for r in rows:
+            r["key"] = r.get("name") or r["host"]
+            r["stale"] = r["online"] and now - r.get("seen", 0) > self.STALE_S
+            dup = by_name.get(r.get("name"), [])
+            r["duplicate"] = dup if len(dup) > 1 else []
+        rows += [{"host": h, "key": h, "online": None, "stale": False, "duplicate": []} for h in pending]
+        return sorted(rows, key=lambda r: r["key"])
+
+    def camera(self, key):
+        """The Camera for a name as it reports it (or a host not yet heard
+        from). None when unknown, or when two cameras claim that name."""
+        with self._lock:
+            hits = [h for h, v in self._state.items() if v.get("name") == key] or ([key] if key in self._cams else [])
+            return self._cams[hits[0]] if len(hits) == 1 else None
+
+    def stop(self):
+        self._stop.set()
+
+
 def main(argv):
     """Bench use. Read-only unless the command is "set", "look-apply" or "rec".
       python3 ursa.py <host> status | caps | watch
@@ -273,7 +380,8 @@ def main(argv):
         return 2
     host, cmd = argv[1], argv[2]
     writes = cmd in ("set", "look-apply", "rec")
-    cam = Camera(host, read_only=not writes)
+    cam = Camera(host, read_only=not writes, allow_record=cmd == "rec",
+                 audit=lambda ev, d: print(f"[{ev}] {d}", file=sys.stderr))
     if cmd == "status":
         print(json.dumps(cam.status(), indent=2))
     elif cmd == "caps":
