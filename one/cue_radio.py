@@ -30,8 +30,10 @@ GONE_SECONDS = 20        # a light not heard for this long is gone (a full chann
 KEEP_SECONDS = 600       # forgotten after this
 PROBE_SECONDS = 5        # a port that has not said "bench-radio" by now is not the radio
 FRAMES_KEPT = 300
-# link traffic worth keeping for the page; beacons are the heard list itself
-_QUIET = {"beacon"}
+# link traffic worth keeping for the page: events, not the heartbeat. Beacons
+# are the heard list itself; hellos and acks go by every second per light and
+# Companion lines many times a second (the Mac's bench dashboard keeps them all)
+_QUIET = {"beacon", "hello", "ack", "line"}
 
 _lock = threading.Lock()
 _state = {"port": "", "connected": False, "status": {}, "since": 0.0}
@@ -197,13 +199,15 @@ def state():
 
 # ---- the One's side of the USB port (Linux) -----------------------------------
 
-UDEV_RULE = "/etc/udev/rules.d/60-downstage-radio.rules"
+UDEV_RULE = "/etc/udev/rules.d/99-downstage-radio.rules"
+UDEV_OLD = "/etc/udev/rules.d/60-downstage-radio.rules"   # its first name: OpenOCD's 60- rule sorted after it
 UDEV_TEXT = (
     "# Downstage One: the CueLink radio (an Espressif ESP32-S3 on USB).\n"
-    "# Readable by the One's service without a group change (which would need a\n"
-    "# restart to take), and never probed by ModemManager, whose AT commands\n"
-    "# would land on the radio.\n"
-    'SUBSYSTEM=="tty", ATTRS{idVendor}=="303a", MODE="0666", ENV{ID_MM_DEVICE_IGNORE}="1"\n'
+    "# Last in order so it holds whatever else is installed (Pi OS's OpenOCD\n"
+    "# rule also claims Espressif boards): the One's user reaches it through\n"
+    "# plugdev (install.sh adds it), and ModemManager never probes it - its AT\n"
+    "# commands would land on the radio.\n"
+    'SUBSYSTEM=="tty", ATTRS{idVendor}=="303a", GROUP="plugdev", MODE="0660", ENV{ID_MM_DEVICE_IGNORE}="1"\n'
 )
 
 
@@ -217,12 +221,17 @@ def udev_guard(run):
             have = open(UDEV_RULE).read()
         except OSError:
             have = ""
-        if have == UDEV_TEXT:
+        if have == UDEV_TEXT and not os.path.exists(UDEV_OLD):
             return   # the usual boot: nothing to do, no sudo
+        if os.path.exists(UDEV_OLD):
+            run(["sudo", "rm", "-f", UDEV_OLD], timeout=10)
         # the same rule install.sh writes, for a unit built before it existed
         run(["sudo", "tee", UDEV_RULE], input=UDEV_TEXT, text=True, timeout=10)
         run(["sudo", "udevadm", "control", "--reload-rules"], timeout=10)
-        run(["sudo", "udevadm", "trigger", "--subsystem-match=tty", "--attr-match=idVendor=303a"], timeout=10)
+        # re-run the rule on a radio already plugged in: --attr-match cannot
+        # see idVendor (it is the USB parent's, not the tty's), so name each one
+        for dev in glob.glob("/dev/serial/by-id/usb-Espressif*"):
+            run(["sudo", "udevadm", "trigger", "--action=change", os.path.realpath(dev)], timeout=10)
         print("[radio] udev rule written", flush=True)
     except Exception as e:
         print(f"[radio] udev guard: {e}", flush=True)

@@ -3425,7 +3425,8 @@
     document.getElementById('fx-radio-list').innerHTML = rows.join('') ||
       '<div class="iface-none" style="padding:6px 0">Listening. No lights heard yet.</div>';
     const who = id => id === 'all' ? 'all' : fxRadioName(id);
-    const fr = (r.frames || []).filter(f => f.type !== 'line').slice(-12).reverse();
+    // hello / ack / line go by every second per light: show what happened, not the heartbeat
+    const fr = (r.frames || []).filter(f => !['line', 'hello', 'ack'].includes(f.type)).slice(-12).reverse();
     document.getElementById('fx-radio-air').innerHTML = fr.map(f =>
       '<div>' + new Date(f.t * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' <b>' + fxEsc(f.type) + '</b> ' +
       fxEsc(who(f.from)) + ' → ' + fxEsc(who(f.to)) + (f.text != null ? ' ' + fxEsc(String(f.text).slice(0, 48)) : '') + '</div>').join('');

@@ -48,16 +48,17 @@ SUBSYSTEM=="usb", ATTRS{idVendor}=="0fd9", GROUP="plugdev", MODE="0664"
 KERNEL=="hidraw*", ATTRS{idVendor}=="0fd9", GROUP="plugdev", MODE="0664"
 EOF
 sudo usermod -aG plugdev "$USER"
-# The CueLink radio (an Espressif ESP32-S3 on USB, one/cue_radio.py): readable
-# without a group change, and kept away from ModemManager. The app's startup
-# guard writes the same file on units built before this line existed, so the
-# text must stay identical to cue_radio.UDEV_TEXT.
-sudo tee /etc/udev/rules.d/60-downstage-radio.rules > /dev/null << 'EOF'
+# The CueLink radio (an Espressif ESP32-S3 on USB, one/cue_radio.py): group
+# plugdev and kept away from ModemManager. The app's startup guard writes the
+# same file on units built before this line existed, so the text must stay
+# identical to cue_radio.UDEV_TEXT.
+sudo tee /etc/udev/rules.d/99-downstage-radio.rules > /dev/null << 'EOF'
 # Downstage One: the CueLink radio (an Espressif ESP32-S3 on USB).
-# Readable by the One's service without a group change (which would need a
-# restart to take), and never probed by ModemManager, whose AT commands
-# would land on the radio.
-SUBSYSTEM=="tty", ATTRS{idVendor}=="303a", MODE="0666", ENV{ID_MM_DEVICE_IGNORE}="1"
+# Last in order so it holds whatever else is installed (Pi OS's OpenOCD
+# rule also claims Espressif boards): the One's user reaches it through
+# plugdev (install.sh adds it), and ModemManager never probes it - its AT
+# commands would land on the radio.
+SUBSYSTEM=="tty", ATTRS{idVendor}=="303a", GROUP="plugdev", MODE="0660", ENV{ID_MM_DEVICE_IGNORE}="1"
 EOF
 sudo udevadm control --reload-rules
 sudo udevadm trigger
