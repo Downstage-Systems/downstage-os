@@ -3834,7 +3834,7 @@ def _relay_unit(ip, d):
         guests.append(g)
     return {"ip": ip, "serial": str(d.get("id", "")), "product": "Relay", "model": "Cue Relay",
             "version": d.get("version", ""), "kind": "", "name": d.get("name", ""),
-            "showing": f"{len(carried)} of 4 linked",
+            "showing": f"{len(carried)} of {int(d.get('max') or 4)} linked",
             "health_ok": not probs, "health_why": " \u00b7 ".join(probs),
             "upd": False, "primary": True,
             "relay": {"one": bool(d.get("one")), "state": d.get("state", ""), "host": d.get("host", ""),
@@ -3845,7 +3845,7 @@ def _relay_unit(ip, d):
                       "trying": d.get("compTrying", ""), "why": d.get("compWhy", "")},
             # the lights it carries, as a Cue's link says them: they group with it
             # on the fleet page, and a light with no WiFi of its own is listed
-            "cue": {"link": {"guests": guests, "max": 4, "channel": d.get("ch", 0),
+            "cue": {"link": {"guests": guests, "max": int(d.get("max") or 4), "channel": d.get("ch", 0),
                              "nearby": [{"id": l.get("id", ""), "label": l.get("label", ""),
                                          "model": l.get("model", ""), "face": int(l.get("rank") or 0) >= 2,
                                          "carrier": False, "rssi": l.get("rssi")} for l in lights]}}}
