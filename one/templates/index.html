@@ -3373,6 +3373,19 @@
     return chips;
   }
   // A card: { key, cls, tally, ink, inner } - the element is kept between refreshes
+  // A One or a View: its photo. A Cue Relay (Cue fw 0.96+): drawn - a slim black
+  // box, the antenna up, its LED green when all is well.
+  function fxUnitArt(u) {
+    if (u.product === 'Relay') {
+      const led = u.health_ok === false ? '#F5A524' : '#2FD97B';
+      return '<svg class="fx-img" viewBox="0 0 64 48" aria-hidden="true">' +
+        '<rect x="6" y="22" width="52" height="18" rx="4" fill="#0b0d10" stroke="#4a545e" stroke-width="1.5"/>' +
+        '<rect x="44" y="6" width="3" height="17" rx="1.5" fill="#9AA4AD"/>' +
+        '<circle cx="15" cy="31" r="2.6" fill="' + led + '"/><circle cx="15" cy="31" r="5" fill="' + led + '" opacity=".25"/>' +
+        '<rect x="24" y="29" width="14" height="4" rx="1" fill="#242B33"/></svg>';
+    }
+    return '<img class="fx-img" src="/static/unit-' + ((u.product || '').toLowerCase() === 'view' ? 'view' : 'one') + '.png" alt="">';
+  }
   function fxCard(u) {
     const bad = u.health_ok === false;
     const key = u.serial || u.ip;
@@ -3380,7 +3393,7 @@
       const nm = u.name || u.product;
       const inner =
         '<div class="fx-stage"><span class="fx-dot"></span>' +
-          '<img class="fx-img" src="/static/unit-' + ((u.product || '').toLowerCase() === 'view' ? 'view' : 'one') + '.png" alt="">' +
+          fxUnitArt(u) +
           (u.upd ? '<span class="fx-badge">Update</span>' : '') + '</div>' +
         '<div class="fx-info"><div class="fx-name">' + fxEsc(nm) + '</div>' +
           '<div class="fx-sub">' + fxEsc(u.product) + (u.showing ? ' · ' + fxEsc(u.showing) : '') + '</div>' +
@@ -3610,7 +3623,7 @@
         [state, cls] = bad ? [u.health_why || 'Not live', 'bad'] : t === 'program' ? ['On air', 'air'] : t === 'preview' ? ['Preview', 'pv']
           : i.timer ? [cueTimerText(), 'tm'] : [(i.cam !== null ? 'Cam ' + i.cam + ' · ' : '') + (i.lit ? 'Live' : 'Standby'), ''];
       } else {
-        art = '<img class="fx-img" src="/static/unit-' + ((u.product || '').toLowerCase() === 'view' ? 'view' : 'one') + '.png" alt="">';
+        art = fxUnitArt(u);
         name = u.name || u.product;
         [state, cls] = bad ? [u.health_why || 'Needs a look', 'bad'] : [u.product + ' · all good', ''];
       }
@@ -3689,19 +3702,23 @@
       const nm = u.name || u.product;
       body.innerHTML =
         '<div class="fx-hero"><div class="fx-stage big"><span class="fx-dot"></span>' +
-          '<img class="fx-img" src="/static/unit-' + ((u.product || '').toLowerCase() === 'view' ? 'view' : 'one') + '.png" alt=""></div>' +
+          fxUnitArt(u) + '</div>' +
           '<div><div class="fx-title">' + fxEsc(nm) + '</div><div class="fx-sub">' + fxEsc(u.product) + '</div>' +
           '<div class="fx-mono fx-dim">' + fxEsc(u.serial) + ' · v' + fxEsc(u.version) + '</div></div></div>' +
         '<div class="fx-sec"><div class="fx-grid2">' +
           fxRow('Address', '<span class="fu-ip" onclick="copyIp(\'' + u.ip + '\')" title="Click to copy">' + fxEsc(u.ip) + '</span>' + (u.kind ? '<div class="fu-sub">via ' + fxEsc(u.kind) + '</div>' : '')) +
-          fxRow('Showing', fxEsc(u.showing || '-')) +
+          fxRow(u.product === 'Relay' ? 'Lights' : 'Showing', fxEsc(u.showing || '-')) +
           fxRow('Status', '<span class="' + (bad ? 'fx-bad' : 'fx-ok') + '">' + fxEsc(bad ? u.health_why : 'All good') + '</span>') +
+          (u.relay ? fxRow('Companion', u.relay.one ? 'Through this One (USB)' : fxEsc(u.relay.host ? u.relay.host + ':' + u.relay.port : 'not set') +
+              (u.relay.live ? ' <span class="fx-ok">live</span>' : u.relay.why ? '<div class="fu-sub">' + fxEsc(u.relay.why) + '</div>' : '')) +
+            fxRow('CueLink', 'ch ' + fxEsc(u.relay.ch) + ' · ' + fxEsc(u.relay.tune) + ' · ' + fxEsc(u.relay.heard) + ' heard') +
+            fxRow('Ethernet', fxEsc(u.relay.eth) + (u.relay.mbps ? ' · ' + u.relay.mbps + ' Mbps' : '') + ' · ' + (u.relay.static ? 'static' : 'DHCP')) : '') +
           fxRow('Software', 'v' + fxEsc(u.version) + (u.upd ? ' <span class="fx-chip warn">update</span>' : '')) +
         '</div></div>' +
         '<div class="fx-actions">' +
           '<button class="fx-btn ghost fx-forget" onclick="fleetForget(\'' + u.serial + '\',\'' + q(nm) + '\',' + !bad + ')">Remove from this list</button>' +
-          '<button class="fx-btn" onclick="fleetIdentify(\'' + u.ip + '\')">Identify</button>' +
-          '<button class="fx-btn primary" onclick="openPanel(\'http://' + u.ip + ':8080\', \'' + q(nm) + '\')">Open its page</button></div>';
+          '<button class="fx-btn" onclick="fleetIdentify(\'' + u.ip + '\',\'' + q(u.product) + '\')">Identify</button>' +
+          '<button class="fx-btn primary" onclick="openPanel(\'http://' + u.ip + (u.product === 'Relay' ? '' : ':8080') + '\', \'' + q(nm) + '\')">Open its page</button></div>';
       return;
     }
     const i = cueInfo(u), L = i.L, c = i.c, nm = i.name;
@@ -4406,10 +4423,10 @@
       showToast(v ? 'Unit name saved.' : 'Unit name cleared.', 'success');
     } catch (e) { showToast('Could not save name.', 'error'); }
   }
-  async function fleetIdentify(ip) {
+  async function fleetIdentify(ip, product) {
     try {
       const d = await (await fetch('/fleet/identify', { method: 'POST',
-        headers: {'Content-Type':'application/json'}, body: JSON.stringify({ ip }) })).json();
+        headers: {'Content-Type':'application/json'}, body: JSON.stringify({ ip, product: product || '' }) })).json();
       showToast(d.ok ? 'Identify is flashing on that unit.' : 'Could not reach that unit.', d.ok ? 'info' : 'error');
     } catch (e) { showToast('Identify failed.', 'error'); }
   }

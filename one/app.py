@@ -3722,6 +3722,8 @@ def _probe_cue(ip, timeout=0.6):
         r = requests.get(f"http://{ip}/status", timeout=timeout, headers={"X-Downstage-One": "1"})
         d = r.json()
         cid = str(d.get("id", ""))
+        if cid.startswith("DSRLY-"):   # a Cue Relay (Cue fw 0.96+): its own card
+            return _relay_unit(ip, d)
         if not cid.startswith("DSCUE-"):
             return None
         state = str(d.get("companion", ""))
@@ -3786,6 +3788,144 @@ def _probe_cue(ip, timeout=0.6):
                                              "rssi": n.get("rssi")} for n in link.get("nearby", [])]}}}
     except Exception:
         return None
+
+
+# ---- the Cue Relay (Cue fw 0.96+): an Ethernet CueLink node ---------------------
+# Rob, 2026-10-01: "make sure the one can tell us/warn us if anything happens
+# to the relay". It answers /status on port 80 like a light, with a DSRLY- id.
+# Its card groups the lights it carries (as a Cue's does), and a watcher
+# below keeps an eye on every Relay this One knows, page open or not.
+_RELAY_BAD_STARTS = ("crash", "watchdog", "brownout")
+
+
+def _relay_problems(d):
+    """What is wrong with a Relay, from its /status, worst first ([] = fine)."""
+    probs = []
+    up = int(d.get("up") or 0)
+    started = str(d.get("startedBy", "")).lower()
+    if up < 3600 and any(b in started for b in _RELAY_BAD_STARTS):
+        probs.append(f"Restarted after a {started}")
+    if up < 3600 and d.get("lastHang"):
+        probs.append(f"Froze and restarted ({d.get('lastHang')})")
+    if d.get("netPending"):
+        probs.append("New address on trial")
+    if not d.get("one"):   # on its own: Companion is its job
+        if not d.get("host"):
+            probs.append("No Companion set")
+        elif not d.get("carry"):
+            probs.append("Linking turned off")
+        elif not d.get("live"):
+            why = str(d.get("compWhy", "") or "connecting")
+            probs.append(f"Companion not live: {why}")
+    if int(d.get("ethMbps") or 0) == 10:
+        probs.append("Ethernet at 10 Mbps (check the cable)")
+    return probs
+
+
+def _relay_unit(ip, d):
+    probs = _relay_problems(d)
+    lights = d.get("lights") or []
+    carried = [l for l in lights if l.get("carried")]
+    guests = []
+    for l in carried:
+        g = {"id": l.get("id", ""), "mirror": False}
+        if isinstance(l.get("follow"), dict):
+            g["follow"] = l["follow"]
+        guests.append(g)
+    return {"ip": ip, "serial": str(d.get("id", "")), "product": "Relay", "model": "Cue Relay",
+            "version": d.get("version", ""), "kind": "", "name": d.get("name", ""),
+            "showing": f"{len(carried)} of 4 linked",
+            "health_ok": not probs, "health_why": " \u00b7 ".join(probs),
+            "upd": False, "primary": True,
+            "relay": {"one": bool(d.get("one")), "state": d.get("state", ""), "host": d.get("host", ""),
+                      "port": d.get("port", 16622), "live": bool(d.get("live")),
+                      "ch": d.get("ch", 0), "tune": d.get("tune", ""), "eth": d.get("ethState", ""),
+                      "mbps": d.get("ethMbps", 0), "static": bool(d.get("static")),
+                      "heard": len(lights), "up": d.get("up", 0), "started": d.get("startedBy", ""),
+                      "trying": d.get("compTrying", ""), "why": d.get("compWhy", "")},
+            # the lights it carries, as a Cue's link says them: they group with it
+            # on the fleet page, and a light with no WiFi of its own is listed
+            "cue": {"link": {"guests": guests, "max": 4, "channel": d.get("ch", 0),
+                             "nearby": [{"id": l.get("id", ""), "label": l.get("label", ""),
+                                         "model": l.get("model", ""), "face": int(l.get("rank") or 0) >= 2,
+                                         "carrier": False, "rssi": l.get("rssi")} for l in lights]}}}
+
+
+_RELAY_WATCH = {}    # serial -> {"name", "ip", "ok", "why", "misses", "up", "restarted_at", "seen"}
+_RELAY_USB = {"id": "", "up": 0, "gone_at": 0.0, "restarted_at": 0.0, "seen": 0.0}
+
+
+def _relay_watch():
+    """Every 15 s, a direct look at each Relay the fleet knows - never a sweep.
+    What it finds feeds this One's own health (the status strip, the fleet
+    page, Show Mode), so a Relay that drops, restarts or loses Companion is
+    said wherever the One is being watched."""
+    while True:
+        time.sleep(15)
+        try:
+            try:
+                units = json.loads(_FLEET_CACHE.read_text()).get("units", [])
+            except Exception:
+                units = []
+            now = time.time()
+            for u in units:
+                if u.get("product") != "Relay" or not u.get("ip"):
+                    continue
+                sid = u.get("serial", "")
+                w = _RELAY_WATCH.setdefault(sid, {"misses": 0, "up": 0, "restarted_at": 0.0, "seen": 0.0})
+                w.update(name=u.get("name") or f"Relay {sid[-4:]}", ip=u["ip"])
+                try:
+                    d = requests.get(f"http://{u['ip']}/status", timeout=2).json()
+                    if str(d.get("id", "")) != sid:
+                        raise ValueError("another device at that address")
+                except Exception:
+                    w["misses"] += 1
+                    if w["misses"] == 2:
+                        print(f"[relay] {w['name']} ({u['ip']}) not responding")
+                    continue
+                up = int(d.get("up") or 0)
+                if w["seen"] and up + 20 < w["up"]:   # its uptime went back: it restarted
+                    w["restarted_at"] = now
+                    print(f"[relay] {w['name']} restarted ({d.get('startedBy', '')})")
+                w.update(misses=0, up=up, seen=now, probs=_relay_problems(d), name=d.get("name") or w["name"])
+            # a Relay on this One's own USB, as its CueLink radio
+            st = cue_radio.state()
+            rid = str(st.get("id") or "")
+            if st.get("connected") and rid.startswith("DSRLY-"):
+                up = int(st.get("up") or 0)
+                if _RELAY_USB["id"] == rid and _RELAY_USB["seen"] and up + 10 < _RELAY_USB["up"]:
+                    _RELAY_USB["restarted_at"] = now
+                    print(f"[relay] the USB Relay {rid} restarted")
+                _RELAY_USB.update(id=rid, up=up, seen=now, gone_at=0.0)
+            elif _RELAY_USB["id"] and not _RELAY_USB["gone_at"]:
+                _RELAY_USB["gone_at"] = now
+                print(f"[relay] the USB Relay {_RELAY_USB['id']} is gone from USB")
+        except Exception as e:
+            print(f"[relay] watch: {e}")
+
+
+threading.Thread(target=_relay_watch, daemon=True).start()
+
+
+def _relay_health():
+    """Problems with this One's Relays, for _health_summary."""
+    out, now = [], time.time()
+    for w in _RELAY_WATCH.values():
+        nm = w.get("name", "Relay")
+        if w.get("misses", 0) >= 2:
+            out.append(f"{nm}: not responding")
+            continue
+        if now - w.get("restarted_at", 0) < 600:
+            out.append(f"{nm}: restarted")
+        out += [f"{nm}: {p}" for p in (w.get("probs") or [])[:1]]
+    if _RELAY_USB["gone_at"]:
+        if now - _RELAY_USB["gone_at"] < 3600:
+            out.append(f"Relay {_RELAY_USB['id'][-4:]} unplugged from USB")
+        else:
+            _RELAY_USB.update(id="", gone_at=0.0)
+    elif now - _RELAY_USB["restarted_at"] < 600:
+        out.append(f"Relay {_RELAY_USB['id'][-4:]} on USB restarted")
+    return out
 
 
 def _cue_model(model):
@@ -4146,6 +4286,10 @@ def _health_summary():
             probs.append(f"CPU hot ({int(float(t))}\u00b0C)")
     except Exception:
         pass
+    try:
+        probs += _relay_health()   # a Relay this One knows (Cue fw 0.96+)
+    except Exception:
+        pass
     return {"ok": not probs, "why": " \u00b7 ".join(probs)}
 
 
@@ -4457,7 +4601,7 @@ def fleet_identify():
     except Exception:
         return jsonify({"ok": False, "error": "bad ip"}), 400
     # a Cue light: white blink for five seconds, on its own port 80
-    if str((request.get_json() or {}).get("product", "")) == "Cue":
+    if str((request.get_json() or {}).get("product", "")) in ("Cue", "Relay"):   # a Relay's LED flashes
         try:
             r = requests.post(f"http://{ip}/identify", timeout=4)
             return jsonify({"ok": r.ok})
