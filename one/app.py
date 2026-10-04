@@ -15,6 +15,7 @@ from concurrent.futures import ThreadPoolExecutor
 from flask import Flask, jsonify, render_template, request, send_file, Response
 
 import cue_ble   # BLE onboarding for Cue lights; degrades to a no-op without bluetooth
+import mdns      # asking the network who is there, instead of sweeping it
 import companion_grid   # a live picture of a Companion page, for choosing a light's button
 import cue_radio   # a USB CueLink radio (listen-only ESP32-S3), when one is plugged in
 
@@ -4120,17 +4121,33 @@ def _probe_unit(ip, timeout=0.6):
     return _probe_cue(ip, timeout)
 
 
-def _do_discover():
-    """Full /24 sweep for Downstage units. Manual button, network-join, and
-    the daily freshen all funnel here; nothing else sweeps."""
+def _do_discover(sweep=True):
+    """Find the other Downstage boxes. Asking comes first: every box
+    advertises _downstage._tcp, so one multicast question finds the rig in a
+    couple of seconds. A /24 sweep is the fallback, and only when something
+    asked for it - knocking on 254 doors is slow and tripped a venue's UniFi
+    threat protection (Rob, 2026-10-02), so the daily freshen and the
+    network-join refresh do not do it."""
     import concurrent.futures
     mine = {i["ip"] for i in get_all_interfaces()}
     ips = set()
-    for i in get_all_interfaces():
-        if i["ip"].startswith("169.254."):
-            continue
-        base = i["ip"].rsplit(".", 1)[0]
-        ips |= {f"{base}.{n}" for n in range(1, 255)}
+    heard = []
+    try:
+        heard = mdns.browse(timeout=2.5)
+    except Exception as e:
+        print(f"[fleet] mDNS browse: {e}")
+    for b in heard:
+        if b.get("ip") and b["ip"] not in mine:
+            ips.add(b["ip"])
+    if heard:
+        kinds = ", ".join(sorted({b["txt"].get("kind", "?") for b in heard}))
+        print(f"[fleet] mDNS found {len(heard)} box(es): {kinds}", flush=True)
+    if sweep:
+        for i in get_all_interfaces():
+            if i["ip"].startswith("169.254."):
+                continue
+            base = i["ip"].rsplit(".", 1)[0]
+            ips |= {f"{base}.{n}" for n in range(1, 255)}
     ips -= mine
 
     found = []
@@ -4172,9 +4189,11 @@ def _do_discover():
 
 @app.route("/discover", methods=["POST"])
 def discover_units():
-    """Sweep this unit's /24s for other Downstage units (identified by their
-    /status signature - works across firmware generations)."""
-    return jsonify({"ok": True, "cue_host": _cue_host_state(), **_do_discover()})
+    """Find other Downstage units: ask over mDNS, then sweep this unit's /24s
+    (identified by their /status signature - works across firmware
+    generations). Post {"sweep": false} to ask only."""
+    sweep = bool((request.get_json(silent=True) or {}).get("sweep", True))
+    return jsonify({"ok": True, "cue_host": _cue_host_state(), **_do_discover(sweep)})
 
 
 _CUE_NAME_MISS = {}   # serial -> when looking it up by name last found nothing
@@ -4260,10 +4279,10 @@ def _fleet_auto():
             if ip != last_ip:
                 last_ip = ip
                 time.sleep(12)   # let the network settle after a join
-                _do_discover()
+                _do_discover(sweep=False)
                 last_sweep = time.time()
             elif time.time() - last_sweep > 86400:
-                _do_discover()
+                _do_discover(sweep=False)
                 last_sweep = time.time()
         except Exception as e:
             print(f"[fleet] auto refresh: {e}")
