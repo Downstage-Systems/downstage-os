@@ -16,6 +16,7 @@ from flask import Flask, jsonify, render_template, request, send_file, Response
 
 import cue_ble   # BLE onboarding for Cue lights; degrades to a no-op without bluetooth
 import mdns      # asking the network who is there, instead of sweeping it
+import relay     # pairing with Cue Relays, and holding the token each gives back
 import companion_grid   # a live picture of a Companion page, for choosing a light's button
 import cue_radio   # a USB CueLink radio (listen-only ESP32-S3), when one is plugged in
 
@@ -3516,7 +3517,7 @@ def _cue_token():
     return str(load_config().get("cue_token", "") or "")
 
 
-def _box_headers(extra=None):
+def _box_headers(extra=None, ip=""):
     """Headers for a call to a Downstage box. The token rides on every call -
     a box that does not need it ignores it, which beats this unit guessing
     which routes a given firmware protects."""
@@ -3524,6 +3525,13 @@ def _box_headers(extra=None):
     tok = _cue_token()
     if tok:
         h["Authorization"] = f"Bearer {tok}"
+    if ip:
+        # a Relay paired with this unit gave it a token of its own; it is
+        # accepted wherever the owner's is, and it is the one that works when
+        # the owner has not set one
+        mine = relay.token_for_ip(ip)
+        if mine:
+            h["Authorization"] = f"Bearer {mine}"
     if extra:
         h.update(extra)
     return h
@@ -3551,6 +3559,33 @@ def fleet_cue_token():
         save_config({"cue_token": tok})
         _audit("CUE_TOKEN", "set" if tok else "cleared")
     return jsonify({"ok": True, "set": bool(_cue_token())})
+
+
+@app.route("/fleet/relay")
+def fleet_relay():
+    """Every Cue Relay this unit knows of, paired or not."""
+    return jsonify({"ok": True, **relay.state()})
+
+
+@app.route("/fleet/relay/pair", methods=["POST"])
+def fleet_relay_pair():
+    """Ask a Relay now rather than waiting for the next round. The owner
+    presses this after tapping Switch to it on a Relay held by another One."""
+    b = request.get_json(silent=True) or {}
+    ip, rid = str(b.get("ip", "")), str(b.get("id", ""))
+    if not ip:
+        return jsonify({"ok": False, "error": "no address"}), 400
+    return jsonify(relay.pair(ip, rid))
+
+
+@app.route("/fleet/relay/unpair", methods=["POST"])
+def fleet_relay_unpair():
+    """Hand a Relay back. Its token is dropped here whether or not it heard
+    us - a token we have thrown away must not keep working."""
+    rid = str((request.get_json(silent=True) or {}).get("id", ""))
+    if not rid:
+        return jsonify({"ok": False, "error": "no relay"}), 400
+    return jsonify(relay.unpair(rid))
 
 
 def _cue_link_post(ip, data):
@@ -4142,6 +4177,10 @@ def _do_discover(sweep=True):
     if heard:
         kinds = ", ".join(sorted({b["txt"].get("kind", "?") for b in heard}))
         print(f"[fleet] mDNS found {len(heard)} box(es): {kinds}", flush=True)
+    # the Relays among them are what the pairing thread asks
+    relay.note_found([{"id": b["txt"].get("id", ""), "name": b["txt"].get("name", ""),
+                       "fw": b["txt"].get("fw", ""), "ip": b["ip"]}
+                      for b in heard if b["txt"].get("kind") == "relay" and b["txt"].get("id")])
     if sweep:
         for i in get_all_interfaces():
             if i["ip"].startswith("169.254."):
@@ -7701,6 +7740,8 @@ if __name__ == "__main__":
         lambda *a, **k: subprocess.run(*a, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, **k)),
         daemon=True).start()
     cue_radio.start()
+    relay.configure(load_config, save_config, _my_ip_toward, _audit)
+    relay.start()
     def _on_sigterm(signum, frame):
         # A service stop during system shutdown is our last chance to own
         # the panel. Reboot leaves the panel alone; poweroff gets the
