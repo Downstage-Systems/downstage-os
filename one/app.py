@@ -3508,6 +3508,50 @@ def fleet_cue_hub_allowed():
     return jsonify({"ok": True, "on": bool(load_config().get("cue_hub"))})
 
 
+def _cue_token():
+    """The owner's control token for the boxes in this rig. One per rig, as
+    the Companion connection does it: a box that has one refuses anything
+    that could stop a show without it."""
+    return str(load_config().get("cue_token", "") or "")
+
+
+def _box_headers(extra=None):
+    """Headers for a call to a Downstage box. The token rides on every call -
+    a box that does not need it ignores it, which beats this unit guessing
+    which routes a given firmware protects."""
+    h = {"X-Downstage-One": "1"}
+    tok = _cue_token()
+    if tok:
+        h["Authorization"] = f"Bearer {tok}"
+    if extra:
+        h.update(extra)
+    return h
+
+
+def _box_refusal(r, who=""):
+    """A box turning us away, in words the operator can act on. Empty when
+    the answer was not about the token."""
+    if r is None:
+        return ""
+    name = who or "that box"
+    if r.status_code == 401:
+        return f"wrong control token for {name} - check it in Setup"
+    if r.status_code == 403:
+        return f"set a control token on {name}'s own page, then enter it here"
+    return ""
+
+
+@app.route("/fleet/cue/token", methods=["GET", "POST"])
+def fleet_cue_token():
+    """Hold the owner's control token. Never answers with the token itself -
+    only whether one is set, so a page can say so without handing it out."""
+    if request.method == "POST":
+        tok = str((request.get_json(silent=True) or {}).get("token", "") or "").strip()
+        save_config({"cue_token": tok})
+        _audit("CUE_TOKEN", "set" if tok else "cleared")
+    return jsonify({"ok": True, "set": bool(_cue_token())})
+
+
 def _cue_link_post(ip, data):
     """A CueLink command to a light. Every one sets a state (link to, mirror,
     follow, ...), so sending it twice is harmless - and a light on weak WiFi
@@ -3517,7 +3561,7 @@ def _cue_link_post(ip, data):
     last = None
     for attempt in range(2):
         try:
-            r = requests.post(f"http://{ip}/link", data=data, timeout=7)
+            r = requests.post(f"http://{ip}/link", data=data, timeout=7, headers=_box_headers())
             return r.json()
         except (requests.Timeout, requests.ConnectionError) as e:
             last = e
@@ -3575,7 +3619,8 @@ def fleet_cue_share():
     b = request.get_json(silent=True) or {}
     ip = str(b.get("ip", ""))
     try:
-        r = requests.post(f"http://{ip}/link", data={"share": "1" if b.get("on") else "0"}, timeout=4)
+        r = requests.post(f"http://{ip}/link", data={"share": "1" if b.get("on") else "0"}, timeout=4,
+                          headers=_box_headers())
         return jsonify({"ok": True, "share": bool(r.json().get("share"))})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)})
@@ -3588,9 +3633,9 @@ def fleet_cue_send_wifi():
     b = request.get_json(silent=True) or {}
     ip, light = str(b.get("ip", "")), str(b.get("id", ""))
     try:
-        requests.post(f"http://{ip}/link", data={"sharewith": light}, timeout=4)
+        requests.post(f"http://{ip}/link", data={"sharewith": light}, timeout=4, headers=_box_headers())
         time.sleep(4)   # the exchange takes a second or two; say how it went
-        res = requests.get(f"http://{ip}/link", timeout=3).json().get("shareResult", "")
+        res = requests.get(f"http://{ip}/link", timeout=3, headers=_box_headers()).json().get("shareResult", "")
         return jsonify({"ok": res.startswith("shared"), "result": res})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)})
@@ -3719,7 +3764,7 @@ def _probe_cue(ip, timeout=0.6):
         # "a One is here": a light following a Companion button (a One feature)
         # counts this as seeing a One, even across a VLAN mDNS does not cross
         # (light fw 0.83.0; without a One it turns back into a surface)
-        r = requests.get(f"http://{ip}/status", timeout=timeout, headers={"X-Downstage-One": "1"})
+        r = requests.get(f"http://{ip}/status", timeout=timeout, headers=_box_headers())
         d = r.json()
         cid = str(d.get("id", ""))
         if cid.startswith("DSRLY-"):   # a Cue Relay (Cue fw 0.96+): its own card
@@ -4314,12 +4359,12 @@ def fleet_cue_adopt():
         data = {"host": me, "port": str(port)}
         if (request.get_json() or {}).get("unlink"):   # a linked light takes its tally through its Cue: let go of it
             data["unlink"] = "1"
-        r = requests.post(f"http://{ip}/adopt", data=data, timeout=6)
+        r = requests.post(f"http://{ip}/adopt", data=data, timeout=6, headers=_box_headers())
         if r.ok:
             _audit("CUE_ADOPT", f"{ip} -> {me}:{port}")
             return jsonify({"ok": True, "host": me, "port": port, "mode": mode,
                             "unlinked": bool((r.json() if r.content else {}).get("unlinked"))})
-        return jsonify({"ok": False, "error": f"light answered {r.status_code}"})
+        return jsonify({"ok": False, "error": _box_refusal(r, "this light") or f"light answered {r.status_code}"})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)[:120]})
 
@@ -4387,9 +4432,12 @@ def fleet_cue_follow():
         except Exception as e:
             return jsonify({"ok": False, "error": str(e)[:120]})
     try:
-        r = requests.post(f"http://{ip}/follow", data=form, timeout=8)
+        r = requests.post(f"http://{ip}/follow", data=form, timeout=8, headers=_box_headers())
         if r.status_code == 404:
             return jsonify({"ok": False, "error": "This light's firmware is too old to follow a button (needs 0.77)"})
+        refused = _box_refusal(r, "this light")
+        if refused:
+            return jsonify({"ok": False, "error": refused})
         return jsonify({"ok": r.ok, **(r.json() if r.ok else {"error": r.text[:120]})})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)[:120]})
@@ -4406,7 +4454,7 @@ def fleet_cue_label():
     except Exception:
         return jsonify({"ok": False, "error": "bad ip"}), 400
     try:
-        r = requests.post(f"http://{ip}/label", data={"label": label}, timeout=6)
+        r = requests.post(f"http://{ip}/label", data={"label": label}, timeout=6, headers=_box_headers())
         return jsonify({"ok": r.ok, "label": label})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)[:120]})
@@ -4603,7 +4651,7 @@ def fleet_identify():
     # a Cue light: white blink for five seconds, on its own port 80
     if str((request.get_json() or {}).get("product", "")) in ("Cue", "Relay"):   # a Relay's LED flashes
         try:
-            r = requests.post(f"http://{ip}/identify", timeout=4)
+            r = requests.post(f"http://{ip}/identify", timeout=4, headers=_box_headers())
             return jsonify({"ok": r.ok})
         except Exception as e:
             return jsonify({"ok": False, "error": str(e)[:120]})

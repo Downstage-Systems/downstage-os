@@ -2337,6 +2337,7 @@
           <div class="fleet-hdr-right">
             <span class="fleet-ts" id="fleet-ts"></span>
             <button class="btn-sm" id="cue-ctl-btn" onclick="cueControlToggle()" title="Let Cue lights with a screen start, pause and step this unit's timer. Off unless you turn it on.">Lights control timer: off</button>
+            <button class="btn-sm" id="cue-token-btn" onclick="cueTokenEdit()" title="The control token your Downstage boxes are locked with. A box that has one refuses anything that could stop a show without it.">Control token: none</button>
             <button class="btn-sm" id="cue-alert-btn" style="display:none; border-color:var(--red); color:var(--red)" title="Every light following this unit's timer pulses red until cleared">Alert timer lights</button>
             <button class="btn-sm" id="fleet-scan-btn" onclick="fleetScan()">Scan for Units</button>
           </div>
@@ -4238,6 +4239,34 @@
     cueControlPaint();
   }
   cueControlPaint();
+
+  // The owner's control token for the boxes in this rig. The unit never
+  // answers with it - only whether one is set - so this asks for it fresh
+  // rather than showing anything back.
+  async function cueTokenPaint() {
+    try {
+      const d = await (await fetch('/fleet/cue/token')).json();
+      const b = document.getElementById('cue-token-btn');
+      if (!b) return;
+      b.textContent = 'Control token: ' + (d.set ? 'set' : 'none');
+      b.style.borderColor = d.set ? 'var(--green)' : '';
+      b.style.color = d.set ? 'var(--green)' : '';
+      b.dataset.on = d.set ? '1' : '';
+    } catch (e) {}
+  }
+  async function cueTokenEdit() {
+    const b = document.getElementById('cue-token-btn');
+    const had = !!b.dataset.on;
+    const t = prompt(had
+      ? 'Control token for this rig\u2019s Downstage boxes.\n\nType a new one, or leave it empty to clear it.'
+      : 'Control token for this rig\u2019s Downstage boxes.\n\nSet the same token on each box\u2019s own page, then enter it here.', '');
+    if (t === null) return;                       // Cancel means cancel
+    await fetch('/fleet/cue/token', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: t.trim() }) });
+    showToast(t.trim() ? 'Control token saved.' : 'Control token cleared.', 'success');
+    cueTokenPaint();
+  }
+  cueTokenPaint();
 
   function bleNetPicker(addr, offer) {
     // every network this unit could hand over, plus one the operator types
