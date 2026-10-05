@@ -3831,6 +3831,37 @@ def fleet_relay():
     return jsonify({"ok": True, **relay.state()})
 
 
+@app.route("/fleet/relay/light", methods=["POST"])
+def fleet_relay_light():
+    """One of the Relay's carried lights, set from the One's page: its number,
+    its words, its brightness, Talent, Identify, or let it go. The body is the
+    Relay's own (docs/companion-integration.md, "POST /api/v1/cue/{n}"), passed
+    through rather than translated, so a key added there needs nothing here."""
+    b = request.get_json(silent=True) or {}
+    ip, light = str(b.get("ip", "")), str(b.get("id", ""))
+    try:
+        ipaddress.ip_address(ip)
+    except Exception:
+        return jsonify({"ok": False, "error": "bad ip"}), 400
+    body = {k: v for k, v in (b.get("set") or {}).items()
+            if k in ("number", "text", "brightness", "talent", "identify", "name", "lock",
+                     "release", "follow", "tally", "color", "pattern", "clear")}
+    if not body:
+        return jsonify({"ok": False, "error": "nothing to set"}), 400
+    n = b.get("n")
+    if n is None:
+        n = _relay_cue_n(ip, light) if light else None
+        if n is None and light:
+            n = _relay_cue_n(ip, light, fresh=True)
+    if n is None:
+        return jsonify({"ok": False, "error": "that Relay is not carrying it"}), 409
+    status, ans = _relay_api(ip, f"cue/{n}", body, "POST")
+    _audit("RELAY_LIGHT", f"{ip} cue {n} {json.dumps(body)[:80]} -> {status}")
+    if status == 200 and body.get("number"):
+        _relay_cue_cache.pop(ip, None)      # its number moved; the map is stale
+    return jsonify({"ok": status == 200 and ans.get("ok", True), "status": status, **ans})
+
+
 @app.route("/fleet/relay/pair", methods=["POST"])
 def fleet_relay_pair():
     """Ask a Relay now rather than waiting for the next round. The owner
@@ -3939,23 +3970,55 @@ def _relay_guests(ip):
     return {"guests": guests, "max": int(d.get("max") or 8), "relay": True}
 
 
+_relay_cue_cache = {}     # ip -> (when, {light id: cue number})
+
+
+def _relay_cue_n(ip, light_id, fresh=False):
+    """A Relay addresses a light by its Cue number, not its id. Cached for a
+    few seconds: a number changes only when somebody changes it."""
+    now = time.time()
+    at, table = _relay_cue_cache.get(ip, (0.0, {}))
+    if fresh or now - at > 5:
+        status, ans = _relay_api(ip, "cues")
+        if status == 200:
+            table = {str(c.get("id")): c.get("n") for c in (ans.get("cues") or []) if c.get("id")}
+            _relay_cue_cache[ip] = (now, table)
+    return table.get(str(light_id))
+
+
 def _relay_link_post(ip, data):
     """A Cue-style CueLink command, said the way a Relay understands it: its
     page posts /cmd with one JSON object. Sending /link to a Relay is what
     gave Rob "Expecting value: line 1 column 1" - it answers HTML, and the
     JSON parse of a 404 page is the error he saw (2026-10-04)."""
-    cmd = None
+    # The Relay's own API, not its page's /cmd: the page routes are that
+    # page's private plumbing and change freely (R&D), and Cue Coding asked
+    # for this route for all of these (2026-10-05).
+    light = data.get("guestfollow") or data.get("guesttalent") or data.get("release") or ""
+    body = None
     if "guestfollow" in data:
-        cmd = {"cmd": "follow", "id": data["guestfollow"], "on": True,
-               "page": int(data.get("page", 1)), "row": int(data.get("row", 0)),
-               "col": int(data.get("col", 0))}
-        if str(data.get("off", "")) == "1":
-            cmd = {"cmd": "follow", "id": data["guestfollow"], "on": False}
+        body = ({"follow": False} if str(data.get("off", "")) == "1" else
+                {"follow": {"page": int(data.get("page", 1)), "row": int(data.get("row", 0)),
+                            "col": int(data.get("col", 0))}})
     elif "guesttalent" in data:
-        cmd = {"cmd": "talent", "id": data["guesttalent"], "on": str(data.get("on", "1")) == "1"}
+        body = {"talent": str(data.get("on", "1")) == "1"}
     elif "release" in data:
-        cmd = {"cmd": "release", "id": data["release"]}
-    elif "guestmode" in data:
+        body = {"release": True}
+    if body is not None:
+        n = _relay_cue_n(ip, light)
+        if n is None:
+            n = _relay_cue_n(ip, light, fresh=True)      # a light that has just arrived
+        if n is None:
+            raise ValueError(f"the Relay is not carrying {light}")
+        status, ans = _relay_api(ip, f"cue/{n}", body, "POST")
+        if status in (401, 403):
+            raise PermissionError(ans.get("error") or "the Relay refused that")
+        if status != 200 or not ans.get("ok", True):
+            raise ValueError(ans.get("error") or f"the Relay answered {status}")
+        time.sleep(0.6)      # 200 means sent, not confirmed: read the result back
+        return _relay_guests(ip)
+    cmd = None
+    if "guestmode" in data:
         # a Relay has no tally of its own, so a light it carries is always its
         # own key: there is nothing to mirror, and nothing to change
         return _relay_guests(ip)

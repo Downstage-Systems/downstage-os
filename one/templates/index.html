@@ -658,6 +658,7 @@
       box-shadow:0 8px 24px rgba(0,0,0,0.45); font-size:13px; color:var(--text);
       max-width:min(560px, calc(100vw - 24px)); }
     .ble-notice.on { display:flex; }
+    .fx-btns-tight { display:flex; gap:4px; flex-wrap:wrap; margin-left:auto; }
     .ble-notice b { color:var(--green); }
 
     .toast {
@@ -3721,6 +3722,47 @@
     await relayLoad(ip);
   }
 
+  // One light the Relay carries. The body keys are the Relay's own
+  // (docs/companion-integration.md, "POST /api/v1/cue/{n}"); the One passes
+  // them through rather than inventing its own names.
+  async function relayLight(ip, n, what, name, on) {
+    let set = null;
+    if (what === 'number') {
+      const v = prompt('Cue number for ' + name + ' (1 to 99, or 0 to follow its camera number):', '');
+      if (v === null) return;                       // Cancel means cancel
+      const num = parseInt(v, 10);
+      if (isNaN(num) || num < 0 || num > 99) { showToast('A number from 0 to 99.', 'warning'); return; }
+      set = { number: num };
+    } else if (what === 'text') {
+      const v = prompt('Words on ' + name + "'s face (24 characters; empty clears them):", '');
+      if (v === null) return;
+      set = { text: v.slice(0, 24) };
+    } else if (what === 'brightness') {
+      const v = prompt('Brightness for ' + name + ', 0 to 100:', '');
+      if (v === null) return;
+      const b = parseInt(v, 10);
+      if (isNaN(b) || b < 0 || b > 100) { showToast('A number from 0 to 100.', 'warning'); return; }
+      set = { brightness: b };
+    } else if (what === 'talent') {
+      set = { talent: !on };
+    } else if (what === 'release') {
+      if (!confirm('Let ' + name + " go? It stops being carried by this Relay, and if it has no WiFi of its own it goes dark until it finds something.")) return;
+      set = { release: true };
+    }
+    if (!set) return;
+    _fxRelayBusy = 'asking the Relay';
+    if (_fxOpen) fxSheet();
+    try {
+      const d = await (await fetch('/fleet/relay/light', { method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ip, n, set }) })).json();
+      _fxRelayBusy = '';
+      // a 200 means sent, not confirmed - the card catches up on the next read
+      showToast(d.ok ? 'Sent to the Relay.' : (d.error || 'The Relay refused that.'), d.ok ? 'success' : 'error');
+    } catch (e) { _fxRelayBusy = ''; showToast('Could not reach the One.', 'error'); }
+    await relayLoad(ip);
+  }
+
   function relayOffers(u, r) {
     const o = r.offers || {}, job = r.job;
     if (job && job.lights) {
@@ -3784,8 +3826,15 @@
         (cues.length ? '<div class="fx-carried">' + cues.map(c =>
           '<div class="fx-carried-row"><span>' + fxEsc((c.n ? c.n + ' \u00b7 ' : '') + (c.name || fxShort(c.id))) + '</span>' +
           fxSignal(c.level) + (c.online ? '' : fxChip('not heard', 'bad')) +
-          '<button class="fleet-btn" onclick="relayAct(\'' + u.ip + '\',\'identify\',{id:\'' + c.id + '\'},\'\')">ID</button>' +
-          '</div>').join('') + '</div>'
+          (c.talent ? fxChip('Talent', 'tal') : '') +
+          '<span class="fx-btns-tight">' +
+            '<button class="fleet-btn" onclick="relayAct(\'' + u.ip + '\',\'identify\',{id:\'' + c.id + '\'},\'\')" title="Blink this light">ID</button>' +
+            '<button class="fleet-btn" onclick="relayLight(\'' + u.ip + '\',' + c.n + ',\'number\',\'' + q(c.name || c.id) + '\')" title="The Cue number it answers to">No.</button>' +
+            '<button class="fleet-btn" onclick="relayLight(\'' + u.ip + '\',' + c.n + ',\'text\',\'' + q(c.name || c.id) + '\')" title="Words on its face">Words</button>' +
+            '<button class="fleet-btn" onclick="relayLight(\'' + u.ip + '\',' + c.n + ',\'brightness\',\'' + q(c.name || c.id) + '\')" title="How bright it is">Bright</button>' +
+            '<button class="fleet-btn" onclick="relayLight(\'' + u.ip + '\',' + c.n + ',\'talent\',\'' + q(c.name || c.id) + '\',' + !!c.talent + ')" title="Talent mode">' + (c.talent ? 'Talent off' : 'Talent') + '</button>' +
+            '<button class="fleet-btn warn" onclick="relayLight(\'' + u.ip + '\',' + c.n + ',\'release\',\'' + q(c.name || c.id) + '\')" title="Let it go">Release</button>' +
+          '</span></div>').join('') + '</div>'
          : '<p class="fx-note">It is carrying no lights.</p>') +
       '</div>' +
       '<div class="fx-sec"><div class="fx-sec-label">Adopt and switch</div>' + relayOffers(u, r) + '</div>' +
