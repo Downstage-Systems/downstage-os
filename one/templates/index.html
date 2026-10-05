@@ -4115,6 +4115,15 @@
                          (g.viaCue ? ' through ' + g.cueName + '.' : '.')
                      : 'Not changed: ' + (d.error || 'no answer'), d.ok ? 'success' : 'error');
       if (!d.ok) return;
+      const back = window._fxPickBack;
+      if (back) {
+        // they came from the Relay's page: offer the way back rather than
+        // leaving them on a One they only opened to press one button
+        window._fxPickBack = null;
+        setTimeout(() => {
+          if (confirm('Set. Go back to ' + back.name + '?')) location.href = 'http://' + back.ip + '/';
+        }, 400);
+      }
       g.mirror = false;
       g.cur = { page: s.page, row: s.row, col: s.col };
       g.sel = null;
@@ -4429,6 +4438,60 @@
   }
   setInterval(bleTick, 30000);
   bleTick();
+
+  // A light's carrier can send its owner here to choose a button: the Relay's
+  // follow sheet asks for page, row and column, and this unit can show the
+  // real grid instead (R&D, 2026-10-04). The picker stays in one place rather
+  // than being built twice.
+  //   http://<one>:8080/?pick=DSCUE-D68CB8[&from=DSRLY-ABBAE4]
+  // "from" is only ever matched against a Relay this unit already knows, so a
+  // link can never send anyone to an address of its own choosing.
+  async function fxPickFromLink() {
+    const q = new URLSearchParams(location.search);
+    const want = (q.get('pick') || '').trim().toUpperCase();
+    if (!want) return;
+    const from = (q.get('from') || '').trim().toUpperCase();
+    history.replaceState(null, '', location.pathname);   // one shot, not on reload
+    setViewMode('full');
+    showSetupTab('network');
+    showToast('Finding ' + want + '\u2026', 'info');
+    // fetch the list rather than waiting for the Network tab's own refresher:
+    // at load there is nothing yet, and that refresher stands down while the
+    // browser tab is in the background - which is exactly where a link from
+    // the Relay's page lands
+    const find = () => ((_fxData && _fxData.units) || [])
+      .find(u => (u.serial || '').toUpperCase() === want);
+    let unit = null;
+    try { renderFleet(await (await fetch('/discover/last')).json()); } catch (e) {}
+    unit = find();
+    if (!unit) {
+      try { renderFleet(await (await fetch('/discover/refresh', { method: 'POST' })).json()); } catch (e) {}
+      unit = find();
+    }
+    for (let tries = 0; tries < 8 && !unit; tries++) {   // a light its Cue has not reported yet
+      await new Promise(r => setTimeout(r, 1000));
+      unit = find();
+    }
+    if (!unit) {
+      showToast(want + ' is not on this One\u2019s list yet. Press Scan for Units, then try again.', 'warning');
+      return;
+    }
+    // where to send them back to, resolved from THIS unit's fleet, never from
+    // the link's own text
+    const relay = ((_fxData && _fxData.units) || []).find(u => u.product === 'Relay' &&
+      (u.serial || '').toUpperCase() === from);
+    window._fxPickBack = relay && relay.ip ? { ip: relay.ip, name: relay.name || relay.serial } : null;
+    clearToast();
+    // the picker lives inside the light's own sheet, so open that first -
+    // calling fxGridOpen on its own renders into a panel nobody can see
+    fxOpen(unit.serial || unit.ip);
+    await new Promise(r => setTimeout(r, 250));
+    fxGridOpen(unit.serial || unit.ip);
+  }
+  // after the rest of the page has finished starting: this runs during init,
+  // and the bootstrap that follows (restoring the saved tab and view mode)
+  // would otherwise run straight over an opened sheet
+  window.addEventListener('load', () => setTimeout(fxPickFromLink, 900));
 
   // while the Network tab is open, freshen the CACHED units (targeted probes,
   // never a sweep) so health / tally colour / versions stay live
