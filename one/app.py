@@ -3617,12 +3617,77 @@ def fleet_relay_unpair():
     return jsonify(relay.unpair(rid))
 
 
+def _is_relay_ip(ip):
+    """True when that address is a Cue Relay. A Relay carries lights like a
+    Cue does, but it does not speak /link - it has its own page protocol."""
+    if relay.token_for_ip(ip):
+        return True
+    try:
+        for u in (json.loads(_FLEET_CACHE.read_text()).get("units") or []):
+            if u.get("ip") == ip:
+                return u.get("product") == "Relay"
+    except Exception:
+        pass
+    return False
+
+
+def _relay_guests(ip):
+    """The Relay's carried lights, shaped like a Cue's /link answer, so the
+    callers of _cue_link_post do not need to know which kind of carrier they
+    are talking to."""
+    try:
+        d = requests.get(f"http://{ip}/status", timeout=4, headers=_box_headers(ip=ip)).json()
+    except Exception:
+        return {}
+    guests = []
+    for l in (d.get("lights") or []):
+        if not l.get("carried"):
+            continue
+        g = {"id": l.get("id", ""), "mirror": False, "talent": bool(l.get("talent"))}
+        if isinstance(l.get("follow"), dict):
+            g["follow"] = l["follow"]
+        guests.append(g)
+    return {"guests": guests, "max": int(d.get("max") or 8), "relay": True}
+
+
+def _relay_link_post(ip, data):
+    """A Cue-style CueLink command, said the way a Relay understands it: its
+    page posts /cmd with one JSON object. Sending /link to a Relay is what
+    gave Rob "Expecting value: line 1 column 1" - it answers HTML, and the
+    JSON parse of a 404 page is the error he saw (2026-10-04)."""
+    cmd = None
+    if "guestfollow" in data:
+        cmd = {"cmd": "follow", "id": data["guestfollow"], "on": True,
+               "page": int(data.get("page", 1)), "row": int(data.get("row", 0)),
+               "col": int(data.get("col", 0))}
+        if str(data.get("off", "")) == "1":
+            cmd = {"cmd": "follow", "id": data["guestfollow"], "on": False}
+    elif "guesttalent" in data:
+        cmd = {"cmd": "talent", "id": data["guesttalent"], "on": str(data.get("on", "1")) == "1"}
+    elif "release" in data:
+        cmd = {"cmd": "release", "id": data["release"]}
+    elif "guestmode" in data:
+        # a Relay has no tally of its own, so a light it carries is always its
+        # own key: there is nothing to mirror, and nothing to change
+        return _relay_guests(ip)
+    if cmd is None:
+        raise ValueError("a Relay does not take that command")
+    r = requests.post(f"http://{ip}/cmd", data={"j": json.dumps(cmd)}, timeout=7,
+                      headers=_box_headers(ip=ip))
+    if r.status_code in (401, 403):
+        raise PermissionError(_box_refusal(r, "the Relay"))
+    time.sleep(0.6)      # let it reach the light before we read the answer back
+    return _relay_guests(ip)
+
+
 def _cue_link_post(ip, data):
     """A CueLink command to a light. Every one sets a state (link to, mirror,
     follow, ...), so sending it twice is harmless - and a light on weak WiFi
     can take seconds to answer, or miss one: the Cue at -81 dBm answered in
     0.2 to 4.5 s, and a Companion reconnect holds its loop 3 s at a time
     (Rob, 2026-09-26: two button picks failed at the old 4 s limit)."""
+    if _is_relay_ip(ip):
+        return _relay_link_post(ip, data)
     last = None
     for attempt in range(2):
         try:
