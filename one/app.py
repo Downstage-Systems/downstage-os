@@ -3758,9 +3758,12 @@ def _box_refusal(r, who=""):
         return ""
     name = who or "that box"
     if r.status_code == 401:
-        return f"wrong control token for {name} - check it in Setup"
+        # two different secrets, named apart on purpose (R&D, 2026-10-05): the
+        # CONTROL token is what a box asks for, the RIG token is what this unit
+        # sends. An owner sets the same string as both.
+        return f"{name} refused this unit's rig token - check it matches that box's control token"
     if r.status_code == 403:
-        return f"set a control token on {name}'s own page, then enter it here"
+        return f"set a control token on {name}'s own page, then put the same one in this unit's rig token"
     return ""
 
 
