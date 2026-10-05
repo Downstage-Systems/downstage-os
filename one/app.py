@@ -3246,6 +3246,7 @@ def _cue_poll_ontime():
                "title": ((payload.get("eventNow") or {}).get("title") or ""),
                # a Time of Day event: OnTime shows the clock, not a countdown
                "timer_type": (payload.get("eventNow") or {}).get("timerType") or "",
+               "event_id": (payload.get("eventNow") or {}).get("id") or "",
                "clock_ms": payload.get("clock")}
     except Exception:
         pass
@@ -3317,7 +3318,9 @@ def _cue_extras():
             # already added: load the 10 minute preset, add 20, and the light
             # has to say 30:00 before anyone presses start - it used to say
             # 10:00 until the clock ran.
-            return f" TIME={hms(max(0, total) // 1000)} PROGRESS=100 HELD=1 TOTAL={max(0, total) // 1000}"
+            held = f" TIME={hms(max(0, total) // 1000)} PROGRESS=100 HELD=1 TOTAL={max(0, total) // 1000}"
+            at = _one_loaded()[1]
+            return held + (f" PRESET={at}" if at else "")
         if tod is not None:                  # nothing loaded: the time of day
             return f" TIME={tod // 3600}:{tod % 3600 // 60:02d} PROGRESS=0 TOD={tod}"
         return ""
@@ -3336,6 +3339,9 @@ def _cue_extras():
     progress = max(0, min(100, round(100 * left / total))) if total > 0 and left > 0 else 0
     title = "".join(c for c in (t.get("title") or "") if 32 <= ord(c) < 127 and c not in '"\\')[:27]
     out = f" TIME={text} PROGRESS={progress} TOTAL={max(0, total) // 1000}"
+    at = _one_loaded()[1]
+    if at:
+        out += f" PRESET={at}"
     if title:
         out += f' TITLE="{title}"'
     return out
@@ -3555,8 +3561,25 @@ def _one_presets():
         out.append({"id": eid, "label": e.get("title") or f"Cue {e.get('cue', '')}",
                     "cue": e.get("cue", ""),
                     "kind": "clock" if e.get("timerType") == "clock" else "countdown",
-                    "seconds": int(e.get("duration") or 0) // 1000})
+                    "seconds": int(e.get("duration") or 0) // 1000,
+                    # the operator's own colour for that event, so a ring can
+                    # be tinted to match what they see in OnTime
+                    "colour": e.get("colour") or ""})
     return out
+
+
+def _one_loaded():
+    """Which preset is loaded: (id, 1-based place in the list). The place is
+    what rides the feed - see _cue_extras - because an id is OnTime's to
+    size and the line has 24 bytes of room left."""
+    t = _cue_poll_ontime() or {}
+    eid = str(t.get("event_id") or "")
+    if not eid:
+        return "", 0
+    for i, p in enumerate(_one_presets(), 1):
+        if p["id"] == eid:
+            return eid, i
+    return eid, 0
 
 
 def _one_timer_state():
@@ -3570,6 +3593,8 @@ def _one_timer_state():
             "left_ms": int(t.get("current") or 0),
             "total_ms": max(0, total),
             "added_ms": int(t.get("added") or 0),
+            "loaded": (_one_loaded()[0] or None),
+            "loaded_at": _one_loaded()[1],   # its place in presets[], 1-based; 0 = not one of them
             "held": t.get("playback") in ("armed", "stop") and total > 0,
             "no_timer": not t,
             "control": bool(load_config().get("cue_control"))}
