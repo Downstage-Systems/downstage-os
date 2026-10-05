@@ -560,17 +560,36 @@ def _my_ip_toward(target):
     try:
         t = ipaddress.ip_address(target)
         out = subprocess.check_output(["ip", "-4", "-o", "addr", "show"], text=True, timeout=3)
+        hits = []
         for line in out.splitlines():
             parts = line.split()
-            if "inet" not in parts:
+            if "inet" not in parts or len(parts) < 2:
                 continue
+            name = parts[1]
             cidr = parts[parts.index("inet") + 1]
             iface = ipaddress.ip_interface(cidr)
             if not iface.ip.is_loopback and t in iface.network:
-                return str(iface.ip)
+                hits.append((name, str(iface.ip)))
+        if not hits:
+            return None
+        # The cable is primary (Rob, 2026-10-04). A One can have both legs on
+        # ONE network - 0001 at the hotel had eth0 .223 and wlan0 .225 on the
+        # same /24 - and then every one of these matches. Handing out the WiFi
+        # address sends a Relay or a light down the flakier path, so say which
+        # we mean rather than trusting the order the kernel lists them in.
+        hits.sort(key=lambda h: (_is_wireless(h[0]), h[0]))
+        return hits[0][1]
     except Exception:
         pass
     return None
+
+
+def _is_wireless(iface):
+    """True for WiFi. Sysfs rather than the name: a USB adapter is not wlan0."""
+    try:
+        return os.path.exists(f"/sys/class/net/{iface}/wireless")
+    except Exception:
+        return iface.startswith(("wl", "wlan"))
 
 
 def check_ontime(ip, timeout=3):
