@@ -872,6 +872,10 @@
       transition:transform .3s cubic-bezier(.2,.8,.2,1); }
     .fx-card:hover .fx-art { transform:scale(1.05) rotate(-1.5deg); }
     .fx-img { position:relative; z-index:1; max-height:96px; max-width:78%; filter:drop-shadow(0 8px 14px rgba(0,0,0,.55)); }
+    /* Drawn art (the Relay) rather than a photo: an inline SVG has no
+       intrinsic size, so max-* alone collapses it to nothing in a flex row.
+       Width plus auto height keeps the viewBox's 4:3 and stays under the cap. */
+    svg.fx-img { width:128px; height:auto; }
     .fx-body { fill:#1c2229; stroke:#313a44; stroke-width:1.4; }
     .fx-glass { fill:#050608; }
     .fx-face { transition:fill .45s ease; }
