@@ -102,7 +102,12 @@ def pair(ip, rid=""):
         me = _hooks["my_ip_toward"](ip) or ""
     except Exception:
         pass
-    body = {"id": serial, "name": cfg.get("hostname", "") or ""}
+    # the name the Relay shows its owner. config has no "hostname" key on a
+    # real unit - the operator's label is unit_name - and sending nothing made
+    # the Relay fall back to the bare serial (bench, 2026-10-04).
+    import socket as _socket
+    name = (cfg.get("unit_name") or cfg.get("hostname") or _socket.gethostname() or "").strip()
+    body = {"id": serial, "name": name}
     if me:
         # where this Relay should look for our Companion and our timer feed.
         # The address depends on which way it is reaching us: a One on two
