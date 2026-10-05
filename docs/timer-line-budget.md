@@ -9,12 +9,31 @@ file in the same change.**
 
 ## The limit
 
-**220 bytes.** A radio drops a line it cannot fit into a CueLink packet -
-whole, counted as `hubTooLong` - so the One trims rather than letting the
-radio decide what is lost. The packet is 240; signing takes about 20 bytes
-off every packet (Cue repo `docs/cuelink-groups-signing.md`), so the line
-gets 220. Cue Coding owns the exact figure; the One reads it from
-`CUE_LINE_LIMIT` in `one/app.py` and nowhere else.
+Two different limits, and the one that matters is not the obvious one
+(Cue Coding, 2026-10-05).
+
+**What is signed is the Relay's rebuilt line, not the One's as sent.** For
+each light it carries, the Relay builds its own `KEY-STATE DEVICEID=<light>-T
+KEY=0` (about 37 bytes) and copies the One's keys in a fixed order:
+
+    COLOR PATTERN PROGRESS TIME TOD HELD NOTIMER ONECLOCK PHASE CONTROL
+    PRESET TOTAL TITLE MESSAGE TEXT
+
+It drops whatever no longer fits, from the end - so TITLE, MESSAGE and TEXT
+go first. The signed-text cap is 226 and the Relay stops at 220.
+
+- **The real constraint: `COLOR` through `TOTAL` must stay under 180 bytes**,
+  counting each " KEY=value". Measured on the bench: 93 today, 131 worst
+  case. About 49 bytes spare, or four more short keys.
+- **A new key a carried light must have goes before TITLE in that order, and
+  Cue Coding must add it to the Relay's list** or it is silently dropped for
+  carried lights only - the light works on its own WiFi and not through a
+  Relay, which nobody traces quickly. This happened: `TOTAL` was added by the
+  One on 2026-10-04 and was missing from the Relay's list until it was
+  spotted here.
+- **The One's own line may be 240.** It holds itself to **220**
+  (`CUE_LINE_LIMIT` in `one/app.py`) so it never hands the Relay something to
+  cut. That is the One's margin, not the protocol's.
 
 ## What is never dropped
 
