@@ -3239,6 +3239,10 @@ def _cue_poll_ontime():
         t = payload["timer"]
         val = {"playback": t.get("playback"), "phase": t.get("phase"), "current": t.get("current"),
                "duration": t.get("duration"),
+               # minutes the operator has added or taken off. The lights have
+               # to follow the real clock, not the event's original length
+               # (Rob, 2026-10-04: "I need the cue to react accordingly")
+               "added": t.get("addedTime") or 0,
                "title": ((payload.get("eventNow") or {}).get("title") or ""),
                # a Time of Day event: OnTime shows the clock, not a countdown
                "timer_type": (payload.get("eventNow") or {}).get("timerType") or "",
@@ -3305,10 +3309,15 @@ def _cue_extras():
         # seconds since midnight for a Cue to format itself (12 / 24 h); TIME
         # is the 24 h fallback for older light firmware.
         return f" TIME={tod // 3600}:{tod % 3600 // 60:02d} PROGRESS=0 TOD={tod}"
+    total = int(t.get("duration") or 0) + int(t.get("added") or 0)
     if t.get("playback") in (None, "armed", "stop"):
         dur = int(t.get("duration") or 0)
-        if t.get("playback") and dur > 0:   # a countdown loaded, not started: its length, HELD (not running)
-            return f" TIME={hms(dur // 1000)} PROGRESS=100 HELD=1"
+        if t.get("playback") and dur > 0:
+            # a countdown loaded but not started. Its length INCLUDING time
+            # already added: load the 10 minute preset, add 20, and the light
+            # has to say 30:00 before anyone presses start - it used to say
+            # 10:00 until the clock ran.
+            return f" TIME={hms(max(0, total) // 1000)} PROGRESS=100 HELD=1 TOTAL={max(0, total) // 1000}"
         if tod is not None:                  # nothing loaded: the time of day
             return f" TIME={tod // 3600}:{tod % 3600 // 60:02d} PROGRESS=0 TOD={tod}"
         return ""
@@ -3321,9 +3330,12 @@ def _cue_extras():
         text = f"{secs // 60}:{secs % 60:02d}"
     if left < 0:
         text = "-" + text
-    progress = max(0, min(100, round(100 * left / dur))) if dur > 0 and left > 0 else 0
+    # against the real total, not the event's original length: with 20 minutes
+    # added to a 10 minute event this used to compute 284% and clamp to full,
+    # so a ring sat pinned until the clock passed the original 10
+    progress = max(0, min(100, round(100 * left / total))) if total > 0 and left > 0 else 0
     title = "".join(c for c in (t.get("title") or "") if 32 <= ord(c) < 127 and c not in '"\\')[:27]
-    out = f" TIME={text} PROGRESS={progress}"
+    out = f" TIME={text} PROGRESS={progress} TOTAL={max(0, total) // 1000}"
     if title:
         out += f' TITLE="{title}"'
     return out
@@ -3520,6 +3532,91 @@ CUE_CONTROL = {
     # current event back to its start - never stop
     "plus5": "addtime/add/300000", "minus5": "addtime/remove/300000", "reset": "reload",
 }
+
+
+ONTIME_LOAD = "load/id"       # OnTime 4.14: GET /api/load/id/<event id>
+
+
+def _one_presets():
+    """Rob's TIME OF DAY / 10 MIN / 55 MIN buttons are the events of OnTime's
+    current rundown, in his order - not a list anyone keeps by hand. Edit the
+    rundown and the Cue follows (R&D, 2026-10-04)."""
+    try:
+        r = requests.get("http://127.0.0.1:4001/data/rundowns/current", timeout=2)
+        d = r.json()
+        d = d.get("payload", d)
+    except Exception:
+        return []
+    entries, out = d.get("entries") or {}, []
+    for eid in (d.get("order") or []):
+        e = entries.get(eid) or {}
+        if e.get("type") != "event" or e.get("skip"):
+            continue
+        out.append({"id": eid, "label": e.get("title") or f"Cue {e.get('cue', '')}",
+                    "cue": e.get("cue", ""),
+                    "kind": "clock" if e.get("timerType") == "clock" else "countdown",
+                    "seconds": int(e.get("duration") or 0) // 1000})
+    return out
+
+
+def _one_timer_state():
+    """What a button needs to draw itself, from the same place the lights'
+    colour comes from, so the two can never disagree."""
+    t = _cue_poll_ontime() or {}
+    total = int(t.get("duration") or 0) + int(t.get("added") or 0)
+    return {"phase": _cue_view.get("phase") or "stopped",
+            "playback": t.get("playback") or "",
+            "title": t.get("title") or "",
+            "left_ms": int(t.get("current") or 0),
+            "total_ms": max(0, total),
+            "added_ms": int(t.get("added") or 0),
+            "held": t.get("playback") in ("armed", "stop") and total > 0,
+            "no_timer": not t,
+            "control": bool(load_config().get("cue_control"))}
+
+
+@app.route("/api/v1/one/timer", methods=["GET", "POST"])
+def one_timer():
+    """The One's timer, for a light or a Relay. GET answers the state and the
+    presets; POST does one thing to it. Behind the same "Lights control
+    timer" setting as /cue/control - off as this unit ships, because a
+    touchscreen that can stop the show clock has to be chosen."""
+    if request.method == "GET":
+        return jsonify({"ok": True, "state": _one_timer_state(), "presets": _one_presets()})
+    if not load_config().get("cue_control"):
+        return jsonify({"ok": False, "error": "timer control is off on this One - "
+                                              "turn on Lights control timer in its Network tab"}), 403
+    b = request.get_json(silent=True) or {}
+    action = str(b.get("action", "")).strip()
+    who = request.remote_addr
+    if action == "load":
+        eid = str(b.get("id", ""))
+        if not re.fullmatch(r"[A-Za-z0-9_-]{1,40}", eid):
+            return jsonify({"ok": False, "error": "which preset?"}), 400
+        path = f"{ONTIME_LOAD}/{eid}"
+    elif action == "add":
+        try:
+            secs = int(b.get("seconds", 0))
+        except (TypeError, ValueError):
+            secs = 0
+        if not secs or abs(secs) > 7200:
+            return jsonify({"ok": False, "error": "seconds, up to two hours either way"}), 400
+        path = f"addtime/{'add' if secs > 0 else 'remove'}/{abs(secs) * 1000}"
+    elif action in ("alert", "clear"):
+        _cue_alert["on"] = action == "alert"
+        return jsonify({"ok": True, "action": action, "state": _one_timer_state()})
+    else:
+        path = CUE_CONTROL.get(action)
+        if not path:
+            return jsonify({"ok": False, "error": "action is start, pause, next, previous, "
+                                                  "reset, add or load"}), 400
+    try:
+        r = requests.get(f"http://127.0.0.1:4001/api/{path}", timeout=2)
+        print(f"[cue] {who}: {action} {b.get('id') or b.get('seconds') or ''} -> {r.status_code}", flush=True)
+        time.sleep(0.25)          # let OnTime settle so the state we answer with is the new one
+        return jsonify({"ok": r.ok, "action": action, "state": _one_timer_state()})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)[:80]}), 502
 
 
 @app.route("/cue/control", methods=["POST"])
