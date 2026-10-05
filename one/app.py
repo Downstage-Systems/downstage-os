@@ -3425,14 +3425,44 @@ def _cue_state():
     return f" PHASE={_cue_view.get('phase') or 'stopped'} CONTROL={1 if _cue_ctl['on'] else 0}"
 
 
-def _cue_fit(line, limit=240):
-    """A line over 240 bytes is dropped by a radio on the way (counted as
-    hubTooLong). Drop the title first; TIME, PROGRESS, COLOR and ONECLOCK are
-    never dropped (a line without ONECLOCK is a clock that stops)."""
+# The KEY-STATE line's budget. A radio drops a line that will not fit into a
+# CueLink packet - whole, counted as hubTooLong - so the One trims rather than
+# letting the radio decide what is lost. Signing takes 20 bytes off every
+# packet (Cue repo docs/cuelink-groups-signing.md), hence 220 and not 240;
+# Cue Coding owns the exact figure. The rule is written up in
+# docs/timer-line-budget.md and must stay true in both repos.
+CUE_LINE_LIMIT = 220
+# What goes, in this order. Everything not named here is never dropped:
+# COLOR, TIME, PROGRESS, TOTAL, HELD, NOTIMER, TOD, ONECLOCK, PHASE, CONTROL,
+# PRESET, PRESSED. A face can be wrong about the title; it must not be wrong
+# about the clock, the phase, or whether its buttons work.
+_CUE_TRIM = ("MESSAGE", "TITLE")
+_cue_overlong = {"said": 0}
+
+
+def _cue_fit(line, limit=CUE_LINE_LIMIT):
+    """Bring a line inside the budget: shorten the quoted fields that may be
+    shortened, in order, and only drop one when shortening cannot save it."""
     if len(line) <= limit:
         return line
-    import re as _re
-    return _re.sub(r' TITLE="[^"]*"', "", line)
+    for field in _CUE_TRIM:
+        m = re.search(rf' {field}="([^"]*)"', line)
+        if not m:
+            continue
+        over = len(line) - limit
+        text = m.group(1)
+        if len(text) - over >= 6:                      # keep a useful stub
+            short = text[:len(text) - over - 1].rstrip() + "\u2026"
+            line = line[:m.start()] + f' {field}="{short}"' + line[m.end():]
+        else:
+            line = line[:m.start()] + line[m.end():]   # nothing worth keeping
+        if len(line) <= limit:
+            return line
+    if _cue_overlong["said"] < 3:                      # say it once or twice, not every 100 ms
+        _cue_overlong["said"] += 1
+        print(f"[cue] line still {len(line)} bytes after trimming (limit {limit}): {line[:80]}...",
+              flush=True)
+    return line
 
 
 def _cue_broadcast_loop():
