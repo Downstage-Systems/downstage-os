@@ -3238,6 +3238,11 @@ def _cue_poll_ontime():
         payload = r.json()["payload"]
         t = payload["timer"]
         val = {"playback": t.get("playback"), "phase": t.get("phase"), "current": t.get("current"),
+               # when this reading was taken. "current" counts down from this
+               # instant, so anything derived from it must use this clock and
+               # not the one at the moment a line is built (Cue Coding,
+               # 2026-10-05): they differ by the age of the cache, up to 200 ms
+               "at_ms": int(now * 1000),
                "duration": t.get("duration"),
                # minutes the operator has added or taken off. The lights have
                # to follow the real clock, not the event's original length
@@ -3288,20 +3293,43 @@ def _one_clock():
     return f" ONECLOCK={lt.tm_hour * 3600 + lt.tm_min * 60 + lt.tm_sec}"
 
 
-_cue_end_held = {"val": 0, "left": 0}
+_cue_end_held = {"val": 0, "offset": 0}
 
 
-def _cue_end(left_ms):
-    """When the running timer expires, in this unit's clock - and HELD STEADY.
+def _cue_end(t):
+    """When the running timer expires, in this unit's clock.
 
-    Computed fresh each time it drifts by a few milliseconds (the clock moves
-    on, OnTime's remaining moves down), which makes the line look changed on
-    every pass of the 100 ms loop: ten pushes a second to every light, which
-    is exactly what happened on the bench when this field first went in. The
-    end of a running timer is a fixed instant, so it only moves when somebody
-    moves it - a second of slack tells a real adjustment from arithmetic
-    noise."""
-    want = int(time.time() * 1000) + left_ms
+    Measured from the instant OnTime was READ, not the instant the line is
+    built: "current" counts down from the former, and the two differ by the
+    age of the poll cache. Taking the wrong one moved END by up to 200 ms
+    between identical readings, which made every line look changed and pushed
+    ten a second to every light (found on the bench, 2026-10-05; Cue Coding
+    diagnosed the same thing from the other side).
+
+    A quarter second of slack on top, because the reading itself still
+    wanders by a few milliseconds and a face does not care, but the change
+    check does."""
+    at = int(t.get("at_ms") or time.time() * 1000)
+    left = int(t.get("current") or 0)
+    clock = t.get("clock_ms")
+    if clock is None:
+        want = at + left
+    else:
+        # OnTime's own clock and its remaining time come from one reading, so
+        # their sum is a fixed instant in OnTime's time. What wanders is the
+        # mapping from that to this unit's clock, because OnTime updates about
+        # once a second while our poll clock does not - which made the sum
+        # creep by up to a second and END change 27 times in ten seconds.
+        # So: hold the mapping, and build END from OnTime's own numbers.
+        if not _cue_end_held["offset"] or abs((at - int(clock)) - _cue_end_held["offset"]) > 1500:
+            _cue_end_held["offset"] = at - int(clock)
+        want = _cue_end_held["offset"] + int(clock) + left
+    # A second of slack, not a quarter. OnTime's clock and its remaining time
+    # are not written in the same instant, so even from its own numbers the
+    # sum wanders by up to ~0.7 s. What matters is that every face gets the
+    # SAME end, so they agree with each other exactly; being within a second
+    # of OnTime's own idea is plenty for a display in mm:ss. A tighter slack
+    # just makes the line change, and a changed line is a push to every light.
     if not _cue_end_held["val"] or abs(want - _cue_end_held["val"]) > 1000:
         _cue_end_held["val"] = want
     return _cue_end_held["val"]
@@ -3362,7 +3390,7 @@ def _cue_extras():
     # receive - which is what made the Slate and the Cue read ahead of the One
     # (Rob, 2026-10-05). Paused or held, there is no end: say what is left.
     running = t.get("playback") == "play"
-    when = f" END={_cue_end(left) if running else 0}" if running else f" LEFT={left}"
+    when = f" END={_cue_end(t)}" if running else f" LEFT={left}"
     title = "".join(c for c in (t.get("title") or "") if 32 <= ord(c) < 127 and c not in '"\\')[:27]
     out = f" TIME={text} PROGRESS={progress} TOTAL={max(0, total) // 1000}{when}"
     at = _one_loaded()[1]
@@ -3654,6 +3682,10 @@ def _one_timer_state():
             "loaded": (_one_loaded()[0] or None),
             "loaded_at": _one_loaded()[1],   # its place in presets[], 1-based; 0 = not one of them
             "now": int(time.time() * 1000),   # take an offset from this
+            # the same instants the feed sends, so a bench check can compare
+            # a device's END with the One's without the cache's age in between
+            "end": (_cue_end(t) if t.get("playback") == "play" else None),
+            "left": int(t.get("current") or 0),
             "held": t.get("playback") in ("armed", "stop") and total > 0,
             "no_timer": not t,
             "control": bool(load_config().get("cue_control"))}
