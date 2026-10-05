@@ -3649,6 +3649,49 @@ def one_timer():
         if not re.fullmatch(r"[A-Za-z0-9_-]{1,40}", eid):
             return jsonify({"ok": False, "error": "which preset?"}), 400
         path = f"{ONTIME_LOAD}/{eid}"
+    elif action == "set":
+        # "put N seconds on the countdown, stopped, ready for START" (Cue
+        # Coding, 2026-10-05, for the Slate's saved times). OnTime 4.14 has no
+        # route that sets an event's length, so this is the three steps the
+        # caller would otherwise make - load a countdown if the clock is
+        # loaded, reload to clear what was added, then add the difference -
+        # done here in one request instead of four across the network.
+        try:
+            want = int(b.get("seconds", 0))
+        except (TypeError, ValueError):
+            want = 0
+        if want <= 0 or want > 35999:               # up to 9:59:59
+            return jsonify({"ok": False, "error": "seconds, from 1 to 9:59:59"}), 400
+        t = _cue_poll_ontime() or {}
+        steps = []
+        if t.get("timer_type") == "clock" or not int(t.get("duration") or 0):
+            first = next((p for p in _one_presets() if p["kind"] == "countdown"), None)
+            if not first:
+                return jsonify({"ok": False, "error": "no countdown in the rundown to put a time on"}), 409
+            steps.append(f"{ONTIME_LOAD}/{first['id']}")
+            base = first["seconds"] * 1000
+        else:
+            steps.append("reload")                  # back to the event's own length
+            base = int(t.get("duration") or 0)
+        diff = want * 1000 - base
+        if diff:
+            steps.append(f"addtime/{'add' if diff > 0 else 'remove'}/{abs(diff)}")
+        try:
+            for i, path in enumerate(steps):
+                r = requests.get(f"http://127.0.0.1:4001/api/{path}", timeout=2)
+                if not r.ok:
+                    return jsonify({"ok": False, "error": f"OnTime refused {path} ({r.status_code})"}), 502
+                if i < len(steps) - 1:
+                    time.sleep(0.15)                # let it settle between steps
+            print(f"[cue] {who}: set {want}s via {' + '.join(steps)}", flush=True)
+            time.sleep(0.25)
+            return jsonify({"ok": True, "action": "set", "seconds": want,
+                            # honest about the side effect: without a real
+                            # setter in OnTime, the difference shows as added
+                            # time, and a light may draw "+N"
+                            "added_shown": diff != 0, "state": _one_timer_state()})
+        except Exception as e:
+            return jsonify({"ok": False, "error": str(e)[:80]}), 502
     elif action == "add":
         try:
             secs = int(b.get("seconds", 0))
@@ -3664,7 +3707,7 @@ def one_timer():
         path = CUE_CONTROL.get(action)
         if not path:
             return jsonify({"ok": False, "error": "action is start, pause, next, previous, "
-                                                  "reset, add or load"}), 400
+                                                  "reset, add, set or load"}), 400
     try:
         r = requests.get(f"http://127.0.0.1:4001/api/{path}", timeout=2)
         print(f"[cue] {who}: {action} {b.get('id') or b.get('seconds') or ''} -> {r.status_code}", flush=True)
