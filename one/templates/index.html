@@ -3879,9 +3879,22 @@
   const kGridSizes = [[4, 8, '8 × 4 (Companion)'], [3, 5, '5 × 3 (Stream Deck)'], [4, 4, '4 × 4'], [8, 8, '8 × 8']];
   function cueCompanionOf(u) {   // the Companion this light's buttons live on
     const i = cueInfo(u), c = i.c;
-    if (i.linked) {   // through a Cue: that Cue's Companion
-      const cue = ((_fxData && _fxData.units) || []).find(x => x.serial === i.L.via || x.serial === i.via);
-      if (cue && cue.cue && cue.cue.host) return { host: cue.cue.host, port: +cue.cue.port || 16622 };
+    if (i.linked) {   // through a carrier: that carrier's Companion
+      const via = ((_fxData && _fxData.units) || []).find(x => x.serial === i.L.via || x.serial === i.via);
+      if (via && via.product === 'Relay') {
+        // a Relay keeps its Companion in its own block, not cue.host - a
+        // Relay has no cue.host at all, which is why a light carried by one
+        // used to say it had no Companion address (Rob's test, 2026-10-04)
+        const r = via.relay || {};
+        if (!r.host) return null;
+        const mine = window._myIp || '';
+        // pointed at this One's Companion: use the address the browser
+        // already reached this One on, as the timer case does
+        if (r.host === mine || r.host === location.hostname)
+          return { host: location.hostname, port: +r.port || 16622 };
+        return { host: r.host, port: +r.port || 16622 };
+      }
+      if (via && via.cue && via.cue.host) return { host: via.cue.host, port: +via.cue.port || 16622 };
       return null;
     }
     if (i.timer) return { host: location.hostname, port: 16622 };   // on this One's timer: this One's Companion
