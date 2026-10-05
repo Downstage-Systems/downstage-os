@@ -3689,6 +3689,109 @@
   }
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && _fxOpen) fxClose(); });
   function fxRow(label, val) { return '<div class="fx-kv"><div class="fu-lbl">' + label + '</div><div class="fx-v">' + val + '</div></div>'; }
+  // The Relay's controls, on the One's page. Everything here is the Relay's
+  // own answer shown as given - who can be adopted, the next free number, what
+  // the check found - so the two pages can never disagree (R&D, 2026-10-04).
+  let _fxRelay = null;         // {ip, at, offers, job, check, cues}
+  let _fxRelayBusy = '';
+
+  async function relayApi(ip, path, method, body) {
+    const r = await fetch('/fleet/relay/api', { method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ip, path, method: method || 'GET', body: body || {} }) });
+    return r.json();
+  }
+
+  async function relayLoad(ip, quiet) {
+    try {
+      const [offers, job, check, cues] = await Promise.all([
+        relayApi(ip, 'offers'), relayApi(ip, 'job'), relayApi(ip, 'check'), relayApi(ip, 'cues')]);
+      _fxRelay = { ip, at: Date.now(), offers, job: job.job, check: check.check, cues: cues.cues || [] };
+      if (!quiet && _fxOpen) fxSheet();
+    } catch (e) { /* the card still shows what the sweep knows */ }
+  }
+
+  async function relayAct(ip, path, body, busyLabel) {
+    _fxRelayBusy = busyLabel || 'working';
+    if (_fxOpen) fxSheet();
+    const d = await relayApi(ip, path, 'POST', body);
+    _fxRelayBusy = '';
+    // the Relay's words, not ours: it decides who can be adopted and why not
+    showToast(d.ok ? (d.message || 'Done.') : (d.error || 'The Relay refused that.'), d.ok ? 'success' : 'error');
+    await relayLoad(ip);
+  }
+
+  function relayOffers(u, r) {
+    const o = r.offers || {}, job = r.job;
+    if (job && job.lights) {
+      const done = job.lights.filter(l => l.state === 'linked').length;
+      return '<p class="fx-note">' + fxEsc(job.kind === 'adopt' ? 'Adopting' : 'Switching') + ' ' +
+          job.lights.length + ' light' + (job.lights.length > 1 ? 's' : '') + ' - ' + done + ' done.</p>' +
+        '<div class="fx-carried">' + job.lights.map(l =>
+          '<div class="fx-carried-row"><span>' + fxEsc(l.name || fxShort(l.id)) + '</span>' +
+          fxChip(l.state, l.state === 'linked' ? 'ok' : l.state === 'no answer' ? 'bad' : 'warn') +
+          (l.cue ? fxChip('cue ' + l.cue, 'link') : '') + '</div>').join('') + '</div>' +
+        (job.undone ? '' : '<div class="fx-actions left"><button class="fx-btn warn" onclick="relayAct(\'' + u.ip +
+          '\',\'job\',{undo:true},\'undoing\')">Undo</button></div>');
+    }
+    if (!o.live) return '<p class="fx-note">The Relay is not on a live Companion, so nothing can be adopted yet.</p>';
+    const list = (arr, kind, verb) => !arr.length ? '' :
+      '<p class="fx-note">' + fxEsc(verb) + ':</p><div class="fx-carried">' +
+      arr.map(l => '<div class="fx-carried-row"><span>' + fxEsc(l.name || (l.model + ' ' + l.id.slice(-4))) +
+        '</span>' + fxSignal(l.rssi) + '</div>').join('') + '</div>' +
+      '<div class="fx-actions left"><button class="fx-btn primary" onclick="relayAct(\'' + u.ip + '\',\'' +
+        kind + '\',{ids:' + JSON.stringify(arr.map(l => l.id)) + '},\'' + kind + 'ing\')">' +
+        (kind === 'adopt' ? 'Adopt ' : 'Switch ') + arr.length + '</button></div>';
+    const bits = list(o.adopt || [], 'adopt', 'New lights with no home, waiting') +
+                 list(o.switch || [], 'switch', 'Lights it has carried before, on WiFi now');
+    return bits || '<p class="fx-note">No light is waiting to be adopted. Room for ' + (o.room === undefined ? '?' : o.room) + ' more.</p>';
+  }
+
+  function relayCheckBlock(u, r) {
+    const c = r.check;
+    if (!c) return '<div class="fx-actions left"><button class="fx-btn" onclick="relayAct(\'' + u.ip +
+      '\',\'check\',{},\'checking\')">Check the rig</button></div>';
+    if (c.running) {
+      // the Relay says which one is blinking now (at = its index, -1 when
+      // done) and ticks off the ones already done, so the page can name it
+      const lights = c.lights || [], now = lights[c.at] || null;
+      return '<p class="fx-note">' + (now
+          ? 'Checking <b>' + fxEsc((now.cue ? 'Cue ' + now.cue + ' \u00b7 ' : '') + (now.name || fxShort(now.id))) + '</b>\u2026 it blinks for two seconds.'
+          : 'Checking the rig\u2026') + '</p>' +
+        (lights.length ? '<div class="fx-carried">' + lights.map((l, n) =>
+          '<div class="fx-carried-row"><span>' + fxEsc(l.name || fxShort(l.id)) + '</span>' +
+          (n === c.at ? fxChip('blinking', 'warn') : l.blinked ? fxChip('done', 'ok') : fxChip('waiting', 'link')) +
+          '</div>').join('') + '</div>' : '');
+    }
+    const rows = (c.lights || []).length
+      ? '<div class="fx-carried">' + (c.lights || []).map(l =>
+          '<div class="fx-carried-row"><span>' + fxEsc(l.name || fxShort(l.id)) + '</span>' +
+          fxChip(l.state, l.state === 'good' ? 'ok' : l.state === 'weak' ? 'warn' : 'bad') + '</div>').join('') +
+        '</div>'
+      : '';
+    return '<p class="fx-note">' + fxEsc(c.summary || '') + '</p>' + rows +
+      '<div class="fx-actions left"><button class="fx-btn" onclick="relayAct(\'' + u.ip +
+        '\',\'check\',{},\'checking\')">Check again</button>' +
+        (c.agoS !== undefined ? '<span class="fx-note">' + fxEsc(fxAge(c.agoS)) + '</span>' : '') + '</div>';
+  }
+
+  function relayBlock(u) {
+    const r = (_fxRelay && _fxRelay.ip === u.ip) ? _fxRelay : null;
+    if (!r) { relayLoad(u.ip); return '<div class="fx-sec"><p class="fx-note">Asking the Relay\u2026</p></div>'; }
+    if (_fxRelayBusy) return '<div class="fx-sec"><p class="fx-note">' + fxEsc(_fxRelayBusy) + '\u2026</p></div>';
+    const cues = r.cues || [];
+    return '<div class="fx-sec"><div class="fx-sec-label">Lights it carries</div>' +
+        (cues.length ? '<div class="fx-carried">' + cues.map(c =>
+          '<div class="fx-carried-row"><span>' + fxEsc((c.n ? c.n + ' \u00b7 ' : '') + (c.name || fxShort(c.id))) + '</span>' +
+          fxSignal(c.level) + (c.online ? '' : fxChip('not heard', 'bad')) +
+          '<button class="fleet-btn" onclick="relayAct(\'' + u.ip + '\',\'identify\',{id:\'' + c.id + '\'},\'\')">ID</button>' +
+          '</div>').join('') + '</div>'
+         : '<p class="fx-note">It is carrying no lights.</p>') +
+      '</div>' +
+      '<div class="fx-sec"><div class="fx-sec-label">Adopt and switch</div>' + relayOffers(u, r) + '</div>' +
+      '<div class="fx-sec"><div class="fx-sec-label">Check the rig</div>' + relayCheckBlock(u, r) + '</div>';
+  }
+
   function fxSheet(first) {
     const u = (_fxData && _fxData.units || []).find(x => (x.serial || x.ip) === _fxOpen);
     const body = document.getElementById('fx-panel-body');
@@ -3720,6 +3823,7 @@
             fxRow('Ethernet', fxEsc(u.relay.eth) + (u.relay.mbps ? ' · ' + u.relay.mbps + ' Mbps' : '') + ' · ' + (u.relay.static ? 'static' : 'DHCP')) : '') +
           fxRow('Software', 'v' + fxEsc(u.version) + (u.upd ? ' <span class="fx-chip warn">update</span>' : '')) +
         '</div></div>' +
+        (u.product === 'Relay' ? relayBlock(u) : '') +
         '<div class="fx-actions">' +
           '<button class="fx-btn ghost fx-forget" onclick="fleetForget(\'' + u.serial + '\',\'' + q(nm) + '\',' + !bad + ')">Remove from this list</button>' +
           '<button class="fx-btn" onclick="fleetIdentify(\'' + u.ip + '\',\'' + q(u.product) + '\')">Identify</button>' +
