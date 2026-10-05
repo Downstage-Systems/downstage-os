@@ -26,11 +26,13 @@ go first. The signed-text cap is 226 and the Relay stops at 220.
   counting each " KEY=value". Measured on the bench: 93 today, 131 worst
   case. About 49 bytes spare, or four more short keys.
 - **A new key a carried light must have goes before TITLE in that order, and
-  Cue Coding must add it to the Relay's list** or it is silently dropped for
-  carried lights only - the light works on its own WiFi and not through a
-  Relay, which nobody traces quickly. This happened: `TOTAL` was added by the
-  One on 2026-10-04 and was missing from the Relay's list until it was
-  spotted here.
+  Cue Coding must add it to the Relay's list** or it is dropped for carried
+  lights only - the light would work on its own WiFi and not through a Relay,
+  which nobody traces quickly. The near miss: `TOTAL` was added by the One on
+  2026-10-04 and was not in the Relay's list until 2026-10-05 (Cue 0.114.4).
+  Nothing was broken by it, because no light reads `TOTAL` yet - rings draw
+  from `PROGRESS`, which the One computes - but it would have been the moment
+  one did.
 - **The One's own line may be 240.** It holds itself to **220**
   (`CUE_LINE_LIMIT` in `one/app.py`) so it never hands the Relay something to
   cut. That is the One's margin, not the protocol's.
