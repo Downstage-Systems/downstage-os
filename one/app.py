@@ -3663,17 +3663,21 @@ def one_timer():
         if want <= 0 or want > 35999:               # up to 9:59:59
             return jsonify({"ok": False, "error": "seconds, from 1 to 9:59:59"}), 400
         t = _cue_poll_ontime() or {}
-        steps = []
         if t.get("timer_type") == "clock" or not int(t.get("duration") or 0):
-            first = next((p for p in _one_presets() if p["kind"] == "countdown"), None)
-            if not first:
-                return jsonify({"ok": False, "error": "no countdown in the rundown to put a time on"}), 409
-            steps.append(f"{ONTIME_LOAD}/{first['id']}")
-            base = first["seconds"] * 1000
-        else:
-            steps.append("reload")                  # back to the event's own length
-            base = int(t.get("duration") or 0)
-        diff = want * 1000 - base
+            # Loading a countdown would put ITS time on the room's screen on
+            # the way to the one asked for. The screen must never pass through
+            # a time nobody chose (R&D's rule), so this refuses instead and
+            # says what to do - the same answer the Slate gives in its own
+            # fallback.
+            return jsonify({"ok": False, "error": "load a countdown first - "
+                                                  "there is no countdown loaded to set"}), 409
+        steps = []
+        if t.get("playback") == "play":
+            steps.append("pause")                   # a time set on a running clock is a race
+        # from what the screen shows NOW, not from the event's own length: a
+        # reload would flash the preset's time before the set one
+        left = int(t.get("current") or 0)
+        diff = want * 1000 - left
         if diff:
             steps.append(f"addtime/{'add' if diff > 0 else 'remove'}/{abs(diff)}")
         try:
