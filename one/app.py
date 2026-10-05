@@ -242,8 +242,18 @@ def get_all_interfaces():
         else:
             kind = iface
         out.append({"iface": iface, "ip": ip, "kind": kind})
-    # wired first
+    # wired first - and it is not only the order: the cable is this unit's
+    # address as far as the rest of the rig is concerned (Rob, 2026-10-04)
     out.sort(key=lambda x: 0 if x["kind"] == "Ethernet" else 1)
+    wired = next((i for i in out if i["kind"] == "Ethernet"), None)
+    for i in out:
+        i["primary"] = (i is wired) if wired else (i is out[0] if out else False)
+        if wired and i is not wired and i["kind"] == "WiFi":
+            i["role"] = "backup"
+    if not wired:
+        for i in out:
+            if i["kind"] == "WiFi":
+                i["note"] = "On WiFi: the cable is unplugged"
     return out
 
 
@@ -4151,6 +4161,109 @@ def _add_carried_cues(units, prev=None):
     return units + extra
 
 
+# ── the cable is primary (Rob, 2026-10-04) ───────────────────────────────────
+# "the relay should always prefer the ethernet on the one, the one should also
+# think of the ethernet as primary." A One with both legs on ONE network (0001
+# at the hotel: eth0 .223, WiFi .225) was answering mDNS with the WiFi address
+# and routing its own traffic over WiFi. WiFi stays up - it is the hotspot and
+# the fallback - it just stops being the one that is offered first.
+ETH_METRIC, WIFI_METRIC = 100, 600
+
+
+def _cable_primary_routes():
+    """Put ethernet below WiFi in NetworkManager's route metrics.
+
+    Written to the saved profiles WITHOUT reactivating anything: a metric
+    takes effect the next time the connection comes up, and bouncing an
+    interface to apply it could take a unit off the network mid-show. The
+    cost is that it lands at the next boot; the benefit is that it cannot
+    strand a unit tonight."""
+    try:
+        out = subprocess.check_output(
+            ["nmcli", "-t", "-f", "NAME,TYPE", "connection", "show"], text=True, timeout=6)
+    except Exception as e:
+        print(f"[net] route metrics: {e}", flush=True)
+        return
+    for line in out.splitlines():
+        name, _, kind = line.rpartition(":")
+        if not name or kind not in ("802-3-ethernet", "802-11-wireless"):
+            continue
+        if name == HOTSPOT_CON:          # the hotspot is its own thing
+            continue
+        want = str(ETH_METRIC if kind == "802-3-ethernet" else WIFI_METRIC)
+        try:
+            cur = subprocess.check_output(
+                ["nmcli", "-g", "ipv4.route-metric", "connection", "show", name],
+                text=True, timeout=6).strip()
+            if cur == want:
+                continue
+            subprocess.run(["sudo", "nmcli", "connection", "modify", name,
+                            "ipv4.route-metric", want], timeout=10, check=True,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            print(f"[net] {name}: route metric {cur or 'unset'} -> {want}", flush=True)
+        except Exception as e:
+            print(f"[net] route metric on {name}: {e}", flush=True)
+
+
+def _cable_primary_mdns():
+    """Answer mDNS with the cable's address while the cable is up.
+
+    Avahi publishes on every interface, so a One with both legs on one network
+    answers with whichever it feels like - that is how the Relay ended up with
+    the WiFi address. Restricting avahi to eth0 fixes it, but it must come
+    back off the moment the cable is not a working path, or an unplugged One
+    becomes unfindable. So: restrict ONLY while eth0 has a real address, and
+    never while the hotspot is up (the hotspot is WiFi, and the setup page has
+    to be findable on it)."""
+    want = ""
+    try:
+        if not hotspot_is_active() and _iface_ip("eth0"):
+            want = "eth0"
+    except Exception:
+        return
+    conf = "/etc/avahi/avahi-daemon.conf"
+    try:
+        cur = open(conf).read()
+    except Exception:
+        return
+    line = f"allow-interfaces={want}" if want else ""
+    has = re.search(r"^allow-interfaces=.*$", cur, re.M)
+    if (has.group(0) if has else "") == line:
+        return                                   # already saying what we mean
+    new = re.sub(r"^allow-interfaces=.*$\n?", "", cur, flags=re.M)
+    if line:
+        new = re.sub(r"^\[server\]$", "[server]\n" + line, new, count=1, flags=re.M)
+        if line not in new:
+            # an avahi.conf with no [server] section: leave it alone rather
+            # than restart the daemon for a change that did not happen
+            print("[net] avahi-daemon.conf has no [server] section - left as is", flush=True)
+            return
+    try:
+        subprocess.run(["sudo", "tee", conf], input=new, text=True, timeout=10,
+                       stdout=subprocess.DEVNULL, check=True)
+        subprocess.run(["sudo", "systemctl", "reload-or-restart", "avahi-daemon"],
+                       timeout=15, check=False)
+        print(f"[net] mDNS now answers on {want or 'every interface'}", flush=True)
+    except Exception as e:
+        print(f"[net] mDNS interface: {e}", flush=True)
+
+
+def _cable_primary_guard():
+    """Both of the above, at boot and whenever the cable comes or goes."""
+    time.sleep(25)
+    _cable_primary_routes()
+    last = None
+    while True:
+        try:
+            up = bool(_iface_ip("eth0")) and not hotspot_is_active()
+            if up != last:
+                last = up
+                _cable_primary_mdns()
+        except Exception as e:
+            print(f"[net] cable guard: {e}", flush=True)
+        time.sleep(20)
+
+
 def _probe_unit(ip, timeout=0.6):
     try:
         r = requests.get(f"http://{ip}:8080/status", timeout=timeout)
@@ -7761,6 +7874,7 @@ if __name__ == "__main__":
     cue_radio.start()
     relay.configure(load_config, save_config, _my_ip_toward, _audit)
     relay.start()
+    threading.Thread(target=_cable_primary_guard, daemon=True).start()
     def _on_sigterm(signum, frame):
         # A service stop during system shutdown is our last chance to own
         # the panel. Reboot leaves the panel alone; poweroff gets the
