@@ -3390,6 +3390,33 @@ def _cue_serve(sock, addr):
         pass
 
 
+_cue_ctl = {"on": False, "at": 0.0}
+
+
+def _cue_state():
+    """What a light's timer controls need (docs/cue-timer-controls.md):
+    PHASE, the same state the lights' colours come from (running, paused,
+    stopped, warning, danger, over, flash, alert - alert means the alert owns
+    the face, not that the timer died), and CONTROL, whether "Lights control
+    timer" is on here (off by default: a light reads 0 as "say how to turn it
+    on", not as a fault). The setting is read once a second, not per line."""
+    now = time.time()
+    if now - _cue_ctl["at"] > 1:
+        _cue_ctl["on"] = bool(load_config().get("cue_control"))
+        _cue_ctl["at"] = now
+    return f" PHASE={_cue_view.get('phase') or 'stopped'} CONTROL={1 if _cue_ctl['on'] else 0}"
+
+
+def _cue_fit(line, limit=240):
+    """A line over 240 bytes is dropped by a radio on the way (counted as
+    hubTooLong). Drop the title first; TIME, PROGRESS, COLOR and ONECLOCK are
+    never dropped (a line without ONECLOCK is a clock that stops)."""
+    if len(line) <= limit:
+        return line
+    import re as _re
+    return _re.sub(r' TITLE="[^"]*"', "", line)
+
+
 def _cue_broadcast_loop():
     """Push the colour to every light when it changes, and at least every
     3 s so the firmware's 7 s silence rule never fires."""
@@ -3409,7 +3436,9 @@ def _cue_broadcast_loop():
                     line += f" PATTERN={pattern}"
                 line += _cue_extras()
                 line += _one_clock()
+                line += _cue_state()
                 line += " PRESSED=0"
+                line = _cue_fit(line)
                 if force or line != c.get("sent"):
                     if _cue_send(sock, line):
                         c["sent"] = line
@@ -3486,6 +3515,10 @@ def cue_directory():
 CUE_CONTROL = {
     "start": "start", "pause": "pause", "next": "start/next", "previous": "start/previous",
     "plus1": "addtime/add/60000", "minus1": "addtime/remove/60000",
+    # the round Cue's timer controls page (docs/cue-timer-controls.md, Cue
+    # Coding 2026-10-04): five minutes either way, and RESET = reload, the
+    # current event back to its start - never stop
+    "plus5": "addtime/add/300000", "minus5": "addtime/remove/300000", "reset": "reload",
 }
 
 
