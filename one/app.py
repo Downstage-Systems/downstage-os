@@ -3318,7 +3318,8 @@ def _cue_extras():
             # already added: load the 10 minute preset, add 20, and the light
             # has to say 30:00 before anyone presses start - it used to say
             # 10:00 until the clock ran.
-            held = f" TIME={hms(max(0, total) // 1000)} PROGRESS=100 HELD=1 TOTAL={max(0, total) // 1000}"
+            held = (f" TIME={hms(max(0, total) // 1000)} PROGRESS=100 HELD=1"
+                    f" TOTAL={max(0, total) // 1000} LEFT={max(0, total)}")
             at = _one_loaded()[1]
             return held + (f" PRESET={at}" if at else "")
         if tod is not None:                  # nothing loaded: the time of day
@@ -3337,8 +3338,14 @@ def _cue_extras():
     # added to a 10 minute event this used to compute 284% and clamp to full,
     # so a ring sat pinned until the clock passed the original 10
     progress = max(0, min(100, round(100 * left / total))) if total > 0 and left > 0 else 0
+    # When it ends, in the One's own clock. A face then ticks from END against
+    # its offset to NOW, instead of counting from the last line it happened to
+    # receive - which is what made the Slate and the Cue read ahead of the One
+    # (Rob, 2026-10-05). Paused or held, there is no end: say what is left.
+    running = t.get("playback") == "play"
+    when = f" END={int(time.time() * 1000) + left}" if running else f" LEFT={left}"
     title = "".join(c for c in (t.get("title") or "") if 32 <= ord(c) < 127 and c not in '"\\')[:27]
-    out = f" TIME={text} PROGRESS={progress} TOTAL={max(0, total) // 1000}"
+    out = f" TIME={text} PROGRESS={progress} TOTAL={max(0, total) // 1000}{when}"
     at = _one_loaded()[1]
     if at:
         out += f" PRESET={at}"
@@ -3488,7 +3495,9 @@ def _cue_broadcast_loop():
                 line += " PRESSED=0"
                 line = _cue_fit(line)
                 if force or line != c.get("sent"):
-                    if _cue_send(sock, line):
+                    # the One's clock at the moment of sending, for a face to
+                    # take its offset from. Appended AFTER the comparison.
+                    if _cue_send(sock, f"{line} NOW={int(time.time() * 1000)}"):
                         c["sent"] = line
             if force:
                 last_all = now
@@ -3625,6 +3634,7 @@ def _one_timer_state():
             "added_ms": int(t.get("added") or 0),
             "loaded": (_one_loaded()[0] or None),
             "loaded_at": _one_loaded()[1],   # its place in presets[], 1-based; 0 = not one of them
+            "now": int(time.time() * 1000),   # take an offset from this
             "held": t.get("playback") in ("armed", "stop") and total > 0,
             "no_timer": not t,
             "control": bool(load_config().get("cue_control"))}

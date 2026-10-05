@@ -23,8 +23,15 @@ It drops whatever no longer fits, from the end - so TITLE, MESSAGE and TEXT
 go first. The signed-text cap is 226 and the Relay stops at 220.
 
 - **The real constraint: `COLOR` through `TOTAL` must stay under 180 bytes**,
-  counting each " KEY=value". Measured on the bench: 93 today, 131 worst
-  case. About 49 bytes spare, or four more short keys.
+  counting each " KEY=value". Measured: 128 before the absolutes, **146 worst
+  case with `END`** (141 with `LEFT`). About 34 bytes spare - two more short
+  keys, not four. `NOW` costs the whole line 18 but is appended after the
+  Relay's copy block.
+- **`NOW` is appended after the change comparison, never before it.** It is
+  the One's clock in milliseconds, so including it in the dedup would make
+  every line look changed on every pass and push ten lines a second to every
+  light. The One sends it on each line that goes out for another reason -
+  which is at least once a second, because the wall clock field changes.
 - **A new key a carried light must have goes before TITLE in that order, and
   Cue Coding must add it to the Relay's list** or it is dropped for carried
   lights only - the light would work on its own WiFi and not through a Relay,
@@ -75,6 +82,7 @@ Measured, not estimated, on bench 0001 with Rob's rundown:
 | Running, with a title | ~173 |
 | Worst case without MESSAGE | ~196 |
 | Worst case with a 48-character MESSAGE | 240, trimmed to 220 |
+| The absolutes (2026-10-05): `NOW` 18, `END` 18, `LEFT` 13 | +31 running, +31 held |
 
 So there is room for about one more short field before MESSAGE starts losing
 characters on an ordinary show line. Anything bigger than that needs a
