@@ -3617,6 +3617,60 @@ def fleet_relay_unpair():
     return jsonify(relay.unpair(rid))
 
 
+# The Relay's own API is what the One drives - not the Relay page's routes,
+# which are that page's private plumbing and change freely (R&D, 2026-10-04).
+# An allowlist rather than a passthrough: this unit will proxy these and
+# nothing else.
+RELAY_API_GET = {"device", "cues", "offers", "job", "check", "status"}
+RELAY_API_POST = {"offers", "adopt", "switch", "job", "check", "identify"}
+
+
+def _relay_api(ip, path, body=None, method="GET", timeout=8):
+    """One call to a Relay, with this One's token. Returns (status, answer).
+
+    The Relay's words are its own: whatever it says about who can be adopted,
+    what the next free number is, or which light is weak, is passed through
+    untouched, so the One and the Relay can never disagree (R&D's rule)."""
+    url = f"http://{ip}/api/v1/{path}" if path != "status" else f"http://{ip}/status"
+    try:
+        if method == "POST":
+            r = requests.post(url, json=(body or {}), timeout=timeout, headers=_box_headers(ip=ip))
+        else:
+            r = requests.get(url, timeout=timeout, headers=_box_headers(ip=ip))
+    except Exception as e:
+        return 0, {"ok": False, "error": f"no answer from the Relay at {ip}"}
+    refused = _box_refusal(r, "the Relay")
+    if refused:
+        return r.status_code, {"ok": False, "error": refused}
+    try:
+        return r.status_code, r.json()
+    except ValueError:
+        return r.status_code, {"ok": False, "error": f"the Relay answered {r.status_code}"}
+
+
+@app.route("/fleet/relay/api", methods=["POST"])
+def fleet_relay_api():
+    """The One's page driving a Relay: GET or POST one of its API routes.
+    Proxied here because a browser cannot reach a Relay on another subnet,
+    and because the token lives on this unit, not in the page."""
+    b = request.get_json(silent=True) or {}
+    ip, path = str(b.get("ip", "")), str(b.get("path", "")).strip("/")
+    method = "POST" if b.get("method", "GET").upper() == "POST" else "GET"
+    try:
+        ipaddress.ip_address(ip)
+    except Exception:
+        return jsonify({"ok": False, "error": "bad ip"}), 400
+    root = path.split("/")[0]
+    ok_path = (root in (RELAY_API_POST if method == "POST" else RELAY_API_GET)
+               or (root == "cue" and method == "POST" and re.fullmatch(r"cue/\d{1,3}", path)))
+    if not ok_path:
+        return jsonify({"ok": False, "error": "not a route this unit will ask for"}), 400
+    status, ans = _relay_api(ip, path, b.get("body"), method)
+    if method == "POST":
+        _audit("RELAY_API", f"{ip} {path} {json.dumps(b.get('body') or {})[:80]} -> {status}")
+    return jsonify({"ok": bool(ans.get("ok", status == 200)), "status": status, **ans})
+
+
 def _is_relay_ip(ip):
     """True when that address is a Cue Relay. A Relay carries lights like a
     Cue does, but it does not speak /link - it has its own page protocol."""
