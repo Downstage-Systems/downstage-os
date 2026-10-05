@@ -3288,6 +3288,25 @@ def _one_clock():
     return f" ONECLOCK={lt.tm_hour * 3600 + lt.tm_min * 60 + lt.tm_sec}"
 
 
+_cue_end_held = {"val": 0, "left": 0}
+
+
+def _cue_end(left_ms):
+    """When the running timer expires, in this unit's clock - and HELD STEADY.
+
+    Computed fresh each time it drifts by a few milliseconds (the clock moves
+    on, OnTime's remaining moves down), which makes the line look changed on
+    every pass of the 100 ms loop: ten pushes a second to every light, which
+    is exactly what happened on the bench when this field first went in. The
+    end of a running timer is a fixed instant, so it only moves when somebody
+    moves it - a second of slack tells a real adjustment from arithmetic
+    noise."""
+    want = int(time.time() * 1000) + left_ms
+    if not _cue_end_held["val"] or abs(want - _cue_end_held["val"]) > 1000:
+        _cue_end_held["val"] = want
+    return _cue_end_held["val"]
+
+
 def _cue_extras():
     """The clock in words, for lights with a face that can show them (the
     round Cue). Rides on the same KEY-STATE line as more of the Downstage
@@ -3343,7 +3362,7 @@ def _cue_extras():
     # receive - which is what made the Slate and the Cue read ahead of the One
     # (Rob, 2026-10-05). Paused or held, there is no end: say what is left.
     running = t.get("playback") == "play"
-    when = f" END={int(time.time() * 1000) + left}" if running else f" LEFT={left}"
+    when = f" END={_cue_end(left) if running else 0}" if running else f" LEFT={left}"
     title = "".join(c for c in (t.get("title") or "") if 32 <= ord(c) < 127 and c not in '"\\')[:27]
     out = f" TIME={text} PROGRESS={progress} TOTAL={max(0, total) // 1000}{when}"
     at = _one_loaded()[1]
