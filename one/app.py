@@ -3535,6 +3535,17 @@ def _cue_fit(line, limit=CUE_LINE_LIMIT):
     return line
 
 
+_cue_nudge = {"at": 0.0}
+
+
+def _cue_push_now():
+    """This unit just changed the timer, so it knows before OnTime tells it.
+    Drop the poll cache and have the next pass of the loop send, instead of
+    waiting up to 200 ms to be told what we did and 100 ms for the tick."""
+    _cue_timer["at"] = 0.0
+    _cue_nudge["at"] = time.time()
+
+
 def _cue_broadcast_loop():
     """Push the colour to every light when it changes, and at least every
     3 s so the firmware's 7 s silence rule never fires."""
@@ -3566,7 +3577,10 @@ def _cue_broadcast_loop():
                 last_all = now
         except Exception as e:
             print(f"[cue] broadcast: {e}")
-        time.sleep(0.1)
+        # 20 ms for a second after this unit changed something itself, 100 ms
+        # the rest of the time: a press should reach a face in one tick, and
+        # an idle rig should not be polled ten times a second for nothing
+        time.sleep(0.02 if time.time() - _cue_nudge["at"] < 1.0 else 0.1)
 
 
 def _cue_host():
@@ -3769,6 +3783,7 @@ def one_timer():
                 if i < len(steps) - 1:
                     time.sleep(0.15)                # let it settle between steps
             print(f"[cue] {who}: set {want}s via {' + '.join(steps)}", flush=True)
+            _cue_push_now()
             time.sleep(0.25)
             return jsonify({"ok": True, "action": "set", "seconds": want,
                             # honest about the side effect: without a real
@@ -3796,6 +3811,7 @@ def one_timer():
     try:
         r = requests.get(f"http://127.0.0.1:4001/api/{path}", timeout=2)
         print(f"[cue] {who}: {action} {b.get('id') or b.get('seconds') or ''} -> {r.status_code}", flush=True)
+        _cue_push_now()           # the lights hear about it now, not at the next tick
         time.sleep(0.25)          # let OnTime settle so the state we answer with is the new one
         return jsonify({"ok": r.ok, "action": action, "state": _one_timer_state()})
     except Exception as e:
@@ -3814,6 +3830,7 @@ def cue_control():
     if action in ("alert", "clear"):
         _cue_alert["on"] = action == "alert"
         print(f"[cue] {who}: {action}")
+        _cue_push_now()
         return jsonify({"ok": True, "action": action})
     path = CUE_CONTROL.get(action)
     if not path:
@@ -3821,6 +3838,7 @@ def cue_control():
     try:
         r = requests.get(f"http://127.0.0.1:4001/api/{path}", timeout=1.5)
         print(f"[cue] {who}: {action} -> {r.status_code}")
+        _cue_push_now()
         return jsonify({"ok": r.ok, "action": action})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)[:80]}), 502
