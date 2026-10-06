@@ -3301,6 +3301,14 @@ def _one_clock():
 _cue_end_held = {"val": 0, "offset": 0, "ef": None}
 
 
+def _ontime_fresh():
+    """OnTime's timer read NOW, never from the cache. Anything that does
+    arithmetic on the remaining time has to use this: the cache is up to
+    200 ms old, and a running timer moves in that time."""
+    _cue_timer["at"] = 0.0
+    return _cue_poll_ontime() or {}
+
+
 def _cue_end(t):
     """When the running timer expires, in this unit's clock.
 
@@ -3757,7 +3765,7 @@ def one_timer():
             want = 0
         if want <= 0 or want > 35999:               # up to 9:59:59
             return jsonify({"ok": False, "error": "seconds, from 1 to 9:59:59"}), 400
-        t = _cue_poll_ontime() or {}
+        t = _ontime_fresh()
         if t.get("timer_type") == "clock" or not int(t.get("duration") or 0):
             # Loading a countdown would put ITS time on the room's screen on
             # the way to the one asked for. The screen must never pass through
@@ -3766,30 +3774,46 @@ def one_timer():
             # fallback.
             return jsonify({"ok": False, "error": "load a countdown first - "
                                                   "there is no countdown loaded to set"}), 409
-        steps = []
-        if t.get("playback") == "play":
-            steps.append("pause")                   # a time set on a running clock is a race
-        # from what the screen shows NOW, not from the event's own length: a
-        # reload would flash the preset's time before the set one
-        left = int(t.get("current") or 0)
-        diff = want * 1000 - left
-        if diff:
-            steps.append(f"addtime/{'add' if diff > 0 else 'remove'}/{abs(diff)}")
+        def ask(path):
+            r = requests.get(f"http://127.0.0.1:4001/api/{path}", timeout=2)
+            if not r.ok:
+                raise RuntimeError(f"OnTime refused {path} ({r.status_code})")
         try:
-            for i, path in enumerate(steps):
-                r = requests.get(f"http://127.0.0.1:4001/api/{path}", timeout=2)
-                if not r.ok:
-                    return jsonify({"ok": False, "error": f"OnTime refused {path} ({r.status_code})"}), 502
-                if i < len(steps) - 1:
-                    time.sleep(0.15)                # let it settle between steps
-            print(f"[cue] {who}: set {want}s via {' + '.join(steps)}", flush=True)
+            # Pause BEFORE reading what is left. Reading first and pausing
+            # second loses however far the timer ran in between - about half a
+            # second, which landed 55:00 on 54:59 (Rob, 2026-10-05).
+            if t.get("playback") == "play":
+                ask("pause")
+                time.sleep(0.2)                     # let the pause settle
+            t = _ontime_fresh()                     # exact now that it is still
+            left = int(t.get("current") or 0)
+            diff = want * 1000 - left
+            if diff:
+                ask(f"addtime/{'add' if diff > 0 else 'remove'}/{abs(diff)}")
+                time.sleep(0.2)
+                # and check it landed: OnTime applies in its own time, and a
+                # saved time that is a second out is the whole complaint
+                after = _ontime_fresh()
+                short = want * 1000 - int(after.get("current") or 0)
+                # Never land UNDER. A display floors, so 54:59.968 reads
+                # "54:59" - which is the whole complaint, even though it is
+                # 32 ms out. A few milliseconds over is invisible.
+                if short > 5:
+                    ask(f"addtime/add/{short + 60}")      # and a hair above
+                    time.sleep(0.15)
+                elif short < -250:
+                    ask(f"addtime/remove/{abs(short)}")
+                    time.sleep(0.15)
+            print(f"[cue] {who}: set {want}s (was {left // 1000}s)", flush=True)
             _cue_push_now()
-            time.sleep(0.25)
+            time.sleep(0.2)
             return jsonify({"ok": True, "action": "set", "seconds": want,
                             # honest about the side effect: without a real
                             # setter in OnTime, the difference shows as added
                             # time, and a light may draw "+N"
                             "added_shown": diff != 0, "state": _one_timer_state()})
+        except RuntimeError as e:
+            return jsonify({"ok": False, "error": str(e)}), 502
         except Exception as e:
             return jsonify({"ok": False, "error": str(e)[:80]}), 502
     elif action == "add":
