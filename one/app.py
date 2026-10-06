@@ -3243,6 +3243,11 @@ def _cue_poll_ontime():
                # not the one at the moment a line is built (Cue Coding,
                # 2026-10-05): they differ by the age of the cache, up to 200 ms
                "at_ms": int(now * 1000),
+               # OnTime's OWN end instant, in its clock (ms since midnight);
+               # None unless it is running. Taking this rather than deriving
+               # an end makes the faces match OnTime's own display instead of
+               # a window around it (R&D, 2026-10-05)
+               "expected_finish": t.get("expectedFinish"),
                "duration": t.get("duration"),
                # minutes the operator has added or taken off. The lights have
                # to follow the real clock, not the event's original length
@@ -3293,7 +3298,7 @@ def _one_clock():
     return f" ONECLOCK={lt.tm_hour * 3600 + lt.tm_min * 60 + lt.tm_sec}"
 
 
-_cue_end_held = {"val": 0, "offset": 0}
+_cue_end_held = {"val": 0, "offset": 0, "ef": None}
 
 
 def _cue_end(t):
@@ -3312,6 +3317,17 @@ def _cue_end(t):
     at = int(t.get("at_ms") or time.time() * 1000)
     left = int(t.get("current") or 0)
     clock = t.get("clock_ms")
+    ef = t.get("expected_finish")
+    if ef is not None and clock is not None:
+        # OnTime's own answer to "when does this end", mapped into this unit's
+        # clock. Held while OnTime's value is unchanged and re-mapped only when
+        # it moves - on an add, a pause, a resume or a load - so END follows
+        # OnTime's display exactly instead of sitting within a second of it.
+        if _cue_end_held.get("ef") != ef or not _cue_end_held["val"]:
+            _cue_end_held["ef"] = ef
+            _cue_end_held["offset"] = at - int(clock)
+            _cue_end_held["val"] = _cue_end_held["offset"] + int(ef)
+        return _cue_end_held["val"]
     if clock is None:
         want = at + left
     else:
@@ -3686,6 +3702,10 @@ def _one_timer_state():
             # a device's END with the One's without the cache's age in between
             "end": (_cue_end(t) if t.get("playback") == "play" else None),
             "left": int(t.get("current") or 0),
+            # OnTime's own, untouched, for comparing a face with its screen
+            "ontime": {"current": t.get("current"), "clock": t.get("clock_ms"),
+                       "expected_finish": t.get("expected_finish"),
+                       "read_at": t.get("at_ms")},
             "held": t.get("playback") in ("armed", "stop") and total > 0,
             "no_timer": not t,
             "control": bool(load_config().get("cue_control"))}
