@@ -3301,6 +3301,56 @@ def _one_clock():
 _cue_end_held = {"val": 0, "offset": 0, "ef": None}
 
 
+# What a saved time last asked for, and on which event. RESET then goes back
+# to the saved time rather than to the event's own length - Rob, 2026-10-05:
+# "when I hold to reset, it snaps back to 30 minutes... not the preset that we
+# previously chose". Cleared whenever a different event is loaded, because the
+# base belongs to the one it was set on.
+_cue_set_base = {"event": None, "seconds": 0}
+
+
+def _set_base_for(t):
+    """The saved seconds for the event loaded now, or None."""
+    if not _cue_set_base["event"]:
+        return None
+    if str(t.get("event_id") or "") != _cue_set_base["event"]:
+        return None
+    return _cue_set_base["seconds"]
+
+
+def _ontime_ask(path):
+    r = requests.get(f"http://127.0.0.1:4001/api/{path}", timeout=2)
+    if not r.ok:
+        raise RuntimeError(f"OnTime refused {path} ({r.status_code})")
+
+
+def _timer_land_on(want_secs):
+    """Put `want_secs` on the loaded countdown, stopped, and leave it there.
+
+    Pause BEFORE reading what is left: reading first and pausing second loses
+    however far the timer ran in between, which landed 55:00 on 54:59 (Rob,
+    2026-10-05). Then correct once if OnTime did not quite land it, and never
+    land UNDER - a display floors, so 54:59.968 reads "54:59"."""
+    t = _ontime_fresh()
+    if t.get("playback") == "play":
+        _ontime_ask("pause")
+        time.sleep(0.2)
+        t = _ontime_fresh()
+    left = int(t.get("current") or 0)
+    diff = want_secs * 1000 - left
+    if diff:
+        _ontime_ask(f"addtime/{'add' if diff > 0 else 'remove'}/{abs(diff)}")
+        time.sleep(0.2)
+        short = want_secs * 1000 - int(_ontime_fresh().get("current") or 0)
+        if short > 5:
+            _ontime_ask(f"addtime/add/{short + 60}")
+            time.sleep(0.15)
+        elif short < -250:
+            _ontime_ask(f"addtime/remove/{abs(short)}")
+            time.sleep(0.15)
+    return left, diff
+
+
 def _ontime_fresh():
     """OnTime's timer read NOW, never from the cache. Anything that does
     arithmetic on the remaining time has to use this: the cache is up to
@@ -3752,6 +3802,7 @@ def one_timer():
         if not re.fullmatch(r"[A-Za-z0-9_-]{1,40}", eid):
             return jsonify({"ok": False, "error": "which preset?"}), 400
         path = f"{ONTIME_LOAD}/{eid}"
+        _cue_set_base.update(event=None, seconds=0)
     elif action == "set":
         # "put N seconds on the countdown, stopped, ready for START" (Cue
         # Coding, 2026-10-05, for the Slate's saved times). OnTime 4.14 has no
@@ -3774,36 +3825,10 @@ def one_timer():
             # fallback.
             return jsonify({"ok": False, "error": "load a countdown first - "
                                                   "there is no countdown loaded to set"}), 409
-        def ask(path):
-            r = requests.get(f"http://127.0.0.1:4001/api/{path}", timeout=2)
-            if not r.ok:
-                raise RuntimeError(f"OnTime refused {path} ({r.status_code})")
         try:
-            # Pause BEFORE reading what is left. Reading first and pausing
-            # second loses however far the timer ran in between - about half a
-            # second, which landed 55:00 on 54:59 (Rob, 2026-10-05).
-            if t.get("playback") == "play":
-                ask("pause")
-                time.sleep(0.2)                     # let the pause settle
-            t = _ontime_fresh()                     # exact now that it is still
-            left = int(t.get("current") or 0)
-            diff = want * 1000 - left
-            if diff:
-                ask(f"addtime/{'add' if diff > 0 else 'remove'}/{abs(diff)}")
-                time.sleep(0.2)
-                # and check it landed: OnTime applies in its own time, and a
-                # saved time that is a second out is the whole complaint
-                after = _ontime_fresh()
-                short = want * 1000 - int(after.get("current") or 0)
-                # Never land UNDER. A display floors, so 54:59.968 reads
-                # "54:59" - which is the whole complaint, even though it is
-                # 32 ms out. A few milliseconds over is invisible.
-                if short > 5:
-                    ask(f"addtime/add/{short + 60}")      # and a hair above
-                    time.sleep(0.15)
-                elif short < -250:
-                    ask(f"addtime/remove/{abs(short)}")
-                    time.sleep(0.15)
+            left, diff = _timer_land_on(want)
+            # RESET goes back to THIS, not to the event's own length
+            _cue_set_base.update(event=str(t.get("event_id") or ""), seconds=want)
             print(f"[cue] {who}: set {want}s (was {left // 1000}s)", flush=True)
             _cue_push_now()
             time.sleep(0.2)
@@ -3827,12 +3852,30 @@ def one_timer():
     elif action in ("alert", "clear"):
         _cue_alert["on"] = action == "alert"
         return jsonify({"ok": True, "action": action, "state": _one_timer_state()})
+    elif action == "reset":
+        t = _ontime_fresh()
+        base = _set_base_for(t)
+        if base:
+            # a saved time was put on this event, so "back to the start" means
+            # back to THAT, not to the event's own length (Rob, 2026-10-05)
+            try:
+                _timer_land_on(base)
+                _cue_push_now()
+                time.sleep(0.2)
+                print(f"[cue] {who}: reset to the saved {base}s", flush=True)
+                return jsonify({"ok": True, "action": "reset", "seconds": base,
+                                "to": "saved", "state": _one_timer_state()})
+            except RuntimeError as e:
+                return jsonify({"ok": False, "error": str(e)}), 502
+        path = CUE_CONTROL["reset"]
     else:
         path = CUE_CONTROL.get(action)
         if not path:
             return jsonify({"ok": False, "error": "action is start, pause, next, previous, "
                                                   "reset, add, set or load"}), 400
     try:
+        if action in ("next", "previous"):
+            _cue_set_base.update(event=None, seconds=0)   # a different event, a different base
         r = requests.get(f"http://127.0.0.1:4001/api/{path}", timeout=2)
         print(f"[cue] {who}: {action} {b.get('id') or b.get('seconds') or ''} -> {r.status_code}", flush=True)
         _cue_push_now()           # the lights hear about it now, not at the next tick
