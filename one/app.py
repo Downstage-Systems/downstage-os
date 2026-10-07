@@ -8263,6 +8263,50 @@ def presets_save():
     return jsonify({"ok": True, "presets": presets})
 
 
+# Every source the setup page offers, as its own keys. "external" is left out
+# on purpose: it needs a URL alongside it, and a remote caller has nowhere to
+# put one - it would switch an output to a blank page.
+ONE_SOURCES = {
+    "/timer", "cleantimer", "/countdown", "/studio", "/backstage", "/timeline",
+    "/info", "/op", "/cuesheet", "/rundown", "/editor", "/timercontrol",
+    "/messagecontrol", "companion", "config", "custom", "welcome", "off",
+    "pattern-card", "pattern-bars", "pattern-dvd", "pattern-grid",
+    "pattern-ramp", "pattern-sync",
+}
+
+
+@app.route("/displays/source", methods=["POST"])
+def displays_source():
+    """Point ONE output at a source, leaving everything else alone.
+
+    /save rewrites whatever it is not sent - resolution, rotation, the clean
+    timer options, the other output - so a remote caller cannot use it without
+    knowing the unit's whole state. This does what applying a preset does, for
+    one output (Cue Coding, for the Slate's ONE page, 2026-10-06)."""
+    global _watchdog_override, _blackout_active
+    b = request.get_json(silent=True) or {}
+    try:
+        out = int(b.get("output", 0))
+    except (TypeError, ValueError):
+        out = 0
+    source = str(b.get("source", "")).strip()
+    if out not in (1, 2):
+        return jsonify({"ok": False, "error": "output is 1 or 2"}), 400
+    if source == "external":
+        return jsonify({"ok": False, "error": "external needs a URL - set it on the One's own page"}), 400
+    if source not in ONE_SOURCES:
+        return jsonify({"ok": False, "error": f"no source called {source!r}"}), 400
+    was = load_config().get(f"hdmi{out}_source", "")
+    _watchdog_override = False
+    _blackout_active = False
+    _testcard_override.discard(out)      # this output is being pointed somewhere on purpose
+    save_config({f"hdmi{out}_source": source})
+    _audit("DISPLAY_SOURCE", f"{request.remote_addr}: HDMI {out} {was or '-'} -> {source}")
+    # only the outputs whose source changed are relaunched
+    threading.Thread(target=launch_all_windows, daemon=True).start()
+    return jsonify({"ok": True, "output": out, "source": source, "was": was})
+
+
 @app.route("/presets/apply", methods=["POST"])
 def presets_apply():
     global _watchdog_override, _blackout_active
