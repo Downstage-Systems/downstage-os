@@ -24,10 +24,7 @@
 
     :root {
       --col-run:     #ffffff;
-      --col-paused:  #fbbf24;
-      --col-over:    #ef4444;
-      --col-stopped: #4b5563;
-      --col-label:   #6b7280;
+      --col-quiet:   #4b5563;   /* only the "waiting" sentence, never the number */
     }
 
     html, body {
@@ -47,21 +44,6 @@
       position: relative;
     }
 
-    /* The name OnTime gives the timer, when it has one. Quiet: the number is
-       the thing people read from the back of a room. */
-    .name {
-      font-family: 'Open Sans', 'Segoe UI', sans-serif;
-      font-size: clamp(14px, 2.2vw, 34px);
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      color: var(--col-label);
-      margin-bottom: clamp(6px, 1.5vh, 24px);
-      text-align: center;
-      max-width: 90vw;
-      overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
-    }
-    .name:empty { display: none; }
-
     /* As big as the glass allows. Tabular figures so it does not jiggle as
        the digits change - a timer that shifts sideways every second is unreadable
        at a distance. */
@@ -72,47 +54,24 @@
       font-variant-numeric: tabular-nums;
       font-feature-settings: 'tnum' 1;
       letter-spacing: -0.02em;
-      transition: color 0.25s ease;
     }
-    .time.paused  { color: var(--col-paused); }
-    .time.over    { color: var(--col-over); }
-    .time.stopped { color: var(--col-stopped); }
-
-    /* Over time blinks slowly rather than fast: at a glance it reads as
-       wrong, without being a strobe in someone's eyeline for ten minutes. */
-    @keyframes overPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
-    .time.over { animation: overPulse 2s ease-in-out infinite; }
-
-    .state {
-      font-family: 'Open Sans', 'Segoe UI', sans-serif;
-      font-size: clamp(12px, 1.6vw, 24px);
-      letter-spacing: 0.22em;
-      text-transform: uppercase;
-      color: var(--col-label);
-      margin-top: clamp(8px, 2vh, 28px);
-      min-height: 1.2em;
-    }
-
     /* Nothing to show: say which timer this screen is, so a blank output is
        explainable rather than mysterious. */
     .waiting {
       font-family: 'Open Sans', 'Segoe UI', sans-serif;
       font-size: clamp(14px, 2vw, 30px);
-      color: var(--col-stopped);
+      color: var(--col-quiet);
       letter-spacing: 0.1em;
       text-align: center;
       padding: 0 6vw;
       line-height: 1.5;
     }
     .hidden { display: none !important; }
-    @media (prefers-reduced-motion: reduce) { .time.over { animation: none; } }
   </style>
 </head>
 <body>
   <div class="stage">
-    <div class="name" id="name"></div>
     <div class="time" id="time">--:--</div>
-    <div class="state" id="state"></div>
     <div class="waiting hidden" id="waiting"></div>
   </div>
 
@@ -121,9 +80,7 @@
   const N = Math.min(3, Math.max(1, parseInt(new URLSearchParams(location.search).get('n') || '1', 10) || 1));
   const KEY = 'auxtimer' + N;
 
-  const $name = document.getElementById('name');
   const $time = document.getElementById('time');
-  const $state = document.getElementById('state');
   const $waiting = document.getElementById('waiting');
 
   function pad(n) { return String(Math.abs(n)).padStart(2, '0'); }
@@ -142,26 +99,18 @@
     if (!last) return;
     const running = last.playback === 'start' || last.playback === 'play';
     const ms = running ? last.current - (Date.now() - lastAt) : last.current;
-    const over = ms < 0;
     $time.textContent = fmt(ms);
-    $time.className = 'time' + (over ? ' over' : running ? '' : last.playback === 'pause' ? ' paused' : ' stopped');
-    $name.textContent = last.name || '';
-    $state.textContent = over ? 'over' : running ? '' : last.playback === 'pause' ? 'paused' : 'stopped';
   }
   setInterval(paint, 100);
 
   function waiting(msg) {
     $waiting.textContent = msg;
     $waiting.classList.remove('hidden');
-    document.getElementById('name').classList.add('hidden');
     $time.classList.add('hidden');
-    $state.classList.add('hidden');
   }
   function live() {
     $waiting.classList.add('hidden');
-    document.getElementById('name').classList.remove('hidden');
     $time.classList.remove('hidden');
-    $state.classList.remove('hidden');
   }
 
   // This unit's own answer, same origin. No cross-origin WebSocket to :4001,
