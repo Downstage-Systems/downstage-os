@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aux Timer</title>
+  <style>
+    /* OnTime's own font, from OnTime's own files - copied onto this unit so
+       the view does not depend on OnTime serving them cross-origin. Its
+       timer views use Open Sans 600 for the number (Rob, 2026-10-07: "match
+       the font a bit better with ontimes font"). */
+    @font-face {
+      font-family: 'Open Sans';
+      font-style: normal; font-weight: 400; font-display: swap;
+      src: url('/static/fonts/open-sans-latin-400.woff2') format('woff2');
+    }
+    @font-face {
+      font-family: 'Open Sans';
+      font-style: normal; font-weight: 600; font-display: swap;
+      src: url('/static/fonts/open-sans-latin-600.woff2') format('woff2');
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --col-run:     #ffffff;
+      --col-paused:  #fbbf24;
+      --col-over:    #ef4444;
+      --col-stopped: #4b5563;
+      --col-label:   #6b7280;
+    }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: #000;
+      color: var(--col-run);
+      font-family: 'Open Sans', 'Segoe UI', sans-serif;
+      overflow: hidden;
+      user-select: none;
+      cursor: none;
+    }
+
+    .stage {
+      width: 100vw; height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      position: relative;
+    }
+
+    /* The name OnTime gives the timer, when it has one. Quiet: the number is
+       the thing people read from the back of a room. */
+    .name {
+      font-family: 'Open Sans', 'Segoe UI', sans-serif;
+      font-size: clamp(14px, 2.2vw, 34px);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--col-label);
+      margin-bottom: clamp(6px, 1.5vh, 24px);
+      text-align: center;
+      max-width: 90vw;
+      overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+    }
+    .name:empty { display: none; }
+
+    /* As big as the glass allows. Tabular figures so it does not jiggle as
+       the digits change - a timer that shifts sideways every second is unreadable
+       at a distance. */
+    .time {
+      font-weight: 600;                 /* OnTime's own weight for the big number */
+      font-size: min(34vh, 19vw);
+      line-height: 0.95;
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: 'tnum' 1;
+      letter-spacing: -0.02em;
+      transition: color 0.25s ease;
+    }
+    .time.paused  { color: var(--col-paused); }
+    .time.over    { color: var(--col-over); }
+    .time.stopped { color: var(--col-stopped); }
+
+    /* Over time blinks slowly rather than fast: at a glance it reads as
+       wrong, without being a strobe in someone's eyeline for ten minutes. */
+    @keyframes overPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+    .time.over { animation: overPulse 2s ease-in-out infinite; }
+
+    .state {
+      font-family: 'Open Sans', 'Segoe UI', sans-serif;
+      font-size: clamp(12px, 1.6vw, 24px);
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--col-label);
+      margin-top: clamp(8px, 2vh, 28px);
+      min-height: 1.2em;
+    }
+
+    /* Nothing to show: say which timer this screen is, so a blank output is
+       explainable rather than mysterious. */
+    .waiting {
+      font-family: 'Open Sans', 'Segoe UI', sans-serif;
+      font-size: clamp(14px, 2vw, 30px);
+      color: var(--col-stopped);
+      letter-spacing: 0.1em;
+      text-align: center;
+      padding: 0 6vw;
+      line-height: 1.5;
+    }
+    .hidden { display: none !important; }
+    @media (prefers-reduced-motion: reduce) { .time.over { animation: none; } }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <div class="name" id="name"></div>
+    <div class="time" id="time">--:--</div>
+    <div class="state" id="state"></div>
+    <div class="waiting hidden" id="waiting"></div>
+  </div>
+
+<script>
+  // Which aux timer this screen shows: /view/aux?n=2. OnTime has three.
+  const N = Math.min(3, Math.max(1, parseInt(new URLSearchParams(location.search).get('n') || '1', 10) || 1));
+  const KEY = 'auxtimer' + N;
+
+  const $name = document.getElementById('name');
+  const $time = document.getElementById('time');
+  const $state = document.getElementById('state');
+  const $waiting = document.getElementById('waiting');
+
+  function pad(n) { return String(Math.abs(n)).padStart(2, '0'); }
+  function fmt(ms) {
+    const neg = ms < 0, abs = Math.abs(ms);
+    const h = Math.floor(abs / 3600000), m = Math.floor((abs % 3600000) / 60000), s = Math.floor((abs % 60000) / 1000);
+    return (neg ? '-' : '') + (h > 0 ? h + ':' + pad(m) + ':' + pad(s) : m + ':' + pad(s));
+  }
+
+  // The last thing OnTime told us, and when. Between messages the clock is
+  // ticked here so the display moves smoothly rather than in steps - OnTime
+  // sends about once a second, which looks like a stutter on a big screen.
+  let last = null, lastAt = 0;
+
+  function paint() {
+    if (!last) return;
+    const running = last.playback === 'start' || last.playback === 'play';
+    const ms = running ? last.current - (Date.now() - lastAt) : last.current;
+    const over = ms < 0;
+    $time.textContent = fmt(ms);
+    $time.className = 'time' + (over ? ' over' : running ? '' : last.playback === 'pause' ? ' paused' : ' stopped');
+    $name.textContent = last.name || '';
+    $state.textContent = over ? 'over' : running ? '' : last.playback === 'pause' ? 'paused' : 'stopped';
+  }
+  setInterval(paint, 100);
+
+  function waiting(msg) {
+    $waiting.textContent = msg;
+    $waiting.classList.remove('hidden');
+    document.getElementById('name').classList.add('hidden');
+    $time.classList.add('hidden');
+    $state.classList.add('hidden');
+  }
+  function live() {
+    $waiting.classList.add('hidden');
+    document.getElementById('name').classList.remove('hidden');
+    $time.classList.remove('hidden');
+    $state.classList.remove('hidden');
+  }
+
+  // This unit's own answer, same origin. No cross-origin WebSocket to :4001,
+  // and no dependence on a socket path that is OnTime's to move between
+  // versions - the One polls OnTime anyway, so it just hands over what it has.
+  let misses = 0;
+  async function tick() {
+    try {
+      const d = await (await fetch('/api/v1/one/aux', { cache: 'no-store' })).json();
+      if (!d.ok) throw new Error(d.error || 'no answer');
+      const a = (d.aux || []).find(x => x.n === N);
+      if (!a || a.current === null || a.current === undefined) throw new Error('no aux timer ' + N);
+      last = a; lastAt = Date.now(); misses = 0;
+      live(); paint();
+    } catch (e) {
+      // one missed poll is nothing; several means something to say
+      if (++misses >= 3) waiting('Waiting for OnTime' + '\u2026');
+    }
+  }
+  tick();
+  setInterval(tick, 500);
+
+</script>
+</body>
+</html>

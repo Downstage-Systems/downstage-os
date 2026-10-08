@@ -1338,6 +1338,8 @@ def _open_window(source, display, hdmi_index):
         url = f"http://{ip}:4001/timer/?" + _cleantimer_params(hdmi_index)
     elif source == "custom":
         url = "http://localhost:8080/view/custom"
+    elif source[:3] == "aux" and source[3:] in ("1", "2", "3"):
+        url = f"http://localhost:8080/view/aux?n={source[3:]}"
     else:
         url = f"http://{ip}:4001{source}"
 
@@ -1994,6 +1996,7 @@ class OLEDDisplay:
                     "/info": "Info", "/op": "Oper", "/cuesheet": "Cues",
                     "/editor": "Edit", "/timercontrol": "TCtrl",
                     "/messagecontrol": "MCtrl", "/rundown": "Rundn",
+                    "aux1": "Aux 1", "aux2": "Aux 2", "aux3": "Aux 3",
                     }.get(key, key.lstrip("/")[:6].capitalize())
         hc = hdmi_connected()
         # ASCII only: the panel font renders fancy punctuation as smudges
@@ -2271,6 +2274,39 @@ def _power_button_monitor_inputdev():
 @app.route("/view/custom")
 def custom_view():
     return render_template("custom_view.html")
+
+
+@app.route("/api/v1/one/aux")
+def one_aux():
+    """OnTime's three aux timers, from this unit rather than from OnTime.
+
+    The views used to read OnTime's WebSocket directly, which means a
+    cross-origin socket from :8080 to :4001 and a path that is OnTime's to
+    change between versions. This unit already polls OnTime every 200 ms for
+    the lights; serving what it has costs nothing and cannot be refused by a
+    browser."""
+    try:
+        r = requests.get("http://127.0.0.1:4001/api/poll", timeout=1.0)
+        p = r.json()["payload"]
+    except Exception as e:
+        return jsonify({"ok": False, "error": "OnTime is not answering", "detail": str(e)[:80]}), 200
+    out = []
+    for n in (1, 2, 3):
+        a = p.get(f"auxtimer{n}") or {}
+        out.append({"n": n, "current": a.get("current"), "duration": a.get("duration"),
+                    "playback": a.get("playback"), "direction": a.get("direction"),
+                    "name": a.get("name") or ""})
+    return jsonify({"ok": True, "aux": out, "clock": p.get("clock"),
+                    "now": int(time.time() * 1000)})
+
+
+@app.route("/view/aux")
+def aux_view():
+    """One of OnTime's three aux timers, alone on a screen (Rob, 2026-10-07).
+    OnTime's own views carry the main timer with them; this is for a screen
+    that should show only the aux count - a backstage call, a changeover, a
+    break clock."""
+    return render_template("aux_view.html")
 
 
 @app.route("/")
@@ -5099,6 +5135,7 @@ _FLEET_SRC_LABELS = {
     "/info": "Public Info", "/op": "Operator", "/cuesheet": "Cue Sheet",
     "/editor": "Editor", "/timercontrol": "Timer Control",
     "/messagecontrol": "Message Control", "/rundown": "Rundown",
+    "aux1": "Aux Timer 1", "aux2": "Aux Timer 2", "aux3": "Aux Timer 3",
 }
 
 def _fleet_src_label(key):
@@ -5829,6 +5866,8 @@ def source_url_for_output(n):
         url = "http://localhost:8000"
     elif source == "custom":
         url = "http://localhost:8080/view/custom"
+    elif source[:3] == "aux" and source[3:] in ("1", "2", "3"):
+        url = f"http://localhost:8080/view/aux?n={source[3:]}"
     else:
         mode = config.get("mode", "local")
         ip = "127.0.0.1" if mode == "local" else config.get("ip", "")
@@ -8305,6 +8344,7 @@ ONE_SOURCES = {
     "/messagecontrol", "companion", "config", "custom", "welcome", "off",
     "pattern-card", "pattern-bars", "pattern-dvd", "pattern-grid",
     "pattern-ramp", "pattern-sync",
+    "aux1", "aux2", "aux3",          # OnTime's aux timers, each alone on a screen
 }
 
 
