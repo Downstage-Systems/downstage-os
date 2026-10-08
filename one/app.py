@@ -3818,13 +3818,32 @@ def one_timer():
             return jsonify({"ok": False, "error": "seconds, from 1 to 9:59:59"}), 400
         t = _ontime_fresh()
         if t.get("timer_type") == "clock" or not int(t.get("duration") or 0):
-            # Loading a countdown would put ITS time on the room's screen on
-            # the way to the one asked for. The screen must never pass through
-            # a time nobody chose (R&D's rule), so this refuses instead and
-            # says what to do - the same answer the Slate gives in its own
-            # fallback.
-            return jsonify({"ok": False, "error": "load a countdown first - "
-                                                  "there is no countdown loaded to set"}), 409
+            # On the clock (or with nothing loaded), a time has to come from
+            # somewhere: a countdown must be loaded before anything can be put
+            # on it. Rob wants +5 on the clock to put a 5:00 countdown up
+            # (2026-10-07), so refusing is no longer the answer - but the
+            # room's screen still must not pass through a time nobody chose.
+            # An exact match costs nothing: load it and it is already right.
+            # Otherwise the closest one is loaded and corrected, which shows
+            # its own time for as long as one poll takes.
+            downs = [p for p in _one_presets() if p["kind"] == "countdown" and p["seconds"] > 0]
+            if not downs:
+                return jsonify({"ok": False, "error": "no countdown in the rundown to put a time on - "
+                                                      "add one in OnTime"}), 409
+            exact = next((p for p in downs if p["seconds"] == want), None)
+            pick = exact or min(downs, key=lambda p: (abs(p["seconds"] - want), p["seconds"]))
+            try:
+                _ontime_ask(f"{ONTIME_LOAD}/{pick['id']}")
+                time.sleep(0.25)
+            except RuntimeError as e:
+                return jsonify({"ok": False, "error": str(e)}), 502
+            t = _ontime_fresh()
+            if exact:
+                _cue_set_base.update(event=str(t.get("event_id") or ""), seconds=want)
+                _cue_push_now()
+                print(f"[cue] {who}: set {want}s by loading {pick['label']!r} - exact, nothing added", flush=True)
+                return jsonify({"ok": True, "action": "set", "seconds": want, "loaded": pick["label"],
+                                "added_shown": False, "state": _one_timer_state()})
         try:
             left, diff = _timer_land_on(want)
             # RESET goes back to THIS, not to the event's own length
