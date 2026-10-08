@@ -3826,12 +3826,26 @@ def one_timer():
             # An exact match costs nothing: load it and it is already right.
             # Otherwise the closest one is loaded and corrected, which shows
             # its own time for as long as one poll takes.
-            downs = [p for p in _one_presets() if p["kind"] == "countdown" and p["seconds"] > 0]
+            downs = [p for p in _one_presets() if p["kind"] == "countdown"]
             if not downs:
                 return jsonify({"ok": False, "error": "no countdown in the rundown to put a time on - "
                                                       "add one in OnTime"}), 409
-            exact = next((p for p in downs if p["seconds"] == want), None)
-            pick = exact or min(downs, key=lambda p: (abs(p["seconds"] - want), p["seconds"]))
+            # In order of what the room sees on the way:
+            #   an exact match  - the clock, then the time. Nothing between.
+            #   a 0:00 event    - the clock, 0:00, the time. Zero is not a
+            #                     wrong number; it reads as starting from
+            #                     nothing (Rob, 2026-10-07).
+            #   the closest     - the clock, that event's own time, the time.
+            #                     The last resort, and the only one that shows
+            #                     a number nobody asked for.
+            exact = next((p for p in downs if p["seconds"] == want and want > 0), None)
+            zero = next((p for p in downs if p["seconds"] == 0), None)
+            sized = [p for p in downs if p["seconds"] > 0]
+            pick = exact or zero or (min(sized, key=lambda p: (abs(p["seconds"] - want), p["seconds"]))
+                                     if sized else None)
+            if pick is None:
+                return jsonify({"ok": False, "error": "no countdown in the rundown to put a time on - "
+                                                      "add one in OnTime"}), 409
             try:
                 _ontime_ask(f"{ONTIME_LOAD}/{pick['id']}")
                 time.sleep(0.25)
