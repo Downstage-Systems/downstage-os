@@ -4358,6 +4358,53 @@ def fleet_cue_share():
         return jsonify({"ok": False, "error": str(e)})
 
 
+def _wifi_ssid_now():
+    """The WiFi this unit is on, to offer as the network to hand a light.
+    NetworkManager's connection name, which is the SSID for a network joined
+    from this unit's own page. Cheap: no scan. Empty when not on WiFi."""
+    try:
+        out = subprocess.run(["nmcli", "-t", "-g", "GENERAL.CONNECTION", "device", "show", "wlan0"],
+                             capture_output=True, text=True, timeout=3).stdout.strip()
+        return "" if out in ("", "--") or out == load_config().get("hotspot_ssid", "") else out[:32]
+    except Exception:
+        return ""
+
+
+def _relay_share(ip, light, ssid="", pw=""):
+    """Send WiFi through a Relay (Relay 0.136.5, POST /api/v1/share). With no
+    network named, the Relay shares the one typed in its WiFi share tab; with
+    one, it uses that for this share only and keeps nothing. The password is
+    passed straight through: never logged here, never stored.
+
+    A Relay with nothing to share answers 409 "no network to share"; the page
+    then asks the operator which network, offering the one this unit is on."""
+    if len(ssid) > 32 or len(pw) > 64:
+        return jsonify({"ok": False, "error": "a WiFi name is at most 32 characters, a password at most 64"})
+    body = {"id": light}
+    if ssid:
+        body.update(ssid=ssid, **{"pass": pw})
+    status, ans = _relay_api(ip, "share", body, "POST")
+    if not ans.get("ok"):
+        err = str(ans.get("error", "") or f"the Relay answered {status}")
+        if err.startswith("no network to share") and not ssid:
+            return jsonify({"ok": False, "need_network": True, "suggest": _wifi_ssid_now(), "error": err})
+        return jsonify({"ok": False, "error": err})
+    # it finishes a second or two later; a light in setup on another channel
+    # takes longer, so give it a while and say so if it is still going
+    res, deadline = {}, time.time() + 12
+    while time.time() < deadline:
+        time.sleep(1)
+        _, res = _relay_api(ip, "share", None, "GET", timeout=3)
+        if not res.get("pending", False):
+            break
+    result = str(res.get("result", "") or "")
+    _audit("CUE_SHARE", f"{light} via Relay {ip}, {'a network named on the One' if ssid else 'its own network'}: "
+                        f"{result or 'no result'}")
+    if res.get("pending"):
+        return jsonify({"ok": False, "result": result or "still sharing - check the light in a moment"})
+    return jsonify({"ok": bool(res.get("ok")) or result.startswith("shared"), "result": result})
+
+
 @app.route("/fleet/cue/send-wifi", methods=["POST"])
 def fleet_cue_send_wifi():
     """Ask a Cue to hand its network to a light it carries - the One pushes to
@@ -4365,12 +4412,7 @@ def fleet_cue_send_wifi():
     b = request.get_json(silent=True) or {}
     ip, light = str(b.get("ip", "")), str(b.get("id", ""))
     if _is_relay_ip(ip):
-        # A Relay has no /link and no WiFi share: it carries its lights over
-        # CueLink, so they need no network of their own. Asking it anyway got
-        # its 404 page parsed as JSON - "Expecting value: line 1 column 1"
-        # (Rob, 2026-10-16, a round Cue asking to join BAE4).
-        return jsonify({"ok": False, "error": "its carrier is a Relay, which carries lights over CueLink - "
-                                              "they need no WiFi. Adopt it on the Relay's card instead."})
+        return _relay_share(ip, light, str(b.get("ssid", "") or ""), str(b.get("pass", "") or ""))
     try:
         requests.post(f"http://{ip}/link", data={"sharewith": light}, timeout=4, headers=_box_headers())
         time.sleep(4)   # the exchange takes a second or two; say how it went
@@ -4639,6 +4681,8 @@ def _relay_unit(ip, d):
                       "port": comp_port, "live": bool(d.get("live")),
                       "found": bool(d.get("compFound")),
                       "mine": bool(comp_host) and comp_host == _my_ip_toward(ip),
+                      # the network in its WiFi share tab, by name only ("" when none)
+                      "share_ssid": str(d.get("ssid", "") or ""),
                       "ch": d.get("ch", 0), "tune": d.get("tune", ""), "eth": d.get("ethState", ""),
                       "mbps": d.get("ethMbps", 0), "static": bool(d.get("static")),
                       "heard": len(lights), "up": d.get("up", 0), "started": d.get("startedBy", ""),

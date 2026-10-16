@@ -3936,16 +3936,15 @@
     if (L.enabled === false) {
       link = '<p class="fx-note">CueLink is off on this light.</p><div class="fx-actions left"><button class="fx-btn" onclick="cueLinkCmd(\'' + u.ip + '\',{enabled:true})">Turn CueLink on</button></div>';
     } else if (i.linked || L.waiting) {
-      // a Relay carries lights over CueLink and shares no WiFi, so a light
-      // waiting on one is offered Adopt on the Relay's card, not Send WiFi
+      // a Relay shares WiFi through its own API (0.136.5), not a Cue's /link
       const viaRelay = ((_fxData && _fxData.units) || []).find(x => x.product === 'Relay' &&
         ((L.via_ip && x.ip === L.via_ip) || (L.via && x.serial === L.via) || (L.chosen && x.serial === L.chosen)));
       link = '<p class="fx-note">' + (i.linked ? 'Linked through <b>' + fxEsc(fxShort(i.via)) + '</b> ' + fxSignal(cueLinkRssi(u, L.via || i.via)) : 'Waiting for <b>' + fxEsc(fxShort(L.via_name || L.chosen || 'its Cue')) + '</b> to come back.') + '</p>' +
         '<div class="fx-actions left" id="fx-link-btns">' +
-          (i.noIp && L.via_ip && !viaRelay ? '<button class="fx-btn" onclick="cueSendWifi(\'' + L.via_ip + '\',\'' + u.serial + '\')" title="Ask its Cue to hand it the network">Send WiFi</button>' : '') +
+          (i.noIp && (viaRelay || L.via_ip) ? '<button class="fx-btn" onclick="cueSendWifi(\'' + (viaRelay ? viaRelay.ip : L.via_ip) + '\',\'' + u.serial + '\',\'' + q(nm) + '\')" title="' +
+            (viaRelay ? 'Ask the Relay to hand it ' + fxEsc((viaRelay.relay && viaRelay.relay.share_ssid) || 'a network') : 'Ask its Cue to hand it the network') + '">Send WiFi</button>' : '') +
           '<button class="fx-btn warn" onclick="cueLinkCmd(\'' + (i.noIp ? L.via_ip : u.ip) + '\',' + (i.noIp ? '{release:\'' + u.serial + '\'}' : '{off:true}') +
-            ',\'Unlink ' + q(nm) + '? It goes back to its own connection' + (i.noIp ? ' - it has no WiFi, so it will be dark until it has.' : '.') + '\')">Unlink</button></div>' +
-        (viaRelay && !i.linked ? '<p class="fx-note fx-dim">A Relay carries it over CueLink, so it needs no WiFi. If the Relay\'s card says it asks to join, tap Adopt there.</p>' : '');
+            ',\'Unlink ' + q(nm) + '? It goes back to its own connection' + (i.noIp ? ' - it has no WiFi, so it will be dark until it has.' : '.') + '\')">Unlink</button></div>';
     } else {
       link = (i.carried ? '<p class="fx-note">Carrying <b>' + i.carried + '</b> light' + (i.carried > 1 ? 's' : '') + ' over CueLink' +
             (+L.max > 1 ? (i.carried >= +L.max ? ' - <b>full</b>, it takes no more' : ', room for ' + (L.max - i.carried) + ' more') : '') + ':</p>' +
@@ -4374,11 +4373,21 @@
       renderFleet(await (await fetch('/discover/refresh', { method: 'POST' })).json());
     } catch (e) { showToast('Could not change sharing.', 'error'); }
   }
-  async function cueSendWifi(cueIp, id) {
-    showToast('Asking its Cue to send the network...', 'info');
+  async function cueSendWifi(cueIp, id, name, net) {
+    showToast(net ? 'Sending ' + net.ssid + '...' : 'Asking its carrier to send the network...', 'info');
     try {
       const d = await (await fetch('/fleet/cue/send-wifi', { method: 'POST',
-        headers: {'Content-Type':'application/json'}, body: JSON.stringify({ ip: cueIp, id }) })).json();
+        headers: {'Content-Type':'application/json'}, body: JSON.stringify(Object.assign({ ip: cueIp, id }, net || {})) })).json();
+      if (d.need_network && !net) {
+        // a Relay with nothing in its WiFi share tab: ask which network,
+        // offering the one this unit is on. Used for this share only - the
+        // Relay keeps nothing (0.136.5).
+        const ssid = prompt('WiFi network to give ' + (name || id) + ' (2.4 GHz):', d.suggest || '');
+        if (ssid === null || !ssid.trim()) return;                       // Cancel means cancel
+        const pass = prompt('Password for ' + ssid.trim() + ' (leave empty for an open network):', '');
+        if (pass === null) return;
+        return cueSendWifi(cueIp, id, name, { ssid: ssid.trim(), pass });
+      }
       showToast(d.ok ? 'Sent - it should join and show up with an address in a few seconds.' : 'Not sent: ' + (d.result || d.error || 'no answer'), d.ok ? 'success' : 'error');
       if (d.ok) setTimeout(async () => {
         try { renderFleet(await (await fetch('/discover', { method: 'POST' })).json()); } catch (e) {}
