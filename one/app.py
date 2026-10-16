@@ -3723,6 +3723,7 @@ def cue_directory():
     else:
         return jsonify({"ok": False, "error": "no Companion here",
                         "name": config.get("hostname", "") or socket.gethostname(),
+                        "unit_name": config.get("unit_name", ""),
                         "serial": config.get("serial", "")})
     lt = time.localtime()
     return jsonify({"ok": True, "host": host, "port": 16622, "source": source,
@@ -3735,6 +3736,9 @@ def cue_directory():
                     "clock": f"{lt.tm_hour:02d}:{lt.tm_min:02d}:{lt.tm_sec:02d}",
                     "utc_offset_min": int((lt.tm_gmtoff or 0) // 60),
                     "name": config.get("hostname", "") or socket.gethostname(),
+                    # what the operator calls this unit ("BENCH"). A Relay
+                    # prefers it over the hostname when it names us (0.136.2)
+                    "unit_name": config.get("unit_name", ""),
                     "serial": config.get("serial", "")})
 
 
@@ -4166,7 +4170,18 @@ def fleet_relay_api():
                or (root == "cue" and method == "POST" and re.fullmatch(r"cue/\d{1,3}", path)))
     if not ok_path:
         return jsonify({"ok": False, "error": "not a route this unit will ask for"}), 400
-    status, ans = _relay_api(ip, path, b.get("body"), method)
+    body = b.get("body")
+    if method == "POST" and root in ("adopt", "switch"):
+        # A light found on the Relay's wire may have a control token set
+        # (offers say "needs":"rig token"). The Relay takes ours in the job's
+        # body, uses it for that job's LAN lights only and never keeps it
+        # (Relay 0.136.2). Added here, never by the page: the token stays on
+        # this unit, and the audit line below logs what the page sent.
+        body = {k: v for k, v in (body or {}).items() if k != "rigToken"}
+        tok = _cue_token()
+        if tok:
+            body["rigToken"] = tok
+    status, ans = _relay_api(ip, path, body, method)
     if method == "POST":
         _audit("RELAY_API", f"{ip} {path} {json.dumps(b.get('body') or {})[:80]} -> {status}")
     return jsonify({"ok": bool(ans.get("ok", status == 200)), "status": status, **ans})
