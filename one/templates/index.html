@@ -3801,14 +3801,34 @@
     const where = l => (l.via === 'lan' ? fxChip('on your network', 'link') : fxSignal(l.rssi)) +
       (l.needs ? '<span title="This light has a control token set. The Relay needs the matching rig token to adopt it.">' +
         fxChip('needs ' + l.needs, 'warn') + '</span>' : '');
+    const label = l => l.name || (l.model + ' ' + l.id.slice(-4));
+    // The body goes through fxEsc: JSON's double quotes inside a double-quoted
+    // onclick cut the handler off at the ids list, and the button did nothing at all
+    // (found 2026-10-16 - Adopt and Switch had never worked from this page).
+    // &quot; is turned back into " by the browser before the script runs.
+    const act = (path, body, busy) => 'relayAct(\'' + u.ip + '\',\'' + path + '\',' +
+      fxEsc(JSON.stringify(body)) + ',\'' + busy + '\')';
     const list = (arr, kind, verb) => !arr.length ? '' :
       '<p class="fx-note">' + fxEsc(verb) + ':</p><div class="fx-carried">' +
-      arr.map(l => '<div class="fx-carried-row"><span>' + fxEsc(l.name || (l.model + ' ' + l.id.slice(-4))) +
+      arr.map(l => '<div class="fx-carried-row"><span>' + fxEsc(label(l)) +
         '</span>' + where(l) + '</div>').join('') + '</div>' +
-      '<div class="fx-actions left"><button class="fx-btn primary" onclick="relayAct(\'' + u.ip + '\',\'' +
-        kind + '\',{ids:' + JSON.stringify(arr.map(l => l.id)) + '},\'' + kind + 'ing\')">' +
+      '<div class="fx-actions left"><button class="fx-btn primary" onclick="' +
+        act(kind, { ids: arr.map(l => l.id) }, kind + 'ing') + '">' +
         (kind === 'adopt' ? 'Adopt ' : 'Switch ') + arr.length + '</button></div>';
-    const bits = list(o.adopt || [], 'adopt', 'New lights with no home, waiting') +
+    // A light that chose this Relay but is not in its rig (Relay 0.136.3,
+    // "kind":"asks"): it is calling on the air and being refused until the
+    // owner says yes. One row each with its own buttons, because each is its
+    // own yes - and Identify first, so the owner knows which light is asking.
+    // Heard over the air, so its signal is real and the bars are drawn.
+    const asks = (o.adopt || []).filter(l => l.kind === 'asks');
+    const asking = !asks.length ? '' : '<div class="fx-carried">' + asks.map(l =>
+      '<div class="fx-carried-row"><span><b>' + fxEsc(label(l)) + '</b> asks to join. Adopt?</span>' +
+        '<span>' + where(l) + ' ' +
+        '<button class="fleet-btn" onclick="' + act('identify', { id: l.id }, '') + '" title="Blink this light">ID</button> ' +
+        '<button class="fx-btn primary" onclick="' + act('adopt', { ids: [l.id] }, 'adopting') + '">Adopt</button>' +
+        '</span></div>').join('') + '</div>';
+    const bits = asking +
+                 list((o.adopt || []).filter(l => l.kind !== 'asks'), 'adopt', 'New lights with no home, waiting') +
                  list(o.switch || [], 'switch', 'Lights it has carried before, on WiFi now');
     return bits || '<p class="fx-note">No light is waiting to be adopted. Room for ' + (o.room === undefined ? '?' : o.room) + ' more.</p>';
   }
