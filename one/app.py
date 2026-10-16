@@ -4603,6 +4603,15 @@ def _relay_unit(ip, d):
     probs = _relay_problems(d)
     lights = d.get("lights") or []
     carried = [l for l in lights if l.get("carried")]
+    # Which Companion it is actually on. /status "host" is the address typed
+    # on the Relay's own page, kept but not necessarily in use; compHost is
+    # the one in use, typed or found through a One (Relay 0.136.x). The card
+    # showed the hotel's typed 192.168.2.223 as "live" while the Relay was on
+    # BENCH's 192.168.10.249 (Rob, 2026-10-16). Older firmware without
+    # compHost has only "host", which then was the one in use.
+    typed = str(d.get("host", "") or "")
+    comp_host = str(d.get("compHost", "") or typed)
+    comp_port = d.get("compPort") or d.get("port", 16622)
     guests = []
     for l in carried:
         g = {"id": l.get("id", ""), "mirror": False}
@@ -4614,8 +4623,12 @@ def _relay_unit(ip, d):
             "showing": f"{len(carried)} of {int(d.get('max') or 4)} linked",
             "health_ok": not probs, "health_why": " \u00b7 ".join(probs),
             "upd": False, "primary": True,
-            "relay": {"one": bool(d.get("one")), "state": d.get("state", ""), "host": d.get("host", ""),
-                      "port": d.get("port", 16622), "live": bool(d.get("live")),
+            "relay": {"one": bool(d.get("one")), "state": d.get("state", ""), "host": comp_host,
+                      "port": comp_port, "live": bool(d.get("live")),
+                      "found": bool(d.get("compFound")),
+                      "mine": bool(comp_host) and comp_host == _my_ip_toward(ip),
+                      # the typed address, only when it is not the one in use
+                      "typed": typed if typed and typed != comp_host else "",
                       "ch": d.get("ch", 0), "tune": d.get("tune", ""), "eth": d.get("ethState", ""),
                       "mbps": d.get("ethMbps", 0), "static": bool(d.get("static")),
                       "heard": len(lights), "up": d.get("up", 0), "started": d.get("startedBy", ""),

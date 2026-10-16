@@ -3911,7 +3911,12 @@
           fxRow(u.product === 'Relay' ? 'Lights' : 'Showing', fxEsc(u.showing || '-')) +
           fxRow('Status', '<span class="' + (bad ? 'fx-bad' : 'fx-ok') + '">' + fxEsc(bad ? u.health_why : 'All good') + '</span>') +
           (u.relay ? fxRow('Companion', u.relay.one ? 'Through this One (USB)' : fxEsc(u.relay.host ? u.relay.host + ':' + u.relay.port : 'not set') +
-              (u.relay.live ? ' <span class="fx-ok">live</span>' : u.relay.why ? '<div class="fu-sub">' + fxEsc(u.relay.why) + '</div>' : '')) +
+              // whose Companion it is, in the Relay's own terms: this unit's,
+              // or one it found through another One
+              (u.relay.host && u.relay.mine ? ' <span class="fx-dim">(this One)</span>' : u.relay.host && u.relay.found ? ' <span class="fx-dim">(found)</span>' : '') +
+              (u.relay.live ? ' <span class="fx-ok">live</span>' : u.relay.why ? '<div class="fu-sub">' + fxEsc(u.relay.why) + '</div>' : '') +
+              // the address typed on the Relay's page, kept but not in use
+              (u.relay.typed ? '<div class="fu-sub">Typed on the Relay: ' + fxEsc(u.relay.typed) + ' - kept, not in use</div>' : '')) +
             fxRow('CueLink', 'ch ' + fxEsc(u.relay.ch) + ' · ' + fxEsc(u.relay.tune) + ' · ' + fxEsc(u.relay.heard) + ' heard') +
             fxRow('Ethernet', fxEsc(u.relay.eth) + (u.relay.mbps ? ' · ' + u.relay.mbps + ' Mbps' : '') + ' · ' + (u.relay.static ? 'static' : 'DHCP')) : '') +
           fxRow('Software', 'v' + fxEsc(u.version) + (u.upd ? ' <span class="fx-chip warn">update</span>' : '')) +
