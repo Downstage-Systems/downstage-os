@@ -4627,8 +4627,6 @@ def _relay_unit(ip, d):
                       "port": comp_port, "live": bool(d.get("live")),
                       "found": bool(d.get("compFound")),
                       "mine": bool(comp_host) and comp_host == _my_ip_toward(ip),
-                      # the typed address, only when it is not the one in use
-                      "typed": typed if typed and typed != comp_host else "",
                       "ch": d.get("ch", 0), "tune": d.get("tune", ""), "eth": d.get("ethState", ""),
                       "mbps": d.get("ethMbps", 0), "static": bool(d.get("static")),
                       "heard": len(lights), "up": d.get("up", 0), "started": d.get("startedBy", ""),
