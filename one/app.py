@@ -5104,6 +5104,10 @@ def _fleet_auto():
                 time.sleep(12)   # let the network settle after a join
                 _do_discover(sweep=False)
                 last_sweep = time.time()
+                # Every Relay we have just became wrong about where our
+                # Companion is. Tell them now rather than at their next
+                # five-minute refresh.
+                relay.address_changed(ip)
             elif time.time() - last_sweep > 86400:
                 _do_discover(sweep=False)
                 last_sweep = time.time()

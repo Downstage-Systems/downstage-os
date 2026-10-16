@@ -14,8 +14,10 @@ the Relay: pairing":
 - 409: another One holds it. Its own page offers "Switch to it", which lets
   our next ask through for two minutes - so we keep asking.
 - Every ask also refreshes the Relay's idea of where our Companion and timer
-  feed are, which is why we re-ask after our address changes, not only when
-  unpaired.
+  feed are. Each pairing records the address we handed over as `told`, and
+  every pass compares it against our address toward that Relay: if this unit
+  has moved networks, the Relay is re-told within about five seconds rather
+  than at the next five-minute refresh.
 
 Standard library only, and every network call is short: this runs on its own
 thread and must never be able to hold up a page.
@@ -34,6 +36,8 @@ TIMEOUT = 4.0
 _lock = threading.RLock()
 _seen = {}                # relay id -> what we know right now
 _hooks = {}
+_wake = threading.Event()  # "stop waiting, go round again"
+_force_after = 0.0         # anything told before this moment is out of date
 
 
 def configure(get_config, save_config, my_ip_toward, audit=None):
@@ -44,6 +48,14 @@ def configure(get_config, save_config, my_ip_toward, audit=None):
 
 def _cfg():
     return _hooks["get_config"]() if _hooks else {}
+
+
+def _me_toward(ip):
+    """This unit's address as that Relay sees it, or "" if we cannot say."""
+    try:
+        return _hooks["my_ip_toward"](ip) or ""
+    except Exception:
+        return ""
 
 
 def _paired():
@@ -97,11 +109,7 @@ def pair(ip, rid=""):
     serial = str(cfg.get("serial", "") or "")
     if not serial:
         return {"ok": False, "error": "this unit has no serial yet"}
-    me = ""
-    try:
-        me = _hooks["my_ip_toward"](ip) or ""
-    except Exception:
-        pass
+    me = _me_toward(ip)
     # the name the Relay shows its owner. config has no "hostname" key on a
     # real unit - the operator's label is unit_name - and sending nothing made
     # the Relay fall back to the bare serial (bench, 2026-10-04).
@@ -119,8 +127,11 @@ def pair(ip, rid=""):
     now = time.time()
     if status == 200 and ans.get("ok") and ans.get("token"):
         got = str(ans.get("id") or rid or "")
+        # `told` is the address this Relay is now holding for us. The tick
+        # compares it against our address toward that Relay, which is how a
+        # network change gets noticed without anything having to announce it.
         _remember(got, token=ans["token"], name=ans.get("name", ""), fw=ans.get("fw", ""),
-                  ip=ip, at=now)
+                  ip=ip, at=now, told=me)
         if not known:
             _hooks["audit"]("RELAY_PAIR", f"{got} at {ip}")
         return {"ok": True, "id": got, "name": ans.get("name", ""), "fw": ans.get("fw", ""),
@@ -201,27 +212,77 @@ def state():
     return {"relays": out}
 
 
+def _candidates(paired):
+    """Every Relay worth asking: what mDNS heard, plus anything we hold a
+    token for. A Relay we cannot currently hear is still ours - and after a
+    network change it is exactly the one that needs telling, which is when
+    mDNS is least likely to have caught up (bench, 2026-10-16: the One had
+    not heard its Relay in 38 minutes while the Relay sat there answering)."""
+    out = {}
+    with _lock:
+        for rid, s in _seen.items():
+            if s.get("ip"):
+                out[rid] = dict(s)
+    with _lock:
+        for rid, entry in paired.items():
+            if entry.get("ip") and rid not in out:
+                out[rid] = {**(_seen.get(rid) or {}), "ip": entry["ip"]}
+    return list(out.items())
+
+
 def _tick():
-    """One pass: pair anything unpaired, refresh anything paired and stale."""
+    """One pass: pair anything unpaired, refresh anything paired and stale,
+    and re-tell at once any Relay holding an address we no longer have."""
     now = time.time()
     paired = _paired()
-    with _lock:
-        candidates = [(rid, dict(s)) for rid, s in _seen.items()]
-    for rid, s in candidates:
+    for rid, s in _candidates(paired):
         ip = s.get("ip", "")
         if not ip:
             continue
         entry = paired.get(rid, {})
-        if entry.get("token") and now - float(entry.get("at") or 0) < REFRESH_EVERY:
+        # The whole point: our address toward this Relay, every pass. If it
+        # is not what the Relay was told, it is pointing at a One that is no
+        # longer there and nothing else will correct it for five minutes.
+        mine = _me_toward(ip)
+        moved = bool(entry.get("token")) and mine and mine != entry.get("told", "")
+        at = float(entry.get("at") or 0)
+        if entry.get("token") and not moved and now - at < REFRESH_EVERY and at >= _force_after:
             continue
-        if not entry and now - float(s.get("asked") or 0) < ASK_EVERY:
+        asked = float(s.get("asked") or 0)
+        if not entry and now - asked < ASK_EVERY and asked >= _force_after:
             continue
+        # A Relay that is not answering gets the same patience as an unpaired
+        # one. Without this, a One carrying a token for a Relay left at the
+        # shop would POST at it every five seconds for the length of a show.
+        if entry and not s.get("last_ok") and now - asked < ASK_EVERY and asked >= _force_after:
+            continue
+        if moved:
+            print(f"[relay] {rid} holds {entry.get('told') or 'nothing'}; we are {mine} - telling it now",
+                  flush=True)
         res = pair(ip, rid)
         with _lock:
             cur = _seen.setdefault(rid, {})
             cur["asked"] = now
+            cur["last_ok"] = bool(res.get("ok"))
             cur["taken_by"] = res.get("by") if res.get("taken") else None
             cur["why"] = "" if res.get("ok") else res.get("error", "")
+
+
+def address_changed(ip=""):
+    """This unit has landed somewhere new. Every Relay we know is holding the
+    old address, so drop the refresh timers and go round again now instead of
+    at the next five-minute refresh (Rob, 2026-10-16: "shouldnt the one be
+    able to send the new companion info to the relay")."""
+    global _force_after
+    _force_after = time.time()
+    _wake.set()
+    _hooks.get("audit", lambda *a, **k: None)("RELAY_READDRESS", ip or "")
+
+
+def _tick_soon():
+    """Wait up to five seconds, or until somebody has news."""
+    _wake.wait(5)
+    _wake.clear()
 
 
 def start():
@@ -232,5 +293,5 @@ def start():
                 _tick()
             except Exception as e:
                 print(f"[relay] {e}", flush=True)
-            time.sleep(5)
+            _tick_soon()
     threading.Thread(target=run, daemon=True).start()
