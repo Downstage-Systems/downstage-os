@@ -3936,11 +3936,16 @@
     if (L.enabled === false) {
       link = '<p class="fx-note">CueLink is off on this light.</p><div class="fx-actions left"><button class="fx-btn" onclick="cueLinkCmd(\'' + u.ip + '\',{enabled:true})">Turn CueLink on</button></div>';
     } else if (i.linked || L.waiting) {
+      // a Relay carries lights over CueLink and shares no WiFi, so a light
+      // waiting on one is offered Adopt on the Relay's card, not Send WiFi
+      const viaRelay = ((_fxData && _fxData.units) || []).find(x => x.product === 'Relay' &&
+        ((L.via_ip && x.ip === L.via_ip) || (L.via && x.serial === L.via) || (L.chosen && x.serial === L.chosen)));
       link = '<p class="fx-note">' + (i.linked ? 'Linked through <b>' + fxEsc(fxShort(i.via)) + '</b> ' + fxSignal(cueLinkRssi(u, L.via || i.via)) : 'Waiting for <b>' + fxEsc(fxShort(L.via_name || L.chosen || 'its Cue')) + '</b> to come back.') + '</p>' +
         '<div class="fx-actions left" id="fx-link-btns">' +
-          (i.noIp && L.via_ip ? '<button class="fx-btn" onclick="cueSendWifi(\'' + L.via_ip + '\',\'' + u.serial + '\')" title="Ask its Cue to hand it the network">Send WiFi</button>' : '') +
+          (i.noIp && L.via_ip && !viaRelay ? '<button class="fx-btn" onclick="cueSendWifi(\'' + L.via_ip + '\',\'' + u.serial + '\')" title="Ask its Cue to hand it the network">Send WiFi</button>' : '') +
           '<button class="fx-btn warn" onclick="cueLinkCmd(\'' + (i.noIp ? L.via_ip : u.ip) + '\',' + (i.noIp ? '{release:\'' + u.serial + '\'}' : '{off:true}') +
-            ',\'Unlink ' + q(nm) + '? It goes back to its own connection' + (i.noIp ? ' - it has no WiFi, so it will be dark until it has.' : '.') + '\')">Unlink</button></div>';
+            ',\'Unlink ' + q(nm) + '? It goes back to its own connection' + (i.noIp ? ' - it has no WiFi, so it will be dark until it has.' : '.') + '\')">Unlink</button></div>' +
+        (viaRelay && !i.linked ? '<p class="fx-note fx-dim">A Relay carries it over CueLink, so it needs no WiFi. If the Relay\'s card says it asks to join, tap Adopt there.</p>' : '');
     } else {
       link = (i.carried ? '<p class="fx-note">Carrying <b>' + i.carried + '</b> light' + (i.carried > 1 ? 's' : '') + ' over CueLink' +
             (+L.max > 1 ? (i.carried >= +L.max ? ' - <b>full</b>, it takes no more' : ', room for ' + (L.max - i.carried) + ' more') : '') + ':</p>' +

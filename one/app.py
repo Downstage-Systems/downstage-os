@@ -4364,10 +4364,22 @@ def fleet_cue_send_wifi():
     the Cue, the Cue pushes to the light over CueLink."""
     b = request.get_json(silent=True) or {}
     ip, light = str(b.get("ip", "")), str(b.get("id", ""))
+    if _is_relay_ip(ip):
+        # A Relay has no /link and no WiFi share: it carries its lights over
+        # CueLink, so they need no network of their own. Asking it anyway got
+        # its 404 page parsed as JSON - "Expecting value: line 1 column 1"
+        # (Rob, 2026-10-16, a round Cue asking to join BAE4).
+        return jsonify({"ok": False, "error": "its carrier is a Relay, which carries lights over CueLink - "
+                                              "they need no WiFi. Adopt it on the Relay's card instead."})
     try:
         requests.post(f"http://{ip}/link", data={"sharewith": light}, timeout=4, headers=_box_headers())
         time.sleep(4)   # the exchange takes a second or two; say how it went
-        res = requests.get(f"http://{ip}/link", timeout=3, headers=_box_headers()).json().get("shareResult", "")
+        r = requests.get(f"http://{ip}/link", timeout=3, headers=_box_headers())
+        try:
+            res = str((r.json() or {}).get("shareResult", ""))
+        except ValueError:
+            # not a Cue's answer: say who refused and how, not a parser error
+            return jsonify({"ok": False, "error": _box_refusal(r, "its Cue") or f"its Cue answered {r.status_code}, not a share result"})
         return jsonify({"ok": res.startswith("shared"), "result": res})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)})
