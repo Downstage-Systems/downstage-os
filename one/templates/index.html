@@ -3794,10 +3794,17 @@
           '\',\'job\',{undo:true},\'undoing\')">Undo</button></div>');
     }
     if (!o.live) return '<p class="fx-note">The Relay is not on a live Companion, so nothing can be adopted yet.</p>';
+    // Where the Relay found it (Relay 0.136.0). Heard on its channel: signal
+    // bars. Found on its wire instead ("via":"lan", rssi null): there is no
+    // signal to draw, so say where it is. A light that wants the rig token
+    // says so up front rather than failing the adopt with a refusal.
+    const where = l => (l.via === 'lan' ? fxChip('on your network', 'link') : fxSignal(l.rssi)) +
+      (l.needs ? '<span title="This light has a control token set. The Relay needs the matching rig token to adopt it.">' +
+        fxChip('needs ' + l.needs, 'warn') + '</span>' : '');
     const list = (arr, kind, verb) => !arr.length ? '' :
       '<p class="fx-note">' + fxEsc(verb) + ':</p><div class="fx-carried">' +
       arr.map(l => '<div class="fx-carried-row"><span>' + fxEsc(l.name || (l.model + ' ' + l.id.slice(-4))) +
-        '</span>' + fxSignal(l.rssi) + '</div>').join('') + '</div>' +
+        '</span>' + where(l) + '</div>').join('') + '</div>' +
       '<div class="fx-actions left"><button class="fx-btn primary" onclick="relayAct(\'' + u.ip + '\',\'' +
         kind + '\',{ids:' + JSON.stringify(arr.map(l => l.id)) + '},\'' + kind + 'ing\')">' +
         (kind === 'adopt' ? 'Adopt ' : 'Switch ') + arr.length + '</button></div>';
