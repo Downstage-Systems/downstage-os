@@ -4359,6 +4359,10 @@ def fleet_cue_link():
         _audit("CUE_LINK", f"{ip} {data}")
         return jsonify({"ok": True, "relayed": d.get("relayed"), "enabled": d.get("enabled")})
     except Exception as e:
+        # logged too: a release can land on the carrier and the read-back
+        # after it still fail, and an unexplained release on 2026-10-17 had
+        # to be ruled out of this path by reasoning instead of by the log
+        _audit("CUE_LINK", f"{ip} {data} failed: {str(e)[:80]}")
         return jsonify({"ok": False, "error": str(e)})
 
 
