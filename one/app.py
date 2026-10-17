@@ -4087,15 +4087,10 @@ def fleet_relay_light():
                      "release", "follow", "tally", "color", "pattern", "clear")}
     if not body:
         return jsonify({"ok": False, "error": "nothing to set"}), 400
-    n = b.get("n")
-    if n is None:
-        n = _relay_cue_n(ip, light) if light else None
-        if n is None and light:
-            n = _relay_cue_n(ip, light, fresh=True)
-    if n is None:
-        return jsonify({"ok": False, "error": "that Relay is not carrying it"}), 409
-    status, ans = _relay_api(ip, f"cue/{n}", body, "POST")
-    _audit("RELAY_LIGHT", f"{ip} cue {n} {json.dumps(body)[:80]} -> {status}")
+    if not light and b.get("n") is None:
+        return jsonify({"ok": False, "error": "which light"}), 400
+    status, ans, n = _relay_cue_post(ip, light, body, b.get("n"))
+    _audit("RELAY_LIGHT", f"{ip} {light or 'cue ' + str(n)} {json.dumps(body)[:80]} -> {status}")
     if status == 200 and body.get("number"):
         _relay_cue_cache.pop(ip, None)      # its number moved; the map is stale
     return jsonify({"ok": status == 200 and ans.get("ok", True), "status": status, **ans})
@@ -4236,6 +4231,30 @@ def _relay_cue_n(ip, light_id, fresh=False):
     return table.get(str(light_id))
 
 
+def _relay_cue_post(ip, light, body, n=None):
+    """One carried light's change, sent to its Relay. Returns (status, answer, n).
+
+    By id where the Relay knows that path (0.136.22: /api/v1/cue/<id> acts on
+    that light alone). By number, /api/v1/cue/<n> reaches every carried light
+    on that number, and two can share one. A Relay older than that answers
+    the id path with an error that does not name the light, and then the
+    number is used as before. The Relay's own id-specific refusals ("no light
+    <id> here", "<id> is not carried here") name it and are passed through."""
+    if light:
+        status, ans = _relay_api(ip, f"cue/{light}", body, "POST")
+        older = status in (400, 404) and light not in str(ans.get("error", ""))
+        if not older:
+            return status, ans, ans.get("n")
+    if n is None and light:
+        n = _relay_cue_n(ip, light)
+        if n is None:
+            n = _relay_cue_n(ip, light, fresh=True)      # a light that has just arrived
+    if n is None:
+        return 409, {"ok": False, "error": "that Relay is not carrying it"}, None
+    status, ans = _relay_api(ip, f"cue/{n}", body, "POST")
+    return status, ans, n
+
+
 def _relay_link_post(ip, data):
     """A Cue-style CueLink command, said the way a Relay understands it: its
     page posts /cmd with one JSON object. Sending /link to a Relay is what
@@ -4255,12 +4274,7 @@ def _relay_link_post(ip, data):
     elif "release" in data:
         body = {"release": True}
     if body is not None:
-        n = _relay_cue_n(ip, light)
-        if n is None:
-            n = _relay_cue_n(ip, light, fresh=True)      # a light that has just arrived
-        if n is None:
-            raise ValueError(f"the Relay is not carrying {light}")
-        status, ans = _relay_api(ip, f"cue/{n}", body, "POST")
+        status, ans, n = _relay_cue_post(ip, light, body)
         if status in (401, 403):
             raise PermissionError(ans.get("error") or "the Relay refused that")
         if status != 200 or not ans.get("ok", True):
