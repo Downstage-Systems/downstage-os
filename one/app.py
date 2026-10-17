@@ -4238,11 +4238,16 @@ def _relay_cue_post(ip, light, body, n=None):
     that light alone). By number, /api/v1/cue/<n> reaches every carried light
     on that number, and two can share one. A Relay older than that answers
     the id path with an error that does not name the light, and then the
-    number is used as before. The Relay's own id-specific refusals ("no light
-    <id> here", "<id> is not carried here") name it and are passed through."""
+    number is used as before - and only then. Once a light is picked, the id
+    path answers exactly like the number path (a 400 for a bad field, a 401
+    for the token), and repeating those by number would only repeat them
+    (Cue Coding, 2026-10-17). So the fallback is for the two answers that
+    mean "no such path": the Relay's JSON 404 "no such route on this Relay"
+    (0.136.5+), or a 404 that is not JSON at all (older)."""
     if light:
         status, ans = _relay_api(ip, f"cue/{light}", body, "POST")
-        older = status in (400, 404) and light not in str(ans.get("error", ""))
+        older = status == 404 and str(ans.get("error", "")) in ("no such route on this Relay",
+                                                               "the Relay answered 404")
         if not older:
             return status, ans, ans.get("n")
     if n is None and light:
