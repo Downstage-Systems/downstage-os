@@ -4653,6 +4653,15 @@ def _relay_problems(d):
     return probs
 
 
+def _setting_of(settings, key):
+    """One value out of a Relay's "a=1;b=2" settings line, or ""."""
+    for part in str(settings or "").split(";"):
+        k, _, v = part.partition("=")
+        if k == key:
+            return v
+    return ""
+
+
 def _relay_unit(ip, d):
     probs = _relay_problems(d)
     lights = d.get("lights") or []
@@ -4692,7 +4701,14 @@ def _relay_unit(ip, d):
             "cue": {"link": {"guests": guests, "max": int(d.get("max") or 4), "channel": d.get("ch", 0),
                              "nearby": [{"id": l.get("id", ""), "label": l.get("label", ""),
                                          "model": l.get("model", ""), "face": int(l.get("rank") or 0) >= 2,
-                                         "carrier": False, "rssi": l.get("rssi")} for l in lights]}}}
+                                         "carrier": False, "rssi": l.get("rssi"),
+                                         # what the Relay knows of a light it
+                                         # carries: the light has no WiFi to
+                                         # be asked itself (2026-10-17)
+                                         "cue": l.get("cue"), "color": l.get("color", ""),
+                                         "cam": _setting_of(l.get("settings", ""), "cam"),
+                                         "carried": bool(l.get("carried")),
+                                         "fw": _setting_of(l.get("settings", ""), "fw")} for l in lights]}}}
 
 
 _RELAY_WATCH = {}    # serial -> {"name", "ip", "ok", "why", "misses", "up", "restarted_at", "seen"}
@@ -4859,13 +4875,19 @@ def _add_carried_cues(units, prev=None):
                 continue
             n = near.get(gid, {})
             mirror = bool(g.get("mirror", True))
+            # A Relay says what each carried light shows and which camera it
+            # follows; a Cue carrier does not, and its guests mirror it.
+            # Without this, the 1.75 a Relay carried drew dark, with no camera
+            # and no version on the One (Rob, 2026-10-17).
+            cam = str(n.get("cam", "") or "")   # the camera it follows, not its Cue number
             extra.append({"ip": "", "last_ip": last_ip.get(gid, ""), "serial": gid, "product": "Cue",
                           "model": _cue_model(n.get("model", "")),
-                          "version": "", "kind": "", "name": n.get("label", ""),
-                          "showing": u.get("showing", "") if mirror else "",
+                          "version": n.get("fw", ""), "kind": "", "name": n.get("label", ""),
+                          "showing": n.get("color") or (u.get("showing", "") if mirror else ""),
                           "health_ok": True, "health_why": "", "upd": False,
                           # the button it follows as its own key, as its Cue says (both 0.80+)
-                          "cue": {"camera": -1, "follow": g.get("follow"),
+                          "cue": {"camera": int(cam) if cam.isdigit() else -1,
+                                  "follow": g.get("follow"),
                                   "link": {"relayed": True, "via": u["serial"],
                                                           "via_name": names.get(u["serial"], u["serial"]),
                                                           "via_ip": u.get("ip", ""),

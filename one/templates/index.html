@@ -3865,21 +3865,47 @@
     const r = (_fxRelay && _fxRelay.ip === u.ip) ? _fxRelay : null;
     if (!r) { relayLoad(u.ip); return '<div class="fx-sec"><p class="fx-note">Asking the Relay\u2026</p></div>'; }
     if (_fxRelayBusy) return '<div class="fx-sec"><p class="fx-note">' + fxEsc(_fxRelayBusy) + '\u2026</p></div>';
+    // fxSheet's own q is not in scope here: relayBlock is its sibling, and
+    // calling q threw "q is not defined" the moment the Relay listed a light,
+    // leaving the card stuck on what it showed before (2026-10-17)
+    const q = s => String(s).replace(/'/g, '');
     const cues = r.cues || [];
+    // /api/v1/cues lists the lights it carries now AND the ones it remembers
+    // from before (carrier null, offline). Only the first are "it carries";
+    // listing both together put two "1 ·" rows on Rob's card (2026-10-17).
+    const mine = cues.filter(c => c.carrier && c.carrier === u.serial);
+    const kept = cues.filter(c => !(c.carrier && c.carrier === u.serial));
+    // Two lights on one number: everything but ID reaches a light by its
+    // number (POST /api/v1/cue/{n}), so a tap could land on the other one.
+    // Hold those until one is renumbered, and say with which.
+    const twins = c => cues.filter(x => c.n && x.n === c.n && x.id !== c.id);
+    const nm = c => c.name || fxShort(c.id);
+    const lightRow = c => {
+      const tw = twins(c);
+      const by = (what, title, label, extra) => '<button class="fleet-btn' + (what === 'release' ? ' warn' : '') +
+        '" onclick="relayLight(\'' + u.ip + '\',' + c.n + ',\'' + what + '\',\'' + q(nm(c)) + '\'' + (extra || '') + ')" title="' + title + '">' + label + '</button>';
+      return '<div class="fx-carried-row"><span>' + fxEsc((c.n ? c.n + ' · ' : '') + nm(c)) + '</span>' +
+        fxSignal(c.level) + (c.online ? '' : fxChip('not heard', 'bad')) +
+        (c.talent ? fxChip('Talent', 'tal') : '') +
+        (tw.length ? '<span title="Renumber one of them on the Relay\'s page. Until then only ID is safe here.">' +
+          fxChip('number ' + c.n + ' is also ' + tw.map(nm).join(', '), 'warn') + '</span>' : '') +
+        '<span class="fx-btns-tight">' +
+          '<button class="fleet-btn" onclick="relayAct(\'' + u.ip + '\',\'identify\',{id:\'' + c.id + '\'},\'\')" title="Blink this light">ID</button>' +
+          (tw.length ? '' :
+            by('number', 'The Cue number it answers to', 'No.') +
+            by('text', 'Words on its face', 'Words') +
+            by('brightness', 'How bright it is', 'Bright') +
+            by('talent', 'Talent mode', c.talent ? 'Talent off' : 'Talent', ',' + !!c.talent) +
+            by('release', 'Let it go', 'Release')) +
+        '</span></div>';
+    };
     return '<div class="fx-sec"><div class="fx-sec-label">Lights it carries</div>' +
-        (cues.length ? '<div class="fx-carried">' + cues.map(c =>
-          '<div class="fx-carried-row"><span>' + fxEsc((c.n ? c.n + ' \u00b7 ' : '') + (c.name || fxShort(c.id))) + '</span>' +
-          fxSignal(c.level) + (c.online ? '' : fxChip('not heard', 'bad')) +
-          (c.talent ? fxChip('Talent', 'tal') : '') +
-          '<span class="fx-btns-tight">' +
-            '<button class="fleet-btn" onclick="relayAct(\'' + u.ip + '\',\'identify\',{id:\'' + c.id + '\'},\'\')" title="Blink this light">ID</button>' +
-            '<button class="fleet-btn" onclick="relayLight(\'' + u.ip + '\',' + c.n + ',\'number\',\'' + q(c.name || c.id) + '\')" title="The Cue number it answers to">No.</button>' +
-            '<button class="fleet-btn" onclick="relayLight(\'' + u.ip + '\',' + c.n + ',\'text\',\'' + q(c.name || c.id) + '\')" title="Words on its face">Words</button>' +
-            '<button class="fleet-btn" onclick="relayLight(\'' + u.ip + '\',' + c.n + ',\'brightness\',\'' + q(c.name || c.id) + '\')" title="How bright it is">Bright</button>' +
-            '<button class="fleet-btn" onclick="relayLight(\'' + u.ip + '\',' + c.n + ',\'talent\',\'' + q(c.name || c.id) + '\',' + !!c.talent + ')" title="Talent mode">' + (c.talent ? 'Talent off' : 'Talent') + '</button>' +
-            '<button class="fleet-btn warn" onclick="relayLight(\'' + u.ip + '\',' + c.n + ',\'release\',\'' + q(c.name || c.id) + '\')" title="Let it go">Release</button>' +
-          '</span></div>').join('') + '</div>'
-         : '<p class="fx-note">It is carrying no lights.</p>') +
+        (mine.length ? '<div class="fx-carried">' + mine.map(lightRow).join('') + '</div>'
+                     : '<p class="fx-note">It is carrying no lights.</p>') +
+        (kept.length ? '<p class="fx-note fx-dim">Remembered, not linked now:</p><div class="fx-carried">' + kept.map(c =>
+          '<div class="fx-carried-row"><span class="fx-dim">' + fxEsc((c.n ? c.n + ' · ' : '') + nm(c)) + '</span>' +
+          (twins(c).some(x => x.carrier === u.serial) ? fxChip('same number as a light it carries', 'warn') : '') +
+          '</div>').join('') + '</div>' : '') +
       '</div>' +
       '<div class="fx-sec"><div class="fx-sec-label">Adopt and switch</div>' + relayOffers(u, r) + '</div>' +
       '<div class="fx-sec"><div class="fx-sec-label">Check the rig</div>' + relayCheckBlock(u, r) + '</div>';
