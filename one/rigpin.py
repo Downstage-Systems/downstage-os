@@ -72,7 +72,11 @@ def pin():
 
 
 def is_set():
-    return bool(pin())
+    """A rig PIN, set through Secure, this page, or a Relay. An old "rig token"
+    typed before the PIN existed (no epoch) is only what this unit sends its
+    boxes: it must not quietly lock the One on the update that brings the PIN
+    (0001, 2026-10-18)."""
+    return bool(pin()) and "rig_pin_epoch" in _cfg()
 
 
 def valid_new(p):
