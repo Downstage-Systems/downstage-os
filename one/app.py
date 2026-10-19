@@ -3084,6 +3084,12 @@ def updates_recheck():
 _OS_VARIANT = "one"
 _OS_APPDIR  = str(BASE_DIR)
 
+# Every top-level module is copied, not only app.py (2026-10-18). Before, a
+# release that added a module (mdns.py, relay.py, rigpin.py...) put an app.py
+# on the unit that could not import it: the unit failed to start and rolled
+# back a minute later, so every such release silently failed to install. The
+# fix only helps once a unit runs it: a unit on an older app.py still runs its
+# own older copy of this script for its next update.
 _SWAP_SCRIPT = """#!/bin/bash
 SRC="{src}"
 APP="{app}"
@@ -3091,10 +3097,10 @@ BK="$APP/.backup"
 LOG="$APP/.update-result"
 sleep 2
 rm -rf "$BK"; mkdir -p "$BK"
-cp    "$APP/app.py"    "$BK/" 2>/dev/null
+cp    "$APP"/*.py      "$BK/" 2>/dev/null
 cp -r "$APP/templates" "$BK/" 2>/dev/null
 cp -r "$APP/static"    "$BK/" 2>/dev/null
-cp    "$SRC/app.py"    "$APP/app.py"
+cp    "$SRC"/*.py      "$APP/"
 [ -d "$SRC/templates" ] && cp -r "$SRC/templates/." "$APP/templates/"
 [ -d "$SRC/static" ]    && cp -r "$SRC/static/."    "$APP/static/"
 {restart}
@@ -3102,7 +3108,7 @@ for i in $(seq 1 12); do
   sleep 5
   curl -s -m 3 http://127.0.0.1:8080/status > /dev/null && {{ echo "ok {tag} $(date -Is)" > "$LOG"; exit 0; }}
 done
-cp    "$BK/app.py"    "$APP/app.py"
+cp    "$BK"/*.py      "$APP/"
 cp -r "$BK/templates/." "$APP/templates/" 2>/dev/null
 cp -r "$BK/static/."    "$APP/static/"    2>/dev/null
 {restart}
@@ -3154,7 +3160,9 @@ def os_update():
             return jsonify({"ok": False, "message": f"Release has no {_OS_VARIANT}/app.py"})
 
         # refuse to install code that won't even parse
-        py_compile.compile(str(src_dir / "app.py"), doraise=True)
+        # every module, not only app.py: app.py imports its neighbours
+        for f in sorted(src_dir.glob("*.py")):
+            py_compile.compile(str(f), doraise=True)
         if not (src_dir / "templates" / "index.html").exists():
             return jsonify({"ok": False, "message": "Release is missing templates/index.html"})
 
@@ -3208,7 +3216,9 @@ def os_update_file():
         if not src_dir:
             return jsonify({"ok": False,
                             "message": f"Not a Downstage OS release - the archive has no {_OS_VARIANT}/app.py"})
-        py_compile.compile(str(src_dir / "app.py"), doraise=True)
+        # every module, not only app.py: app.py imports its neighbours
+        for f in sorted(src_dir.glob("*.py")):
+            py_compile.compile(str(f), doraise=True)
         if not (src_dir / "templates" / "index.html").exists():
             return jsonify({"ok": False, "message": "Archive is missing templates/index.html"})
         m = re.search(r'OS_VERSION = "([^"]+)"', (src_dir / "app.py").read_text())
