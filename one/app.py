@@ -7092,14 +7092,41 @@ def _hotspot_has_clients():
         return False
 
 
-def _try_saved_wifi():
-    """Ask NM to bring up each saved WiFi profile; True on first success."""
-    for name in _saved_wifi_profiles():
-        if name in _portal_blocked_ssids:
-            continue
+def _wifi_try_order(visible=None):
+    """Which saved networks to try, in order. Rob, 2026-10-19, for every
+    device: "try to connect to the last wifi network. then if it doesnt work,
+    proceed to the other saved networks, and finally failback to hotspot mode."
+
+    The network last joined goes first, even when the scan did not see it (a
+    hidden SSID never shows in a scan). Then the other saved networks the
+    scan can hear, strongest first. Saved networks nobody can hear are not
+    tried: at a new venue they would only add minutes before the hotspot
+    (the lights do the same, in range first)."""
+    saved = [name for name, _ in _saved_wifi() if name not in _portal_blocked_ssids]
+    if not saved:
+        return []
+    if visible is None:
         try:
-            r = subprocess.run(["sudo", "nmcli", "connection", "up", name],
-                               capture_output=True, text=True, timeout=75)
+            _, visible = _scan_wifi()
+        except Exception:
+            visible = []
+    strength = {}
+    for n in visible or []:
+        k = str(n.get("ssid", "")).lower()
+        strength[k] = max(strength.get(k, 0), int(n.get("signal") or 0))   # a mesh: its strongest AP
+    others = [x for x in saved[1:] if x.lower() in strength]
+    others.sort(key=lambda x: -strength[x.lower()])
+    return [saved[0]] + others
+
+
+def _try_saved_wifi(visible=None):
+    """Bring up saved WiFi in _wifi_try_order: True on the first that joins.
+    20 s each, as the lights give each network (was up to 75 s)."""
+    for name in _wifi_try_order(visible):
+        try:
+            print(f"[wifi] trying {name}")
+            r = subprocess.run(["sudo", "nmcli", "--wait", "20", "connection", "up", name],
+                               capture_output=True, text=True, timeout=30)
             if r.returncode == 0:
                 print(f"[hotspot] rejoined WiFi: {name}")
                 return True
@@ -7180,10 +7207,11 @@ def _hotspot_fallback_inner(grace):
                 return
         saved = _saved_wifi_profiles()
         if saved:
-            # Only spend time retrying WiFi that is ACTUALLY in range (the
-            # radio-missed-first-association case). At a fresh venue none of
-            # the saved networks are present, so we skip straight to the
-            # hotspot instead of hunting for absent home networks for minutes.
+            # The last network joined is always tried once, heard or not (a
+            # hidden SSID never shows in a scan); the other saved networks
+            # only when the scan hears them, strongest first. At a fresh venue
+            # that is one 20 s try, then the hotspot - not minutes of hunting
+            # for absent home networks.
             try:
                 _, visible = _scan_wifi()
                 # NB: saved entries are NM connection NAMES - this match works
@@ -7191,16 +7219,15 @@ def _hotspot_fallback_inner(grace):
                 in_range = ({n["ssid"].lower() for n in visible}
                             & {x.lower() for x in saved})
             except Exception:
-                in_range = set()
-            if in_range:
-                for attempt in range(2):
-                    print(f"[hotspot] saved WiFi in range -- joining ({attempt + 1}/2)")
-                    if _try_saved_wifi():
-                        return
-                    time.sleep(10)
-                    if get_network_info()["ip"] != "unknown":
-                        return
-            else:
+                visible, in_range = [], set()
+            for attempt in range(2 if in_range else 1):
+                print(f"[hotspot] trying saved WiFi, last joined first ({attempt + 1}/{2 if in_range else 1})")
+                if _try_saved_wifi(visible):
+                    return
+                time.sleep(10)
+                if get_network_info()["ip"] != "unknown":
+                    return
+            if not in_range:
                 print("[hotspot] no saved network in range -- hotspot now")
         print("[hotspot] no network found -- starting fallback hotspot")
         ok, msg = start_hotspot()
