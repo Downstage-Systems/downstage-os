@@ -1,3 +1,4 @@
+import hashlib
 import json
 import os
 import re
@@ -17,6 +18,7 @@ from flask import Flask, jsonify, render_template, request, send_file, Response
 import cue_ble   # BLE onboarding for Cue lights; degrades to a no-op without bluetooth
 import mdns      # asking the network who is there, instead of sweeping it
 import relay     # pairing with Cue Relays, and holding the token each gives back
+import rigpin    # the rig PIN: the lock, known devices, strangers slowed
 import companion_grid   # a live picture of a Companion page, for choosing a light's button
 import cue_radio   # a USB CueLink radio (listen-only ESP32-S3), when one is plugged in
 
@@ -1302,7 +1304,9 @@ def _open_window(source, display, hdmi_index):
         return subprocess.Popen([
             "chromium", *_COMMON_FLAGS,
             profile, pos, size,
-            "--app=http://localhost:8080",
+            # the key that makes this window the unit's console (rigpin):
+            # made at each start, known only to this process and this window
+            f"--app=http://localhost:8080/?console={rigpin.console_key()}",
             "--start-maximized",
         ], env=_chromium_env(hdmi_index))
 
@@ -4054,13 +4058,258 @@ def _box_refusal(r, who=""):
         return ""
     name = who or "that box"
     if r.status_code == 401:
-        # two different secrets, named apart on purpose (R&D, 2026-10-05): the
-        # CONTROL token is what a box asks for, the RIG token is what this unit
-        # sends. An owner sets the same string as both.
-        return f"{name} refused this unit's rig token - check it matches that box's control token"
+        # one PIN for the rig now, named "the rig PIN" wherever an owner reads
+        # it (Rob, 2026-10-18)
+        return f"{name} refused this unit's rig PIN - check it is the same PIN as on {name}"
     if r.status_code == 403:
-        return f"set a control token on {name}'s own page, then put the same one in this unit's rig token"
+        return f"{name} has a rig PIN: enter the same rig PIN on this unit"
+    if r.status_code == 429:
+        # a box slowing us for wrong PINs: its own words, and never a retry
+        # before it says (docs/control-token.md, "The lockout on the wire")
+        try:
+            said = str((r.json() or {}).get("error", "") or "")
+        except Exception:
+            said = ""
+        return said or f"{name} is slowing this unit for wrong rig PINs: try again in {r.headers.get('Retry-After', '30')} s"
     return ""
+
+
+# -- the rig PIN (rigpin.py; Cue repo docs/control-token.md) ----------------
+
+# Rob, FINAL 2026-10-18: six digits; no slowing, no lockout.
+# What the rig PIN locks once one is set: restart, power, network, blackout,
+# looks and sources, plus what is the same kind of thing (an update or an
+# install restarts something; Identify, test card, swap, resync, desktop and
+# OnTime's mode all change what the outputs show; the unit's name is on the
+# Relay's gated list too). The timer, tally and the pages stay open.
+_RIG_LOCKED = {
+    "/system/restart", "/system/shutdown", "/system/factory-reset", "/displays/power",
+    "/system/patches/apply", "/system/set-time", "/system/timezone",
+    "/os/update", "/os/update-file",
+    "/companion/install", "/companion/start", "/companion/stop", "/companion/restart",
+    "/companion/update", "/companion/revert", "/companion/set-channel",
+    "/ontime/install", "/ontime/start", "/ontime/stop", "/ontime/update", "/ontime/revert",
+    "/satellite/install", "/satellite/mode", "/satellite/restart",
+    "/network/apply", "/wifi/connect", "/wifi/disconnect", "/wifi/forget",
+    "/hotspot/start", "/hotspot/stop",
+    "/blackout", "/blackout/clear",
+    "/presets/apply", "/presets/save", "/presets/delete",
+    "/displays/source", "/displays/swap", "/displays/testcard", "/displays/identify",
+    "/displays/resync", "/save", "/mode", "/reset", "/desktop", "/refresh",
+    "/unit-name", "/fleet/relay/unpair",
+}
+
+_my_ips_cache = [0.0, []]
+
+
+def _my_ips():
+    """This unit's own addresses: a request from one of them is this unit."""
+    if time.time() - _my_ips_cache[0] > 10:
+        try:
+            ips = subprocess.run(["hostname", "-I"], capture_output=True, text=True,
+                                 timeout=3).stdout.split()
+        except Exception:
+            ips = []
+        _my_ips_cache[:] = [time.time(), ips]
+    return _my_ips_cache[1]
+
+
+def _rig_who():
+    return (request.remote_addr, request.headers.get("Authorization", ""),
+            request.cookies.get(rigpin.COOKIE, ""), request.headers.get("X-Console-Key", ""))
+
+
+def _rig_refuse(status, body, headers=None):
+    resp = jsonify(body)
+    resp.status_code = status
+    for k, v in (headers or {}).items():
+        resp.headers[k] = v
+    return resp
+
+
+def _with_pass(resp):
+    """This browser knows the PIN now: give it the pass, so it is a known
+    device (never slowed, may reveal). HttpOnly: no page script reads it;
+    SameSite=Strict: no other site's page can make it ride along."""
+    if rigpin.is_set():
+        resp.set_cookie(rigpin.COOKIE, rigpin.pass_cookie(), max_age=rigpin.COOKIE_MAX_AGE,
+                        httponly=True, samesite="Strict", path="/")
+    else:
+        resp.delete_cookie(rigpin.COOKIE, path="/")
+    return resp
+
+
+def _rig_may_manage():
+    """Change or clear the PIN: the console, a known browser, or the PIN
+    itself sent along. Unlike the show actions, being this unit is not
+    enough: Companion runs here too, and its admin page is open."""
+    remote, auth, cookie, ck = _rig_who()
+    if rigpin.known(remote, cookie, ck):
+        return True, 200, {}, {}
+    presented = auth[7:].strip() if auth[:7].lower() == "bearer " else ""
+    if not presented:
+        return False, 401, {"ok": False, "error": "this rig has a PIN: enter it to do that",
+                            "needs": rigpin.NEEDS}, {}
+    status, body = rigpin.try_pin(presented)
+    return status == 200, status, body, {}
+
+
+def _pin_print(p):
+    return hashlib.sha256(("downstage rig pin:" + str(p)).encode()).hexdigest()[:16]
+
+
+def _take_relay_pin(p, rid, name):
+    """A secured Relay's PIN is this unit's PIN (one tap secures the rig),
+    unless it is the very PIN this unit was told to forget: a Relay that was
+    away when the rig was cleared must not lock the One again with it."""
+    if (load_config().get("rig_pin_ignore") or {}).get(rid) == _pin_print(p):
+        return
+    if rigpin.pin() != p:
+        rigpin.set_pin(p, f"from Relay {name or rid}")
+        save_config({"rig_pin_from": name or rid})
+
+
+def _relay_secure(ip, token, on, pin=""):
+    """POST the Relay's own Secure / Unsecure (0.137: /secure, on=1 makes a
+    PIN, on=0 asks for it). Returns (status, answer)."""
+    try:
+        r = requests.post(f"http://{ip}/secure", data={"on": "1" if on else "0"}, timeout=6,
+                          headers={"Authorization": f"Bearer {pin or token}", "X-Downstage-One": "1"})
+        try:
+            return r.status_code, r.json()
+        except ValueError:
+            return r.status_code, {"ok": r.ok, "error": (r.text or "").strip()[:160]}
+    except Exception:
+        return 0, {"ok": False, "error": f"no answer from the Relay at {ip}"}
+
+
+def _rig_clear_all(why):
+    """Open the rig from this unit: unsecure each Relay that holds the PIN
+    (this unit still knows it, so it can ask), then clear this unit's own.
+    A Relay that cannot be reached keeps its PIN; this unit remembers to
+    ignore that PIN, so the Relay coming back does not lock it again."""
+    p, cfg = rigpin.pin(), load_config()
+    ignore, said = dict(cfg.get("rig_pin_ignore") or {}), []
+    for rid, ip, tok in relay.secured_relays():
+        status, ans = _relay_secure(ip, tok, False, pin=p)
+        if status == 200:
+            relay.mark(rid, secured=False, opened=False)
+            said.append(f"{rid}: opened")
+        else:
+            ignore[rid] = _pin_print(p)
+            said.append(f"{rid}: not reached ({ans.get('error') or status}), it keeps its PIN")
+    rigpin.set_pin("", why)
+    save_config({"rig_pin_from": "", "rig_pin_ignore": ignore})
+    return _with_pass(jsonify({"ok": True, "set": False, "relays": said}))
+
+
+@app.before_request
+def _rig_pin_gate():
+    """Nothing here until a rig PIN is set. Then the locked actions ask."""
+    if request.method != "POST" or request.path not in _RIG_LOCKED or not rigpin.is_set():
+        return None
+    ok, status, body = rigpin.check(*_rig_who())
+    return None if ok else _rig_refuse(status, body)
+
+
+@app.route("/rig/state")
+def rig_state():
+    """What this browser may know about the rig PIN. Never the PIN itself."""
+    remote, auth, cookie, ck = _rig_who()
+    cfg = load_config()
+    relays = [{"id": r["id"], "name": r.get("name", ""), "secured": r.get("secured", False),
+               "opened": r.get("opened", False), "needsPin": r.get("needs_pin", False)}
+              for r in relay.state().get("relays", []) if r.get("paired") or r.get("needs_pin")]
+    hs = hotspot_is_active()
+    return jsonify({"ok": True, "set": rigpin.is_set(),
+                    "known": rigpin.is_set() and rigpin.known(remote, cookie, ck),
+                    "console": rigpin.is_console(remote, ck),
+                    "hotspot": rigpin.on_hotspot(remote, hs),
+                    "from": cfg.get("rig_pin_from", ""),
+                    "relays": relays, "forgotten": rigpin.FORGOTTEN, "relayLine": rigpin.RELAY_LINE})
+
+
+@app.route("/rig/unlock", methods=["POST"])
+def rig_unlock():
+    """A browser types the PIN once and becomes a known device."""
+    if not rigpin.is_set():
+        return jsonify({"ok": False, "error": "this rig has no PIN"}), 404
+    remote, auth, cookie, ck = _rig_who()
+    typed = str((request.get_json(silent=True) or {}).get("pin", "") or "").strip()
+    status, body = rigpin.try_pin(typed)
+    resp = _rig_refuse(status, body)
+    return _with_pass(resp) if status == 200 else resp
+
+
+@app.route("/rig/reveal", methods=["POST"])
+def rig_reveal():
+    """The PIN, to a known device or the console, on its own request: never
+    in /status or any other answer (docs/control-token.md, "Decided")."""
+    if not rigpin.is_set():
+        return jsonify({"ok": False, "error": "this rig has no PIN"}), 404
+    remote, auth, cookie, ck = _rig_who()
+    if not rigpin.known(remote, cookie, ck):
+        return jsonify({"ok": False, "error": rigpin.FORGOTTEN}), 403
+    _audit("RIG_PIN_REVEAL", remote)
+    resp = jsonify({"ok": True, "pin": rigpin.pin()})
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
+@app.route("/rig/clear", methods=["POST"])
+def rig_clear():
+    """A forgotten PIN: hands on the unit only, never the venue network.
+    Its own screen, or a browser on its own hotspot (password on the unit).
+    A device that still knows the PIN may clear it too."""
+    if not rigpin.is_set():
+        return jsonify({"ok": True, "set": False})
+    remote, auth, cookie, ck = _rig_who()
+    if not (rigpin.is_console(remote, ck) or rigpin.on_hotspot(remote, hotspot_is_active())):
+        ok, status, body, headers = _rig_may_manage()
+        if not ok:
+            if status == 401 and not auth:
+                body = dict(body, error="Clearing a forgotten rig PIN needs hands on this unit: its own "
+                                        "screen, or its hotspot (the name and password are printed on it).")
+            return _rig_refuse(status, body, headers)
+    return _rig_clear_all("cleared on the unit" if rigpin.is_console(remote, ck) else
+                          "cleared from the unit's hotspot" if rigpin.on_hotspot(remote, hotspot_is_active())
+                          else "cleared by a device that knew it")
+
+
+@app.route("/rig/secure", methods=["POST"])
+def rig_secure():
+    """Secure this rig / Unsecure this rig, as on the Relay's page and through
+    it: the Relay makes the PIN and this unit takes it, so one tap covers both.
+    With no Relay paired, this unit makes the PIN itself."""
+    on = bool((request.get_json(silent=True) or {}).get("on", True))
+    if not on:
+        if not rigpin.is_set():
+            return jsonify({"ok": True, "set": False})
+        ok, status, body, headers = _rig_may_manage()
+        if not ok:
+            return _rig_refuse(status, body, headers)
+        return _rig_clear_all("Unsecure this rig on the One")
+    if rigpin.is_set():
+        return jsonify({"ok": False, "error": "this rig is secured already: unsecure it first to make a new PIN"}), 409
+    for rid, ip, tok, name in relay.paired_relays():
+        status, ans = _relay_secure(ip, tok, True)
+        if status == 200 and ans.get("token"):
+            rigpin.set_pin(str(ans["token"]), f"Secure this rig on the One, through {name or rid}")
+            relay.mark(rid, secured=True, opened=False)
+            save_config({"rig_pin_from": name or rid, "rig_pin_ignore": {}})
+            # shown once, to the browser that made it (which now knows it)
+            return _with_pass(jsonify({"ok": True, "set": True, "pin": rigpin.pin(), "via": name or rid}))
+        if status == 409:
+            # secured on the Relay's own page already: take its PIN through the
+            # pair exchange, but never show it here - this browser did not make it
+            relay.pair(ip, rid)
+            if rigpin.is_set():
+                return jsonify({"ok": True, "set": True, "via": name or rid,
+                                "message": f"{name or rid} was secured already: this One uses its PIN now. "
+                                           "Enter it here to unlock this browser."})
+    rigpin.set_pin(rigpin.make(), "Secure this rig on the One (no Relay)")
+    save_config({"rig_pin_from": "", "rig_pin_ignore": {}})
+    return _with_pass(jsonify({"ok": True, "set": True, "pin": rigpin.pin(), "via": ""}))
 
 
 @app.route("/fleet/cue/token", methods=["GET", "POST"])
@@ -4068,9 +4317,22 @@ def fleet_cue_token():
     """Hold the owner's control token. Never answers with the token itself -
     only whether one is set, so a page can say so without handing it out."""
     if request.method == "POST":
+        # Anyone on the network could set or clear this before the rig PIN
+        # (2026-10-18). Setting one on an open rig is securing it, open to
+        # all; replacing or clearing one asks for it.
         tok = str((request.get_json(silent=True) or {}).get("token", "") or "").strip()
-        save_config({"cue_token": tok})
-        _audit("CUE_TOKEN", "set" if tok else "cleared")
+        if rigpin.is_set():
+            ok, status, body, headers = _rig_may_manage()
+            if not ok:
+                return _rig_refuse(status, body, headers)
+        if not tok:
+            return _rig_clear_all("cleared on the One's page")
+        bad = rigpin.valid_new(tok)
+        if bad:
+            return jsonify({"ok": False, "error": bad}), 400
+        rigpin.set_pin(tok, "typed on the One's page")
+        save_config({"rig_pin_from": "", "rig_pin_ignore": {}})
+        return _with_pass(jsonify({"ok": True, "set": True}))
     return jsonify({"ok": True, "set": bool(_cue_token())})
 
 
@@ -4184,7 +4446,7 @@ def fleet_relay_api():
         # this unit, and the audit line below logs what the page sent.
         body = {k: v for k, v in (body or {}).items() if k != "rigToken"}
         tok = _cue_token()
-        if tok:
+        if tok and not relay.opened_ip(ip):     # an opened Relay cleared it on purpose
             body["rigToken"] = tok
     status, ans = _relay_api(ip, path, body, method)
     if method == "POST":
@@ -6962,11 +7224,18 @@ def _hotspot_fallback_inner(grace):
 
 @app.route("/hotspot/status")
 def hotspot_status():
+    """The hotspot's password is printed on the unit, and it is how hands on
+    the unit clear a forgotten rig PIN, so it is never served to the network
+    (Coding Main, 2026-10-18): only the unit's own screen, or a browser already
+    on the hotspot (which knows it), gets it back."""
     config = load_config()
+    active = hotspot_is_active()
+    mine = (rigpin.is_console(request.remote_addr, request.headers.get("X-Console-Key", ""))
+            or rigpin.on_hotspot(request.remote_addr, active))
     return jsonify({
-        "active": hotspot_is_active(),
+        "active": active,
         "ssid":   config.get("hotspot_ssid", ""),
-        "pass":   config.get("hotspot_pass", ""),
+        "pass":   config.get("hotspot_pass", "") if mine else "",
         "auto":   config.get("hotspot_auto", True),
     })
 
@@ -8713,7 +8982,10 @@ if __name__ == "__main__":
         lambda *a, **k: subprocess.run(*a, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, **k)),
         daemon=True).start()
     cue_radio.start()
-    relay.configure(load_config, save_config, _my_ip_toward, _audit)
+    rigpin.configure(load_config, save_config, _my_ips, _audit)
+    relay.configure(load_config, save_config, _my_ip_toward, _audit,
+                    rig_pin=lambda: "" if not rigpin.is_set() else rigpin.pin(),
+                    take_pin=_take_relay_pin)
     relay.start()
     threading.Thread(target=_cable_primary_guard, daemon=True).start()
     def _on_sigterm(signum, frame):

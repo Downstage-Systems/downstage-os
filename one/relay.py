@@ -40,10 +40,13 @@ _wake = threading.Event()  # "stop waiting, go round again"
 _force_after = 0.0         # anything told before this moment is out of date
 
 
-def configure(get_config, save_config, my_ip_toward, audit=None):
-    """Wire this module to the unit without importing it (app.py is the One)."""
+def configure(get_config, save_config, my_ip_toward, audit=None, rig_pin=None, take_pin=None):
+    """Wire this module to the unit without importing it (app.py is the One).
+    rig_pin() is this unit's rig PIN ("" when open); take_pin(pin, rid, name)
+    makes a secured Relay's PIN this unit's own (docs/control-token.md)."""
     _hooks.update(get_config=get_config, save_config=save_config,
-                  my_ip_toward=my_ip_toward, audit=audit or (lambda *a, **k: None))
+                  my_ip_toward=my_ip_toward, audit=audit or (lambda *a, **k: None),
+                  rig_pin=rig_pin or (lambda: ""), take_pin=take_pin or (lambda *a: None))
 
 
 def _cfg():
@@ -122,7 +125,11 @@ def pair(ip, rid=""):
         # networks must not hand out the wrong one.
         body.update(companionHost=me, companionPort=16622, timerHost=me, timerPort=16640)
     known = _paired().get(rid or "", {})
-    status, ans = _post(ip, "/api/v1/pair", body, known.get("token", ""))
+    # Our pair token once we have one. Before that, a secured Relay (0.137)
+    # pairs a new One only with the rig PIN, so send ours if we have one.
+    # Not to a Relay that was opened: it cleared that PIN on purpose.
+    bearer = known.get("token", "") or ("" if known.get("opened") else _hooks["rig_pin"]())
+    status, ans = _post(ip, "/api/v1/pair", body, bearer)
 
     now = time.time()
     if status == 200 and ans.get("ok") and ans.get("token"):
@@ -130,12 +137,37 @@ def pair(ip, rid=""):
         # `told` is the address this Relay is now holding for us. The tick
         # compares it against our address toward that Relay, which is how a
         # network change gets noticed without anything having to announce it.
-        _remember(got, token=ans["token"], name=ans.get("name", ""), fw=ans.get("fw", ""),
-                  ip=ip, at=now, told=me)
+        fields = dict(token=ans["token"], name=ans.get("name", ""), fw=ans.get("fw", ""),
+                      ip=ip, at=now, told=me)
+        # The rig PIN rides the pair answer (Relay 0.137). Secured: it is this
+        # unit's PIN too, so one tap on the Relay secures the whole rig.
+        # Opened (BOOT on the Relay, or Unsecure there): stop sending it to
+        # that Relay and say so, but keep this unit's own PIN until it is
+        # cleared at this unit (Coding Main's rule, 2026-10-18). A Relay
+        # older than 0.137 says neither, and nothing changes.
+        sec = ans.get("rigSecured")
+        if sec is True and ans.get("rigToken"):
+            fields.update(secured=True, opened=False)
+            _hooks["take_pin"](str(ans["rigToken"]), got, ans.get("name", ""))
+        elif sec is False:
+            if known.get("secured"):
+                fields["opened"] = True
+                _hooks["audit"]("RELAY_OPENED", f"{got}: its rig PIN was cleared; this One keeps its own")
+            fields["secured"] = False
+        _remember(got, **fields)
         if not known:
             _hooks["audit"]("RELAY_PAIR", f"{got} at {ip}")
         return {"ok": True, "id": got, "name": ans.get("name", ""), "fw": ans.get("fw", ""),
                 "ip": ip, "paired": True}
+    if status == 429:
+        # this Relay is slowing us for wrong PINs: wait as long as it says
+        wait = int(ans.get("retryAfter") or 30)
+        return {"ok": False, "id": rid, "ip": ip, "paired": bool(known.get("token")), "retry_after": wait,
+                "error": ans.get("error") or f"the Relay is slowing this unit: try again in {wait} s"}
+    if status == 409 and (ans.get("needs") == "rig PIN" or "has a PIN" in str(ans.get("error", ""))):
+        return {"ok": False, "id": rid, "ip": ip, "paired": False, "needs_pin": True,
+                "error": "this Relay has a rig PIN: enter the same rig PIN on this One, "
+                         "or pair from the Relay's page"}
     if status == 409:
         other = ans.get("paired") or {}
         return {"ok": False, "id": rid, "ip": ip, "paired": False, "taken": True,
@@ -166,6 +198,33 @@ def unpair(rid):
 
 def token_for(rid):
     return (_paired().get(rid) or {}).get("token", "")
+
+
+def opened_ip(ip):
+    """True when the Relay at that address had its rig PIN cleared: this unit
+    stops sending its PIN there."""
+    for entry in _paired().values():
+        if entry.get("ip") == ip:
+            return bool(entry.get("opened"))
+    return False
+
+
+def secured_relays():
+    """[(id, ip, token)] for paired Relays that hold the rig PIN."""
+    return [(rid, e.get("ip", ""), e.get("token", "")) for rid, e in _paired().items()
+            if e.get("secured") and e.get("ip")]
+
+
+def paired_relays():
+    """[(id, ip, token, name)] for every Relay this unit is paired with."""
+    return [(rid, e.get("ip", ""), e.get("token", ""), e.get("name", "")) for rid, e in _paired().items()
+            if e.get("token") and e.get("ip")]
+
+
+def mark(rid, **fields):
+    """Record what Secure / Unsecure through this Relay changed."""
+    if rid in _paired():
+        _remember(rid, **fields)
 
 
 def token_for_ip(ip):
@@ -208,6 +267,10 @@ def state():
                 "last_seen": round(now - seen, 1) if seen else None,
                 "taken_by": s.get("taken_by") or None,
                 "why": s.get("why", ""),
+                "secured": bool(p.get("secured")),
+                "opened": bool(p.get("opened")),
+                "needs_pin": bool(s.get("needs_pin")),
+                "retry_in": max(0, int(float(s.get("retry_at") or 0) - now)),
             })
     return {"relays": out}
 
@@ -248,6 +311,8 @@ def _tick():
         at = float(entry.get("at") or 0)
         if entry.get("token") and not moved and now - at < REFRESH_EVERY and at >= _force_after:
             continue
+        if now < float(s.get("retry_at") or 0):
+            continue     # it asked us to wait (429): never earlier, not even on news
         asked = float(s.get("asked") or 0)
         if not entry and now - asked < ASK_EVERY and asked >= _force_after:
             continue
@@ -264,6 +329,8 @@ def _tick():
             cur = _seen.setdefault(rid, {})
             cur["asked"] = now
             cur["last_ok"] = bool(res.get("ok"))
+            cur["retry_at"] = now + res["retry_after"] if res.get("retry_after") else 0
+            cur["needs_pin"] = bool(res.get("needs_pin"))
             cur["taken_by"] = res.get("by") if res.get("taken") else None
             cur["why"] = "" if res.get("ok") else res.get("error", "")
 

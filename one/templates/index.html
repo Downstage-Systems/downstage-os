@@ -1210,6 +1210,9 @@
     .modal p  { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
     .modal input { margin-bottom: 14px; }
     .modal-btns { display: flex; gap: 8px; }
+    .rig-big { font: 600 34px var(--font-mono); letter-spacing: .32em; text-align: center; margin: 12px 0 6px; }
+    #rig-body .modal-btns { flex-wrap: wrap; margin-top: 10px; }
+    #rig-body input { width: 100%; margin: 8px 0; }
 
     /* ── Timezone / selects ── */
     .tz-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -2359,7 +2362,7 @@
           <div class="fleet-hdr-right">
             <span class="fleet-ts" id="fleet-ts"></span>
             <button class="btn-sm" id="cue-ctl-btn" onclick="cueControlToggle()" title="Let Cue lights with a screen start, pause and step this unit's timer. Off unless you turn it on.">Lights control timer: off</button>
-            <button class="btn-sm" id="cue-token-btn" onclick="cueTokenEdit()" title="The rig token: what this unit SENDS to your Downstage boxes. Set the same one as the control token on each box, and this unit can drive a box that is locked.">Rig token: none</button>
+            <button class="btn-sm" id="cue-token-btn" onclick="rigOpen()" title="Open: anyone on this network can change this rig. Secure it.">Rig PIN: open</button>
             <button class="btn-sm" id="cue-alert-btn" style="display:none; border-color:var(--red); color:var(--red)" title="Every light following this unit's timer pulses red until cleared">Alert timer lights</button>
             <button class="btn-sm" id="fleet-scan-btn" onclick="fleetScan()">Scan for Units</button>
           </div>
@@ -2722,6 +2725,14 @@
   </div>
 </div>
 
+<!-- The rig PIN (docs/control-token.md): one dialog behind the Rig PIN button -->
+<div class="modal-overlay" id="rig-modal">
+  <div class="modal" style="max-width:440px">
+    <h3>Rig PIN</h3>
+    <div id="rig-body"></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="log-modal">
   <div class="modal" style="max-width:640px;width:92vw">
     <h3>Setup Log</h3>
@@ -2737,6 +2748,35 @@
 <div class="ble-notice" id="ble-notice"></div>
 
 <script>
+  // The rig PIN on every request this page makes (rigpin.py). The kiosk is
+  // started with ?console=<key>: kept here, sent as X-Console-Key on this
+  // unit's own requests, and taken out of the address. A locked action that
+  // answers 401 "needs rig PIN" asks for it once and goes again.
+  (function () {
+    const nativeFetch = window.fetch.bind(window);
+    const q = new URLSearchParams(location.search);
+    const consoleKey = q.get('console') || '';
+    if (consoleKey) {
+      q.delete('console');
+      history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : '') + location.hash);
+    }
+    const same = u => { try { return new URL(u, location.href).origin === location.origin; } catch (e) { return false; } };
+    window.fetch = async function (input, init) {
+      const url = typeof input === 'string' ? input : (input && input.url) || '';
+      if (!same(url)) return nativeFetch(input, init);
+      const opts = Object.assign({ credentials: 'same-origin' }, init || {});
+      if (consoleKey) { const h = new Headers(opts.headers || {}); h.set('X-Console-Key', consoleKey); opts.headers = h; }
+      const r = await nativeFetch(input, opts);
+      if (r.status === 401 && !opts.rigAgain && !/\/rig\//.test(url)) {
+        let d = null;
+        try { d = await r.clone().json(); } catch (e) {}
+        if (d && d.needs === 'rig PIN') {
+          if (window.rigAskPin && await window.rigAskPin(d.error)) return window.fetch(input, Object.assign({}, init, { rigAgain: true }));
+        }
+      }
+      return r;
+    };
+  })();
   window._myIp = '{{ local_ip }}';   // this unit's LAN address, for fleet cards
 
   // ── IP History ───────────────────────────────────────────────────────────────
@@ -3799,8 +3839,8 @@
     // signal to draw, so say where it is. A light that wants the rig token
     // says so up front rather than failing the adopt with a refusal.
     const where = l => (l.via === 'lan' ? fxChip('on your network', 'link') : fxSignal(l.rssi)) +
-      (l.needs ? '<span title="This light has a control token set. The Relay needs the matching rig token to adopt it.">' +
-        fxChip('needs ' + l.needs, 'warn') + '</span>' : '');
+      (l.needs ? '<span title="This light has a PIN set. The Relay needs the matching rig PIN to adopt it.">' +
+        fxChip('needs the rig PIN', 'warn') + '</span>' : '');
     const label = l => l.name || (l.model + ' ' + l.id.slice(-4));
     // The body goes through fxEsc: JSON's double quotes inside a double-quoted
     // onclick cut the handler off at the ids list, and the button did nothing at all
@@ -3940,6 +3980,7 @@
               // or one it found through another One
               (u.relay.host && u.relay.mine ? ' <span class="fx-dim">(this One)</span>' : u.relay.host && u.relay.found ? ' <span class="fx-dim">(found)</span>' : '') +
               (u.relay.live ? ' <span class="fx-ok">live</span>' : u.relay.why ? '<div class="fu-sub">' + fxEsc(u.relay.why) + '</div>' : '')) +
+            fxRow('Rig PIN', rigRelayLine(u.serial)) +
             fxRow('CueLink', 'ch ' + fxEsc(u.relay.ch) + ' · ' + fxEsc(u.relay.tune) + ' · ' + fxEsc(u.relay.heard) + ' heard') +
             fxRow('Ethernet', fxEsc(u.relay.eth) + (u.relay.mbps ? ' · ' + u.relay.mbps + ' Mbps' : '') + ' · ' + (u.relay.static ? 'static' : 'DHCP')) : '') +
           fxRow('Software', 'v' + fxEsc(u.version) + (u.upd ? ' <span class="fx-chip warn">update</span>' : '')) +
@@ -4505,33 +4546,143 @@
   }
   cueControlPaint();
 
-  // The owner's control token for the boxes in this rig. The unit never
-  // answers with it - only whether one is set - so this asks for it fresh
-  // rather than showing anything back.
-  async function cueTokenPaint() {
-    try {
-      const d = await (await fetch('/fleet/cue/token')).json();
-      const b = document.getElementById('cue-token-btn');
-      if (!b) return;
-      b.textContent = 'Rig token: ' + (d.set ? 'set' : 'none');
-      b.style.borderColor = d.set ? 'var(--green)' : '';
-      b.style.color = d.set ? 'var(--green)' : '';
-      b.dataset.on = d.set ? '1' : '';
-    } catch (e) {}
+  // -- the rig PIN (docs/control-token.md, rigpin.py) ----------------------
+  // One PIN for the rig: what this unit sends its boxes and what it asks for
+  // before restart, power, network, blackout, looks and sources. Never shown
+  // back by any status: revealed on its own request, to a known browser or
+  // this unit's own screen. The "Open" sentence lives on this button and in
+  // its dialog, not as a line on the page (UI slim-down, Rob 2026-10-18).
+  window._rigState = null;
+  let _rigWait = null, _rigShown = '', _rigHold = null, _rigNote = '';
+  async function rigPaint() {
+    try { window._rigState = await (await fetch('/rig/state')).json(); } catch (e) { return; }
+    const s = window._rigState, b = document.getElementById('cue-token-btn');
+    if (!b) return;
+    b.textContent = 'Rig PIN: ' + (!s.set ? 'open' : s.known || s.console ? 'on' : 'locked');
+    b.title = !s.set ? 'Open: anyone on this network can change this rig. Secure it.'
+      : 'This rig has a PIN: restart, power, network, blackout, looks and sources ask for it.';
+    const col = s.set ? 'var(--green)' : '';
+    b.style.borderColor = col; b.style.color = col; b.dataset.on = s.set ? '1' : '';
+    if (document.getElementById('rig-modal').classList.contains('open') && !_rigShown) rigRender();
   }
-  async function cueTokenEdit() {
-    const b = document.getElementById('cue-token-btn');
-    const had = !!b.dataset.on;
-    const t = prompt(had
-      ? 'The rig token: what this unit sends to your Downstage boxes.\n\nType a new one, or leave it empty to clear it.'
-      : 'The rig token: what this unit sends to your Downstage boxes.\n\nSet it as the control token on each box\u2019s own page, then enter the same one here.', '');
-    if (t === null) return;                       // Cancel means cancel
-    await fetch('/fleet/cue/token', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: t.trim() }) });
-    showToast(t.trim() ? 'Rig token saved.' : 'Rig token cleared.', 'success');
-    cueTokenPaint();
+  // kept for anything still calling the old names
+  const cueTokenPaint = rigPaint;
+  function rigOpen(note) {
+    _rigNote = note || '';            // why it opened: kept across a refresh
+    rigRender();
+    document.getElementById('rig-modal').classList.add('open');
+    rigPaint();
   }
-  cueTokenPaint();
+  function rigClose(ok) {
+    document.getElementById('rig-modal').classList.remove('open');
+    _rigShown = ''; _rigNote = '';
+    if (_rigWait) { const w = _rigWait; _rigWait = null; w(!!ok); }
+  }
+  window.rigAskPin = why => new Promise(res => {
+    _rigWait = res;
+    rigOpen(why);
+    setTimeout(() => { const i = document.getElementById('rig-pin-in'); if (i) i.focus(); }, 60);
+  });
+  function rigRender(note) {
+    const s = window._rigState || {}, el = document.getElementById('rig-body');
+    const btn = (label, js, cls) => '<button class="' + (cls || 'btn-sm') + '" onclick="' + js + '">' + label + '</button>';
+    if (note) _rigNote = note;
+    let h = _rigNote ? '<p class="fx-note">' + fxEsc(_rigNote) + '</p>' : '';
+    if (_rigShown) {      // just made here: shown once, to the browser that made it
+      el.innerHTML = '<p>The rig PIN:</p><div class="rig-big">' + fxEsc(_rigShown) + '</div>' +
+        '<p class="fx-note">Write it down. The Slate and the Companion connection need it typed once.</p>' +
+        '<div class="modal-btns">' + btn('I have written it down', 'rigClose(true)', 'btn-primary') + '</div>';
+      return;
+    }
+    if (!s.set) {
+      h += '<p class="fx-note">Open: anyone on this network can change this rig.</p>' +
+        '<div class="modal-btns">' + btn('Secure this rig', 'rigSecure()', 'btn-primary') +
+        btn('Use my own PIN', 'rigSetOwn()') + btn('Close', 'rigClose()', 'btn-ghost') + '</div>';
+    } else if (s.known || s.console) {
+      h += '<div class="rig-big" id="rig-shown">••••</div>' +
+        (s.from ? '<p class="fx-note">From ' + fxEsc(s.from) + '.</p>' : '') +
+        '<div class="modal-btns">' +
+        '<button class="btn-sm" onpointerdown="rigRevealHold(true)" onpointerup="rigRevealHold(false)" onpointerleave="rigRevealHold(false)" title="Hold for two seconds">Hold to reveal</button>' +
+        btn('Change', 'rigSetOwn()') + btn('Unsecure this rig', 'rigUnsecure()') + btn('Close', 'rigClose(true)', 'btn-ghost') + '</div>';
+    } else {
+      h += '<input id="rig-pin-in" type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="Rig PIN (six digits)" onkeydown="if(event.key===\'Enter\')rigUnlock()">' +
+        '<div class="modal-btns">' + btn('Unlock', 'rigUnlock()', 'btn-primary') + btn('Cancel', 'rigClose(false)', 'btn-ghost') + '</div>' +
+        '<p class="fx-note">' + fxEsc(s.forgotten || '') + ' ' + fxEsc(s.relayLine || '') + '</p>';
+    }
+    if (s.set && (s.console || s.hotspot))
+      h += '<div class="modal-btns">' + btn('Clear the rig PIN', 'rigClear()', 'fx-btn warn') + '</div>';
+    el.innerHTML = h;
+    // a redraw must not take the field away from someone typing: after a
+    // wrong PIN the next try goes straight in
+    const i = document.getElementById('rig-pin-in');
+    if (i && document.getElementById('rig-modal').classList.contains('open')) i.focus();
+  }
+  async function rigPost(path, body) {
+    const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) });
+    let d = {};
+    try { d = await r.json(); } catch (e) {}
+    return Object.assign({ status: r.status }, d);
+  }
+  async function rigUnlock() {
+    const i = document.getElementById('rig-pin-in'), pin = ((i && i.value) || '').trim();
+    if (!pin) return;
+    const d = await rigPost('/rig/unlock', { pin });
+    if (d.ok) { showToast('Unlocked: this browser knows the rig PIN now.', 'success'); await rigPaint(); rigClose(true); return; }
+    showToast(d.error || 'Not unlocked.', 'error');
+    await rigPaint(); rigRender();
+  }
+  async function rigSecure() {
+    if (!confirm('Secure this rig?\n\nRestart, power, network, blackout, looks and sources will ask for a six-digit rig PIN on any browser that has not entered it. This unit’s own screen and its Companion never ask.')) return;
+    const d = await rigPost('/rig/secure', { on: true });
+    if (!d.ok) { showToast(d.error || 'Not secured.', 'error'); return; }
+    await rigPaint();
+    if (d.pin) { _rigShown = d.pin; rigRender(); }
+    else { showToast(d.message || 'Secured.', 'success'); rigRender(d.message); }
+  }
+  async function rigSetOwn() {
+    const v = prompt('A rig PIN for this unit (six digits):', '');
+    if (v === null) return;                       // Cancel means cancel
+    if (!v.trim()) return;                        // clearing is Unsecure, asked on its own
+    const d = await rigPost('/fleet/cue/token', { token: v.trim() });
+    showToast(d.ok ? 'Rig PIN saved.' : (d.error || 'Not saved.'), d.ok ? 'success' : 'error');
+    await rigPaint(); rigRender();
+  }
+  async function rigUnsecure() {
+    if (!confirm('Unsecure this rig?\n\nThe Relay and this One both open: anyone on this network can change the rig again.')) return;
+    const d = await rigPost('/rig/secure', { on: false });
+    if (!d.ok) { showToast(d.error || 'Not unsecured.', 'error'); return; }
+    showToast('This rig is open.' + ((d.relays || []).some(x => /keeps its PIN/.test(x)) ? ' A Relay was not reached and keeps its PIN.' : ''), 'success');
+    await rigPaint(); rigRender();
+  }
+  async function rigClear() {
+    if (!confirm('Clear the rig PIN?\n\nThis unit opens, and any Relay it can reach opens too.')) return;
+    const d = await rigPost('/rig/clear', {});
+    showToast(d.ok ? 'Rig PIN cleared: this rig is open.' : (d.error || 'Not cleared.'), d.ok ? 'success' : 'error');
+    await rigPaint(); rigRender();
+  }
+  function rigRevealHold(down) {
+    clearTimeout(_rigHold);
+    if (!down) return;
+    _rigHold = setTimeout(async () => {
+      const d = await rigPost('/rig/reveal', {});
+      const el = document.getElementById('rig-shown');
+      if (!el) return;
+      if (!d.ok) { showToast(d.error || 'Not revealed.', 'error'); return; }
+      el.textContent = d.pin;
+      setTimeout(() => { const e2 = document.getElementById('rig-shown'); if (e2) e2.textContent = '••••'; }, 15000);
+    }, 2000);
+  }
+  // a light Relay card line: whether that Relay holds the rig PIN
+  function rigRelayLine(id) {
+    const s = window._rigState, r = s && (s.relays || []).find(x => x.id === id);
+    if (!r) return '-';
+    if (r.needsPin) return '<span class="fx-bad">Asks for the rig PIN</span><div class="fu-sub">Enter the same rig PIN on this One (Rig PIN on the Fleet tab), or pair from the Relay’s page.</div>';
+    if (r.opened) return 'Opened<div class="fu-sub">Its PIN was cleared at the Relay, so this One stopped sending it. This One keeps its own until cleared here.</div>';
+    return r.secured ? '<span class="fx-ok">Secured</span>' : 'Open';
+  }
+  document.getElementById('rig-modal').addEventListener('click', e => { if (e.target.id === 'rig-modal') rigClose(false); });
+  rigPaint();
+  setInterval(rigPaint, 60000);
 
   function bleNetPicker(addr, offer) {
     // every network this unit could hand over, plus one the operator types
@@ -6156,7 +6307,7 @@
     }
     const hint = document.getElementById('hotspot-hint');
     if (hotspotActive) {
-      hint.innerHTML = `Broadcasting <code>${hotspotSsid}</code> · password <code>${hotspotPass}</code> · setup UI at <code>http://10.42.0.1:8080</code>. WiFi client is unavailable while the hotspot runs.`;
+      hint.innerHTML = `Broadcasting <code>${hotspotSsid}</code> · password <code>${hotspotPass || 'printed on the unit'}</code> · setup UI at <code>http://10.42.0.1:8080</code>. WiFi client is unavailable while the hotspot runs.`;
       hint.style.display = '';
     } else {
       hint.style.display = 'none';
@@ -6175,7 +6326,7 @@
     const btn = document.getElementById('hotspot-btn');
     if (!hotspotActive) {
       const onWifi = true; // conservative: always warn
-      if (!confirm(`Start hotspot ${hotspotSsid}?\n\nThe device will leave any WiFi network it is on. If you are connected over WiFi right now, you will need to rejoin via the hotspot (password: ${hotspotPass}) at http://10.42.0.1:8080 - or use ethernet.`)) return;
+      if (!confirm(`Start hotspot ${hotspotSsid}?\n\nThe device will leave any WiFi network it is on. If you are connected over WiFi right now, you will need to rejoin via the hotspot (password: ${hotspotPass || 'printed on the unit'}) at http://10.42.0.1:8080 - or use ethernet.`)) return;
     }
     btn.disabled = true;
     try {
