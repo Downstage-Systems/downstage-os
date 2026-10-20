@@ -3307,6 +3307,8 @@ def _cue_poll_ontime():
                # a Time of Day event: OnTime shows the clock, not a countdown
                "timer_type": (payload.get("eventNow") or {}).get("timerType") or "",
                "event_id": (payload.get("eventNow") or {}).get("id") or "",
+               # what OnTime will run after it, for a rundown's "next" (Slate Plus)
+               "next_id": (payload.get("eventNext") or {}).get("id") or "",
                "clock_ms": payload.get("clock")}
     except Exception:
         pass
@@ -3844,7 +3846,15 @@ def one_timer():
     timer" setting as /cue/control - off as this unit ships, because a
     touchscreen that can stop the show clock has to be chosen."""
     if request.method == "GET":
-        return jsonify({"ok": True, "state": _one_timer_state(), "presets": _one_presets()})
+        # The presets are the rundown's events, in its order (skipped ones left
+        # out): id, label (its title), kind, seconds (its length), colour. Each
+        # also says whether it is the one loaded in OnTime now, and whether it
+        # is next, so a Slate can draw now / next / later (R&D, 2026-10-19).
+        t = _cue_poll_ontime() or {}
+        now_id, next_id = str(t.get("event_id") or ""), str(t.get("next_id") or "")
+        presets = [dict(p, loaded=bool(now_id) and p["id"] == now_id, next=bool(next_id) and p["id"] == next_id)
+                   for p in _one_presets()]
+        return jsonify({"ok": True, "state": _one_timer_state(), "presets": presets})
     if not load_config().get("cue_control"):
         return jsonify({"ok": False, "error": "timer control is off on this One - "
                                               "turn on Lights control timer in its Network tab"}), 403
