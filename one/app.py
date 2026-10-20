@@ -1657,12 +1657,63 @@ def start_local_ontime():
             log = open(BASE_DIR / "ontime.log", "a")
         # --disable-gpu: newer OnTime builds (4.10+) crash allocating GPU
         # buffers on the Pi even in headless mode (gbm dma_buf errors)
-        _ontime_proc = subprocess.Popen(
-            [str(entry), "--no-sandbox", "--headless", "--disable-gpu"],
-            stdout=log, stderr=log, cwd=str(ONTIME_ROOT),
-        )
+        argv = [str(entry), "--no-sandbox", "--headless", "--disable-gpu"]
+        if _ontime_unit_start(argv):
+            log.close()
+            _ontime_proc = None
+        else:
+            _ontime_proc = subprocess.Popen(argv, stdout=log, stderr=log, cwd=str(ONTIME_ROOT))
     threading.Thread(target=_hide_ontime_windows, daemon=True).start()
     return True, "started"
+
+
+# OnTime runs in a unit of its own, not as a child of this app (Rob,
+# 2026-10-19: "Build 3"). As a child it lived in ontime-kiosk's cgroup, so
+# every restart of the app (a deploy, an OS update, a crash) killed OnTime too,
+# and it came back with nothing loaded: a Slate or a light showing "now" went
+# empty mid-show. A transient user unit is outside that cgroup. It does not
+# outlive a power cycle (nothing persists), and the app starts it at boot as
+# it always has; ontime_is_running() already finds an OnTime it did not
+# launch, by pgrep.
+ONTIME_UNIT = "ontime-server"
+
+
+def _ontime_unit_start(argv):
+    """Start OnTime as its own transient user unit. False if systemd-run is
+    not there or refuses, and the caller starts it as a child as before."""
+    try:
+        subprocess.run(["systemctl", "--user", "reset-failed", ONTIME_UNIT],
+                       timeout=5, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        env = []
+        for k in ("DISPLAY", "XAUTHORITY", "HOME", "PATH"):
+            if os.environ.get(k):
+                env.append(f"--setenv={k}={os.environ[k]}")
+        out = str(BASE_DIR / "ontime.log")
+        r = subprocess.run(
+            ["systemd-run", "--user", "--collect", f"--unit={ONTIME_UNIT}",
+             "--description=OnTime (Downstage One)",
+             f"--working-directory={ONTIME_ROOT}",
+             f"--property=StandardOutput=append:{out}",
+             f"--property=StandardError=append:{out}",
+             *env, *argv],
+            capture_output=True, text=True, timeout=10)
+        if r.returncode == 0:
+            print(f"[ontime] started in its own unit ({ONTIME_UNIT})")
+            return True
+        print(f"[ontime] systemd-run refused ({(r.stderr or r.stdout).strip()[:120]}) - starting as a child")
+    except Exception as e:
+        print(f"[ontime] systemd-run not usable ({e}) - starting as a child")
+    return False
+
+
+def _ontime_unit_stop():
+    try:
+        subprocess.run(["systemctl", "--user", "stop", ONTIME_UNIT], timeout=15,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(["systemctl", "--user", "reset-failed", ONTIME_UNIT], timeout=5,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception:
+        pass
 
 
 def stop_local_ontime():
@@ -1672,6 +1723,7 @@ def stop_local_ontime():
     with _ontime_lock:
         _kill(_ontime_proc)
         _ontime_proc = None
+        _ontime_unit_stop()
         # Also kill any OnTime processes that outlived a previous Flask instance
         try:
             subprocess.run(
@@ -7297,6 +7349,10 @@ sleep 2
 # wipe all WiFi profiles (unit reverts to hotspot-on-boot provisioning state)
 nmcli -t -f NAME,TYPE connection show | grep ':802-11-wireless$' | cut -d: -f1 | \\
   while read -r c; do sudo nmcli connection delete "$c" || true; done
+# OnTime runs in its own unit now, not inside this app's: stop it before its
+# data goes, so it cannot write its rundown back on the way down
+systemctl --user stop ontime-server 2>/dev/null || true
+pkill -f squashfs-root/ontime || true
 # wipe user data + logs
 rm -rf /home/pi/.config/ontime-electron
 rm -rf {app}/.backup
