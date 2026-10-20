@@ -99,13 +99,13 @@
     .logo-text h1 {
       font-family: var(--font-display);
       font-size: 22px; font-weight: 700; color: var(--text);
-      text-transform: uppercase; letter-spacing: 0.05em; line-height: 1;
+      text-transform: none; letter-spacing: 0; line-height: 1;
     }
     .logo-text h1 .product { color: var(--accent); }
     .logo-text p {
       font-family: var(--font-mono);
-      font-size: 10px; color: var(--muted); margin-top: 4px;
-      text-transform: uppercase; letter-spacing: 0.2em;
+      font-size: 13px; color: var(--muted); margin-top: 4px;
+      text-transform: none; letter-spacing: 0;
     }
     .logo-left { display:flex; align-items:center; gap:14px; min-width:0; }
     .head-center { display:flex; flex-direction:column; align-items:center; gap:4px; }
@@ -125,14 +125,14 @@
     /* vitals: boxed name+address, with the status pill separate below */
     .addr-right { margin-left:auto; flex-shrink:0; }
     .status-strip { display:flex; background:var(--surface2);
-      border:1px solid var(--border); border-radius:10px; overflow:hidden;
+      border:1px solid var(--border); border-radius:4px; overflow:hidden;
       margin:0 0 16px; }
     .status-strip .status-bar { flex:1 1 auto; justify-content:center; gap:8px;
       white-space:nowrap;
       margin:0; padding:8px 10px; border:none; border-right:1px solid var(--border);
       border-radius:0; background:none; cursor:pointer;
-      font:600 10.5px var(--font-display); letter-spacing:0.08em;
-      text-transform:uppercase; color:var(--muted); }
+      font:600 13px var(--font-display); letter-spacing: 0;
+      text-transform: none; color:var(--muted); }
     .status-strip .status-bar:last-child { border-right:none; }
     .status-strip .status-bar:hover { filter:brightness(1.3); }
     .status-strip .status-dot { width:7px; height:7px; }
@@ -141,7 +141,7 @@
     .status-strip .status-bar.checking { background:none; color:var(--muted2); }
     .status-strip .status-bar.idle { background:none; color:var(--muted2); }
     .status-strip .status-bar.disconnected { background:rgba(229,72,77,0.10); color:#f2555a; }
-    .status-strip .status-bar.disconnected .status-dot { box-shadow:0 0 8px rgba(229,72,77,0.7); }
+    .status-strip .status-bar.disconnected .status-dot { box-shadow: none; }
     .status-strip .status-bar.warn { background:var(--amber-bg); color:var(--amber); }
     @media (max-width: 620px) {
       .status-strip { flex-wrap:wrap; }
@@ -158,16 +158,16 @@
     .addr-main:hover .addr-copy-ic { fill: var(--accent); }
     .addr-box { position: relative; }
     #qr-pop { position: absolute; top: calc(100% + 8px); right: 0; z-index: 500;
-      background: #fff; border-radius: 10px; padding: 8px 8px 6px;
-      box-shadow: 0 8px 28px rgba(0,0,0,0.55); text-align: center; }
+      background: #fff; border-radius: 4px; padding: 8px 8px 6px;
+      box-shadow: none; text-align: center; }
     #qr-pop img { width: 148px; height: 148px; display: block; image-rendering: pixelated; }
-    #qr-pop .qr-cap { font-size: 10.5px; color: #444; margin-top: 3px;
+    #qr-pop .qr-cap { font-size: 12px; color: #444; margin-top: 3px;
       font-family: var(--font-body); }
     .addr-box .addr-sub { font-family: var(--font-mono); font-size: 13px; color: var(--muted); }
 
 
     /* ── Card ── */
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
     /* Per-page surface tint: barely-there hue per tab keeps you oriented.
        Keep chroma at this level or lower; Show Mode stays neutral. */
     .card { transition: background-color 0.35s; }
@@ -186,9 +186,9 @@
     /* ── Status bar ── */
     .status-bar {
       display: inline-flex; align-items: center; gap: 8px;
-      padding: 5px 12px; border-radius: 999px;
-      font-family: var(--font-mono); font-size: 11px; font-weight: 500;
-      text-transform: uppercase; letter-spacing: 0.09em; margin-bottom: 0;
+      padding: 5px 12px; border-radius: 4px;
+      font-family: var(--font-mono); font-size: 13px; font-weight: 500;
+      text-transform: none; letter-spacing: 0; margin-bottom: 0;
       transition: all 0.25s ease; border: 1px solid transparent;
     }
     .status-bar.connected    { background: var(--green-bg); border-color: var(--green-bd); color: var(--green); }
@@ -196,8 +196,8 @@
     .status-bar.checking     { background: var(--blue-bg);  border-color: var(--blue-bd);  color: var(--blue); }
     .status-bar.warn         { background: var(--amber-bg); border-color: var(--amber-bd); color: var(--amber); }
     .pill-row { display:grid; grid-template-columns:1fr 1fr; gap:5px; }
-    .pill-row .status-bar { justify-content:flex-start; font-size:10px;
-      padding:4px 9px; gap:6px; letter-spacing:0.04em; }
+    .pill-row .status-bar { justify-content:flex-start; font-size:12px;
+      padding:4px 9px; gap:6px; letter-spacing: 0; }
     .pill-row .status-dot { width:6px; height:6px; }
     .pill-row .status-bar { cursor: pointer; }
     .pill-row .status-bar:hover { filter: brightness(1.25); }
@@ -209,13 +209,13 @@
       font:600 13px/1 var(--font-body); color:var(--text); }
     #job-ribbon.on { display:flex; }
     #job-ribbon .jdot { width:9px; height:9px; border-radius:50%; background:var(--amber);
-      box-shadow:0 0 7px rgba(245,165,36,0.7); animation:pulse 1.6s infinite; flex-shrink:0; }
-    #job-ribbon.done .jdot { background:var(--green); box-shadow:0 0 7px rgba(47,217,123,0.7); animation:none; }
-    #job-ribbon.failed .jdot { background:var(--red); box-shadow:0 0 7px rgba(229,72,77,0.7); animation:none; }
-    #job-ribbon .jtime { font-family:var(--font-mono); font-size:12px; color:var(--amber); }
+      box-shadow: none; animation:pulse 1.6s infinite; flex-shrink:0; }
+    #job-ribbon.done .jdot { background:var(--green); box-shadow: none; animation:none; }
+    #job-ribbon.failed .jdot { background:var(--red); box-shadow: none; animation:none; }
+    #job-ribbon .jtime { font-family:var(--font-mono); font-size:13px; color:var(--amber); }
     #job-ribbon.done .jtime { color:var(--green); } #job-ribbon.failed .jtime { color:var(--red); }
     #job-ribbon .jx { margin-left:auto; background:none; border:1px solid var(--border2);
-      border-radius:6px; color:var(--muted); padding:4px 10px; cursor:pointer; font:inherit; display:none; }
+      border-radius:4px; color:var(--muted); padding:4px 10px; cursor:pointer; font:inherit; display:none; }
     #job-ribbon.done .jx, #job-ribbon.failed .jx { display:block; }
     body.job-ribboned { padding-top:62px; }
     /* in-UI Companion emulator panel */
@@ -225,18 +225,18 @@
     .emu-head { display:flex; align-items:center; gap:6px; padding:8px 12px;
       background:var(--surface); border-bottom:1px solid var(--violet-bd, var(--border2)); }
     .emu-title { flex:1; font-family:var(--font-display); font-weight:700; font-size:14px;
-      letter-spacing:0.06em; text-transform:uppercase; color:var(--violet, var(--text)); }
+      letter-spacing: 0; text-transform: none; color:var(--violet, var(--text)); }
     .emu-tabs { flex:1; display:flex; gap:5px; overflow-x:auto; min-width:0; }
     .emu-tab { display:flex; align-items:center; gap:7px; padding:6px 10px;
-      background:var(--surface2); border:1px solid var(--border2); border-radius:8px;
-      font-family:var(--font-display); font-weight:600; font-size:12px;
-      letter-spacing:0.04em; text-transform:uppercase; color:var(--muted);
+      background:var(--surface2); border:1px solid var(--border2); border-radius:4px;
+      font-family:var(--font-display); font-weight:600; font-size:13px;
+      letter-spacing: 0; text-transform: none; color:var(--muted);
       cursor:pointer; white-space:nowrap; }
     .emu-tab.on { color:var(--text); border-color:var(--muted2); background:var(--surface); }
     .emu-tab .etx { font-size:14px; line-height:1; color:var(--muted2); padding:0 1px; }
     .emu-tab .etx:hover { color:var(--red); }
     #emu-frames iframe { position:absolute; inset:0; width:100%; height:100%; border:0; background:#000; }
-    .emu-act { background:none; border:1px solid var(--border2); border-radius:7px;
+    .emu-act { background:none; border:1px solid var(--border2); border-radius:4px;
       padding:6px 9px; cursor:pointer; }
     .emu-act svg { width:16px; height:16px; fill:var(--muted); display:block; }
     .emu-act:hover svg { fill:var(--text); }
@@ -245,7 +245,7 @@
     #tool-dock { position:fixed; left:50%; transform:translateX(-50%); bottom:12px;
       z-index:930; display:none; align-items:center; gap:5px; padding:6px 8px;
       background:var(--surface); border:1px solid var(--violet-bd, var(--border2));
-      border-radius:12px; box-shadow:0 6px 24px rgba(0,0,0,0.55);
+      border-radius:4px; box-shadow: none;
       max-width:92vw; overflow-x:auto; }
     #tool-dock.on { display:flex; }
     /* body freeze while a panel is open - iOS scrolls the page behind a
@@ -258,10 +258,10 @@
       font:600 13px/1 var(--font-body); color:var(--text); }
     #conn-ribbon.on { display:flex; }
     #conn-ribbon .cdot { width:9px; height:9px; border-radius:50%; background:var(--red);
-      box-shadow:0 0 7px rgba(229,72,77,0.7); animation:pulse 1.4s infinite; flex-shrink:0; }
+      box-shadow: none; animation:pulse 1.4s infinite; flex-shrink:0; }
     #conn-ribbon.shutdown { border-bottom-color:var(--amber); }
-    #conn-ribbon.shutdown .cdot { background:var(--amber); box-shadow:0 0 7px rgba(245,165,36,0.7); }
-    #conn-ribbon .csub { color:var(--muted); font-weight:400; font-size:12px; }
+    #conn-ribbon.shutdown .cdot { background:var(--amber); box-shadow: none; }
+    #conn-ribbon .csub { color:var(--muted); font-weight:400; font-size:13px; }
     body.conn-ribboned { padding-top:62px; }
     @keyframes pulse {
       0%   { box-shadow: 0 0 0 0 rgba(47,217,123,0.6); }
@@ -272,29 +272,29 @@
     /* ── Section label - mono eyebrow, Standby Amber ── */
     .section-label {
       font-family: var(--font-mono);
-      font-size: 12px; font-weight: 700; color: var(--amber);
-      text-transform: uppercase; letter-spacing: 0.18em; margin-bottom: 8px;
+      font-size: 13px; font-weight: 700; color: var(--amber);
+      text-transform: none; letter-spacing: 0; margin-bottom: 8px;
     }
 
     /* ── Mode toggle ── */
     .mode-toggle {
       display: grid; grid-template-columns: 1fr 1fr;
       background: var(--surface2); border: 1px solid var(--border2);
-      border-radius: 10px; padding: 4px; margin-bottom: 24px; gap: 4px;
+      border-radius: 4px; padding: 4px; margin-bottom: 24px; gap: 4px;
     }
     .mode-btn {
-      padding: 10px 12px; border: none; border-radius: 7px;
+      padding: 10px 12px; border: none; border-radius: 4px;
       background: transparent; color: var(--muted);
       font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
       display: flex; align-items: center; justify-content: center; gap: 7px; transition: all 0.18s;
     }
     .mode-btn svg { width: 15px; height: 15px; fill: currentColor; }
-    .mode-btn.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 6px rgba(0,0,0,0.4); }
+    .mode-btn.active { background: var(--surface); color: var(--text); box-shadow: none; }
     .mode-toggle:not(.view-toggle) .mode-btn.active {
       background: var(--surface); color: var(--amber);
-      box-shadow: 0 1px 6px rgba(0,0,0,0.4); }
-    .mode-active-tag { font-family: var(--font-mono); font-size: 10px;
-      letter-spacing: 0.1em; text-transform: uppercase; color: var(--green);
+      box-shadow: none; }
+    .mode-active-tag { font-family: var(--font-mono); font-size: 12px;
+      letter-spacing: 0; text-transform: none; color: var(--green);
       margin-left: 8px; }
 
     /* ── Fields ── */
@@ -314,8 +314,8 @@
     .ip-history-dropdown {
       position: absolute; top: calc(100% + 4px); left: 0; right: 0;
       background: var(--surface2); border: 1px solid var(--border2);
-      border-radius: 9px; overflow: hidden; z-index: 100;
-      display: none; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      border-radius: 4px; overflow: hidden; z-index: 100;
+      display: none; box-shadow: none;
     }
     .ip-history-dropdown.open { display: block; }
     .ip-history-item {
@@ -329,7 +329,7 @@
     input {
       width: 100%; padding: 11px 14px;
       background: var(--surface2); border: 1px solid var(--border2);
-      border-radius: 9px; color: var(--text); font-size: 15px; font-family: inherit;
+      border-radius: 4px; color: var(--text); font-size: 15px; font-family: inherit;
       outline: none; transition: border-color 0.15s, box-shadow 0.15s;
     }
     input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-lo); }
@@ -339,7 +339,7 @@
     /* ── Local OnTime panel ── */
     .local-panel {
       background: var(--surface2); border: 1px solid var(--border2);
-      border-radius: 10px; padding: 16px; margin-bottom: 22px;
+      border-radius: 4px; padding: 16px; margin-bottom: 22px;
     }
     /* System tab: OS / Unit Name / Virtual Previews as three equal-height panels */
     .sys-trio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 22px; }
@@ -348,13 +348,13 @@
     @media (max-width: 900px) { .sys-trio { grid-template-columns: 1fr; } }
     .cue-seg { display: flex; gap: 8px; flex: 1; min-width: 240px; }
     .cue-seg button { flex: 1; min-width: 70px; padding: 9px 0; background: var(--surface2);
-      border: 1px solid var(--border2); border-radius: 8px; color: var(--muted);
+      border: 1px solid var(--border2); border-radius: 4px; color: var(--muted);
       font-family: var(--font-display); font-size: 13px; font-weight: 600;
-      letter-spacing: 0.04em; cursor: pointer;
+      letter-spacing: 0; cursor: pointer;
       text-align: center; display: flex; align-items: center; justify-content: center; }
     .cue-seg button.on { border-color: var(--green-bd); color: var(--green); background: var(--green-bg); }
     .wd-box { background: var(--surface2); border: 1px solid var(--border2);
-      border-radius: 10px; padding: 12px 14px; margin-top: 14px; }
+      border-radius: 4px; padding: 12px 14px; margin-top: 14px; }
     .wd-box .toggle-row { margin-top: 0; }
     .wd-sub { display: flex; align-items: center; justify-content: space-between; gap: 12px;
       margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border);
@@ -362,7 +362,7 @@
     .wd-sub.off { opacity: 0.4; pointer-events: none; }
     .cue-marks { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
     .cue-marks button { flex: 1; min-width: 58px; padding: 8px 0; background: var(--surface2);
-      border: 1px solid var(--border2); border-radius: 8px; color: var(--text);
+      border: 1px solid var(--border2); border-radius: 4px; color: var(--text);
       font-family: 'Share Tech Mono', monospace; font-size: 13px; cursor: pointer;
       display: flex; align-items: center; justify-content: center; }
     .cue-marks button:not(.on) { opacity: 0.35; }
@@ -374,17 +374,17 @@
     .local-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; overflow: hidden; }
     .local-panel-title { font-size: 13px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
     .local-panel-title svg { width: 14px; height: 14px; fill: var(--muted); flex-shrink: 0; }
-    .status-badge { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px; border: 1px solid transparent; flex-shrink: 0; white-space: nowrap; }
+    .status-badge { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 4px; border: 1px solid transparent; flex-shrink: 0; white-space: nowrap; }
     .status-badge.running { background: var(--green-bg); border-color: var(--green-bd); color: var(--green); }
     .status-badge.stopped { background: var(--red-bg);   border-color: var(--red-bd);   color: var(--red); }
     .status-badge.missing { background: var(--amber-bg); border-color: var(--amber-bd); color: var(--amber); }
     .local-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
     .btn-sm {
-      padding: 8px 14px; border: 1px solid var(--border2); border-radius: 7px;
+      padding: 8px 14px; border: 1px solid var(--border2); border-radius: 4px;
       background: var(--surface); color: var(--muted);
       font-family: var(--font-display); font-size: 13px; font-weight: 600;
-      letter-spacing: 0.04em; cursor: pointer;
+      letter-spacing: 0; cursor: pointer;
       display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s;
       white-space: nowrap; flex-shrink: 0; text-decoration: none;
     }
@@ -401,7 +401,7 @@
     }
 
     .preview-box {
-      border-radius: 10px; overflow: hidden;
+      border-radius: 4px; overflow: hidden;
       background: #000; border: 1px solid var(--border2);
       aspect-ratio: 16/9; position: relative; cursor: pointer;
       transition: border-color 0.15s;
@@ -427,44 +427,44 @@
     .preview-virtual iframe { width:1280px; height:720px; border:none;
       transform-origin:0 0; pointer-events:none; }
     .pv-bar { display:flex; align-items:center; justify-content:center;
-      padding:6px 10px; border-radius:8px; font:700 10px var(--font-mono);
-      letter-spacing:0.09em; text-transform:uppercase;
+      padding:6px 10px; border-radius:4px; font:700 13px var(--font-mono);
+      letter-spacing: 0; text-transform: none;
       background:var(--surface2); border:1px solid var(--border2); color:var(--muted2); }
     .pv-bar.ok { background:var(--green-bg, rgba(47,217,123,0.08)); border-color:rgba(47,217,123,0.35);
       color:var(--accent); }
     .pv-bar.virt { background:var(--amber-bg); border-color:var(--amber-bd); color:var(--amber); }
     .preview-badge {
       position: absolute; top: 7px; left: 8px; z-index: 1;
-      font-size: 10px; font-weight: 700;
+      font-size: 12px; font-weight: 700;
       color: #fff; background: rgba(0,0,0,0.6);
       backdrop-filter: blur(4px);
       padding: 2px 7px; border-radius: 4px;
-      letter-spacing: 0.06em;
+      letter-spacing: 0;
       pointer-events: none;
     }
 
     .preview-hint {
-      font-size: 11px; color: var(--muted2);
+      font-size: 13px; color: var(--muted2);
       margin: 6px 2px 2px; letter-spacing: 0.02em;
     }
 
     .preview-offline {
       position: absolute; inset: 0;
       display: flex; align-items: center; justify-content: center;
-      color: var(--muted2); font-size: 12px; font-weight: 500;
+      color: var(--muted2); font-size: 13px; font-weight: 500;
     }
 
     .preview-nodisp {
       position: absolute; inset: 0; display: flex; flex-direction: column;
       align-items: center; justify-content: center; gap: 8px;
       background: #000; color: var(--muted);
-      font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
+      font-size: 13px; font-weight: 600; letter-spacing: 0;
     }
     .preview-nodisp svg { width: 34px; height: 34px; fill: none;
       stroke: var(--muted2); stroke-width: 1.6; opacity: 0.9; }
     .tab-nodisp {
-      font-family: var(--font-mono); font-size: 9px; text-transform: uppercase;
-      letter-spacing: 0.06em; color: var(--amber); margin-left: 4px;
+      font-family: var(--font-mono); font-size: 13px; text-transform: none;
+      letter-spacing: 0; color: var(--amber); margin-left: 4px;
     }
     /* ── Display controls (under previews) ── */
     .display-ctl-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 12px; }
@@ -476,20 +476,20 @@
     .hdmi-tabs {
       display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
       background: var(--surface2); border: 1px solid var(--border2);
-      border-radius: 10px; padding: 4px; margin-bottom: 14px; gap: 4px;
+      border-radius: 4px; padding: 4px; margin-bottom: 14px; gap: 4px;
     }
     .hdmi-tab {
-      padding: 9px 8px; border: none; border-radius: 7px;
+      padding: 9px 8px; border: none; border-radius: 4px;
       background: transparent; color: var(--muted);
       font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
       display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.18s;
       min-width: 0; overflow: hidden;
     }
     .hdmi-tab svg { width: 15px; height: 15px; fill: currentColor; flex-shrink: 0; }
-    .hdmi-tab.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 6px rgba(0,0,0,0.4); }
+    .hdmi-tab.active { background: var(--surface); color: var(--text); box-shadow: none; }
     .hdmi-tab .source-name {
       font-family: var(--font-mono);
-      font-size: 10px; font-weight: 400; color: var(--accent);
+      font-size: 13px; font-weight: 400; color: var(--accent);
       background: var(--accent-lo); border: 1px solid rgba(47,217,123,0.25);
       padding: 2px 6px; border-radius: 4px; margin-left: 2px;
       min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -502,8 +502,8 @@
     }
     .source-group-label {
       grid-column: 1 / -1;
-      font-size: 10px; font-weight: 700; color: var(--muted);
-      text-transform: uppercase; letter-spacing: 0.1em;
+      font-size: 13px; font-weight: 700; color: var(--muted);
+      text-transform: none; letter-spacing: 0;
       margin-top: 4px;
       display: flex; align-items: center; gap: 8px;
     }
@@ -513,7 +513,7 @@
       display: flex; align-items: center; gap: 8px;
       padding: 9px 12px;
       background: var(--surface2); border: 1px solid var(--border2);
-      border-radius: 9px; cursor: pointer; transition: all 0.15s; user-select: none;
+      border-radius: 4px; cursor: pointer; transition: all 0.15s; user-select: none;
     }
     .source-chip:hover { border-color: var(--muted2); background: var(--surface2); }
     .source-chip.selected { background: var(--accent-lo); border-color: var(--accent); }
@@ -533,25 +533,25 @@
     .source-chip.selected .chip-opt { display: grid; }
     .chip-opt-item { display: flex; align-items: center; justify-content: space-between;
       gap: 10px; padding: 8px 11px; background: var(--surface); border: 1px solid var(--border2);
-      border-radius: 9px; min-width: 0; }
+      border-radius: 4px; min-width: 0; }
     /* compact toggles inside chips */
 
     .chip-opt input[type="color"] {
       width: 46px; height: 24px; padding: 0; border: 1px solid var(--border2);
-      border-radius: 6px; background: none; cursor: pointer;
+      border-radius: 4px; background: none; cursor: pointer;
     }
     .chip-opt input[type="color"]::-webkit-color-swatch-wrapper { padding: 1px; }
     .chip-opt input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
     @media (max-width: 620px) {
-      .chip-opt .toggle { width: 46px; height: 26px; border-radius: 13px; }
+      .chip-opt .toggle { width: 46px; height: 26px; border-radius: 4px; }
       .chip-opt .toggle::after { top: 3px; left: 3px; width: 20px; height: 20px; }
       .chip-opt .toggle.on::after { left: 23px; }
-      .chip-opt input[type="color"] { width: 58px; height: 32px; border-radius: 8px; }
+      .chip-opt input[type="color"] { width: 58px; height: 32px; border-radius: 4px; }
     }
 
 
     .source-chip-icon {
-      width: 26px; height: 26px; border-radius: 6px;
+      width: 26px; height: 26px; border-radius: 4px;
       background: var(--border2);
       display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
@@ -572,20 +572,20 @@
       display: flex; align-items: center; gap: 14px;
       padding: 12px 16px;
       background: var(--surface); border: 1px solid var(--accent);
-      border-radius: 12px; z-index: 90;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(47,217,123,0.1);
+      border-radius: 4px; z-index: 90;
+      box-shadow: none;
       transition: transform 0.25s ease;
     }
     .save-bar.visible { transform: translateX(-50%) translateY(0); }
     .save-bar-text {
       flex: 1; min-width: 0;
-      font-family: var(--font-mono); font-size: 11px; color: var(--amber);
-      text-transform: uppercase; letter-spacing: 0.12em;
+      font-family: var(--font-mono); font-size: 13px; color: var(--amber);
+      text-transform: none; letter-spacing: 0;
     }
     .save-bar .btn-primary { flex: 0 0 auto; padding: 10px 22px; font-size: 14px; }
     .save-bar-cancel {
       flex: 0 0 auto; padding: 10px 16px; font-size: 13px;
-      background: none; border: 1px solid var(--border2); border-radius: 9px;
+      background: none; border: 1px solid var(--border2); border-radius: 4px;
       color: var(--muted); cursor: pointer;
     }
     .save-bar-cancel:hover { color: var(--text); border-color: var(--muted2); }
@@ -594,16 +594,16 @@
     .external-url-row { grid-column: 1 / -1; margin: 2px 0 4px; }
     .external-url-row input { font-family: var(--font-mono); font-size: 13px; }
     .external-url-hint {
-      font-size: 11px; color: var(--muted); margin-top: 6px; line-height: 1.5;
+      font-size: 13px; color: var(--muted); margin-top: 6px; line-height: 1.5;
     }
 
     /* ── Buttons - Rajdhani, uppercase, like panel labels ── */
     .actions { display: flex; gap: 10px; }
     button {
-      padding: 12px 20px; border: none; border-radius: 9px;
+      padding: 12px 20px; border: none; border-radius: 4px;
       font-family: var(--font-display);
       font-size: 15px; font-weight: 600; cursor: pointer;
-      text-transform: uppercase; letter-spacing: 0.05em;
+      text-transform: none; letter-spacing: 0;
       transition: all 0.15s; white-space: nowrap;
       display: flex; align-items: center; gap: 7px;
     }
@@ -614,9 +614,9 @@
     .btn-primary {
       background: var(--accent);
       color: #0B0D10; flex: 1; justify-content: center;
-      box-shadow: 0 4px 16px rgba(47,217,123,0.25);
+      box-shadow: none;
     }
-    .btn-primary:hover:not(:disabled) { box-shadow: 0 6px 24px rgba(47,217,123,0.4); filter: brightness(1.08); }
+    .btn-primary:hover:not(:disabled) { box-shadow: none; filter: brightness(1.08); }
     .btn-ghost { background: var(--surface2); color: var(--muted); border: 1px solid var(--border2); }
     .btn-ghost:hover:not(:disabled) { background: var(--border2); color: var(--text); }
 
@@ -624,16 +624,16 @@
     /* A Cue light seen over Bluetooth: not on the network yet, so it cannot
        appear as an ordinary fleet card. Deliberately a banner and not a
        modal - a light being plugged in must never interrupt a show. */
-    .ble-banner { display:none; margin:0 0 12px; padding:11px 13px; border-radius:9px;
+    .ble-banner { display:none; margin:0 0 12px; padding:11px 13px; border-radius:4px;
       background:var(--green-bg); border:1px solid var(--green-bd); }
     .ble-banner.on { display:block; }
     /* A network's lights split across WiFi channels (0.85 lights): amber, a banner, never a modal */
-    .fx-split { display:none; margin:0 0 12px; padding:11px 13px; border-radius:9px; font-size:13px; line-height:1.5;
+    .fx-split { display:none; margin:0 0 12px; padding:11px 13px; border-radius:4px; font-size:13px; line-height:1.5;
       background:rgba(245,165,36,.08); border:1px solid rgba(245,165,36,.4); }
     .fx-split.on { display:block; }
     .fx-split b { color:var(--amber); }
     .fx-split .fu-sub { margin-top:4px; }
-    .fx-ch { font:600 10.5px var(--font-mono); color:var(--muted2); }
+    .fx-ch { font:600 13px var(--font-mono); color:var(--muted2); }
     .fx-ch.odd { color:var(--amber); }
     .ble-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
     .ble-row + .ble-row { margin-top:9px; padding-top:9px; border-top:1px solid var(--green-bd); }
@@ -642,20 +642,20 @@
     @keyframes blepulse { 0%,100% { opacity:1 } 50% { opacity:0.35 } }
     .ble-txt { flex:1; min-width:180px; font-size:13px; color:var(--text); }
     .ble-txt b { color:var(--green); }
-    .ble-sub { display:block; font-size:11.5px; color:var(--muted); margin-top:2px; }
+    .ble-sub { display:block; font-size:13px; color:var(--muted); margin-top:2px; }
     .ble-btns { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
     .ble-net { background:var(--surface2); color:var(--text); border:1px solid var(--border2);
-      border-radius:7px; padding:4px 7px; font:inherit; font-size:12.5px; max-width:180px; }
+      border-radius:4px; padding:4px 7px; font:inherit; font-size:12.5px; max-width:180px; }
     .ble-other { display:flex; gap:6px; }
     .ble-other[hidden] { display:none; }
     .ble-other input { background:var(--surface2); color:var(--text); border:1px solid var(--border2);
-      border-radius:7px; padding:4px 7px; font:inherit; font-size:12.5px; width:132px; }
+      border-radius:4px; padding:4px 7px; font:inherit; font-size:12.5px; width:132px; }
     /* The same news on any other page: a quiet strip at the bottom, never a
        modal, and it stays out of Show Mode's way by sitting above the toast. */
     .ble-notice { display:none; position:fixed; left:50%; transform:translateX(-50%);
       bottom:16px; z-index:60; align-items:center; gap:10px; padding:9px 12px;
-      border-radius:10px; background:var(--green-bg); border:1px solid var(--green-bd);
-      box-shadow:0 8px 24px rgba(0,0,0,0.45); font-size:13px; color:var(--text);
+      border-radius:4px; background:var(--green-bg); border:1px solid var(--green-bd);
+      box-shadow: none; font-size:13px; color:var(--text);
       max-width:min(560px, calc(100vw - 24px)); }
     .ble-notice.on { display:flex; }
     .fx-btns-tight { display:flex; gap:4px; flex-wrap:wrap; margin-left:auto; }
@@ -667,12 +667,12 @@
       width: calc(100% - 32px); max-width: 560px;
       /* above every sheet and dialog (the unit sheet is 900, the add-to-home
          dialog 1000): a toast is the answer to what was just tapped in one */
-      padding: 12px 16px; border-radius: 12px; z-index: 1100;
+      padding: 12px 16px; border-radius: 4px; z-index: 1100;
       font-size: 13px; font-weight: 500;
       display: flex; align-items: flex-start; gap: 9px;
       border: 1px solid transparent;
       background: var(--surface);
-      box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+      box-shadow: none;
       opacity: 0; pointer-events: none;
       transition: transform 0.25s ease, opacity 0.25s ease;
     }
@@ -691,51 +691,51 @@
       padding: 16px 0 0; margin-top: 18px; border-top: 1px solid var(--border);
       display: flex; flex-direction: column; gap: 10px;
     }
-    .footer-info { font-size: 12px; color: var(--muted); line-height: 1.6; }
+    .footer-info { font-size: 13px; color: var(--muted); line-height: 1.6; }
     code {
       font-family: var(--font-mono);
       background: var(--surface2); border: 1px solid var(--border2);
-      padding: 1px 6px; border-radius: 5px; color: var(--accent); font-size: 11px;
+      padding: 1px 6px; border-radius: 4px; color: var(--accent); font-size: 13px;
       word-break: break-all; overflow-wrap: break-word;
     }
     .oss-credit {
-      font-size: 11px; color: var(--muted); line-height: 1.5;
+      font-size: 13px; color: var(--muted); line-height: 1.5;
     }
     .oss-credit a { color: var(--muted); text-decoration: underline; text-underline-offset: 2px; }
     .oss-credit a:hover { color: var(--text); }
     #a2hs-hint { display:flex; align-items:center; gap:6px; margin:18px auto 0; max-width:460px; }
     .a2hs-open { flex:1; display:flex; align-items:center; justify-content:center; gap:8px;
-      background:var(--surface2); border:1px dashed var(--border2); border-radius:9px;
-      color:var(--muted); font:600 12px var(--font-body); padding:10px 12px; cursor:pointer; }
+      background:var(--surface2); border:1px dashed var(--border2); border-radius:4px;
+      color:var(--muted); font:600 13px var(--font-body); padding:10px 12px; cursor:pointer; }
     .a2hs-open svg { width:15px; height:15px; fill:var(--accent); flex-shrink:0; }
     .a2hs-x { background:none; border:none; color:var(--muted2); font-size:18px;
       padding:6px 8px; cursor:pointer; line-height:1; }
     #a2hs-pop { position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,0.6);
       display:flex; align-items:center; justify-content:center; padding:24px; }
-    .a2hs-card { background:var(--surface); border:1px solid var(--border2); border-radius:12px;
+    .a2hs-card { background:var(--surface); border:1px solid var(--border2); border-radius:4px;
       padding:20px 22px; max-width:340px; width:100%; }
     .a2hs-title { font-family:var(--font-display); font-weight:700; font-size:16px;
-      letter-spacing:0.04em; text-transform:uppercase; margin-bottom:12px; }
+      letter-spacing: 0; text-transform: none; margin-bottom:12px; }
     .a2hs-steps { font-size:13.5px; line-height:1.7; color:var(--text); }
     .a2hs-steps b { color:var(--accent); }
     .a2hs-close { margin-top:16px; width:100%; background:var(--surface2);
-      border:1px solid var(--border2); border-radius:8px; color:var(--text);
+      border:1px solid var(--border2); border-radius:4px; color:var(--text);
       font:600 13px var(--font-body); padding:9px; cursor:pointer; }
     .brand-footer {
       font-family: var(--font-mono);
-      font-size: 9px; color: var(--muted2);
-      text-transform: uppercase; letter-spacing: 0.2em;
+      font-size: 13px; color: var(--muted2);
+      text-transform: none; letter-spacing: 0;
       text-align: center; margin-top: 18px;
     }
     .footer-btns { display: flex; flex-direction: column; gap: 8px; }
     .footer-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
     .footer-sep { width: 1px; height: 20px; background: var(--border2); flex-shrink: 0; margin: 0 2px; }
-    .footer-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; flex-shrink: 0; }
+    .footer-label { font-size: 13px; color: var(--muted); text-transform: none; letter-spacing: 0; flex-shrink: 0; }
     .footer-btn {
       padding: 7px 11px; background: transparent; border: 1px solid var(--border2);
-      border-radius: 7px; color: var(--muted);
-      font-family: var(--font-display); font-size: 12px; font-weight: 600;
-      letter-spacing: 0.04em; cursor: pointer; white-space: nowrap; transition: all 0.15s;
+      border-radius: 4px; color: var(--muted);
+      font-family: var(--font-display); font-size: 13px; font-weight: 600;
+      letter-spacing: 0; cursor: pointer; white-space: nowrap; transition: all 0.15s;
       display: flex; align-items: center; gap: 5px; flex-shrink: 0;
     }
     .footer-btn svg { width: 12px; height: 12px; fill: currentColor; }
@@ -757,78 +757,78 @@
     #iface-panel .iface-row:only-child, #iface-panel .iface-none { grid-column:1 / -1; }
     @media (max-width: 700px) { #iface-panel { grid-template-columns:1fr; } }
     .iface-row { display:flex; align-items:center; gap:10px; padding:11px 14px;
-                 background:var(--surface2); border:1px solid var(--border2); border-radius:9px; }
+                 background:var(--surface2); border:1px solid var(--border2); border-radius:4px; }
     .iface-row .ithumb { height:36px; width:auto; flex-shrink:0; }
-    .fleet-ts { font-size:11px; color:var(--muted); padding-left:2px; }
+    .fleet-ts { font-size:13px; color:var(--muted); padding-left:2px; }
     /* CueLink radio (a USB ESP32 on the One, one/cue_radio.py): shown only while one is plugged in */
-    .fx-radio { margin-top:14px; padding:12px 14px; border:1px solid var(--border); border-radius:10px; background:var(--surface); }
+    .fx-radio { margin-top:14px; padding:12px 14px; border:1px solid var(--border); border-radius:4px; background:var(--surface); }
     .fx-radio-hdr { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
-    .fx-radio-hdr select { margin-left:auto; background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:7px;
-                           font:600 12px var(--font-display); letter-spacing:.06em; padding:4px 8px; }
+    .fx-radio-hdr select { margin-left:auto; background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:4px;
+                           font:600 13px var(--font-display); letter-spacing: 0; padding:4px 8px; }
     .fx-radio-row { display:grid; grid-template-columns:minmax(0,1fr) 44px 46px 62px minmax(0,1.2fr); gap:8px; align-items:center;
-                    padding:6px 0; border-top:1px solid var(--border); font:12px var(--font-mono); color:var(--muted); }
-    .fx-radio-row b { font:600 14px var(--font-display); letter-spacing:.04em; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+                    padding:6px 0; border-top:1px solid var(--border); font:13px var(--font-mono); color:var(--muted); }
+    .fx-radio-row b { font:600 14px var(--font-display); letter-spacing: 0; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .fx-radio-row.gone { opacity:.4; }
     .fx-radio-row .lv-g { color:var(--green); } .fx-radio-row .lv-a { color:var(--amber); } .fx-radio-row .lv-r { color:var(--red); }
-    .fx-radio-air { margin-top:8px; max-height:140px; overflow:auto; font:11px var(--font-mono); color:var(--muted); }
+    .fx-radio-air { margin-top:8px; max-height:140px; overflow:auto; font:13px var(--font-mono); color:var(--muted); }
     .fx-radio-air div { padding:2px 0; overflow-wrap:anywhere; }
     .fx-radio-air b { color:var(--text); font-weight:400; }
     .fleet-hdr-right { display:flex; align-items:center; gap:12px; }
-    .idot.bad { background:#f2555a !important; box-shadow:0 0 7px rgba(229,72,77,0.6) !important; }
+    .idot.bad { background:#f2555a !important; box-shadow: none; }
     .fu-card { background:var(--surface2); border:1px solid var(--border2);
-      border-radius:10px; padding:12px 14px; }
+      border-radius:4px; padding:12px 14px; }
     .fu-card.ok { border-color:rgba(47,217,123,0.35); background:rgba(47,217,123,0.045); }
     .fu-card.bad { border-color:rgba(229,72,77,0.45); background:rgba(229,72,77,0.05); }
     .fu-head { display:flex; align-items:center; gap:11px; }
     .fu-head .idot { width:9px; height:9px; border-radius:50%; background:var(--accent);
-      box-shadow:0 0 7px rgba(47,217,123,0.6); flex-shrink:0; }
+      box-shadow: none; flex-shrink:0; }
     .fu-head .ithumb { height:34px; width:auto; flex-shrink:0; }
     .fu-id { min-width:0; }
-    .fu-name { font:700 13.5px var(--font-display); letter-spacing:0.04em; color:var(--text); }
+    .fu-name { font:700 13.5px var(--font-display); letter-spacing: 0; color:var(--text); }
     /* the lineup icons (Design, Downstage Cue assets/icons): outline glyphs in currentColor */
     .cuel-ctl { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:10px; padding-top:10px; border-top:1px solid var(--border); }
     .cuel-ctl .fu-lbl { margin-right:4px; }
-    .cuel-ctl select { background:var(--surface2); color:var(--text); border:1px solid var(--border2); border-radius:8px; padding:6px 8px; font:600 12px var(--font-display); letter-spacing:.04em; }
+    .cuel-ctl select { background:var(--surface2); color:var(--text); border:1px solid var(--border2); border-radius:4px; padding:6px 8px; font:600 13px var(--font-display); letter-spacing: 0; }
     /* neutral, not amber: on a tally page amber means standby (Design, 2026-09-24) */
     .cue-icon { width:18px; height:18px; vertical-align:-4px; margin-right:6px; color:var(--muted); flex:none; }
-    .fu-prod { font-size:9.5px; color:var(--muted2); letter-spacing:0.09em;
-      margin-left:7px; text-transform:uppercase; }
-    .fu-serial { font-family:var(--font-mono); font-size:10.5px; color:var(--muted2); margin-top:2px; }
+    .fu-prod { font-size:13px; color:var(--muted2); letter-spacing: 0;
+      margin-left:7px; text-transform: none; }
+    .fu-serial { font-family:var(--font-mono); font-size:13px; color:var(--muted2); margin-top:2px; }
     .fu-btns { margin-left:auto; display:flex; gap:8px; flex-shrink:0; }
     .fu-meta { display:grid; grid-template-columns:1.1fr 1fr 1.3fr; gap:9px;
       margin-top:12px; }
     .fu-meta > div { background:var(--surface); border:1px solid var(--border2);
-      border-radius:9px; padding:9px 10px 8px; text-align:center; }
-    .fu-lbl { font:600 9.5px var(--font-display); color:var(--muted2);
-      text-transform:uppercase; letter-spacing:0.09em; margin-bottom:3px; }
+      border-radius:4px; padding:9px 10px 8px; text-align:center; }
+    .fu-lbl { font:600 13px var(--font-display); color:var(--muted2);
+      text-transform: none; letter-spacing: 0; margin-bottom:3px; }
     .fu-val { font-size:12.5px; color:var(--text); line-height:1.4; }
     .fu-val.ok { color:var(--accent); }
     .fu-val.bad { color:#f2555a; }
     .fu-ip { font-family:var(--font-mono); font-size:13px; color:var(--accent); cursor:pointer; }
     .fu-ip:hover { text-decoration:underline; text-underline-offset:3px; }
-    .fu-sub { font-size:10.5px; color:var(--muted); margin-top:2px; }
+    .fu-sub { font-size:13px; color:var(--muted); margin-top:2px; }
     .iupdot { display:inline-block; width:6px; height:6px; border-radius:50%;
       background:var(--amber); margin-left:6px; vertical-align:1px; }
     .fleet-btn { margin-left:8px; background:none; border:1px solid var(--border2);
-      border-radius:6px; color:var(--text); font:600 11px var(--font-body);
+      border-radius:4px; color:var(--text); font:600 13px var(--font-body);
       padding:5px 10px; cursor:pointer; }
     .fleet-btn:hover { border-color:var(--muted2); }
     .fleet-card { margin:0 0 6px; }
-    .fu-head .cue-swatch { display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:8px; border:1px solid var(--border2); box-shadow:inset 0 0 0 2px rgba(0,0,0,.35); }
+    .fu-head .cue-swatch { display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:4px; border:1px solid var(--border2); box-shadow:inset 0 0 0 2px rgba(0,0,0,.35); }
     .cue-cam { font-family:var(--mono); font-size:15px; color:var(--muted2); }
-    .cue-rename { margin-left:6px; padding:1px 6px; font-size:11px; line-height:1.4; color:var(--muted); }
+    .cue-rename { margin-left:6px; padding:1px 6px; font-size:13px; line-height:1.4; color:var(--muted); }
     .cuel-seg { display:inline-flex; gap:0; margin-right:6px; align-self:center; }
     .cuel-seg .fleet-btn { margin-left:0; border-radius:0; }
-    .cuel-seg .fleet-btn:first-child { border-radius:6px 0 0 6px; }
-    .cuel-seg .fleet-btn:last-child { border-radius:0 6px 6px 0; border-left:none; }
+    .cuel-seg .fleet-btn:first-child { border-radius:4px 0 0 4px; }
+    .cuel-seg .fleet-btn:last-child { border-radius:0 4px 4px 0; border-left:none; }
     .cuel-seg .fleet-btn.on { color:var(--accent); border-color:var(--accent); }
     #cue-alert-btn.alerting { background:var(--red); color:#fff; }
-    .cue-swatch.lit { box-shadow:0 0 12px 2px color-mix(in srgb, currentColor 0%, transparent), inset 0 0 0 2px rgba(255,255,255,.12); }
+    .cue-swatch.lit { box-shadow: none; }
     .if-mini { display:flex; background:var(--surface2); border:1px solid var(--border2);
-      border-radius:7px; padding:2px; gap:2px; }
-    .if-mini button { background:none; border:none; border-radius:5px; color:var(--muted);
-      font:600 10px var(--font-display); letter-spacing:0.07em; padding:4px 11px;
-      cursor:pointer; text-transform:uppercase; }
+      border-radius:4px; padding:2px; gap:2px; }
+    .if-mini button { background:none; border:none; border-radius:4px; color:var(--muted);
+      font:600 13px var(--font-display); letter-spacing: 0; padding:4px 11px;
+      cursor:pointer; text-transform: none; }
     .if-mini button.active { background:var(--surface); color:var(--accent); }
     /* ── Downstage units: live cards, three wide (Rob, 2026-09-26) ── */
     @property --tally { syntax:'<color>'; inherits:true; initial-value:#07090b; }
@@ -839,24 +839,24 @@
        2026-09-28): the carrier first, then the lights it carries. The box
        spans as many columns as it has lights, up to the grid's width, and
        lays them out on the same columns inside. */
-    .fx-group { --gc:2; grid-column:span 2; position:relative; padding:7px; border-radius:18px;
+    .fx-group { --gc:2; grid-column:span 2; position:relative; padding:7px; border-radius:4px;
       border:1.5px solid var(--cuelink); background:color-mix(in srgb, var(--cuelink) 6%, transparent); }
     .fx-group.g3 { --gc:3; grid-column:1 / -1; }
     .fx-ggrid { display:grid; grid-template-columns:repeat(var(--gc), minmax(0, 1fr)); gap:10px; }
     @media (max-width: 760px) { .fx-group.g3 { --gc:2; } }
     @media (max-width: 460px) { .fx-group, .fx-group.g3 { --gc:1; grid-column:auto; } }
     .fx-card { --tally:#07090b; --ink:#5b6670; position:relative; display:flex; flex-direction:column;
-      background:var(--surface2); border:1px solid var(--border2); border-radius:14px; overflow:hidden;
+      background:var(--surface2); border:1px solid var(--border2); border-radius:4px; overflow:hidden;
       cursor:pointer; outline:none; transition:--tally .45s ease, transform .18s ease, border-color .18s, box-shadow .25s; }
-    .fx-card:hover { transform:translateY(-2px); border-color:#3a4450; box-shadow:0 10px 28px rgba(0,0,0,.35); }
+    .fx-card:hover { transform:translateY(-2px); border-color:#3a4450; box-shadow: none; }
     .fx-card:focus-visible { border-color:var(--accent); box-shadow:0 0 0 2px rgba(47,217,123,.35); }
     .fx-card.lit { border-color:color-mix(in srgb, var(--tally) 38%, var(--border2)); }
-    .fx-card.air { box-shadow:0 0 0 1px color-mix(in srgb, var(--tally) 55%, transparent), 0 0 26px -6px var(--tally); }
+    .fx-card.air { box-shadow: none; }
     .fx-card.bad { border-color:rgba(229,72,77,.5); }
     /* a light the radio has stopped hearing: still listed, visibly not answering */
     .fx-card.stale { opacity:.55; }
     .fx-card.stale:hover { opacity:1; }
-    .fx-note { margin:6px 0 0; font-size:11.5px; line-height:1.35; color:var(--muted); }
+    .fx-note { margin:6px 0 0; font-size:13px; line-height:1.35; color:var(--muted); }
     .fx-sig-air { color:var(--cuelink, #2FD97B); }
     .fx-new { animation:fxIn .45s cubic-bezier(.2,.8,.2,1) both; }
     @keyframes fxIn { from { opacity:0; transform:translateY(10px) scale(.98); } }
@@ -903,21 +903,21 @@
     .fx-card.lit .fx-tglow, .fx-panel.lit .fx-tglow, .su-card.lit .fx-tglow { opacity:1; }
     .fx-card.lit .fx-led, .fx-panel.lit .fx-led { fill:var(--tally); filter:drop-shadow(0 0 2px var(--tally)); }
     .fx-dot { position:absolute; top:11px; left:12px; z-index:2; width:8px; height:8px; border-radius:50%;
-      background:var(--accent); box-shadow:0 0 8px rgba(47,217,123,.7); }
-    .fx-card.bad .fx-dot, .fx-panel.bad .fx-dot { background:#f2555a; box-shadow:0 0 8px rgba(229,72,77,.7); }
-    .fx-badge { position:absolute; top:9px; right:10px; z-index:2; font:600 9.5px var(--font-display); letter-spacing:.09em;
-      text-transform:uppercase; color:var(--amber); border:1px solid rgba(245,165,36,.45); border-radius:20px; padding:2px 8px; }
+      background:var(--accent); box-shadow: none; }
+    .fx-card.bad .fx-dot, .fx-panel.bad .fx-dot { background:#f2555a; box-shadow: none; }
+    .fx-badge { position:absolute; top:9px; right:10px; z-index:2; font:600 12px var(--font-display); letter-spacing: 0;
+      text-transform: none; color:var(--amber); border:1px solid rgba(245,165,36,.45); border-radius:4px; padding:2px 8px; }
     .fx-link { position:absolute; top:8px; right:9px; z-index:2; display:flex; align-items:center; gap:3px;
-      font:700 11px var(--font-display); color:var(--accent); background:rgba(11,13,16,.7); border:1px solid rgba(47,217,123,.35);
-      border-radius:20px; padding:2px 7px 2px 5px; }
+      font:700 13px var(--font-display); color:var(--accent); background:rgba(11,13,16,.7); border:1px solid rgba(47,217,123,.35);
+      border-radius:4px; padding:2px 7px 2px 5px; }
     .fx-link svg { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2; }
     .fx-info { padding:11px 13px 12px; display:flex; flex-direction:column; gap:3px; min-width:0; flex:1; }
-    .fx-name { font:700 15px var(--font-display); letter-spacing:.04em; color:var(--text);
+    .fx-name { font:700 15px var(--font-display); letter-spacing: 0; color:var(--text);
       white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .fx-sub { font:600 10px var(--font-display); letter-spacing:.1em; text-transform:uppercase; color:var(--muted);
+    .fx-sub { font:600 13px var(--font-display); letter-spacing: 0; text-transform: none; color:var(--muted);
       white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .fx-chips { display:flex; flex-wrap:wrap; gap:5px; margin-top:6px; }
-    .fx-chip { font:600 10px var(--font-display); letter-spacing:.08em; text-transform:uppercase; border-radius:20px;
+    .fx-chip { font:600 12px var(--font-display); letter-spacing: 0; text-transform: none; border-radius:4px;
       padding:2px 8px; border:1px solid var(--border2); color:var(--muted); white-space:nowrap; }
     .fx-chip.ok { color:var(--accent); border-color:rgba(47,217,123,.35); }
     .fx-chip.air { color:#fff; background:var(--red); border-color:var(--red); }
@@ -929,8 +929,8 @@
     .fx-chip.tal { color:#ff8a8e; border-color:rgba(229,72,77,.45); }
     .fx-chip.bad { color:#f2555a; border-color:rgba(229,72,77,.5); white-space:normal; }
     .fx-foot { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:auto; padding-top:9px; }
-    .fx-sig { display:flex; align-items:center; gap:8px; font:600 11px var(--font-mono); color:var(--muted); }
-    .fx-mono { font:11px var(--font-mono); color:var(--muted2); }
+    .fx-sig { display:flex; align-items:center; gap:8px; font:600 13px var(--font-mono); color:var(--muted); }
+    .fx-mono { font:13px var(--font-mono); color:var(--muted2); }
     .fx-dim { color:var(--muted2); }
     .fx-bars { display:inline-flex; align-items:flex-end; gap:2px; height:13px; }
     .fx-sig-one { display:inline-flex; align-items:center; gap:4px; }
@@ -954,10 +954,10 @@
     .fx-panel { overscroll-behavior:contain; }   /* the end of its scroll does not carry on into the page */
     html.fx-locked, html.fx-locked body { overflow:hidden; }
     .fx-panel { --tally:#07090b; --ink:#5b6670; position:relative; width:min(560px, 100%); max-height:calc(100vh - 40px); overflow:auto;
-      background:var(--surface); border:1px solid var(--border2); border-radius:18px; box-shadow:0 24px 60px rgba(0,0,0,.55);
+      background:var(--surface); border:1px solid var(--border2); border-radius:4px; box-shadow: none;
       transform:translateY(14px) scale(.98); opacity:0; transition:transform .22s cubic-bezier(.2,.8,.2,1), opacity .22s, --tally .45s; }
     .fx-sheet.open .fx-panel { transform:none; opacity:1; }
-    .fx-panel.air { box-shadow:0 24px 60px rgba(0,0,0,.55), 0 0 0 1px color-mix(in srgb, var(--tally) 55%, transparent), 0 0 40px -10px var(--tally); }
+    .fx-panel.air { box-shadow: none; }
     /* the page's button rule pads 12 x 20 and fills svgs: undone here, or the circle squashes to an oval */
     .fx-x { position:absolute; top:12px; right:12px; z-index:3; width:34px; height:34px; min-width:34px; padding:0; flex:none;
       display:grid; place-items:center; border-radius:50%; border:1px solid var(--border2);
@@ -965,50 +965,50 @@
     .fx-x svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; }
     .fx-x:hover { color:var(--text); border-color:var(--muted2); background:var(--surface2); }
     .fx-hero { display:flex; gap:16px; align-items:center; padding:16px 18px; border-bottom:1px solid var(--border); }
-    .fx-stage.big { width:150px; height:150px; flex:none; border-radius:14px; border:1px solid var(--border); }
+    .fx-stage.big { width:150px; height:150px; flex:none; border-radius:4px; border:1px solid var(--border); }
     .fx-stage.big .fx-art { width:128px; height:128px; }
     .fx-hero-txt { min-width:0; }
-    .fx-title { font:700 22px var(--font-display); letter-spacing:.04em; color:var(--text); display:flex; align-items:center; gap:8px; }
-    .fx-edit { background:none; border:1px solid var(--border2); border-radius:6px; color:var(--muted); font-size:12px; padding:1px 7px; cursor:pointer; }
+    .fx-title { font:700 22px var(--font-display); letter-spacing: 0; color:var(--text); display:flex; align-items:center; gap:8px; }
+    .fx-edit { background:none; border:1px solid var(--border2); border-radius:4px; color:var(--muted); font-size:13px; padding:1px 7px; cursor:pointer; }
     .fx-edit:hover { color:var(--text); border-color:var(--muted2); }
     .fx-sec { padding:14px 18px; border-bottom:1px solid var(--border); }
-    .fx-h { font:600 10px var(--font-display); letter-spacing:.12em; text-transform:uppercase; color:var(--muted2); margin-bottom:9px; }
+    .fx-h { font:600 13px var(--font-display); letter-spacing: 0; text-transform: none; color:var(--muted2); margin-bottom:9px; }
     .fx-note { font-size:12.5px; color:var(--muted); margin:0 0 10px; }
     .fx-note b { color:var(--text); font-weight:600; }
     .fx-sigbars { vertical-align:-1px; margin-left:6px; }
     :root { --cuelink: var(--accent); }   /* CueLink green: the link badge, the rings and every CueLink bar */
     .fx-carried { display:flex; flex-direction:column; gap:6px; margin:-4px 0 10px; }
     .fx-carried-row { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:7px 10px;
-      background:var(--surface2); border:1px solid var(--border2); border-radius:9px; font:600 13px var(--font-display); letter-spacing:.04em; }
+      background:var(--surface2); border:1px solid var(--border2); border-radius:4px; font:600 13px var(--font-display); letter-spacing: 0; }
     .fx-seg { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
     .fx-seg.three { grid-template-columns:1fr 1fr 1fr; }
     .fx-seg button[disabled] { opacity:.4; cursor:not-allowed; }
     .fx-where { margin:0 0 10px; font-size:13px; line-height:1.5; color:var(--text); }
     .fx-info-btn { display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; margin-left:8px; padding:0; border-radius:50%; border:1px solid var(--muted2); background:none;
-      color:var(--muted); font:700 11px var(--font-body); font-style:italic; text-transform:none; letter-spacing:0; cursor:pointer; vertical-align:1px; }
+      color:var(--muted); font:700 13px var(--font-body); font-style:italic; text-transform:none; letter-spacing:0; cursor:pointer; vertical-align:1px; }
     .fx-info-btn:hover, .explain .fx-info-btn { color:var(--accent); border-color:var(--accent); }
-    .fx-explain { display:none; margin-top:10px; padding:10px 12px; border-radius:10px; background:var(--surface2); border:1px solid var(--border2);
-      font-size:12px; line-height:1.5; color:var(--muted); }
+    .fx-explain { display:none; margin-top:10px; padding:10px 12px; border-radius:4px; background:var(--surface2); border:1px solid var(--border2);
+      font-size:13px; line-height:1.5; color:var(--muted); }
     .fx-explain p { margin:0 0 6px; } .fx-explain p:last-child { margin:0; }
     .fx-explain b { color:var(--text); }
     .explain .fx-explain { display:block; }
-    .fx-seg button { text-align:left; background:var(--surface2); border:1px solid var(--border2); border-radius:10px; padding:10px 12px;
+    .fx-seg button { text-align:left; background:var(--surface2); border:1px solid var(--border2); border-radius:4px; padding:10px 12px;
       color:var(--text); cursor:pointer; display:flex; flex-direction:column; gap:2px; transition:border-color .15s, background .15s; }
-    .fx-seg button b { font:700 13px var(--font-display); letter-spacing:.04em; }
-    .fx-seg button span { font-size:11px; color:var(--muted); }
+    .fx-seg button b { font:700 13px var(--font-display); letter-spacing: 0; }
+    .fx-seg button span { font-size:13px; color:var(--muted); }
     .fx-seg button:hover { border-color:var(--muted2); }
     .fx-seg button.on { border-color:var(--accent); background:rgba(47,217,123,.08); }
     .fx-seg button.on b { color:var(--accent); }
-    .fx-select { width:100%; background:var(--surface2); color:var(--text); border:1px solid var(--border2); border-radius:10px;
-      padding:10px 12px; font:600 13px var(--font-display); letter-spacing:.04em; }
+    .fx-select { width:100%; background:var(--surface2); color:var(--text); border:1px solid var(--border2); border-radius:4px;
+      padding:10px 12px; font:600 13px var(--font-display); letter-spacing: 0; }
     .fx-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-    .fx-kv { background:var(--surface2); border:1px solid var(--border2); border-radius:10px; padding:9px 11px; min-width:0; }
+    .fx-kv { background:var(--surface2); border:1px solid var(--border2); border-radius:4px; padding:9px 11px; min-width:0; }
     .fx-v { font-size:13px; color:var(--text); overflow-wrap:anywhere; }
     .fx-ok { color:var(--accent); } .fx-bad { color:#f2555a; }
     .fx-actions { display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; padding:14px 18px; }
     .fx-actions.left { justify-content:flex-start; padding:10px 0 0; }
-    .fx-btn { background:var(--surface2); border:1px solid var(--border2); border-radius:9px; color:var(--text);
-      font:600 12px var(--font-display); letter-spacing:.06em; text-transform:uppercase; padding:8px 14px; cursor:pointer; }
+    .fx-btn { background:var(--surface2); border:1px solid var(--border2); border-radius:4px; color:var(--text);
+      font:600 13px var(--font-display); letter-spacing: 0; text-transform: none; padding:8px 14px; cursor:pointer; }
     .fx-btn:hover { border-color:var(--muted2); }
     .fx-btn.primary { background:var(--accent); border-color:var(--accent); color:#0b0d10; }
     .fx-btn.on { color:var(--accent); border-color:var(--accent); }
@@ -1018,7 +1018,7 @@
     .fx-forget:hover { color:#f2555a; border-color:rgba(229,72,77,.5); }
     @media (max-width: 560px) {
       .fx-sheet { padding:0; align-items:flex-end; }
-      .fx-panel { width:100%; max-height:92vh; border-radius:18px 18px 0 0; }
+      .fx-panel { width:100%; max-height:92vh; border-radius:4px 4px 0 0; }
       .fx-hero { flex-direction:column; text-align:center; }
       .fx-title { justify-content:center; } .fx-hero .fx-chips { justify-content:center; }
       .fx-seg, .fx-seg.three, .fx-grid2 { grid-template-columns:1fr; }
@@ -1032,14 +1032,14 @@
     body.show-mode .show-units.has { display:block; margin:-4px 0 22px; }
     .su-row { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
     .su-card { --tally:#07090b; --ink:#5b6670; display:flex; align-items:center; gap:10px; min-width:150px; max-width:210px; flex:0 1 auto;
-      padding:6px 12px 6px 6px; border-radius:12px; background:var(--surface2); border:1px solid var(--border2); cursor:pointer;
+      padding:6px 12px 6px 6px; border-radius:4px; background:var(--surface2); border:1px solid var(--border2); cursor:pointer;
       transition:--tally .45s ease, border-color .18s, transform .15s, box-shadow .25s; outline:none; }
     .su-card:hover { transform:translateY(-1px); border-color:#3a4450; }
     .su-card:focus-visible { border-color:var(--accent); }
     .su-card.lit { border-color:color-mix(in srgb, var(--tally) 45%, var(--border2)); }
-    .su-card.air { box-shadow:0 0 0 1px color-mix(in srgb, var(--tally) 60%, transparent), 0 0 18px -6px var(--tally); }
+    .su-card.air { box-shadow: none; }
     .su-card.bad { border-color:rgba(229,72,77,.5); }
-    .su-art { position:relative; width:44px; height:44px; flex:none; border-radius:9px; overflow:hidden; display:grid; place-items:center;
+    .su-art { position:relative; width:44px; height:44px; flex:none; border-radius:4px; overflow:hidden; display:grid; place-items:center;
       background:radial-gradient(120% 90% at 50% 0%, #1b2129 0%, #0d1014 70%); }
     .su-art::before { content:''; position:absolute; inset:-40%; opacity:0; transition:opacity .45s;
       background:radial-gradient(circle, color-mix(in srgb, var(--tally) 60%, transparent) 0%, transparent 45%); }
@@ -1051,20 +1051,20 @@
     .su-card:not(.lit) .fx-num { fill:#5b6670; } .su-card.lit .fx-led { fill:var(--tally); }
     .su-card.lit .fx-art .fx-frame ~ .fx-num { fill:var(--tally); }
     .su-txt { min-width:0; display:flex; flex-direction:column; gap:1px; text-align:left; }
-    .su-name { font:700 13px var(--font-display); letter-spacing:.04em; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .su-state { font:600 9.5px var(--font-display); letter-spacing:.1em; text-transform:uppercase; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .su-name { font:700 13px var(--font-display); letter-spacing: 0; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .su-state { font:600 13px var(--font-display); letter-spacing: 0; text-transform: none; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .su-state.air { color:#ff6b70; } .su-state.pv { color:var(--accent); } .su-state.bad { color:#f2555a; } .su-state.tm { color:var(--amber); }
     .su-dot { position:absolute; top:4px; left:4px; width:6px; height:6px; border-radius:50%; background:var(--accent); z-index:1; }
     .su-card.bad .su-dot { background:#f2555a; }
     @media (prefers-reduced-motion: reduce) { .su-card { transition:none; } .su-card.air .su-art::before { animation:none; } }
     /* choosing a light's button on a live picture of a Companion page */
-    .fx-pick { width:100%; display:flex; align-items:center; gap:14px; text-align:left; padding:12px 14px; border-radius:12px;
+    .fx-pick { width:100%; display:flex; align-items:center; gap:14px; text-align:left; padding:12px 14px; border-radius:4px;
       background:linear-gradient(135deg, rgba(47,217,123,.10), rgba(46,144,217,.08)); border:1px solid rgba(47,217,123,.35);
       color:var(--text); text-transform:none; letter-spacing:0; }
     .fx-pick:hover { border-color:var(--accent); }
     .fx-pick > span:nth-child(2) { display:flex; flex-direction:column; gap:2px; flex:1; min-width:0; }
-    .fx-pick b { font:700 14px var(--font-display); letter-spacing:.05em; text-transform:uppercase; }
-    .fx-pick > span:nth-child(2) > span { font:400 12px var(--font-body); color:var(--muted); white-space:normal; }
+    .fx-pick b { font:700 14px var(--font-display); letter-spacing: 0; text-transform: none; }
+    .fx-pick > span:nth-child(2) > span { font:400 13px var(--font-body); color:var(--muted); white-space:normal; }
     .fx-pick > svg { width:14px; height:14px; fill:none; stroke:var(--muted); stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
     .fx-pick-ic { display:grid; grid-template-columns:repeat(4, 8px); gap:3px; flex:none; }
     .fx-pick-ic i { width:8px; height:8px; border-radius:2px; background:#2a323b; }
@@ -1077,71 +1077,71 @@
     .fx-back svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
     .fx-back:hover { color:var(--text); border-color:var(--muted2); }
     .fx-gbar { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 16px 0; }
-    .fx-pager { display:flex; align-items:center; gap:10px; font:600 13px var(--font-display); letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+    .fx-pager { display:flex; align-items:center; gap:10px; font:600 13px var(--font-display); letter-spacing: 0; text-transform: none; color:var(--muted); }
     .fx-pager b { color:var(--text); font-size:16px; }
-    .fx-gpage { max-width:260px; padding:6px 10px; border-radius:8px; border:1px solid var(--border2); background:var(--surface2); color:var(--text);
-      font:600 13px var(--font-display); letter-spacing:.04em; }
-    .fx-pager button { width:32px; height:32px; min-width:32px; padding:0; justify-content:center; border-radius:8px; border:1px solid var(--border2);
+    .fx-gpage { max-width:260px; padding:6px 10px; border-radius:4px; border:1px solid var(--border2); background:var(--surface2); color:var(--text);
+      font:600 13px var(--font-display); letter-spacing: 0; }
+    .fx-pager button { width:32px; height:32px; min-width:32px; padding:0; justify-content:center; border-radius:4px; border:1px solid var(--border2);
       background:var(--surface2); color:var(--text); font-size:20px; line-height:1; }
-    .fx-gsize { background:var(--surface2); color:var(--text); border:1px solid var(--border2); border-radius:8px; padding:6px 8px; font:600 12px var(--font-display); letter-spacing:.04em; }
+    .fx-gsize { background:var(--surface2); color:var(--text); border:1px solid var(--border2); border-radius:4px; padding:6px 8px; font:600 13px var(--font-display); letter-spacing: 0; }
     .fx-gwrap { padding:12px 16px; }
-    .fx-gcells { display:grid; gap:6px; padding:10px; background:#08090b; border:1px solid var(--border); border-radius:12px; }
-    .fx-cell { position:relative; aspect-ratio:1; min-width:0; padding:0; border-radius:7px; border:1px solid #20262d; background:#000;
+    .fx-gcells { display:grid; gap:6px; padding:10px; background:#08090b; border:1px solid var(--border); border-radius:4px; }
+    .fx-cell { position:relative; aspect-ratio:1; min-width:0; padding:0; border-radius:4px; border:1px solid #20262d; background:#000;
       overflow:hidden; cursor:pointer; display:block; transition:transform .12s, box-shadow .15s, border-color .15s; }
     .fx-cell img, .fx-cell-txt { width:100%; height:100%; display:block; object-fit:cover; image-rendering:auto; }
-    .fx-cell-txt { display:flex; align-items:center; justify-content:center; text-align:center; font:600 10px var(--font-display);
+    .fx-cell-txt { display:flex; align-items:center; justify-content:center; text-align:center; font:600 13px var(--font-display);
       padding:3px; overflow:hidden; white-space:normal; word-break:break-word; text-transform:none; letter-spacing:0; }
     .fx-cell-wait { display:block; width:100%; height:100%; background:linear-gradient(110deg, #111418 30%, #1a1f25 50%, #111418 70%);
       background-size:220% 100%; animation:fxShimmer 1.2s linear infinite; }
     @keyframes fxShimmer { to { background-position:-120% 0; } }
-    .fx-cell:hover { transform:scale(1.06); z-index:1; border-color:var(--muted2); box-shadow:0 6px 16px rgba(0,0,0,.5); }
+    .fx-cell:hover { transform:scale(1.06); z-index:1; border-color:var(--muted2); box-shadow: none; }
     .fx-cell.down { box-shadow:inset 0 0 0 2px #fff; }
-    .fx-cell.sel { border-color:var(--accent); box-shadow:0 0 0 2px var(--accent), 0 0 18px rgba(47,217,123,.45); transform:scale(1.04); z-index:2; }
+    .fx-cell.sel { border-color:var(--accent); box-shadow: none; transform:scale(1.04); z-index:2; }
     .fx-cell.nav { opacity:.85; }
     .fx-gfoot { display:flex; flex-direction:column; gap:12px; padding:4px 16px 16px; }
     .fx-gfoot-row { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:52px; }
-    .fx-gsel { font:700 15px var(--font-display); letter-spacing:.05em; color:var(--accent); }
+    .fx-gsel { font:700 15px var(--font-display); letter-spacing: 0; color:var(--accent); }
     .fx-cell.cur { border-color:#2e90d9; box-shadow:0 0 0 2px #2e90d9; }
-    .fx-cur { position:absolute; left:50%; bottom:3px; transform:translateX(-50%); font:700 8.5px var(--font-display); letter-spacing:.1em;
+    .fx-cur { position:absolute; left:50%; bottom:3px; transform:translateX(-50%); font:700 13px var(--font-display); letter-spacing: 0;
       color:#fff; background:#2e90d9; border-radius:4px; padding:1px 5px; }
-    .fx-gblock { font-size:12px; color:var(--amber); max-width:52%; text-align:right; line-height:1.4; }
+    .fx-gblock { font-size:13px; color:var(--amber); max-width:52%; text-align:right; line-height:1.4; }
     .fx-follow { margin:10px 0 0; }
-    .fx-warn-t { color:var(--amber); font-size:12px; }
-    .fx-link-btn { display:inline; padding:0; margin-left:6px; background:none; border:none; color:var(--accent); font:600 12px var(--font-body);
+    .fx-warn-t { color:var(--amber); font-size:13px; }
+    .fx-link-btn { display:inline; padding:0; margin-left:6px; background:none; border:none; color:var(--accent); font:600 13px var(--font-body);
       text-transform:none; letter-spacing:0; text-decoration:underline; text-underline-offset:3px; cursor:pointer; }
-    .fx-gmsg { margin:18px 16px 16px; padding:16px 18px; border:1px solid rgba(245,165,36,.4); border-radius:12px; background:rgba(245,165,36,.06); }
-    .fx-gmsg-t { font:700 16px var(--font-display); letter-spacing:.04em; color:var(--amber); margin-bottom:6px; }
+    .fx-gmsg { margin:18px 16px 16px; padding:16px 18px; border:1px solid rgba(245,165,36,.4); border-radius:4px; background:rgba(245,165,36,.06); }
+    .fx-gmsg-t { font:700 16px var(--font-display); letter-spacing: 0; color:var(--amber); margin-bottom:6px; }
     .fx-gmsg p { font-size:13px; color:var(--text); margin:0 0 8px; line-height:1.5; }
     .fx-gmsg p.fx-dim { color:var(--muted); }
     .fx-btn:disabled { opacity:.45; cursor:not-allowed; transform:none; }
-    @media (max-width: 560px) { .fx-gcells { gap:4px; padding:6px; } .fx-cell { border-radius:5px; } }
+    @media (max-width: 560px) { .fx-gcells { gap:4px; padding:6px; } .fx-cell { border-radius:4px; } }
     @media (prefers-reduced-motion: reduce) { .fx-cell-wait { animation:none; } .fx-cell { transition:none; } }
-    #fleet-panel .ivia { font-size:11px; color:var(--muted); }
+    #fleet-panel .ivia { font-size:13px; color:var(--muted); }
     #fleet-panel .ibrk { display:none; }
     @media (max-width: 620px) {
       .fu-meta { grid-template-columns:1fr; gap:9px; }
       .fu-id { flex:1; min-width:0; }
       .fu-name, .fu-serial { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-      .fu-serial { font-size:10px; }
+      .fu-serial { font-size:13px; }
       .status-strip .status-bar { justify-content:flex-start; }
       .fleet-hdr-right { flex-wrap:wrap; justify-content:flex-end; }
       .fleet-hdr-right .fleet-ts { flex-basis:100%; text-align:right; white-space:nowrap; order:2; }
     }
     .iface-row .idot { width:8px; height:8px; border-radius:50%; background:var(--accent);
-                       box-shadow:0 0 7px rgba(47,217,123,0.6); flex-shrink:0; }
+                       box-shadow: none; flex-shrink:0; }
     .iface-row .ikind { font-family:var(--font-display); font-weight:700; font-size:13px;
-                        letter-spacing:0.04em; width:88px; }
+                        letter-spacing: 0; width:88px; }
     .iface-row .iip { font-family:var(--font-mono); font-size:14px; color:var(--accent); cursor:pointer; }
     .iface-row .iip:hover { text-decoration:underline; text-underline-offset:3px; }
-    .iface-row .iprim { font-family:var(--font-mono); font-size:9px; letter-spacing:0.1em;
+    .iface-row .iprim { font-family:var(--font-mono); font-size:13px; letter-spacing: 0;
       color:var(--accent); border:1px solid var(--green-bd); border-radius:4px;
       padding:2px 6px; }
-    .iface-row .idev { font-family:var(--font-mono); font-size:11px; color:var(--muted2); margin-left:auto; }
+    .iface-row .idev { font-family:var(--font-mono); font-size:13px; color:var(--muted2); margin-left:auto; }
     .iface-row.isec { opacity:0.62; }
-    .iface-row .idot.warn { background:var(--amber); box-shadow:0 0 7px rgba(245,165,36,0.5); }
-    .iface-row .inote { font-size:11px; color:var(--muted); }
+    .iface-row .idot.warn { background:var(--amber); box-shadow: none; }
+    .iface-row .inote { font-size:13px; color:var(--muted); }
     .iface-none { padding:11px 14px; font-size:12.5px; color:var(--muted);
-                  background:var(--surface2); border:1px solid var(--border2); border-radius:9px; }
+                  background:var(--surface2); border:1px solid var(--border2); border-radius:4px; }
     .wifi-saved-row { display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid var(--border); }
     .wifi-saved-row .wifi-name { flex:1; }
     .wifi-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; overflow: hidden; }
@@ -1153,7 +1153,7 @@
     .wifi-network-list { display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow-y: auto; }
     .wifi-network {
       display: flex; align-items: center; gap: 10px;
-      padding: 9px 12px; border-radius: 8px; cursor: pointer;
+      padding: 9px 12px; border-radius: 4px; cursor: pointer;
       background: var(--surface); border: 1px solid var(--border2);
       transition: all 0.15s;
     }
@@ -1182,18 +1182,18 @@
     .hotspot-info { display: flex; align-items: center; gap: 8px; font-size: 13px; min-width: 0; }
     .hotspot-info svg { width: 14px; height: 14px; fill: var(--muted); flex-shrink: 0; }
     .hotspot-ssid {
-      font-family: var(--font-mono); font-size: 12px; color: var(--text);
+      font-family: var(--font-mono); font-size: 13px; color: var(--text);
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
     .hotspot-state {
-      font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em;
-      padding: 2px 7px; border-radius: 20px; border: 1px solid var(--border2); color: var(--muted);
+      font-family: var(--font-mono); font-size: 13px; text-transform: none; letter-spacing: 0;
+      padding: 2px 7px; border-radius: 4px; border: 1px solid var(--border2); color: var(--muted);
     }
     .hotspot-state.on { border-color: var(--green-bd); background: var(--green-bg); color: var(--green); }
     .hotspot-hint {
-      margin-top: 8px; font-size: 11px; color: var(--muted); line-height: 1.6;
+      margin-top: 8px; font-size: 13px; color: var(--muted); line-height: 1.6;
     }
-    .hotspot-hint code { font-size: 11px; }
+    .hotspot-hint code { font-size: 13px; }
 
     /* ── WiFi password modal ── */
     .modal-overlay {
@@ -1204,13 +1204,13 @@
     .modal-overlay.open { display: flex; }
     .modal {
       background: var(--surface); border: 1px solid var(--border2);
-      border-radius: 16px; padding: 24px; width: 320px; max-width: 90vw;
+      border-radius: 4px; padding: 24px; width: 320px; max-width: 90vw;
     }
-    .modal h3 { font-family: var(--font-display); font-size: 17px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+    .modal h3 { font-family: var(--font-display); font-size: 17px; font-weight: 700; text-transform: none; letter-spacing: 0; margin-bottom: 6px; }
     .modal p  { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
     .modal input { margin-bottom: 14px; }
     .modal-btns { display: flex; gap: 8px; }
-    .rig-big { font: 600 34px var(--font-mono); letter-spacing: .32em; text-align: center; margin: 12px 0 6px; }
+    .rig-big { font: 600 34px var(--font-mono); letter-spacing: 0; text-align: center; margin: 12px 0 6px; }
     #rig-body .modal-btns { flex-wrap: wrap; margin-top: 10px; }
     #rig-body input { width: 100%; margin: 8px 0; }
 
@@ -1219,21 +1219,21 @@
     .tz-row select, select.setting-select {
       flex: 1; min-width: 0; width: 100%; padding: 9px 12px;
       background: var(--surface2); border: 1px solid var(--border2);
-      border-radius: 9px; color: var(--text); font-size: 13px; font-family: inherit;
+      border-radius: 4px; color: var(--text); font-size: 13px; font-family: inherit;
       outline: none; cursor: pointer; transition: border-color 0.15s;
     }
     .tz-row select:focus, select.setting-select:focus { border-color: var(--accent); }
     .tz-current {
-      font-size: 12px; color: var(--muted); margin-bottom: 10px;
+      font-size: 13px; color: var(--muted); margin-bottom: 10px;
       display: flex; align-items: center; gap: 6px;
     }
-    .tz-note { font-size: 11.5px; color: var(--muted2); line-height: 1.5; margin-top: 11px; }
+    .tz-note { font-size: 13px; color: var(--muted2); line-height: 1.5; margin-top: 11px; }
     .tz-current span { color: var(--text); font-weight: 500; }
 
     /* ── Blackout / watchdog banners ── */
     .alert-bar {
       display: flex; align-items: center; gap: 10px; padding: 10px 16px;
-      border-radius: 10px; margin-bottom: 16px;
+      border-radius: 4px; margin-bottom: 16px;
       font-size: 13px; font-weight: 600; border: 1px solid transparent;
     }
     .alert-bar.blackout  { background: rgba(0,0,0,0.7); border-color: #333; color: #666; }
@@ -1243,7 +1243,7 @@
       position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
       width: calc(100% - 32px); max-width: 560px; margin-bottom: 0;
       background: rgba(8,9,11,0.94); color: #9AA4AD; z-index: 85;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.7);
+      box-shadow: none;
       backdrop-filter: blur(6px);
     }
     /* step above the save bar when both are up */
@@ -1252,8 +1252,8 @@
     .alert-bar.power     { background: var(--red-bg); border-color: var(--red-bd); color: var(--red); }
     .alert-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
     .alert-bar .alert-action {
-      margin-left: auto; padding: 5px 12px; border-radius: 6px; border: 1px solid currentColor;
-      background: transparent; color: inherit; font-size: 12px; font-weight: 700;
+      margin-left: auto; padding: 5px 12px; border-radius: 4px; border: 1px solid currentColor;
+      background: transparent; color: inherit; font-size: 13px; font-weight: 700;
       cursor: pointer; font-family: inherit; transition: all 0.15s;
     }
     .alert-bar .alert-action:hover { opacity: 0.7; }
@@ -1267,18 +1267,18 @@
       display: flex; align-items: center; gap: 5px;
       padding: 5px 10px 5px 12px;
       background: var(--surface2); border: 1px solid var(--border2);
-      border-radius: 20px; cursor: pointer; transition: all 0.15s; font-size: 12px;
+      border-radius: 4px; cursor: pointer; transition: all 0.15s; font-size: 12px;
       color: var(--text); font-weight: 500; user-select: none;
     }
     .preset-chip:hover { border-color: var(--accent); color: var(--accent); }
     .preset-chip .del {
       width: 14px; height: 14px; border-radius: 50%; background: var(--border2);
       display: flex; align-items: center; justify-content: center;
-      font-size: 10px; line-height: 1; color: var(--muted); flex-shrink: 0;
+      font-size: 12px; line-height: 1; color: var(--muted); flex-shrink: 0;
       transition: background 0.15s;
     }
     .preset-chip .del:hover { background: var(--red); color: #fff; }
-    .preset-empty { font-size: 12px; color: var(--muted2); padding: 2px 0; }
+    .preset-empty { font-size: 13px; color: var(--muted2); padding: 2px 0; }
 
     /* ── Display settings (resolution/rotation) ── */
     .display-settings-grid {
@@ -1288,8 +1288,8 @@
       display: flex; flex-direction: column; gap: 5px;
     }
     .display-setting-row label {
-      font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase;
-      letter-spacing: 0.08em;
+      font-size: 13px; font-weight: 600; color: var(--muted); text-transform: none;
+      letter-spacing: 0;
     }
 
     /* ── System health ── */
@@ -1299,19 +1299,19 @@
     .health-tile {
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       padding: 12px 8px; background: var(--surface); border: 1px solid var(--border);
-      border-radius: 9px; text-align: center;
+      border-radius: 4px; text-align: center;
     }
     .health-tile .val { font-family: var(--font-mono); font-size: 14px; color: var(--text); word-break: break-all; line-height: 1.2; }
-    .health-tile .lbl { font-size: 10px; color: var(--muted); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.08em; }
+    .health-tile .lbl { font-size: 13px; color: var(--muted); margin-top: 3px; text-transform: none; letter-spacing: 0; }
 
     /* ── Watchdog toggle row ── */
     .toggle-row {
       display: flex; align-items: center; gap: 12px;
       margin-top: 10px;
     }
-    .toggle-label { font-size: 12px; color: var(--muted); flex: 1; min-width: 0; line-height: 1.4; }
+    .toggle-label { font-size: 13px; color: var(--muted); flex: 1; min-width: 0; line-height: 1.4; }
     .toggle {
-      width: 36px; height: 20px; border-radius: 10px; border: none; cursor: pointer;
+      width: 36px; height: 20px; border-radius: 4px; border: none; cursor: pointer;
       padding: 0;   /* the global button padding (12px 20px) floors the box at 40x24 otherwise */
       background: var(--border2); position: relative; transition: background 0.2s;
       flex-shrink: 0;
@@ -1328,22 +1328,22 @@
     .version-row {
       display: none; align-items: center; gap: 8px; flex-wrap: wrap;
       margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border);
-      font-size: 12px; color: var(--muted);
+      font-size: 13px; color: var(--muted);
     }
     .version-tag { font-family: var(--font-mono); font-size: 12px; color: var(--text); }
     .version-badge {
-      font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px;
+      font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 4px;
       border: 1px solid transparent;
     }
     .version-badge.uptodate { background: var(--green-bg); border-color: var(--green-bd); color: var(--green); }
     .version-badge.available { background: var(--amber-bg); border-color: var(--amber-bd); color: var(--amber); }
     .version-badge.checking  { background: var(--blue-bg);  border-color: var(--blue-bd);  color: var(--blue); }
     .channel-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
-    .channel-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; flex-shrink: 0; }
-    .channel-toggle { display: flex; border: 1px solid var(--border2); border-radius: 7px; overflow: hidden; }
+    .channel-label { font-size: 13px; color: var(--muted); text-transform: none; letter-spacing: 0; flex-shrink: 0; }
+    .channel-toggle { display: flex; border: 1px solid var(--border2); border-radius: 4px; overflow: hidden; }
     .channel-btn {
       padding: 4px 12px; background: transparent; border: none; border-radius: 0;
-      color: var(--muted); font-size: 11px; font-weight: 500; cursor: pointer;
+      color: var(--muted); font-size: 13px; font-weight: 500; cursor: pointer;
       font-family: inherit; transition: all 0.15s;
     }
     .channel-btn:first-child { border-right: 1px solid var(--border2); }
@@ -1376,18 +1376,18 @@
     .ctx-menu {
       position: fixed; z-index: 300; min-width: 215px;
       background: var(--surface2); border: 1px solid var(--border2);
-      border-radius: 10px; padding: 5px;
-      box-shadow: 0 10px 32px rgba(0,0,0,0.55);
+      border-radius: 4px; padding: 5px;
+      box-shadow: none;
     }
     .ctx-title {
-      font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
-      text-transform: uppercase; padding: 6px 10px 4px;
+      font-size: 13px; font-weight: 700; letter-spacing: 0;
+      text-transform: none; padding: 6px 10px 4px;
     }
     .ctx-item {
       display: flex; align-items: center; gap: 9px; width: 100%;
       padding: 8px 10px; border: none; background: transparent;
       color: var(--text); font-family: inherit; font-size: 13px;
-      border-radius: 7px; cursor: pointer; text-align: left;
+      border-radius: 4px; cursor: pointer; text-align: left;
     }
     .ctx-item:hover { background: var(--surface); }
     .ctx-item svg { width: 14px; height: 14px; fill: currentColor; opacity: 0.8; flex-shrink: 0; }
@@ -1414,12 +1414,12 @@
     .show-quick .qb-emulator.dimmed { opacity: 0.45; }
     #float-wall { position: fixed; z-index: 1200; top: 72px; left: 12px;
       width: min(92vw, 880px); background: var(--surface);
-      border: 1px solid var(--border2); border-radius: 12px; overflow: hidden;
-      box-shadow: 0 14px 44px rgba(0,0,0,0.55); display: flex; flex-direction: column; }
+      border: 1px solid var(--border2); border-radius: 4px; overflow: hidden;
+      box-shadow: none; display: flex; flex-direction: column; }
     .fw-head { display: flex; justify-content: space-between; align-items: center;
       padding: 7px 12px; background: var(--surface2); border-bottom: 1px solid var(--border);
       cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
-    .fw-title { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.18em;
+    .fw-title { font-family: var(--font-mono); font-size: 13px; letter-spacing: 0;
       color: var(--amber); }
     .fw-x { background: none; border: none; color: var(--muted); font-size: 18px;
       cursor: pointer; padding: 0 4px; line-height: 1; }
@@ -1440,15 +1440,15 @@
     body.show-mode #show-embed.on { display: block !important; margin-bottom: 34px; }
     /* blacked out: the Resume controls flash until someone brings it back */
     @keyframes resume-flash {
-      0%, 100% { border-color: var(--red); box-shadow: 0 0 12px rgba(229,72,77,0.55); }
+      0%, 100% { border-color: var(--red); box-shadow: none; }
       50%      { border-color: var(--red-bd); box-shadow: none; }
     }
     .btn-sm.blackout.flashing { animation: resume-flash 1.1s ease-in-out infinite; color: var(--red); }
     .show-quick .btn-sm {
       flex-direction: column; justify-content: center; align-items: center;
       aspect-ratio: 1 / 1; gap: 9px; padding: 8px 4px;
-      background: var(--surface2); border: 1px solid var(--border2); border-radius: 16px;
-      font-size: 11px; letter-spacing: 0.04em; text-align: center;
+      background: var(--surface2); border: 1px solid var(--border2); border-radius: 4px;
+      font-size: 13px; letter-spacing: 0; text-align: center;
       white-space: normal; line-height: 1.25;
     }
     .show-quick .btn-sm svg { width: 26px; height: 26px; fill: var(--accent); }
@@ -1493,11 +1493,11 @@
       /* address becomes one compact line under the wordmark, not a dangling stack */
       .addr-right { margin-left: 0; width: 100%; flex-direction: row; align-items: center;
                    gap: 10px; text-align: left; }
-      .addr-right .addr-main { font-size: 11px; }
+      .addr-right .addr-main { font-size: 13px; }
       /* five tabs share the width evenly - all visible, no hidden scrolling.
          id selectors: the desktop tab styles live later in this sheet */
       #setup-tabs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; padding: 3px; }
-      #setup-tabs .stab { padding: 9px 0; font-size: 11px; letter-spacing: -0.01em;
+      #setup-tabs .stab { padding: 9px 0; font-size: 13px; letter-spacing: -0.01em;
               text-align: center; min-width: 0; overflow: hidden; white-space: nowrap; }
       #setup-tabs .stab-upd { top: 3px; right: 2px; width: 6px; height: 6px; }
       /* Show Mode tiles: all five across one row on a phone */
@@ -1505,12 +1505,12 @@
       body.show-mode .show-quick.qb-live {
         grid-template-columns: repeat(4, minmax(0, 1fr));
         justify-content: center; gap: 8px; }
-      .show-quick .btn-sm { border-radius: 12px; gap: 6px; padding: 6px 2px;
-                            font-size: 8.5px; letter-spacing: 0.02em; }
+      .show-quick .btn-sm { border-radius: 4px; gap: 6px; padding: 6px 2px;
+                            font-size: 13px; letter-spacing: 0.02em; }
       .show-quick .btn-sm svg { width: 20px; height: 20px; }
       .display-ctl-row { flex-wrap: wrap; }
       .display-ctl-row .btn-sm { flex: 1 1 auto; }
-      .mode-btn, .hdmi-tab { font-size: 12px; padding: 9px 5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .mode-btn, .hdmi-tab { font-size: 13px; padding: 9px 5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .hdmi-tab .source-name { display: none; }
       .source-grid { grid-template-columns: 1fr; }
       .source-chip.chip-wide { grid-column: auto; }
@@ -1521,19 +1521,19 @@
     }
     /* ── Setup tabs - segmented control, same pattern as the view toggle ── */
     .setup-tabs { display:flex; gap:4px; background:var(--surface2);
-                  border:1px solid var(--border2); border-radius:10px; padding:4px;
+                  border:1px solid var(--border2); border-radius:4px; padding:4px;
                   margin:18px 0 20px; }
     .stab { position:relative; flex:1; padding:10px 8px; background:transparent; border:none;
-            border-radius:7px; justify-content:center;
+            border-radius:4px; justify-content:center;
             font-family:var(--font-display); font-weight:700; font-size:13.5px;
-            letter-spacing:0.05em; color:var(--muted); cursor:pointer; transition:all 0.15s; }
+            letter-spacing: 0; color:var(--muted); cursor:pointer; transition:all 0.15s; }
     .stab:active { transform:none; }
     .stab:hover { color:var(--text); }
     .stab.on { background:var(--surface); color:var(--accent);
-               box-shadow:0 1px 6px rgba(0,0,0,0.4); }
+               box-shadow: none; }
     .stab-upd { display:none; position:absolute; top:6px; right:6px; width:7px; height:7px;
                 border-radius:50%; background:var(--amber);
-                box-shadow:0 0 6px rgba(245,165,36,0.8); }
+                box-shadow: none; }
     .stab-upd.on { display:block; }
     .tpane { display:none; }
     /* Save & Apply and the footer hug the pane's real content - no dead space.
@@ -1545,32 +1545,32 @@
     #wiz-overlay { position:fixed; inset:0; z-index:980; background:rgba(5,6,8,0.88);
       display:none; align-items:center; justify-content:center; padding:20px; overflow-y:auto; }
     #wiz-overlay.on { display:flex; }
-    .wiz-card { background:var(--surface); border:1px solid var(--border2); border-radius:16px;
+    .wiz-card { background:var(--surface); border:1px solid var(--border2); border-radius:4px;
       padding:26px 28px; max-width:520px; width:100%; }
     .wiz-brand { display:flex; align-items:center; gap:12px; margin-bottom:18px; }
     .wiz-brand svg { width:38px; height:38px; flex-shrink:0; }
     .wiz-brand span { font-family:var(--font-display); font-weight:700; font-size:19px;
-      text-transform:uppercase; letter-spacing:0.06em; }
+      text-transform: none; letter-spacing: 0; }
     .wiz-brand b { color:var(--accent); }
     .wiz-title { font-family:var(--font-display); font-weight:700; font-size:20px;
-      text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; }
+      text-transform: none; letter-spacing: 0; margin-bottom:4px; }
     .wiz-sub { font-size:13px; color:var(--muted); line-height:1.55; margin-bottom:20px; }
     .wiz-row { display:flex; align-items:center; gap:12px; padding:13px 0;
       border-top:1px solid var(--border); }
     .wiz-row .wdot { width:10px; height:10px; border-radius:50%; flex-shrink:0;
       background:var(--surface2); border:1px solid var(--border2); }
     .wiz-row.done .wdot { background:var(--accent); border-color:var(--accent);
-      box-shadow:0 0 6px rgba(47,217,123,0.5); }
+      box-shadow: none; }
     .wiz-row.busy .wdot { background:var(--amber); border-color:var(--amber);
-      box-shadow:0 0 6px rgba(245,165,36,0.5); animation:pulse 1.4s infinite; }
+      box-shadow: none; animation:pulse 1.4s infinite; }
     .wiz-row.busy .wdesc { color:var(--amber); }
-    .wiz-warn { font-size:11.5px; color:var(--muted); line-height:1.5;
+    .wiz-warn { font-size:13px; color:var(--muted); line-height:1.5;
       margin-top:16px; padding-top:14px; border-top:1px solid var(--border); }
     .wiz-warn b { color:var(--amber); font-weight:600; }
     .wiz-row .winfo { flex:1; min-width:0; }
     .wiz-row .wname { font-family:var(--font-display); font-weight:600; font-size:14px;
-      letter-spacing:0.03em; }
-    .wiz-row .wdesc { font-size:11.5px; color:var(--muted); margin-top:2px; line-height:1.4; }
+      letter-spacing: 0; }
+    .wiz-row .wdesc { font-size:13px; color:var(--muted); margin-top:2px; line-height:1.4; }
     .wiz-row.done .wdesc { color:var(--accent); }
     .wiz-foot { display:flex; gap:10px; margin-top:22px; align-items:center; }
     .wiz-skip { background:none; border:none; color:var(--muted); font-size:12.5px;
@@ -1579,17 +1579,17 @@
     #upd-strip { display:flex; align-items:center; gap:8px; flex-wrap:wrap;
       margin:-8px 0 18px; padding:9px 14px; font-size:12.5px;
       background:var(--amber-bg); border:1px solid var(--amber-bd);
-      border-radius:9px; color:var(--amber); }
+      border-radius:4px; color:var(--amber); }
     #upd-strip .us-link { color:var(--amber); font-weight:600; cursor:pointer;
       text-decoration:underline; text-underline-offset:3px; }
     #upd-strip .us-hide { margin-left:auto; cursor:pointer; color:var(--muted);
       font-size:17px; line-height:1; padding:0 3px; }
     #upd-strip .us-hide:hover { color:var(--text); }
-    .pm-card { background:var(--surface); border:1px solid var(--border2); border-radius:14px;
+    .pm-card { background:var(--surface); border:1px solid var(--border2); border-radius:4px;
       padding:20px; width:100%; display:flex; flex-direction:column; gap:9px; }
     .pm-title { font-family:var(--font-display); font-weight:700; font-size:15px;
-      letter-spacing:0.06em; text-transform:uppercase; margin-bottom:4px; }
-    .pm-btn { width:100%; justify-content:center; padding:12px; border-radius:9px;
+      letter-spacing: 0; text-transform: none; margin-bottom:4px; }
+    .pm-btn { width:100%; justify-content:center; padding:12px; border-radius:4px;
       background:var(--surface2); border:1px solid var(--border2); color:var(--text); font-size:14px; }
     .pm-btn.pm-cancel { color:var(--muted); }
     /* pull-to-refresh (custom: iOS has no native PTR, and standalone
@@ -1597,13 +1597,221 @@
     #ptr-spin { position:fixed; top:-54px; left:50%; z-index:1001;
       width:38px; height:38px; margin-left:-19px; border-radius:50%;
       background:var(--surface); border:1px solid var(--border2);
-      box-shadow:0 4px 16px rgba(0,0,0,0.5);
+      box-shadow: none;
       display:flex; align-items:center; justify-content:center;
       pointer-events:none; }
     #ptr-spin svg { width:20px; height:20px; fill:var(--muted); transition:transform 0.15s, fill 0.15s; }
     #ptr-spin.armed svg { fill:var(--accent); transform:rotate(180deg); }
     #ptr-spin.loading svg { fill:var(--accent); animation:ptr-rot 0.8s linear infinite; }
     @keyframes ptr-rot { to { transform:rotate(360deg); } }
+    /* ── The Downstage UI standard (Rob, 2026-10-19; Cue repo docs/ui-standard.md, with the Relay page
+       0.139.0 as the reference build). The question on a show day: is the show running? The header answers
+       it first - the One drawn and lit, its name, four figures - before any setting. Two faces: Rajdhani
+       for names and figures, the system's for every word (the page must look right with no internet).
+       Flat surfaces in three tones with 1 px edges; colour only for data. These rules sit last on
+       purpose: they override the older ones above. ── */
+    :root {
+      --bg: #0B0D10; --surface: #12161B; --surface2: #181D23; --border: #1B2128; --border2: #232A32;
+      --ground: #0B0D10; --panel: #12161B; --raised: #181D23; --edge: #232A32; --rule: #1B2128;
+      --text: #EEF1F3; --muted: #9AA4AD; --muted2: #7D8790;
+      --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      --font-mono: var(--font-body);
+      --r: 4px; --r-btn: 6px;
+      --ok-fill: #10301D; --ok-text: #74E8A8; --bad-fill: #3A1517; --bad-text: #FF9A9D;
+      --warn-fill: #33270F; --warn-text: #F7C066; --new-fill: #0F2A3A; --new-text: #8FD3FF;
+    }
+    body::before { display: none !important; }
+    body { background: var(--ground); font: 400 14px/1.45 var(--font-body); color: var(--text); }
+    .wrap { max-width: 1040px; }
+    /* raw data stays monospaced: logs, hex, the setup log */
+    pre, code, #log-body { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .header-clock, .fu-ip, .fx-mono, .stat em, .stat small, input, td { font-variant-numeric: tabular-nums; }
+
+    /* the old header and its strip of status boxes give way to the figures below */
+    .logo-row, .status-strip, .view-toggle { display: none !important; }
+
+    /* ── the header: the One itself ── */
+    .top { display: grid; gap: 18px; padding: 22px 0 6px; }
+    .top .brand { display: flex; align-items: center; gap: 8px; font: 600 15px var(--font-display); color: var(--muted); }
+    .top .brand svg { width: 22px; height: 22px; }
+    .top .brand b { color: var(--text); font-weight: 700; }
+    .hero { display: grid; grid-template-columns: 88px minmax(0, 1fr) auto; align-items: center; gap: 0 20px; }
+    .hero-art { width: 88px; height: 88px; border-radius: var(--r); background: var(--panel); border: 1px solid var(--edge);
+      display: flex; align-items: center; justify-content: center; color: var(--muted); }
+    .hero-art svg { width: 64px; height: 64px; display: block; }
+    .hero-art.ok { color: var(--accent); } .hero-art.warn { color: var(--amber); } .hero-art.bad { color: var(--red); }
+    .top h1 { font: 700 34px/1.05 var(--font-display); color: var(--text); letter-spacing: .01em; margin: 0; }
+    .top #hero-sub { font-size: 13px; color: var(--muted); margin-top: 6px; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+    .hero-acts { display: flex; gap: 8px; }
+    .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--edge); border-bottom: 1px solid var(--edge); }
+    .stat { padding: 16px 20px 18px; min-width: 0; border: 0; border-left: 1px solid var(--rule); border-radius: 0; display: grid; gap: 2px;
+      cursor: pointer; background: none; text-align: left; color: inherit; font: inherit; }
+    .stat:first-child { border-left: 0; padding-left: 0; }
+    .stat:hover > span { color: var(--text); }
+    .stat > span { font-size: 13px; color: var(--muted); }
+    .stat em { font: 700 32px/1.1 var(--font-display); font-style: normal; color: var(--text); display: flex; align-items: baseline; gap: 5px; white-space: nowrap; }
+    .stat em small { font: 600 15px var(--font-display); color: var(--muted); }
+    .stat > small { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .stat.ok em { color: var(--accent); } .stat.warn em { color: var(--amber); } .stat.bad em { color: var(--red); }
+    .stat .air { color: var(--red); }
+
+    /* ── tabs: an underline, the active one white with a 2 px green rule ── */
+    .setup-tabs { background: none; border: 0; border-bottom: 1px solid var(--edge); border-radius: 0; padding: 0; gap: 2px; margin: 6px 0 22px; justify-content: flex-start; }
+    .stab { flex: none; border-radius: 0; padding: 12px 14px; font: 600 15px var(--font-body); color: var(--muted);
+      border-bottom: 2px solid transparent; margin-bottom: -1px; background: none; }
+    .stab.on { background: none; color: var(--text); border-bottom-color: var(--accent); }
+    .hdmi-tabs { background: none; border: 0; border-bottom: 1px solid var(--edge); border-radius: 0; padding: 0; }
+    .hdmi-tab { border-radius: 0; background: none; border-bottom: 2px solid transparent; margin-bottom: -1px; font: 600 14px var(--font-body); }
+    .hdmi-tab.active { background: none; border-bottom-color: var(--accent); color: var(--text); }
+
+    /* each tab had its own colour by id (#stab-displays.on and so on): the active tab is white, green rule */
+    #setup-tabs .stab.on { color: var(--text); }
+    /* the page is one flat surface on every tab: no per-tab tint */
+    body:not(.show-mode)[data-page] .card { background: none; }
+    /* ── group, don't box: the big panel is the page, sections split by rules ── */
+    .card { background: none; border: 0; border-radius: 0; overflow: visible; }
+    .card-body { padding: 0; }
+    .section-label { font: 700 20px/1.2 var(--font-display); color: var(--text); letter-spacing: .01em; margin: 26px 0 12px; }
+    .section-label:first-child { margin-top: 4px; }
+
+    /* ── controls: one filled primary per view; the rest quiet; destructive a red tint ── */
+    button, .btn-sm, .btn-ghost, .btn-primary, .fx-btn, .fleet-btn, .mode-btn { border-radius: var(--r-btn); }
+    .btn-sm, .btn-ghost, .fx-btn, .fleet-btn, .mode-btn, .btn-q {
+      background: var(--raised); border: 1px solid var(--edge); color: var(--text); font: 600 14px var(--font-body); min-height: 34px; }
+    .btn-sm:hover, .btn-ghost:hover, .fx-btn:hover, .fleet-btn:hover, .mode-btn:hover, .btn-q:hover { border-color: var(--muted2); }
+    .btn-primary, .fx-btn.primary { background: var(--accent); color: #0B0D10; border: 1px solid var(--accent); font: 600 14px var(--font-body); filter: none; }
+    .btn-sm.blackout, .btn-sm.danger, .btn-q.danger, .fx-btn.bad, .fleet-btn.warn {
+      background: color-mix(in srgb, var(--red) 10%, var(--raised)); border-color: color-mix(in srgb, var(--red) 55%, var(--edge)); color: var(--bad-text); }
+    .btn-q { display: inline-flex; align-items: center; justify-content: center; padding: 0 14px; cursor: pointer; }
+    .btn-q.on { background: var(--bad-fill); border-color: var(--red); color: var(--bad-text); }
+    .mode-btn.active { background: var(--panel); border-color: var(--muted2); color: var(--text); }
+    .mode-toggle { background: none; border: 0; padding: 0; gap: 8px; }
+    input[type="text"], input[type="password"], input[type="number"], input[type="email"], select, textarea {
+      border-radius: var(--r); background: var(--ground); border: 1px solid var(--edge); font-family: var(--font-body); }
+
+    /* ── pills: pale tints, never filled colour ── */
+    .fx-chip, .status-badge, .mode-active-tag { border-radius: var(--r); font: 500 12px var(--font-body); border: 0; padding: 3px 8px; }
+    .fx-chip.ok, .status-badge.ok { background: var(--ok-fill); color: var(--ok-text); }
+    .fx-chip.bad, .status-badge.bad, .fx-chip.tal { background: var(--bad-fill); color: var(--bad-text); }
+    .fx-chip.warn, .status-badge.warn { background: var(--warn-fill); color: var(--warn-text); }
+    .fx-chip.link { background: var(--raised); color: var(--muted); }
+    .status-badge.running { background: var(--ok-fill); color: var(--ok-text); }
+    .status-badge.stopped { background: var(--bad-fill); color: var(--bad-text); }
+    .status-badge.missing { background: var(--warn-fill); color: var(--warn-text); }
+    .status-badge.off, .status-badge.checking { background: var(--raised); color: var(--muted); }
+    .fx-chip.co { background: color-mix(in srgb, var(--violet) 16%, var(--panel)); color: #C4B2FF; }
+
+    /* ── devices: drawn, on a flat stage; their tally tints the tile, never a glow ── */
+    .fx-stage, .sm-stage { background: var(--panel) !important; }
+    .fx-stage::before, .fx-stage::after, .sm-stage::before, .sm-stage::after { display: none !important; }
+
+    /* ── the fleet: each unit a tile - its drawing beside its name, its state on top, its signal at the
+       foot. A lit light tints its whole tile in its tally (16% fill, 70% edge, 2 px on air) instead of a
+       glow behind the drawing; the tile shows two pills at most, the rest is in its sheet. ── */
+    .fx-card { display: grid; grid-template-columns: 56px minmax(0, 1fr); column-gap: 12px; align-items: start;
+      padding: 12px; background: var(--panel); border: 1px solid var(--edge); border-radius: var(--r); transition: border-color .15s; }
+    .fx-card:hover { transform: none; border-color: var(--muted2); }
+    .fx-card.lit { background: color-mix(in srgb, var(--tally) 16%, var(--panel)); border-color: color-mix(in srgb, var(--tally) 70%, var(--panel)); }
+    .fx-card.air { border-width: 2px; padding: 11px; }
+    /* a unit that is not answering says so in its pill; the edge stays quiet (tally is what tints a tile) */
+    .fx-card.bad { border-color: var(--edge); }
+    .fx-card .fx-stage { position: static; height: 56px; width: 56px; border: 0; overflow: visible; }
+    .fx-card .fx-art, .fx-card .fx-img { width: 56px; height: 56px; filter: none; transform: none; }
+    .fx-card:hover .fx-art { transform: none; }
+    .fx-card .fx-dot { top: 14px; right: 14px; left: auto; }
+    .fx-card .fx-link { top: 10px; right: 30px; }
+    .fx-card .fx-badge { position: absolute; top: 10px; right: 30px; }
+    .fx-info { padding: 0; gap: 2px; }
+    .fx-name { font: 700 17px/1.15 var(--font-display); padding-right: 40px; }
+    .fx-sub { font: 400 13px var(--font-body); color: var(--muted); }
+    .fx-card .fx-chips { margin-top: 6px; }
+    .fx-card .fx-chips > :nth-child(n+3) { display: none; }
+    .fx-foot { padding-top: 10px; }
+    .fx-group { border: 0; border-top: 1px solid var(--edge); background: none; border-radius: 0; padding: 14px 0 0; }
+    .fx-chip.air { background: var(--bad-fill); color: var(--bad-text); }
+    .fx-chip.pv { background: var(--ok-fill); color: var(--ok-text); }
+    .fx-chip.stby { background: var(--warn-fill); color: var(--warn-text); }
+    .fx-chip.tm { background: var(--raised); color: var(--text); }
+    /* a sheet's details: rows split by rules, not a grid of boxes */
+    .fx-grid2 { gap: 0 28px; }
+    .fx-kv { background: none; border: 0; border-top: 1px solid var(--rule); border-radius: 0; padding: 10px 0; }
+    .fu-lbl { font: 400 13px var(--font-body); color: var(--muted); text-transform: none; }
+    .fu-ip { color: var(--text); font-family: var(--font-body); }
+    /* a chosen option is shown by its edge and weight, not in green: green is the primary and live */
+    .fx-seg button b { font: 600 14px var(--font-body); }
+    .fx-seg button.on { border-color: var(--text); background: var(--raised); }
+    .fx-seg button.on b { color: var(--text); }
+    /* ── the settings tabs: group, don't box. Each .field is a section - its title, then its fields - split
+       from the next by a rule; on a wide screen it is a row: the title in a 240 px column on the left, the
+       fields on the right. Displays keeps its own layout: it is a picture of the outputs, not a form. ── */
+    .local-panel { background: none; border: 0; border-radius: 0; padding: 0; box-shadow: none; }
+    .tpane:not(#tpane-displays) .field { margin: 0; padding: 20px 0; border-top: 1px solid var(--rule); }
+    .tpane:not(#tpane-displays) .field:first-child { border-top: 0; padding-top: 4px; }
+    .tpane:not(#tpane-displays) .section-label { margin: 0 0 12px; }
+    .local-panel-title { font: 600 14px var(--font-body); }
+    @media (min-width: 900px) {
+      body:not(.show-mode) .tpane:not(#tpane-displays) .field {
+        display: grid; grid-template-columns: 240px minmax(0, 1fr); column-gap: 40px; align-items: start; }
+      body:not(.show-mode) .tpane:not(#tpane-displays) .field > * { grid-column: 2; }
+      body:not(.show-mode) .tpane:not(#tpane-displays) .field > .section-label { grid-column: 1; grid-row: 1 / span 30; margin: 2px 0 0; }
+      .sys-trio { display: contents; }
+    }
+    .sys-trio .field { display: block; }
+    /* a chosen option: its edge and weight, not amber or green */
+    .mode-toggle:not(.view-toggle) .mode-btn.active { color: var(--text); }
+    .cue-seg button { border-radius: var(--r-btn); font: 600 14px var(--font-body); }
+    .cue-seg button.on { border-color: var(--text); color: var(--text); background: var(--raised); }
+    .cue-marks button { font: 600 13px var(--font-body); font-variant-numeric: tabular-nums; border-radius: var(--r-btn); }
+    /* system health: figures, not a row of boxes */
+    .health-grid { gap: 0; border-top: 1px solid var(--rule); }
+    .health-tile { background: none; border: 0; border-left: 1px solid var(--rule); border-radius: 0; padding: 10px 14px; text-align: left; }
+    .health-tile:first-child { border-left: 0; padding-left: 0; }
+    .health-tile .val { font: 700 20px var(--font-display); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .health-tile .lbl { font: 400 13px var(--font-body); color: var(--muted); text-transform: none; }
+    /* the fleet's header: its title, then its buttons, wrapping on a narrow screen rather than pushing the page */
+    .fleet-card > div:first-child { flex-wrap: wrap; }
+    .fleet-hdr-right { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; align-items: center; }
+    @media (max-width: 560px) { .fleet-hdr-right { justify-content: flex-start; } }
+    /* the unit's own network links: rows split by rules, wrapping on a phone instead of running off it */
+    .iface-row { flex-wrap: wrap; min-width: 0; background: none; border: 0; border-top: 1px solid var(--rule); border-radius: 0; padding: 10px 0; }
+    /* tiles two across below 900 px, as on the Relay; one across on a phone */
+    @media (max-width: 900px) { .fx-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .fx-group.g3 { --gc: 2; } }
+    @media (max-width: 560px) { .fx-grid { grid-template-columns: minmax(0, 1fr); } .fx-group, .fx-group.g3 { --gc: 1; } }
+    /* the footer's system actions: quiet, the ones that stop or wipe the unit a red tint */
+    .footer-btn { border-radius: var(--r-btn); font: 500 13px var(--font-body); background: var(--raised); border: 1px solid var(--edge); color: var(--text); }
+    .footer-btn.danger { background: color-mix(in srgb, var(--red) 10%, var(--raised)); border-color: color-mix(in srgb, var(--red) 55%, var(--edge)); color: var(--bad-text); }
+    /* ── Displays: the sources are one list of choices, not 25 boxes. A row each, split by rules, its icon
+       plain; the chosen one is a raised row with an edge. Blackout lives in the header, once. Save & Apply
+       sits at the right, as a form's primary does. ── */
+    .source-grid { gap: 0 28px; }
+    .source-chip { background: none; border: 0; border-bottom: 1px solid var(--rule); border-radius: 0; padding: 9px 6px; }
+    .source-chip:hover { background: var(--raised); border-color: var(--rule); }
+    .source-chip.selected { background: var(--raised); border-left: 2px solid var(--text); padding-left: 10px; }
+    .source-chip.selected-off { background: var(--raised); border-left: 2px solid var(--red); padding-left: 10px; }
+    .source-chip-icon, .source-chip.selected .source-chip-icon, .source-chip.selected-off .source-chip-icon { background: none; }
+    .source-chip-icon svg { fill: var(--muted); }
+    .source-chip.selected .source-chip-icon svg { fill: var(--text); }
+    .source-chip-label { font: 500 14px var(--font-body); }
+    body:not(.show-mode) #blackout-btn { display: none; }
+    #save-actions { display: flex; justify-content: flex-end; }
+    #save-actions #save-btn { width: auto; flex: 0 0 auto; min-width: 180px; }
+    .wd-box { background: none; border: 0; border-top: 1px solid var(--rule); border-radius: 0; padding: 14px 0 0; }
+    @media (max-width: 900px) {
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .stat:nth-child(3) { border-left: 0; padding-left: 0; }
+      .stat:nth-child(n+3) { border-top: 1px solid var(--rule); }
+    }
+    @media (max-width: 560px) {
+      .wrap { padding-left: 16px; padding-right: 16px; }
+      .hero { grid-template-columns: 64px minmax(0, 1fr); }
+      .hero-art { width: 64px; height: 64px; } .hero-art svg { width: 46px; height: 46px; }
+      .top h1 { font-size: 28px; }
+      .hero-acts { grid-column: 1 / -1; margin-top: 14px; }
+      .hero-acts .btn-q { flex: 1; }
+      .stat { padding: 12px 12px 14px; } .stat em { font-size: 26px; }
+      .setup-tabs { overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
   </style>
 </head>
 <body>
@@ -1713,6 +1921,28 @@
     Find it at {{ hostname }}.local &rarr;</button>
 </div>
 <div class="wrap">
+  <!-- The show-day answer (Downstage UI standard, 2026-10-19): the One drawn and lit by its state, its
+       name, the two actions wanted at once, and four figures. Each figure opens its tab. -->
+  <header class="top" id="top">
+    <div class="brand"><svg viewBox="0 0 96 96" aria-hidden="true" style="color:var(--accent)"><rect x="6" y="10" width="84" height="66" rx="10" fill="none" stroke="currentColor" stroke-width="7"/><rect x="20" y="54" width="40" height="9" rx="4.5" fill="currentColor"/><rect x="64" y="54" width="12" height="9" rx="4.5" fill="currentColor" opacity="0.3"/><rect x="20" y="83" width="26" height="7" rx="3.5" fill="currentColor"/><rect x="50" y="83" width="26" height="7" rx="3.5" fill="currentColor"/></svg><span>Downstage <b>One</b></span></div>
+    <div class="hero">
+      <div class="hero-art" id="hero-art"><svg viewBox="0 0 96 96" aria-hidden="true"><rect x="6" y="10" width="84" height="66" rx="10" fill="none" stroke="currentColor" stroke-width="7"/><rect x="20" y="54" width="40" height="9" rx="4.5" fill="currentColor"/><rect x="64" y="54" width="12" height="9" rx="4.5" fill="currentColor" opacity="0.3"/><rect x="20" y="83" width="26" height="7" rx="3.5" fill="currentColor"/><rect x="50" y="83" width="26" height="7" rx="3.5" fill="currentColor"/></svg></div>
+      <div>
+        <h1 id="hero-name">{{ hostname }}</h1>
+        <div id="hero-sub"></div>
+      </div>
+      <div class="hero-acts">
+        <button class="btn-q danger" id="hero-blackout" onclick="blackout()" title="Black out every display">Blackout</button>
+        <button class="btn-q" id="hero-mode" onclick="setViewMode(document.body.classList.contains('show-mode') ? 'full' : 'show')">Show mode</button>
+      </div>
+    </div>
+    <div class="stats">
+      <button class="stat" id="st-timer" onclick="pillGo('timer')"><span>Timer</span><em id="st-timer-v">-</em><small id="st-timer-c">Asking OnTime</small></button>
+      <button class="stat" id="st-out" onclick="pillGo('displays')"><span>Outputs</span><em id="st-out-v">-</em><small id="st-out-c"></small></button>
+      <button class="stat" id="st-comp" onclick="pillGo('companion')"><span>Companion</span><em id="st-comp-v">-</em><small id="st-comp-c"></small></button>
+      <button class="stat" id="st-lights" onclick="pillGo('network')"><span>Lights</span><em id="st-lights-v">-</em><small id="st-lights-c"></small></button>
+    </div>
+  </header>
 
   <div class="logo-row">
     <div class="logo-left">
@@ -1786,27 +2016,27 @@
   <div class="card">
     <div class="card-body">
 
-      <!-- View tabs: Full Setup vs simplified Show Mode -->
+      <!-- View tabs: Full setup vs simplified Show mode -->
       <div class="mode-toggle view-toggle">
         <button class="mode-btn active" id="view-tab-full" onclick="setViewMode('full')">
           <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
-          Full Setup
+          Full setup
         </button>
         <button class="mode-btn" id="view-tab-show" onclick="setViewMode('show')">
           <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
-          Show Mode
+          Show mode
         </button>
       </div>
 
-      <!-- Show Mode quick bar - one-tap tools for mid-show -->
-      <div class="section-label show-quick-label">Quick Actions</div>
+      <!-- Show mode quick bar - one-tap tools for mid-show -->
+      <div class="section-label show-quick-label">Quick actions</div>
       <div class="show-quick" id="show-quick" style="display:none">
         <button class="btn-sm blackout" id="blackout-btn-quick" onclick="blackout()" title="Black out all displays - press again to resume">
           <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="13" rx="2" stroke="currentColor" stroke-width="2"/><line x1="5.5" y1="7.5" x2="18.5" y2="15.5" stroke="currentColor" stroke-width="2"/></svg>
           Blackout</button>
-        <button class="btn-sm qb-ontime" onclick="quickOpen('/editor/')" title="Open the OnTime Editor in a new tab" style="display:none">
+        <button class="btn-sm qb-ontime" onclick="quickOpen('/editor/')" title="Open the OnTime editor in a new tab" style="display:none">
           <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-          OnTime Editor
+          OnTime editor
         </button>
         <button class="btn-sm qb-ontime" onclick="quickOpen('/messagecontrol')" title="Open OnTime Message Control - send messages to stage displays" style="display:none">
           <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>
@@ -1815,39 +2045,39 @@
         <button class="btn-sm qb-pattern" id="testpattern-btn" onclick="toggleTestPattern()"
                 title="Throw test cards on both outputs - press again to restore what was showing">
           <svg viewBox="0 0 24 24"><path d="M3 3h7v7H3V3zm11 0h7v7h-7V3zM3 14h7v7H3v-7zm11 3.5c0-1.93 1.57-3.5 3.5-3.5s3.5 1.57 3.5 3.5S19.43 21 17.5 21 14 19.43 14 17.5z"/></svg>
-          Test Patterns
+          Test patterns
         </button>
         <button class="btn-sm qb-companion" onclick="openCompanionButtons()" title="Open Companion's web button surface - your Stream Deck pages, tappable from this device" style="display:none">
           <svg viewBox="0 0 24 24"><path d="M4 4h4v4H4V4zm6 0h4v4h-4V4zm6 0h4v4h-4V4zM4 10h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4zM4 16h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4z"/></svg>
           Buttons</button>
-        <button class="btn-sm qb-companion qb-emulator" onclick="toggleShowEmbed()" title="Show your Companion button wall right here under Quick Actions - tap again to close" style="display:none">
+        <button class="btn-sm qb-companion qb-emulator" onclick="toggleShowEmbed()" title="Show your Companion button wall right here under Quick actions - tap again to close" style="display:none">
           <svg viewBox="0 0 24 24"><path d="M20 5H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-1 2H5v-2h2v2zm0-3H5V8h2v2zm9 7H8v-2h8v2zm0-4h-2v-2h2v2zm0-3h-2V8h2v2zm3 3h-2v-2h2v2zm0-3h-2V8h2v2z"/></svg>
-          Virtual Deck</button>
+          Virtual deck</button>
         <button class="btn-sm qb-companion" onclick="openCompanion()" title="Open the Companion admin UI in a new tab - edit Stream Deck buttons and pages" style="display:none">
           <svg viewBox="0 0 24 24"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/></svg>
           Companion
         </button>
         <button class="btn-sm qb-power" onclick="shutdownPi()" title="Shut the unit down cleanly - the panel confirms when it's safe to unplug">
           <svg viewBox="0 0 24 24"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg>
-          Power Off</button>
+          Power off</button>
       </div>
 
-      <!-- Show Mode: every Downstage unit as a mini card, a tap from its sheet
+      <!-- Show mode: every Downstage unit as a mini card, a tap from its sheet
            (Rob, 2026-09-26) -->
       <div class="show-units" id="show-units"><div class="su-row" id="su-row"></div></div>
 
-      <!-- My Buttons, live on the Show Mode page - the button wall under the
+      <!-- My Buttons, live on the Show mode page - the button wall under the
            tiles, no overlay hop -->
       <div id="show-embed" style="display:none">
         <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:22px; margin-bottom:10px">
-          <div class="section-label" style="margin:0">Virtual Deck</div>
+          <div class="section-label" style="margin:0">Virtual deck</div>
           <div style="display:flex; gap:8px">
-            <button class="btn-sm" onclick="openEmulator()" title="Open the Virtual Deck in the tool viewer - tabbed, full-height, survives page switches">Open in Viewer</button>
-            <button class="btn-sm" onclick="popOutButtons()" title="Float the Virtual Deck in its own movable window, sized to the deck layout">Pop Out &#8599;</button>
+            <button class="btn-sm" onclick="openEmulator()" title="Open the Virtual deck in the tool viewer - tabbed, full-height, survives page switches">Open in viewer</button>
+            <button class="btn-sm" onclick="popOutButtons()" title="Float the Virtual deck in its own movable window, sized to the deck layout">Pop out &#8599;</button>
             <button class="btn-sm" onclick="toggleShowEmbed()" title="Close - the quick action brings it back">&times;</button>
           </div>
         </div>
-        <iframe id="show-embed-frame" title="Virtual Deck"
+        <iframe id="show-embed-frame" title="Virtual deck"
                 style="width:100%; aspect-ratio:1.9/1; min-height:300px; max-height:64vh;
                        border:1px solid var(--border2); border-radius:14px; background:#000"></iframe>
       </div>
@@ -1859,7 +2089,7 @@
           <span class="fw-title">VIRTUAL DECK</span>
           <button class="fw-x" onclick="closeFloatWall()" title="Close">&times;</button>
         </div>
-        <iframe id="float-wall-frame" title="Virtual Deck floating"></iframe>
+        <iframe id="float-wall-frame" title="Virtual deck floating"></iframe>
         <div class="fw-size" id="fw-size" title="Drag to resize"></div>
       </div>
 
@@ -1867,8 +2097,8 @@
       <div id="show-embed-hint" class="show-quick-label" style="display:none; text-align:center;
            margin-top:18px; font-size:12.5px; color:var(--muted); font-family:inherit;
            text-transform:none; letter-spacing:normal">
-        No Stream Deck? No problem - add a Virtual Deck right here.
-        Set an <b>Emulator ID</b> on the Companion tab and it appears under Quick Actions.
+        No Stream Deck? No problem - add a Virtual deck right here.
+        Set an <b>Emulator ID</b> on the Companion tab and it appears under Quick actions.
       </div>
 
       <!-- Blackout banner -->
@@ -1904,24 +2134,24 @@
       <div id="tab-scroll">
       <div class="tpane full-only" id="tpane-timer">
       <!-- Mode toggle -->
-      <div class="section-label full-only">OnTime Server Mode</div>
+      <div class="section-label full-only">OnTime server mode</div>
       <div class="mode-toggle full-only">
         <button class="mode-btn" id="btn-local" onclick="setMode('local')">
           <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-5 12H4v-2h11v2zm5-4H4v-2h16v2zm0-4H4V6h16v2z"/></svg>
-          Local Server<span class="mode-active-tag" id="active-tag-local" style="display:none">Active</span>
+          Local server<span class="mode-active-tag" id="active-tag-local" style="display:none">Active</span>
         </button>
         <button class="mode-btn" id="btn-remote" onclick="setMode('remote')">
           <svg viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3a4.237 4.237 0 00-6 0zm-4-4l2 2a7.074 7.074 0 0110 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
-          Remote Server<span class="mode-active-tag" id="active-tag-remote" style="display:none">Active</span>
+          Remote server<span class="mode-active-tag" id="active-tag-remote" style="display:none">Active</span>
         </button>
       </div>
 
       <!-- Remote: IP -->
       <div id="remote-section" class="field full-only">
-        <div class="section-label">OnTime Server Address</div>
+        <div class="section-label">OnTime server address</div>
         <div id="remote-local-note" class="tz-note" style="display:none; margin:0 0 12px">
           In Remote mode the onboard OnTime server stands down - displays, the editor, and
-          Show Mode all follow the remote server. Switching back to Local starts it again;
+          Show mode all follow the remote server. Switching back to Local starts it again;
           your local rundown is kept.</div>
         <div class="ip-row">
           <div class="ip-input-wrap">
@@ -1947,15 +2177,15 @@
                background:var(--amber-bg); border:1px solid var(--amber-bd); border-radius:9px">
             <span style="flex:1; font-size:12.5px; color:var(--amber); line-height:1.5">
               Remote mode is active - this server is not driving the displays.</span>
-            <button class="btn-sm success" id="local-activate-btn" onclick="activateLocal()">Start Server</button>
+            <button class="btn-sm success" id="local-activate-btn" onclick="activateLocal()">Start server</button>
           </div>
         </div>
-        <div class="section-label">OnTime Server (Local)</div>
+        <div class="section-label">OnTime server (local)</div>
         <div class="local-panel">
           <div class="local-panel-header">
             <div class="local-panel-title">
               <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-5 12H4v-2h11v2zm5-4H4v-2h16v2zm0-4H4V6h16v2z"/></svg>
-              OnTime Server
+              OnTime server
             </div>
             <span class="status-badge" id="local-status-badge">-</span>
           </div>
@@ -1971,7 +2201,7 @@
       <div class="tpane on" id="tpane-displays">
       <!-- HDMI source selector -->
       <div class="field">
-        <div class="section-label">Display Sources</div>
+        <div class="section-label">Display sources</div>
 
         <!-- Live previews -->
         <div class="preview-row" id="preview-row">
@@ -1999,7 +2229,7 @@
         <div class="display-ctl-row">
           <button class="btn-sm" onclick="refreshDisplays()" title="Reload the web pages on all outputs - recovers a stuck or frozen view. Plugging in a display is detected automatically.">
             <svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
-            Reload Pages
+            Reload pages
           </button>
           <button class="btn-sm blackout" id="blackout-btn" onclick="blackout()" title="Black out all displays">
             <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="13" rx="2" stroke="currentColor" stroke-width="2"/><line x1="5.5" y1="7.5" x2="18.5" y2="15.5" stroke="currentColor" stroke-width="2"/></svg>
@@ -2012,18 +2242,18 @@
           </button>
           <button class="btn-sm" onclick="refreshPreviews()" title="Restart the two preview thumbnails above - the displays themselves are untouched.">
             <svg viewBox="0 0 24 24"><path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8A5.87 5.87 0 016 12c0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/></svg>
-            Refresh Previews
+            Refresh previews
           </button>
         </div>
 
-        <!-- Quick Presets - one-tap recall of a full output setup -->
-        <div class="source-group-label">Quick Presets</div>
+        <!-- Quick presets - one-tap recall of a full output setup -->
+        <div class="source-group-label">Quick presets</div>
         <div class="preset-strip" id="preset-strip">
           <span class="preset-empty">No presets saved yet</span>
         </div>
         <button class="btn-sm" onclick="savePreset()" style="margin-bottom:14px">
           <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-          Save Current as Preset
+          Save current as preset
         </button>
 
         <!-- HDMI tabs -->
@@ -2161,7 +2391,7 @@
             <span class="source-chip-label">Rundown</span>
           </div>
 
-          <div class="source-group-label">Test Patterns</div>
+          <div class="source-group-label">Test patterns</div>
 
           <div class="source-chip" data-source="pattern-card" onclick="selectSource(this)">
             <div class="source-chip-icon"><svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zM5 7h3v3H5V7zm5 0h3v3h-3V7zm5 0h3v3h-3V7zM5 12h13v2H5v-2zm0 4h9v2H5v-2z"/></svg></div>
@@ -2235,7 +2465,7 @@
 
       <!-- Display settings: resolution + rotation -->
       <div class="field full-only">
-        <div class="section-label">Display Settings</div>
+        <div class="section-label">Display settings</div>
         <div class="local-panel">
           <div class="display-settings-grid">
             <div class="display-setting-row">
@@ -2284,7 +2514,7 @@
               <span class="toggle-label" style="color:var(--muted)">While the server is down, show</span>
               <div class="cue-seg" style="flex:0 0 auto; min-width:0">
                 <button id="wdfb-holding" class="on" style="flex:0 0 auto; padding:6px 14px"
-                        onclick="setWdFallback('holding')">Holding Page</button>
+                        onclick="setWdFallback('holding')">Holding page</button>
                 <button id="wdfb-black" style="flex:0 0 auto; padding:6px 14px"
                         onclick="setWdFallback('black')">Black</button>
               </div>
@@ -2326,14 +2556,14 @@
             <button class="btn-sm success" onclick="setEmulatorId()">Set</button>
           </div>
           <div class="external-url-hint" style="display:block; margin-top:6px">Paste a Companion
-            emulator ID and a Virtual Deck tile appears in Show Mode, opening that emulator
+            emulator ID and a Virtual deck tile appears in Show mode, opening that emulator
             full-page. Clear the field and Set to remove it.</div>
           <div class="channel-row" style="margin-top:10px">
-            <span class="channel-label">Virtual Deck</span>
+            <span class="channel-label">Virtual deck</span>
             <button class="btn-sm" onclick="popOutButtons()"
-                    title="The Virtual Deck in its own small window - drag it to any display">Open in Window</button>
+                    title="The Virtual deck in its own small window - drag it to any display">Open in window</button>
             <button class="btn-sm" onclick="copyWallLink(this)"
-                    title="Copy the Virtual Deck page address for another device - a touchscreen, a tablet, a spare display">Copy Link</button>
+                    title="Copy the Virtual deck page address for another device - a touchscreen, a tablet, a spare display">Copy link</button>
           </div>
 
           <div class="external-url-hint" style="display:block; margin-top:10px">Up to two 15-key Stream Decks can run from the USB ports (an XL counts as two - key backlights add up). For more, connect them through a powered USB hub.</div>
@@ -2358,13 +2588,13 @@
       <div class="field full-only">
       <div class="fleet-card full-only">
         <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0 0 12px">
-          <div class="section-label" style="margin:0">Downstage Units on This Network</div>
+          <div class="section-label" style="margin:0">Downstage units</div>
           <div class="fleet-hdr-right">
             <span class="fleet-ts" id="fleet-ts"></span>
             <button class="btn-sm" id="cue-ctl-btn" onclick="cueControlToggle()" title="Let Cue lights with a screen start, pause and step this unit's timer. Off unless you turn it on.">Lights control timer: off</button>
             <button class="btn-sm" id="cue-token-btn" onclick="rigOpen()" title="Open: anyone on this network can change this rig. Secure it.">Rig PIN: open</button>
-            <button class="btn-sm" id="cue-alert-btn" style="display:none; border-color:var(--red); color:var(--red)" title="Every light following this unit's timer pulses red until cleared">Alert timer lights</button>
-            <button class="btn-sm" id="fleet-scan-btn" onclick="fleetScan()">Scan for Units</button>
+            <button class="btn-sm danger" id="cue-alert-btn" style="display:none" title="Every light following this unit's timer pulses red until cleared">Alert timer lights</button>
+            <button class="btn-sm" id="fleet-scan-btn" onclick="fleetScan()">Scan for units</button>
           </div>
         </div>
         <div class="ble-banner" id="ble-banner"></div>
@@ -2486,7 +2716,7 @@
       <div class="tpane full-only" id="tpane-system">
       <!-- Timezone -->
       <div class="field full-only">
-        <div class="section-label">Pi Timezone</div>
+        <div class="section-label">Pi timezone</div>
         <div class="local-panel">
           <div class="tz-current">Current: <span id="tz-current">Loading…</span></div>
           <div class="tz-row">
@@ -2499,7 +2729,7 @@
               Auto-detect</button>
             <button class="btn-sm" id="time-sync-btn" onclick="syncTimeFromDevice()" title="Set the One's clock from this device - for venues with no internet">
               <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
-              Sync Time</button>
+              Sync time</button>
           </div>
           <div class="tz-note">Sets the whole unit's timezone. OnTime updates right away.
             Companion follows the system timezone but needs a restart to pick up a change -
@@ -2507,7 +2737,7 @@
         </div>
       </div>
 
-      <!-- Downstage OS / Unit Name / Virtual Previews - three-up -->
+      <!-- Downstage OS / Unit name / Virtual previews - three-up -->
       <div class="sys-trio full-only">
       <div class="field full-only">
         <div class="section-label">Downstage OS</div>
@@ -2536,7 +2766,7 @@
       </div>
 
       <div class="field full-only">
-        <div class="section-label">Unit Name</div>
+        <div class="section-label">Unit name</div>
         <div class="local-panel">
           <div style="display:flex; gap:8px">
             <input id="unit-name-input" maxlength="24" placeholder="e.g. FOH, Stage Left, Green Room"
@@ -2549,7 +2779,7 @@
       </div>
 
       <div class="field full-only">
-        <div class="section-label">Virtual Previews</div>
+        <div class="section-label">Virtual previews</div>
         <div class="local-panel">
           <div class="toggle-row">
             <span class="toggle-label">Render an output's source in its preview tile when no display is connected</span>
@@ -2560,17 +2790,17 @@
       </div>
 
       <div class="field full-only" style="grid-column:1 / -1">
-        <div class="section-label">Audio Cues</div>
+        <div class="section-label">Audio cues</div>
         <div class="local-panel">
           <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap">
             <div class="cue-seg">
               <button id="cue-off" class="on" onclick="setAudioCues('off')">Off</button>
               <button id="cue-tones" onclick="setAudioCues('tones')">Tones</button>
-              <button id="cue-spoken" onclick="setAudioCues('spoken')">Spoken Times</button>
+              <button id="cue-spoken" onclick="setAudioCues('spoken')">Spoken times</button>
             </div>
-            <button class="btn-sm" onclick="testAudioCues()">Test Audio</button>
+            <button class="btn-sm" onclick="testAudioCues()">Test audio</button>
             <button class="btn-sm" id="linetone-btn" onclick="toggleLineTone()"
-                    title="Continuous 1 kHz reference out the 3.5mm jack - for console line checks. A firing cue cuts the tone.">Line Tone</button>
+                    title="Continuous 1 kHz reference out the 3.5mm jack - for console line checks. A firing cue cuts the tone.">Line tone</button>
           </div>
           <div class="cue-marks" id="cue-marks">
             <button data-ms="600000" class="on" onclick="toggleCueMark(600000)">10:00</button>
@@ -2581,20 +2811,20 @@
             <button data-ms="10000" class="on" onclick="toggleCueMark(10000)">0:10</button>
             <button data-ms="0" class="on" onclick="toggleCueMark(0)">0:00</button>
           </div>
-          <div class="external-url-hint">Time calls through the unit's 3.5mm jack as the timer passes each selected mark - tap a time to turn that callout on or off, and feed the jack to comms or a backstage speaker. Requires the OnTime server (local or remote): cues follow the OnTime timer, so other display sources (external URLs, patterns, Companion) have nothing to cue from. Saved on this unit. Line Tone plays a continuous 1&nbsp;kHz reference for console line checks - a firing cue cuts it.</div>
+          <div class="external-url-hint">Time calls through the unit's 3.5mm jack as the timer passes each selected mark - tap a time to turn that callout on or off, and feed the jack to comms or a backstage speaker. Requires the OnTime server (local or remote): cues follow the OnTime timer, so other display sources (external URLs, patterns, Companion) have nothing to cue from. Saved on this unit. Line tone plays a continuous 1&nbsp;kHz reference for console line checks - a firing cue cuts it.</div>
         </div>
       </div>
       </div>
 
-      <!-- System Health -->
+      <!-- System health -->
       <div class="field full-only">
-        <div class="section-label">System Health</div>
+        <div class="section-label">System health</div>
         <div class="local-panel">
           <div class="health-grid" id="health-grid">
-            <div class="health-tile"><div class="val" id="h-temp">-</div><div class="lbl">CPU Temp</div></div>
-            <div class="health-tile"><div class="val" id="h-cpu">-</div><div class="lbl">CPU Load</div></div>
-            <div class="health-tile"><div class="val" id="h-gpu">-</div><div class="lbl">GPU Clock</div></div>
-            <div class="health-tile"><div class="val" id="h-ram">-</div><div class="lbl">RAM Used</div></div>
+            <div class="health-tile"><div class="val" id="h-temp">-</div><div class="lbl">CPU temp</div></div>
+            <div class="health-tile"><div class="val" id="h-cpu">-</div><div class="lbl">CPU load</div></div>
+            <div class="health-tile"><div class="val" id="h-gpu">-</div><div class="lbl">GPU clock</div></div>
+            <div class="health-tile"><div class="val" id="h-ram">-</div><div class="lbl">RAM used</div></div>
             <div class="health-tile"><div class="val" id="h-uptime">-</div><div class="lbl">Uptime</div></div>
           </div>
         </div>
@@ -2602,16 +2832,16 @@
 
       <!-- Config Backup -->
       <div class="field full-only">
-        <div class="section-label">Config Backup / Restore</div>
+        <div class="section-label">Config backup / restore</div>
         <div class="local-panel">
           <div class="local-actions">
             <button class="btn-sm" onclick="downloadConfig()">
               <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zm-8 2V5h2v6h1.17L12 13.17 9.83 11H11zm-6 7h14v2H5z"/></svg>
-              Download Config
+              Download config
             </button>
             <label class="btn-sm" style="cursor:pointer">
               <svg viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5z"/></svg>
-              Upload Config
+              Upload config
               <input type="file" id="config-upload-input" accept=".json" style="display:none" onchange="uploadConfig(this)">
             </label>
           </div>
@@ -2660,7 +2890,7 @@
           </button>
           <button class="footer-btn danger" onclick="factoryReset()" title="Erase all user data - out-of-box state">
             <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-            Factory Reset
+            Factory reset
           </button>
         </div>
       </div>
@@ -2691,7 +2921,7 @@
     </div>
   </div>
   <div class="brand-footer">
-    DOWNSTAGE.SYSTEMS · © 2026 DOWNSTAGE SYSTEMS LLC
+    downstage.systems · © 2026 Downstage Systems LLC
   </div>
 
 </div>
@@ -2892,7 +3122,7 @@
 
   // ── Unsaved-changes bar ──────────────────────────────────────────────────────
   function pillGo(tab) {
-    setViewMode('full');      // tabs live in Full Setup
+    setViewMode('full');      // tabs live in Full setup
     showSetupTab(tab);
   }
   async function failsafeSync() {
@@ -2990,7 +3220,7 @@
   // ── Mode ─────────────────────────────────────────────────────────────────────
   function setMode(mode) {
     // the toggle only navigates between the two sections - nothing changes
-    // until an explicit action (Start Server / Connect). Amber = where you're
+    // until an explicit action (Start server / Connect). Amber = where you're
     // looking; the green Active tag = what's actually running.
     setModeButtons(mode);
     showModeSection(mode);
@@ -3021,14 +3251,14 @@
       showToast(d.message, 'success');
       fetchStatus(true);
     } catch { showToast('Could not reach the unit.', 'error'); }
-    finally { btn.disabled = false; btn.textContent = 'Start Server'; }
+    finally { btn.disabled = false; btn.textContent = 'Start server'; }
   }
 
   async function connectRemote() {
     const ip = document.getElementById('ip').value.trim();
     if (!ip) { showToast('Enter the OnTime server address first.', 'error'); return; }
     if (ontimeRunning &&
-        !confirm(`Connect to ${ip}?\n\nThe OnTime local server will be turned off - displays, the editor, and Show Mode will follow the remote server. Switching back to Local turns it on again.`)) return;
+        !confirm(`Connect to ${ip}?\n\nThe OnTime local server will be turned off - displays, the editor, and Show mode will follow the remote server. Switching back to Local turns it on again.`)) return;
     const btn = document.getElementById('connect-btn');
     btn.disabled = true; btn.textContent = 'Connecting…';
     try {
@@ -3157,14 +3387,14 @@
       badge.className = 'status-badge stopped';
       badge.textContent = 'Stopped';
       actions.innerHTML = `<button class="btn-sm success" onclick="toggleOntime('start')">
-        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>Start Server</button>`;
+        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>Start server</button>`;
     } else {
       badge.className = 'status-badge running';
       badge.textContent = 'Running';
       actions.innerHTML = `<button class="btn-sm danger" onclick="toggleOntime('stop')">
-        <svg viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>Stop Server</button>
-        <button class="btn-sm" onclick="openEditor()" title="Open the OnTime Editor in the tool viewer">
-        <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>OnTime Editor</button>`;
+        <svg viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>Stop server</button>
+        <button class="btn-sm" onclick="openEditor()" title="Open the OnTime editor in the tool viewer">
+        <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>OnTime editor</button>`;
     }
   }
 
@@ -3421,7 +3651,7 @@
     else if (t === 'program') chips.push(fxChip('On air', 'air'));
     else if (t === 'preview') chips.push(fxChip('Preview', 'pv'));
     else if (i.timer) chips.push(fxChip(cueTimerText(), 'tm'));
-    else chips.push(fxChip(i.lit ? 'Live' : 'Standby', 'ok'));
+    else chips.push(fxChip(i.lit ? 'Live' : 'Standby', i.lit ? 'ok' : 'stby'));   // standby is amber, not green
     if (i.radioOnly) chips.push(fxChip(i.air && i.air.gone ? 'Last heard ' + fxAge(i.air.age) : 'Heard over CueLink', i.air && i.air.gone ? 'warn' : 'link'));
     if (i.air && i.air.setup) chips.push(fxChip('In setup', 'warn'));
     if (i.linked) chips.push(fxChip('via ' + fxShort(i.via), 'link'));
@@ -3666,7 +3896,7 @@
       } else fts.textContent = '';
     }
   }
-  // Show Mode's bar: the same units, small - the device in its live colour,
+  // Show mode's bar: the same units, small - the device in its live colour,
   // its name and one line of state; a tap opens its sheet
   const _suInner = {};
   function renderShowUnits(units) {
@@ -3711,7 +3941,7 @@
     [...row.children].forEach(el => { if (!keep.has(el.dataset.key)) { delete _suInner[el.dataset.key]; el.remove(); } });
   }
   // ---- a unit's sheet: everything you can do to it -------------------------
-  // The sheet sits on the page itself, not in the Network tab, so Show Mode's
+  // The sheet sits on the page itself, not in the Network tab, so Show mode's
   // bar can open it too (that tab is hidden there)
   (() => { const s = document.getElementById('fx-sheet'); if (s && s.parentElement !== document.body) document.body.appendChild(s); })();
   // The page behind stays put while a sheet is open (Rob, 2026-09-26); the
@@ -3981,7 +4211,8 @@
               (u.relay.host && u.relay.mine ? ' <span class="fx-dim">(this One)</span>' : u.relay.host && u.relay.found ? ' <span class="fx-dim">(found)</span>' : '') +
               (u.relay.live ? ' <span class="fx-ok">live</span>' : u.relay.why ? '<div class="fu-sub">' + fxEsc(u.relay.why) + '</div>' : '')) +
             fxRow('Rig PIN', rigRelayLine(u.serial)) +
-            fxRow('CueLink', 'ch ' + fxEsc(u.relay.ch) + ' · ' + fxEsc(u.relay.tune) + ' · ' + fxEsc(u.relay.heard) + ' heard') +
+            fxRow('CueLink', 'ch ' + fxEsc(u.relay.ch) + ' · ' + fxEsc(u.relay.tune) + ' · ' + fxEsc(u.relay.heard) + ' heard' +
+              (u.relay.move_wait ? '<div class="fu-sub">' + fxEsc(u.relay.move_wait) + '</div>' : '')) +
             fxRow('Ethernet', fxEsc(u.relay.eth) + (u.relay.mbps ? ' · ' + u.relay.mbps + ' Mbps' : '') + ' · ' + (u.relay.static ? 'static' : 'DHCP')) : '') +
           fxRow('Software', 'v' + fxEsc(u.version) + (u.upd ? ' <span class="fx-chip warn">update</span>' : '')) +
         '</div></div>' +
@@ -4509,7 +4740,7 @@
     btn.disabled = true; btn.textContent = 'Scanning\u2026 (~10s)';
     try { renderFleet(await (await fetch('/discover', { method: 'POST' })).json()); }
     catch (e) { showToast('Scan failed.', 'error'); }
-    finally { btn.disabled = false; btn.textContent = 'Scan for Units'; }
+    finally { btn.disabled = false; btn.textContent = 'Scan for units'; }
   }
   (async () => {   // last scan is remembered on the unit - show it on load
     try { renderFleet(await (await fetch('/discover/last')).json()); } catch (e) {}
@@ -4533,8 +4764,6 @@
       const b = document.getElementById('cue-ctl-btn');
       if (!b) return;
       b.textContent = 'Lights control timer: ' + (d.on ? 'on' : 'off');
-      b.style.borderColor = d.on ? 'var(--green)' : '';
-      b.style.color = d.on ? 'var(--green)' : '';
       b.dataset.on = d.on ? '1' : '';
     } catch (e) {}
   }
@@ -4561,8 +4790,7 @@
     b.textContent = 'Rig PIN: ' + (!s.set ? 'open' : s.known || s.console ? 'on' : 'locked');
     b.title = !s.set ? 'Open: anyone on this network can change this rig. Secure it.'
       : 'This rig has a PIN: restart, power, network, blackout, looks and sources ask for it.';
-    const col = s.set ? 'var(--green)' : '';
-    b.style.borderColor = col; b.style.color = col; b.dataset.on = s.set ? '1' : '';
+    b.dataset.on = s.set ? '1' : '';
     if (document.getElementById('rig-modal').classList.contains('open') && !_rigShown) rigRender();
   }
   // kept for anything still calling the old names
@@ -4863,7 +5091,7 @@
       unit = find();
     }
     if (!unit) {
-      showToast(want + ' is not on this One\u2019s list yet. Press Scan for Units, then try again.', 'warning');
+      showToast(want + ' is not on this One\u2019s list yet. Press Scan for units, then try again.', 'warning');
       return;
     }
     // where to send them back to, resolved from THIS unit's fleet, never from
@@ -4887,7 +5115,7 @@
   // never a sweep) so health / tally colour / versions stay live
   setInterval(async () => {
     const pane = document.getElementById('tpane-network');
-    const showing = document.body.classList.contains('show-mode') || (pane && pane.offsetParent !== null);   // the Network tab, or Show Mode's bar
+    const showing = document.body.classList.contains('show-mode') || (pane && pane.offsetParent !== null);   // the Network tab, or Show mode's bar
     if (!showing || document.hidden) return;   // not in a hidden browser tab: the One probes every light each tick
     try { renderFleet(await (await fetch('/discover/refresh', { method: 'POST' })).json()); } catch (e) {}
   }, 5000);   // 5 s, not 60: the cards show each light's tally live (Rob, 2026-09-26)
@@ -4933,6 +5161,83 @@
     document.getElementById('upd-strip').style.display = 'none';
     try { await fetch('/updates/dismiss', { method: 'POST' }); } catch (e) {}
   }
+  // -- the header's four figures (Downstage UI standard, 2026-10-19) ---------
+  // The show-day answer before any setting: the timer, the outputs, Companion
+  // and the lights. A figure is coloured only by its state: green live, amber
+  // standby or missing, red fault or on air. Each opens its tab.
+  function heroSet(id, val, ctx, cls, html) {
+    const s = document.getElementById(id);
+    if (!s) return;
+    s.className = 'stat' + (cls ? ' ' + cls : '');
+    const v = document.getElementById(id + '-v'), c = document.getElementById(id + '-c');
+    if (v) { if (html) v.innerHTML = val; else v.textContent = val; }
+    if (c) c.innerHTML = ctx || '';
+  }
+  function heroPaint(d) {
+    const nm = document.getElementById('hero-name');
+    if (nm && d.name) nm.textContent = d.name;
+    const sub = document.getElementById('hero-sub');
+    const host = '{{ hostname }}'.replace(/\.local$/i, '') + '.local';
+    if (sub) sub.textContent = [d.serial, d.primary_ip || d.local_ip, host].filter(Boolean).join(' · ');
+    const con = d.hdmi_connected || {}, on = ['1', '2'].filter(k => con[k]), gone = ['1', '2'].filter(k => !con[k]);
+    if (d.blackout) heroSet('st-out', 'Blackout', 'every display is black', 'bad');
+    else heroSet('st-out', on.length + ' <small>of 2</small>',
+      gone.length ? fxEsc(gone.map(k => 'HDMI ' + k).join(' and ')) + ': no display' : fxEsc(d.now_showing || 'both showing'),
+      on.length === 0 ? 'bad' : gone.length ? 'warn' : '', true);
+    if (!d.companion_installed) heroSet('st-comp', 'Off', 'not installed', '');
+    else if (d.companion_running) heroSet('st-comp', 'Live', 'on this unit', 'ok');
+    else if (d.companion_remote && d.companion_remote.ok) heroSet('st-comp', 'Remote', fxEsc(d.companion_remote.ip || ''), 'ok');
+    else heroSet('st-comp', 'Stopped', 'start it in the Companion tab', 'warn');
+    const art = document.getElementById('hero-art');
+    if (art) art.className = 'hero-art ' + (d.blackout ? 'bad' : (d.health && d.health.ok === false) ? 'warn' : 'ok');
+    if (art) art.title = d.health && d.health.why ? d.health.why : 'All good';
+    const hb = document.getElementById('hero-blackout');
+    if (hb) { hb.classList.toggle('on', !!d.blackout); hb.textContent = d.blackout ? 'Blackout on' : 'Blackout'; }
+  }
+  function heroClock(ms) {
+    const h = Math.floor(ms / 3600000) % 24, m = Math.floor(ms / 60000) % 60;
+    return ((h % 12) || 12) + ':' + String(m).padStart(2, '0') + ' <small>' + (h < 12 ? 'AM' : 'PM') + '</small>';
+  }
+  function heroLeft(ms) {
+    const neg = ms < 0, a = Math.round(Math.abs(ms) / 1000);
+    const h = Math.floor(a / 3600), m = Math.floor(a % 3600 / 60), s = a % 60;
+    return (neg ? '-' : '') + (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s).padStart(2, '0');
+  }
+  async function heroTimer() {
+    try {
+      const d = await (await fetch('/api/v1/one/timer', { cache: 'no-store' })).json();
+      const st = d.state || {}, pre = (d.presets || []).find(p => p.id === st.loaded);
+      if (st.no_timer || !st.loaded) { heroSet('st-timer', 'Clear', 'nothing loaded', ''); return; }
+      if (pre && pre.kind === 'clock') {
+        heroSet('st-timer', heroClock((st.ontime || {}).clock || 0), fxEsc(pre.label || 'Time of day'), '', true);
+        return;
+      }
+      const ph = st.phase || 'stopped';
+      const cls = ph === 'over' || ph === 'flash' || ph === 'alert' ? 'bad' : ph === 'paused' ? 'warn' : ph === 'running' ? 'ok' : '';
+      const word = ph === 'flash' || ph === 'alert' ? 'alert' : ph;
+      heroSet('st-timer', heroLeft(st.left_ms || 0), fxEsc(word + (st.title ? ' · ' + st.title : '')), cls);
+    } catch (e) { heroSet('st-timer', '-', 'OnTime is not answering', 'warn'); }
+  }
+  async function heroLights() {
+    try {
+      const d = await (await fetch('/discover/last', { cache: 'no-store' })).json();
+      const lights = (d.units || []).filter(u => u.product === 'Cue' && (u.ip || (((u.cue || {}).link || {}).relayed)));
+      if (!lights.length) { heroSet('st-lights', 'None', 'found on this network', ''); return; }
+      const rgb = c => /^#[0-9a-f]{6}$/i.test(c || '') ? [1, 3, 5].map(i => parseInt(c.substr(i, 2), 16)) : null;
+      let air = 0, pv = 0;
+      for (const u of lights) {
+        const c = rgb(u.showing);
+        if (!c) continue;
+        if (c[0] > 170 && c[1] < 90 && c[2] < 90) air++;
+        else if (c[1] > 150 && c[0] < 120 && c[2] < 140) pv++;
+      }
+      heroSet('st-lights', String(lights.length),
+        air ? '<span class="air">' + air + ' on air</span>' + (pv ? ' · ' + pv + ' preview' : '') : pv ? pv + ' preview' : 'none on air', '');
+    } catch (e) {}
+  }
+  heroTimer(); setInterval(() => { if (!document.hidden) heroTimer(); }, 1000);
+  heroLights(); setInterval(() => { if (!document.hidden) heroLights(); }, 15000);
+
   async function fetchStatus(quiet = false) {
     const bar = document.getElementById('status-bar');
     const txt = document.getElementById('status-text');
@@ -4948,6 +5253,7 @@
       // back - reload so the whole page reflects fresh state
       if (_wasOffline) { location.reload(); return; }
       _connFails = 0;
+      try { heroPaint(d); } catch (e) {}
       ontimeInstalled    = d.ontime_installed;
       ontimeRunning      = d.ontime_running;
       companionInstalled = d.companion_installed;
@@ -4957,7 +5263,7 @@
 
       if (d.serial) document.getElementById('os-serial').textContent = d.serial;
 
-      // Show Mode quick bar: only offer tools that are actually reachable -
+      // Show mode quick bar: only offer tools that are actually reachable -
       // OnTime views when the server (local or remote) answers, Companion
       // when its service is running
       document.querySelectorAll('.show-quick .qb-ontime')
@@ -5352,7 +5658,7 @@
           <svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>Restart</button>
         <button class="btn-sm" onclick="downloadCompanionConfig()" title="Download a full backup of the Companion config - pages, connections and surfaces - to this computer">
           <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zm-8 2V5h2v6h1.17L12 13.17 9.83 11H11zm-6 7h14v2H5z"/></svg>
-          Save Config</button>
+          Save config</button>
         <button class="btn-sm" id="companion-rescan-btn" onclick="rescanUSB()">
           <svg viewBox="0 0 24 24"><path d="M15 7h1a2 2 0 012 2v1h2V9a4 4 0 00-4-4h-1V3l-4 4 4 4V7zM9 17H8a2 2 0 01-2-2v-1H4v1a4 4 0 004 4h1v2l4-4-4-4v3z"/></svg>
           Rescan USB</button>
@@ -5550,11 +5856,11 @@
     if (d.ok) {
       emulatorId = d.id;
       document.getElementById('emulator-id').value = d.id;
-      showToast(d.id ? 'Emulator set - Virtual Deck tile added to Show Mode.' : 'Emulator cleared.', 'success');
+      showToast(d.id ? 'Emulator set - Virtual deck tile added to Show mode.' : 'Emulator cleared.', 'success');
       fetchStatus(true);
     }
   }
-  // in-UI panel: every quick-action tool opens inside Show Mode, with a
+  // in-UI panel: every quick-action tool opens inside Show mode, with a
   // pop-out for when it deserves its own tab
   // ── keep-awake while a tool panel is open ──
   // Wake Lock API needs a secure context (our units speak HTTP), so fall
@@ -5666,7 +5972,7 @@
   }
 
   // While tools are open but the viewer is hidden, their tabs dock at the
-  // bottom of the page - visible from any tab or Show Mode, one tap back in.
+  // bottom of the page - visible from any tab or Show mode, one tap back in.
   function renderToolDock() {
     const dock = document.getElementById('tool-dock');
     if (!dock) return;
@@ -5714,15 +6020,15 @@
   function closeEmulator() { hidePanel(); }
   function openEmulator() {
     if (!emulatorId) return;
-    openPanel(`http://${compHost()}:8000/emulator/${emulatorId}`, 'Virtual Deck');
+    openPanel(`http://${compHost()}:8000/emulator/${emulatorId}`, 'Virtual deck');
   }
   function openCompanionButtons() {
     openPanel(`http://${compHost()}:8000/tablet`, 'Buttons');
   }
 
-  // ── OnTime Editor ─────────────────────────────────────────────────────────────
+  // ── OnTime editor ─────────────────────────────────────────────────────────────
   function openEditor() {
-    openPanel(`http://${_otHost}:4001/editor/`, 'OnTime Editor');
+    openPanel(`http://${_otHost}:4001/editor/`, 'OnTime editor');
   }
 
 
@@ -5953,14 +6259,14 @@
     showToast('Sources swapped.', 'success');
   }
 
-  // ── Show Mode quick bar ──
+  // ── Show mode quick bar ──
   function quickOpen(path) {
     // OnTime views live on the configured server: this Pi in local mode,
     // the remote address otherwise
     const host = currentMode === 'remote'
       ? (document.getElementById('ip').value.trim() || window.location.hostname)
       : window.location.hostname;
-    const titles = { '/editor/': 'OnTime Editor', '/timercontrol': 'Timer Control' };
+    const titles = { '/editor/': 'OnTime editor', '/timercontrol': 'Timer Control' };
     openPanel(`http://${host}:4001${path}`, titles[path] || 'OnTime');
   }
 
@@ -5969,8 +6275,10 @@
     document.body.classList.toggle('show-mode', m === 'show');
     document.getElementById('view-tab-show').classList.toggle('active', m === 'show');
     document.getElementById('view-tab-full').classList.toggle('active', m !== 'show');
+    const hm = document.getElementById('hero-mode');
+    if (hm) hm.textContent = m === 'show' ? 'Full setup' : 'Show mode';
     try { localStorage.setItem('ds1-view-mode', m); } catch (e) {}
-    // Show Mode forces the displays pane visible - if we arrived from another
+    // Show mode forces the displays pane visible - if we arrived from another
     // tab, its virtual tiles were hidden (possibly evicted); re-arm them
     if (m === 'show' && window._lastViewMode && window._lastViewMode !== 'show' &&
         document.body.dataset.page !== 'displays')
@@ -5998,7 +6306,12 @@
       reviveVirtualPreviews();
     window._lastSetupTab = t;
   }
-  try { showSetupTab(localStorage.getItem('ds1-setup-tab') || 'displays'); } catch (e) {}
+  // ?tab=network opens that tab (a link from help, or the header's figures on another page)
+  try {
+    const qt = new URLSearchParams(location.search).get('tab');
+    const ok = ['displays', 'timer', 'companion', 'network', 'system'];
+    showSetupTab(ok.includes(qt) ? qt : (localStorage.getItem('ds1-setup-tab') || 'displays'));
+  } catch (e) {}
   document.body.dataset.hdmi = activeHdmiTab;   // colour identity from first paint
 
   async function refreshDisplays() {
@@ -6061,7 +6374,7 @@
   }
 
   // the inline My Buttons wall is an iframe too - hidden canvases purge,
-  // so reload it when Show Mode returns after a real absence
+  // so reload it when Show mode returns after a real absence
   function reviveShowEmbed() {
     const sef = document.getElementById('show-embed-frame');
     if (sef && sef.dataset.url && Date.now() - (+sef.dataset.at || 0) > 30000) {
@@ -6564,7 +6877,7 @@
   }
 
   // The status bar under a preview tile - shared by the status poll and the
-  // Virtual Previews toggle so both keep it current.
+  // Virtual previews toggle so both keep it current.
   function updatePvBar(n, connected) {
     const bar = document.getElementById('pv-bar-' + n);
     if (!bar) return;
@@ -6655,7 +6968,7 @@
   function paintLineTone() {
     const b = document.getElementById('linetone-btn');
     if (!b) return;
-    b.textContent = window._lineTone ? 'Tone On' : 'Line Tone';
+    b.textContent = window._lineTone ? 'Tone On' : 'Line tone';
     b.style.borderColor = window._lineTone ? 'var(--amber-bd)' : '';
     b.style.color = window._lineTone ? 'var(--amber)' : '';
   }
@@ -6711,7 +7024,7 @@
       act.innerHTML = `<button class="btn-sm danger" onclick="setSatellite(false)">Disable</button>`;
       return;
     }
-    badge.className = 'status-badge stopped'; badge.textContent = 'Off';
+    badge.className = 'status-badge off'; badge.textContent = 'Off';   // an optional feature switched off: not a fault
     note.textContent = s.version ? 'v' + s.version + ' installed' : '';
     act.innerHTML = `
       <input id="sat-ip" placeholder="Remote Companion IP - e.g. 192.168.1.50"
@@ -6747,7 +7060,7 @@
     } catch (e) { showToast('Could not reach the unit.', 'error'); }
     finally { window._satBusy = false; }
   }
-  // Pop Out: a REAL OS window (the /wall wrapper) you can drag to any
+  // Pop out: a REAL OS window (the /wall wrapper) you can drag to any
   // display. Standalone web apps can't spawn OS windows, so there the
   // in-page floating panel steps in instead.
   function popOutButtons() {
@@ -6804,7 +7117,7 @@
   })();
   function copyWallLink(btn) {
     const u = `http://${window.location.host}/virtual-deck`;
-    const done = () => showToast('Virtual Deck link copied - paste it on the console device.', 'success');
+    const done = () => showToast('Virtual deck link copied - paste it on the console device.', 'success');
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(u).then(done, () => fallbackCopyWall(u, done));
     } else fallbackCopyWall(u, done);
@@ -6846,7 +7159,7 @@
   }
 
   async function savePreset() {
-    const name = prompt('Preset name (e.g. "Show Mode", "Rehearsal"):');
+    const name = prompt('Preset name (e.g. "Show mode", "Rehearsal"):');
     if (!name || !name.trim()) return;
     try {
       const r = await fetch('/presets/save', {
@@ -7157,7 +7470,7 @@
       }
     } else {
       badgeEl.className   = 'version-badge uptodate';
-      badgeEl.textContent = '✓ Up to date';
+      badgeEl.textContent = 'Up to date';
       if (ub) ub.remove();
     }
   }

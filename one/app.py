@@ -4990,7 +4990,10 @@ def _relay_unit(ip, d):
                       "ch": d.get("ch", 0), "tune": d.get("tune", ""), "eth": d.get("ethState", ""),
                       "mbps": d.get("ethMbps", 0), "static": bool(d.get("static")),
                       "heard": len(lights), "up": d.get("up", 0), "started": d.get("startedBy", ""),
-                      "trying": d.get("compTrying", ""), "why": d.get("compWhy", "")},
+                      "trying": d.get("compTrying", ""), "why": d.get("compWhy", ""),
+                      # while it waits to move to the rig's channel, in its own words:
+                      # "Waiting for no one on air to move to channel 6 (4 lights without WiFi)"
+                      "move_wait": str(((d.get("rigWifi") or {}).get("moveWait")) or "")},
             # the lights it carries, as a Cue's link says them: they group with it
             # on the fleet page, and a light with no WiFi of its own is listed
             "cue": {"link": {"guests": guests, "max": int(d.get("max") or 4), "channel": d.get("ch", 0),
