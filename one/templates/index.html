@@ -885,7 +885,8 @@
     .fx-frame { fill:none; stroke-width:3; opacity:.25; transition:stroke .45s, stroke-width .3s, opacity .3s; }
     .fx-card.lit .fx-frame, .fx-panel.lit .fx-frame { opacity:1; }
     .fx-card.air .fx-frame, .fx-panel.air .fx-frame { stroke-width:5; }
-    .fx-port { fill:#2a323b; }
+    .fx-lip { fill:#141920; stroke:#313a44; stroke-width:1.4; }   /* the Lite's outside lip, a shade under the body */
+    .fx-tub { stroke:#262e37; stroke-width:1; }
     .fx-num { font:700 40px var(--font-display); text-anchor:middle; dominant-baseline:central; fill:var(--ink); }
     .fx-card:not(.lit) .fx-num, .fx-panel:not(.lit) .fx-num { fill:#5b6670; }
     .fx-art .fx-frame ~ .fx-num { fill:var(--tally); }
@@ -3589,12 +3590,15 @@
              '" r="' + r.toFixed(1) + '" class="fx-led"/>';
       return s;
     };
+    // the Lite on its side, as the landscape case: the outside lip as a rim
+    // round the tub, no chin and no port bar (Rob, 2026-10-20; the Cue repo's
+    // docs/device-icons/README.md, "The Cue Lite is landscape")
     if (i.kind === 'camera') return '<svg class="fx-art" viewBox="0 0 120 120" aria-hidden="true">' +
-      '<rect x="26" y="14" width="68" height="92" rx="13" class="fx-body"/>' +
-      '<rect x="31" y="19" width="58" height="72" rx="8" class="fx-glass"/>' +
-      '<rect x="35" y="23" width="50" height="64" rx="6" class="fx-frame" style="stroke:var(--tally)"/>' +
-      numTxt(60, 56, 34) +
-      '<rect x="52" y="96" width="16" height="3" rx="1.5" class="fx-port"/></svg>';
+      '<rect x="12" y="21" width="96" height="80" rx="17" class="fx-lip"/>' +
+      '<rect x="16" y="25" width="88" height="72" rx="13" class="fx-body fx-tub"/>' +
+      '<rect x="22" y="30" width="76" height="62" rx="8" class="fx-glass"/>' +
+      '<rect x="26" y="34" width="68" height="54" rx="6" class="fx-frame" style="stroke:var(--tally)"/>' +
+      numTxt(60, 62, 34) + '</svg>';
     // the 360 from the side, to the case's proportions: a 33 x 12 mm tile, the
     // 21 mm tower 10.8 mm proud with its 2 mm chamfer (cue-tile.scad)
     if (i.kind === '360') return '<svg class="fx-art" viewBox="0 0 120 120" aria-hidden="true">' +
