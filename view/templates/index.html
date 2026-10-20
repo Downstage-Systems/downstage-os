@@ -952,6 +952,12 @@
       background: color-mix(in srgb, var(--red) 10%, var(--raised)); border-color: color-mix(in srgb, var(--red) 55%, var(--edge)); color: var(--bad-text); }
     .btn-q { display: inline-flex; align-items: center; justify-content: center; padding: 0 14px; cursor: pointer; }
     .btn-q.on { background: var(--bad-fill); border-color: var(--red); color: var(--bad-text); }
+    /* the page's two modes side by side: the one in use bright on a raised face, the other dim */
+    .hero-mode { display: inline-flex; padding: 2px; gap: 2px; background: var(--ground); border: 1px solid var(--edge); border-radius: var(--r-btn); }
+    .hero-mode button { min-height: 30px; padding: 0 12px; border: 1px solid transparent; border-radius: 4px; background: none;
+      font: 600 14px var(--font-body); color: var(--muted2); cursor: pointer; }
+    .hero-mode button:hover { color: var(--muted); }
+    .hero-mode button.on { background: var(--raised); border-color: var(--edge); color: var(--text); }
     .mode-btn.active { background: var(--panel); border-color: var(--muted2); color: var(--text); }
     .mode-toggle { background: none; border: 0; padding: 0; gap: 8px; }
     input[type="text"], input[type="password"], input[type="number"], input[type="email"], select, textarea {
@@ -1094,7 +1100,8 @@
       .hero-art { width: 64px; height: 64px; } .hero-art svg { width: 46px; height: 46px; }
       .top h1 { font-size: 28px; }
       .hero-acts { grid-column: 1 / -1; margin-top: 14px; }
-      .hero-acts .btn-q { flex: 1; }
+      .hero-acts .btn-q, .hero-acts .hero-mode { flex: 1; }
+      .hero-mode button { flex: 1; }
       .stat { padding: 12px 12px 14px; } .stat em { font-size: 26px; }
       .setup-tabs { overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
     }
@@ -1142,7 +1149,11 @@
       </div>
       <div class="hero-acts">
         <button class="btn-q danger" id="hero-blackout" onclick="blackout()" title="Black out the output">Blackout</button>
-        <button class="btn-q" id="hero-mode" onclick="setViewMode(document.body.classList.contains('show-mode') ? 'full' : 'show')">Show mode</button>
+        <!-- both modes in view, the one in use bright and the other dim (Rob: "make this toggle more obvious") -->
+        <div class="hero-mode" role="group" aria-label="Page mode">
+          <button id="hero-mode-full" class="on" aria-pressed="true" onclick="setViewMode('full')">Full setup</button>
+          <button id="hero-mode-show" aria-pressed="false" onclick="setViewMode('show')">Show mode</button>
+        </div>
       </div>
     </div>
     <div class="stats">
@@ -2897,8 +2908,10 @@
     document.body.classList.toggle('show-mode', m === 'show');
     document.getElementById('view-tab-show').classList.toggle('active', m === 'show');
     document.getElementById('view-tab-full').classList.toggle('active', m !== 'show');
-    const hm = document.getElementById('hero-mode');
-    if (hm) hm.textContent = m === 'show' ? 'Full setup' : 'Show mode';
+    for (const [id, on] of [['hero-mode-full', m !== 'show'], ['hero-mode-show', m === 'show']]) {
+      const b = document.getElementById(id);
+      if (b) { b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); }
+    }
     try { localStorage.setItem('dsv-view-mode', m); } catch (e) {}
   }
   try { setViewMode(localStorage.getItem('dsv-view-mode') || 'full'); } catch (e) {}
