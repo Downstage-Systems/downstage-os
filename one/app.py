@@ -5869,6 +5869,65 @@ def fleet_cue_follow():
         return jsonify({"ok": False, "error": str(e)[:120]})
 
 
+_TIMER_SOURCES = ("auto", "one", "local")
+
+
+@app.route("/fleet/cue/timer-source", methods=["GET", "POST"])
+def fleet_cue_timer_source():
+    """Which timer a round Cue's face shows (Rob, 2026-10-20: "make sure this
+    setting is adjustable from the relay and the one pages"): auto (the One's
+    when one is found, unless the Cue's own countdown is running), one, or
+    local. Saved on the light. Asked of the light itself when it has WiFi
+    ({"ip"}: GET /api/v1/timer "mode", POST /api/v1/timer/source), or of the
+    Relay that carries it ({"relay", "id"}: the hub's "timerSource"). A light
+    that does not say (a Lite, a 360, a Mini, older firmware) answers
+    source null, and the page shows no control for it (Cue 0.149.3)."""
+    b = (request.get_json(silent=True) or {}) if request.method == "POST" else request.args
+    ip, rip, lid = str(b.get("ip", "") or ""), str(b.get("relay", "") or ""), str(b.get("id", "") or "")
+    try:
+        ipaddress.ip_address(ip or rip)
+    except Exception:
+        return jsonify({"ok": False, "error": "bad ip"}), 400
+    if rip and not re.fullmatch(r"[A-Za-z0-9_-]{1,40}", lid):
+        return jsonify({"ok": False, "error": "which light"}), 400
+    mode = ""
+    if request.method == "POST":
+        mode = str(b.get("mode", "")).strip().lower()
+        if mode not in _TIMER_SOURCES:
+            return jsonify({"ok": False, "error": "timerSource is auto, one or local"}), 400
+    try:
+        if ip:
+            if mode:
+                r = requests.post(f"http://{ip}/api/v1/timer/source", json={"mode": mode},
+                                  timeout=4, headers=_box_headers(ip=ip))
+                if not r.ok:
+                    why = _box_refusal(r, "the light")
+                    try:
+                        why = why or r.json().get("error", "")
+                    except Exception:
+                        pass
+                    return jsonify({"ok": False, "error": why or f"the light answered {r.status_code}"}), 200
+                _audit("CUE_TIMER_SOURCE", f"{ip} -> {mode}")
+            d = requests.get(f"http://{ip}/api/v1/timer", timeout=4, headers=_box_headers(ip=ip)).json()
+            src = str(d.get("mode", "") or "")
+            src = "local" if src == "cue" else src         # "cue" before 0.149.3
+        else:
+            if mode:
+                status, ans, _n = _relay_cue_post(rip, lid, {"timerSource": mode})
+                if status != 200 or not ans.get("ok", True):
+                    return jsonify({"ok": False, "error": ans.get("error") or f"the Relay answered {status}"}), 200
+                _audit("CUE_TIMER_SOURCE", f"{lid} via {rip} -> {mode}")
+            status, ans = _relay_api(rip, f"cue/{lid}")
+            c = ans.get("cue") if isinstance(ans.get("cue"), dict) else ans
+            if status != 200 or "timerSource" not in c:
+                status, ans = _relay_api(rip, "cues")
+                c = next((x for x in (ans.get("cues") or []) if str(x.get("id")) == lid), {})
+            src = str(c.get("timerSource", "") or "")
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)[:80]}), 200
+    return jsonify({"ok": True, "source": src if src in _TIMER_SOURCES else None})
+
+
 @app.route("/fleet/cue/label", methods=["POST"])
 def fleet_cue_label():
     """Rename a Cue light from the fleet card. The light restarts to

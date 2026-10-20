@@ -984,6 +984,8 @@
     .fx-seg { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
     .fx-seg.three { grid-template-columns:1fr 1fr 1fr; }
     .fx-seg button[disabled] { opacity:.4; cursor:not-allowed; }
+    .fx-seg.three.tsrc { grid-template-columns:1fr 1fr 1fr !important; }   /* three short words: one row at any width */
+    .fx-seg.tsrc button { text-align:center; }
     .fx-where { margin:0 0 10px; font-size:13px; line-height:1.5; color:var(--text); }
     .fx-info-btn { display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; margin-left:8px; padding:0; border-radius:50%; border:1px solid var(--muted2); background:none;
       color:var(--muted); font:700 13px var(--font-body); font-style:italic; text-transform:none; letter-spacing:0; cursor:pointer; vertical-align:1px; }
@@ -4319,7 +4321,7 @@
       // One's timer by itself, a swipe from its tally, so no light needs to be
       // driven by the timer. Pointing a light at this One's Companion - for a
       // Companion that runs here - is a link in Details instead.
-      cueWhereSec(u, i) +
+      cueWhereSec(u, i) + cueTimerSrcSec(u, i) +
       ((L.enabled !== undefined || i.noIp) ? '<div class="fx-sec"><div class="fx-h">CueLink</div>' +
         // the link's own buttons and these share one row
         (link.includes('id="fx-link-btns"') ? link.replace(/<\/div>$/, shareBtn + offBtn + '</div>')
@@ -4342,6 +4344,74 @@
         (i.noIp ? '' :
         '<button class="fx-btn" onclick="cueIdentify(\'' + u.ip + '\')" title="Blink it white for five seconds">Identify</button>' +
         '<button class="fx-btn primary" onclick="openPanel(\'http://' + u.ip + '/\', \'' + q(nm) + '\')">Open its page</button>') + '</div>';
+  }
+  // ---- Timer source: which timer a round Cue's face shows ----
+  // (Rob, 2026-10-20: "make sure this setting is adjustable from the relay
+  // and the one pages"; Cue 0.149.3.) Saved on the light. Asked of the light
+  // when it has WiFi, else of the Relay that carries it. Only a round Cue
+  // has it: a light that does not say (a Lite, a 360, a Mini, older
+  // firmware) gets no control at all.
+  let _fxTsrc = {};   // light serial -> {source, at, busy}
+  const TSRC_LINE = {
+    auto: "The One's timer when one is found, unless this Cue's own is running.",
+    one: "Always the One's timer.",
+    local: "Always this Cue's own timer, even with a One on the network.",
+  };
+  // 0.149.3 is where "mode" became this setting; before it the same field
+  // said something else (0.148.1 answers "local" with source "cue"), so an
+  // older light gets no control rather than a wrong one
+  const fxVerAtLeast = (v, want) => {
+    const a = String(v || '').split('.').map(n => parseInt(n, 10) || 0), b = want.split('.').map(Number);
+    for (let k = 0; k < b.length; k++) if ((a[k] || 0) !== b[k]) return (a[k] || 0) > b[k];
+    return true;
+  };
+  function cueTsrcWhere(u, i) {
+    if (!i.noIp && u.ip) return fxVerAtLeast(u.version, '0.149.3') ? { ip: u.ip } : null;
+    const r = ((_fxData && _fxData.units) || []).find(x => x.product === 'Relay' && x.serial && (x.serial === i.via || x.name === i.via));
+    const via = r || ((_fxData && _fxData.units) || []).find(x => x.product === 'Relay' &&
+      ((((x.cue || {}).link || {}).guests) || []).some(g => g.id === u.serial));
+    return via ? { relay: via.ip, id: u.serial } : null;
+  }
+  function cueTimerSrcSec(u, i) {
+    if (i.kind !== 'round') return '';
+    const where = cueTsrcWhere(u, i);
+    if (!where) return '';
+    const t = _fxTsrc[u.serial];
+    if (!t || Date.now() - t.at > 15000) cueTsrcLoad(u.serial, where);
+    if (!t || !t.source) return '';
+    const opt = m => '<button class="' + (t.source === m ? 'on' : '') + '"' + (t.busy ? ' disabled' : '') +
+      ' onclick="cueTsrcSet(\'' + u.serial + '\',\'' + m + '\')"><b>' + { auto: 'Auto', one: 'One', local: 'Local' }[m] + '</b></button>';
+    return '<div class="fx-sec"><div class="fx-h">Timer source</div>' +
+      '<div class="fx-seg three tsrc">' + opt('auto') + opt('one') + opt('local') + '</div>' +
+      '<p class="fx-note" style="margin-top:8px">' + fxEsc(TSRC_LINE[t.source] || '') + '</p></div>';
+  }
+  async function cueTsrcLoad(key, where) {
+    const t = _fxTsrc[key] || (_fxTsrc[key] = { source: null, at: 0 });
+    if (t.loading) return;
+    t.loading = true; t.at = Date.now();
+    try {
+      const d = await (await fetch('/fleet/cue/timer-source?' + new URLSearchParams(where))).json();
+      const was = t.source;
+      t.source = d.ok ? d.source : t.source;
+      if (_fxOpen && t.source !== was) fxSheet();
+    } catch (e) { /* no control until it answers */ }
+    t.loading = false;
+  }
+  async function cueTsrcSet(key, mode) {
+    const u = ((_fxData && _fxData.units) || []).find(x => (x.serial || x.ip) === key);
+    const t = _fxTsrc[key];
+    if (!u || !t || t.source === mode) return;
+    const where = cueTsrcWhere(u, cueInfo(u));
+    if (!where) return;
+    t.busy = true; if (_fxOpen) fxSheet();
+    try {
+      const d = await (await fetch('/fleet/cue/timer-source', { method: 'POST',
+        headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...where, mode }) })).json();
+      if (d.ok) { t.source = d.source || mode; t.at = Date.now(); }
+      showToast(d.ok ? cueInfo(u).name + ': ' + ({ auto: 'Auto', one: 'One', local: 'Local' }[t.source] || mode) + ' timer.'
+                     : 'Not changed: ' + (d.error || 'no answer'), d.ok ? 'success' : 'error');
+    } catch (e) { showToast('Could not reach the One.', 'error'); }
+    t.busy = false; if (_fxOpen) fxSheet();
   }
   // ---- "In Companion": where the light lives there, and the switch ----
   function cueWhereSec(u, i) {
