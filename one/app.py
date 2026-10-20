@@ -5917,12 +5917,20 @@ def fleet_cue_timer_source():
                 if status != 200 or not ans.get("ok", True):
                     return jsonify({"ok": False, "error": ans.get("error") or f"the Relay answered {status}"}), 200
                 _audit("CUE_TIMER_SOURCE", f"{lid} via {rip} -> {mode}")
-            status, ans = _relay_api(rip, f"cue/{lid}")
-            c = ans.get("cue") if isinstance(ans.get("cue"), dict) else ans
-            if status != 200 or "timerSource" not in c:
-                status, ans = _relay_api(rip, "cues")
-                c = next((x for x in (ans.get("cues") or []) if str(x.get("id")) == lid), {})
-            src = str(c.get("timerSource", "") or "")
+            # the Relay hands a change on over CueLink, so for a second or so
+            # it still reports the old choice (0.149.5, 2026-10-20): read
+            # until it says the new one, rather than answer with the old
+            deadline = time.time() + (4 if mode else 0)
+            while True:
+                status, ans = _relay_api(rip, f"cue/{lid}")
+                c = ans.get("cue") if isinstance(ans.get("cue"), dict) else ans
+                if status != 200 or "timerSource" not in c:
+                    status, ans = _relay_api(rip, "cues")
+                    c = next((x for x in (ans.get("cues") or []) if str(x.get("id")) == lid), {})
+                src = str(c.get("timerSource", "") or "")
+                if not mode or src == mode or time.time() > deadline:
+                    break
+                time.sleep(0.5)
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)[:80]}), 200
     return jsonify({"ok": True, "source": src if src in _TIMER_SOURCES else None})

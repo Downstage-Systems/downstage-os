@@ -4407,9 +4407,14 @@
     try {
       const d = await (await fetch('/fleet/cue/timer-source', { method: 'POST',
         headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...where, mode }) })).json();
+      const W = { auto: 'Auto', one: 'One', local: 'Local' };
       if (d.ok) { t.source = d.source || mode; t.at = Date.now(); }
-      showToast(d.ok ? cueInfo(u).name + ': ' + ({ auto: 'Auto', one: 'One', local: 'Local' }[t.source] || mode) + ' timer.'
-                     : 'Not changed: ' + (d.error || 'no answer'), d.ok ? 'success' : 'error');
+      // the light's own answer, not ours: through a Relay a change can still
+      // be on its way when the Relay is asked again
+      showToast(!d.ok ? 'Not changed: ' + (d.error || 'no answer')
+                : t.source === mode ? cueInfo(u).name + ': ' + W[mode] + ' timer.'
+                : 'Sent. ' + cueInfo(u).name + ' still says ' + (W[t.source] || 'nothing') + ': check it in a moment.',
+                !d.ok ? 'error' : t.source === mode ? 'success' : 'warning');
     } catch (e) { showToast('Could not reach the One.', 'error'); }
     t.busy = false; if (_fxOpen) fxSheet();
   }
