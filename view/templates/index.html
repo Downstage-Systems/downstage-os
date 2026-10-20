@@ -952,6 +952,15 @@
       background: color-mix(in srgb, var(--red) 10%, var(--raised)); border-color: color-mix(in srgb, var(--red) 55%, var(--edge)); color: var(--bad-text); }
     .btn-q { display: inline-flex; align-items: center; justify-content: center; padding: 0 14px; cursor: pointer; }
     .btn-q.on { background: var(--bad-fill); border-color: var(--red); color: var(--bad-text); }
+    /* Blackout while it is on: a slow red pulse, so a black stage is never mistaken for a fault. The one
+       glow the standard allows, by Rob's call (2026-10-19: "when this is active, pulse glow red"). It holds
+       still, lit, for anyone who asks for reduced motion. */
+    #hero-blackout.on { color: #fff; background: color-mix(in srgb, var(--red) 28%, var(--panel)); animation: blackoutPulse 1.6s ease-in-out infinite; }
+    @keyframes blackoutPulse {
+      0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--red) 55%, transparent); }
+      50% { box-shadow: 0 0 14px 3px color-mix(in srgb, var(--red) 70%, transparent); }
+    }
+    @media (prefers-reduced-motion: reduce) { #hero-blackout.on { box-shadow: 0 0 10px 2px color-mix(in srgb, var(--red) 60%, transparent); } }
     /* the page's two modes side by side: the one in use bright on a raised face, the other dim */
     .hero-mode { display: inline-flex; padding: 2px; gap: 2px; background: var(--ground); border: 1px solid var(--edge); border-radius: var(--r-btn); }
     .hero-mode button { min-height: 30px; padding: 0 12px; border: 1px solid transparent; border-radius: 4px; background: none;
