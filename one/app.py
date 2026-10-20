@@ -2332,6 +2332,113 @@ def custom_view():
     return render_template("custom_view.html")
 
 
+def _one_output_state(t=None):
+    """What the One's timer screen is showing on top of the timer: its own
+    Blackout (the button on this page, Companion's, the Slate's: one
+    blackout) and whether OnTime's timer view carries an aux timer under the
+    main time. Readable everywhere, so a surface that opens mid-blackout
+    shows it (R&D, 2026-10-20)."""
+    if t is None:
+        t = _cue_poll_ontime() or {}
+    src = t.get("secondary_source")
+    return {"blackout": bool(_blackout_active), "blackout_outputs": sorted(_blackout_outputs),
+            "secondary_source": src,
+            "aux_shown": int(src[3:]) if isinstance(src, str) and src in ("aux1", "aux2", "aux3") else 0}
+
+
+@app.route("/api/v1/one/output", methods=["GET", "POST"])
+def one_output():
+    """The timer screen's Blackout and aux, for a Slate or a Relay.
+    POST {"blackout": true|false} and/or {"aux": true|false, "n": 1}.
+    Blackout is the One's own, the same as its page's button; OnTime's
+    timer-view blackout stays unused, so there is only one. Aux shown is
+    OnTime's timer view secondary source: aux n, or nothing; the aux keeps
+    running either way. Behind the rig PIN, like every output change."""
+    if request.method == "POST":
+        b = request.get_json(silent=True) or {}
+        if "blackout" not in b and "aux" not in b:
+            return jsonify({"ok": False, "error": "send blackout (true or false) or aux (true or false)"}), 400
+        who = request.remote_addr
+        if "aux" in b:
+            try:
+                n = int(b.get("n", 1))
+            except (TypeError, ValueError):
+                n = 0
+            if n not in (1, 2, 3):
+                return jsonify({"ok": False, "error": "n is 1, 2 or 3"}), 400
+            try:
+                _ontime_ask(f"message/timer/secondarySource/{'aux' + str(n) if b.get('aux') else 'null'}")
+            except Exception as e:
+                return jsonify({"ok": False, "error": str(e)[:80]}), 502
+            _cue_timer.update(at=0)         # the next read is OnTime's new answer
+            print(f"[output] {who}: aux {n} {'shown' if b.get('aux') else 'hidden'}", flush=True)
+        if "blackout" in b:
+            (_blackout_on if b.get("blackout") else _blackout_off)(None)
+            _audit("BLACKOUT", f"{'on' if b.get('blackout') else 'off'} from {who} (api)")
+        time.sleep(0.15)
+    return jsonify({"ok": True, "output": _one_output_state()})
+
+
+_AUX_ACTIONS = "start, pause, stop, set, add or direction"
+
+
+def _aux_read(n):
+    p = requests.get("http://127.0.0.1:4001/api/poll", timeout=1.0).json()["payload"]
+    a = p.get(f"auxtimer{n}") or {}
+    return {"n": n, "current": a.get("current"), "duration": a.get("duration"),
+            "playback": a.get("playback"), "direction": a.get("direction"),
+            "running": a.get("playback") == "start", "name": a.get("name") or ""}
+
+
+@app.route("/api/v1/one/aux", methods=["POST"])
+def one_aux_do():
+    """Do one thing to an aux timer (aux 1 unless "n" says): start, pause,
+    stop, set {"seconds"} (its duration), add {"seconds"} (either way, without
+    stopping it), direction {"direction": "down"|"up"}. OnTime 4.15 has every
+    one of these itself. Behind Lights control timer, like the main timer."""
+    if not load_config().get("cue_control"):
+        return jsonify({"ok": False, "error": "timer control is off on this One - "
+                                              "turn on Lights control timer in its Network tab"}), 403
+    b = request.get_json(silent=True) or {}
+    action = str(b.get("action", "")).strip()
+    try:
+        n = int(b.get("n", 1))
+    except (TypeError, ValueError):
+        n = 0
+    if n not in (1, 2, 3):
+        return jsonify({"ok": False, "error": "n is 1, 2 or 3"}), 400
+    try:
+        secs = int(b.get("seconds", 0))
+    except (TypeError, ValueError):
+        secs = 0
+    if action in ("start", "pause", "stop"):
+        path = f"auxtimer/{n}/{action}"
+    elif action == "set":
+        if secs <= 0 or secs > 35999:
+            return jsonify({"ok": False, "error": "seconds, from 1 to 9:59:59"}), 400
+        path = f"auxtimer/{n}/duration/{secs * 1000}"
+    elif action == "add":
+        if not secs or abs(secs) > 7200:
+            return jsonify({"ok": False, "error": "seconds, up to two hours either way"}), 400
+        path = f"auxtimer/{n}/addtime/{secs * 1000}"
+    elif action == "direction":
+        d = str(b.get("direction", "")).strip().lower()
+        d = {"down": "count-down", "up": "count-up"}.get(d, d)
+        if d not in ("count-down", "count-up"):
+            return jsonify({"ok": False, "error": "direction is down or up"}), 400
+        path = f"auxtimer/{n}/direction/{d}"
+    else:
+        return jsonify({"ok": False, "error": f"action is {_AUX_ACTIONS}"}), 400
+    try:
+        _ontime_ask(path)
+        time.sleep(0.1)
+        a = _aux_read(n)
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)[:80]}), 502
+    print(f"[aux] {request.remote_addr}: {n} {action} {b.get('seconds') or b.get('direction') or ''}", flush=True)
+    return jsonify({"ok": True, "action": action, "aux": a})
+
+
 @app.route("/api/v1/one/aux")
 def one_aux():
     """OnTime's three aux timers, from this unit rather than from OnTime.
@@ -2351,9 +2458,12 @@ def one_aux():
         a = p.get(f"auxtimer{n}") or {}
         out.append({"n": n, "current": a.get("current"), "duration": a.get("duration"),
                     "playback": a.get("playback"), "direction": a.get("direction"),
-                    "name": a.get("name") or ""})
+                    "running": a.get("playback") == "start", "name": a.get("name") or ""})
+    src = ((p.get("message") or {}).get("timer") or {}).get("secondarySource")
     return jsonify({"ok": True, "aux": out, "clock": p.get("clock"),
-                    "now": int(time.time() * 1000)})
+                    "now": int(time.time() * 1000),
+                    "output": _one_output_state({"secondary_source": src}),
+                    "control": bool(load_config().get("cue_control"))})
 
 
 @app.route("/view/aux")
@@ -2583,6 +2693,7 @@ def status():
         "companion_running":    companion_is_running(),
         "displays":             displays,
         "blackout":             _blackout_active,
+        "output":               _one_output_state(),   # blackout + the timer view's aux
         "blackout_outputs":     sorted(_blackout_outputs),
         "testcard_outputs":     sorted(_testcard_override),
         "watchdog_override":    _watchdog_override,
@@ -3361,6 +3472,9 @@ def _cue_poll_ontime():
                "event_id": (payload.get("eventNow") or {}).get("id") or "",
                # what OnTime will run after it, for a rundown's "next" (Slate Plus)
                "next_id": (payload.get("eventNext") or {}).get("id") or "",
+               # what OnTime's timer view shows under the main time: aux1-3,
+               # "secondary" (the secondary message) or None (Slate Plus)
+               "secondary_source": ((payload.get("message") or {}).get("timer") or {}).get("secondarySource"),
                "clock_ms": payload.get("clock")}
     except Exception:
         pass
@@ -3906,7 +4020,8 @@ def one_timer():
         now_id, next_id = str(t.get("event_id") or ""), str(t.get("next_id") or "")
         presets = [dict(p, loaded=bool(now_id) and p["id"] == now_id, next=bool(next_id) and p["id"] == next_id)
                    for p in _one_presets()]
-        return jsonify({"ok": True, "state": _one_timer_state(), "presets": presets})
+        return jsonify({"ok": True, "state": _one_timer_state(), "presets": presets,
+                        "output": _one_output_state(t)})
     if not load_config().get("cue_control"):
         return jsonify({"ok": False, "error": "timer control is off on this One - "
                                               "turn on Lights control timer in its Network tab"}), 403
@@ -4154,7 +4269,7 @@ _RIG_LOCKED = {
     "/satellite/install", "/satellite/mode", "/satellite/restart",
     "/network/apply", "/wifi/connect", "/wifi/disconnect", "/wifi/forget",
     "/hotspot/start", "/hotspot/stop",
-    "/blackout", "/blackout/clear",
+    "/blackout", "/blackout/clear", "/api/v1/one/output",
     "/presets/apply", "/presets/save", "/presets/delete",
     "/displays/source", "/displays/swap", "/displays/testcard", "/displays/identify",
     "/displays/resync", "/save", "/mode", "/reset", "/desktop", "/refresh",
@@ -8166,9 +8281,13 @@ def blackout():
     them is a pure black void, so unmapping is an instant blackout - and the
     hidden windows keep their state for an instant restore. Pass
     {"output": 1|2} to black out a single display; no body blacks out all."""
+    only = _parse_output(request.get_json(silent=True) or {})
+    return jsonify(_blackout_on(only))
+
+
+def _blackout_on(only=None):
+    """Black out one output (1 or 2), or all of them with None."""
     global _blackout_active
-    data = request.get_json(silent=True) or {}
-    only = _parse_output(data)
     env  = {**os.environ, "DISPLAY": ":0"}
     targets = {}   # wid → output
     for n in ([only] if only else [1, 2]):
@@ -8192,17 +8311,20 @@ def blackout():
             print(f"[blackout] unmap {wid}: {e}")
     _blackout_outputs.update({only} if only else {1, 2})
     _blackout_active = True
-    return jsonify({"ok": True, "blackout": True,
-                    "outputs": sorted(_blackout_outputs)})
+    return {"ok": True, "blackout": True, "outputs": sorted(_blackout_outputs)}
 
 
 @app.route("/blackout/clear", methods=["POST"])
 def blackout_clear():
     """Restore blacked-out windows. {"output": 1|2} resumes one display;
     no body resumes everything."""
+    only = _parse_output(request.get_json(silent=True) or {})
+    return jsonify(_blackout_off(only))
+
+
+def _blackout_off(only=None):
+    """Bring back one output (1 or 2), or everything with None."""
     global _blackout_active
-    data = request.get_json(silent=True) or {}
-    only = _parse_output(data)
     env  = {**os.environ, "DISPLAY": ":0"}
     restored = True
     for wid, n in list(_blackout_hidden.items()):
@@ -8227,8 +8349,7 @@ def blackout_clear():
     _blackout_active = bool(_blackout_outputs)
     if not restored:
         threading.Thread(target=launch_all_windows, daemon=True).start()
-    return jsonify({"ok": True, "blackout": _blackout_active,
-                    "outputs": sorted(_blackout_outputs)})
+    return {"ok": True, "blackout": _blackout_active, "outputs": sorted(_blackout_outputs)}
 
 
 @app.route("/displays/swap", methods=["POST"])
