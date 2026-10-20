@@ -2579,7 +2579,7 @@
     }
     const hint = document.getElementById('hotspot-hint');
     if (hotspotActive) {
-      hint.innerHTML = `Broadcasting <code>${hotspotSsid}</code> · password <code>${hotspotPass}</code> · setup UI at <code>http://10.42.0.1:8080</code>. WiFi client is unavailable while the hotspot runs.`;
+      hint.innerHTML = `Broadcasting <code>${hotspotSsid}</code> · password <code>${hotspotPass || 'printed on the unit'}</code> · setup UI at <code>http://10.42.0.1:8080</code>. WiFi client is unavailable while the hotspot runs.`;
       hint.style.display = '';
     } else {
       hint.style.display = 'none';
@@ -2597,7 +2597,7 @@
   async function toggleHotspot() {
     const btn = document.getElementById('hotspot-btn');
     if (!hotspotActive) {
-      if (!confirm(`Start hotspot ${hotspotSsid}?\n\nThe device will leave any WiFi network it is on. If you are connected over WiFi right now, rejoin via the hotspot (password: ${hotspotPass}) at http://10.42.0.1:8080 - or use ethernet.`)) return;
+      if (!confirm(`Start hotspot ${hotspotSsid}?\n\nThe device will leave any WiFi network it is on. If you are connected over WiFi right now, rejoin via the hotspot (password: ${hotspotPass || 'printed on the unit'}) at http://10.42.0.1:8080 - or use ethernet.`)) return;
     }
     btn.disabled = true;
     try {

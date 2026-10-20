@@ -1337,13 +1337,41 @@ def _hotspot_fallback_inner(grace):
         print(f"[hotspot] WiFi still absent -- hotspot back up: ok={ok}")
 
 
+_HOTSPOT_NET = "10.42.0."     # NetworkManager's shared mode: 10.42.0.0/24
+
+
+def _asker_may_see_hotspot_pass(active):
+    """The hotspot's password is printed on the unit and shown on its own
+    screen, so it is never served to the network (as the One, 2026-10-18;
+    Rob, 2026-10-20: "fix the view hotspot"). Only this unit's own screen
+    (loopback: the View runs no Companion or anything else that could ask
+    for it) or a browser already on the hotspot, which knows it, gets it.
+    A hotspot address is trusted only when no other interface of ours is on
+    10.42.0.x, so a venue network that happens to use it says no."""
+    remote = str(request.remote_addr or "").split("%")[0]
+    if remote.startswith("::ffff:"):
+        remote = remote[7:]
+    if remote in ("127.0.0.1", "::1"):
+        return True
+    if not active or not remote.startswith(_HOTSPOT_NET):
+        return False
+    try:
+        txt = subprocess.run(["ip", "-4", "-o", "addr", "show"], capture_output=True,
+                             text=True, timeout=3).stdout
+    except Exception:
+        return False
+    on_net = [l for l in txt.splitlines() if len(l.split()) >= 4 and l.split()[3].startswith(_HOTSPOT_NET)]
+    return len(on_net) == 1
+
+
 @app.route("/hotspot/status")
 def hotspot_status():
     config = load_config()
+    active = hotspot_is_active()
     return jsonify({
-        "active": hotspot_is_active(),
+        "active": active,
         "ssid":   config.get("hotspot_ssid", ""),
-        "pass":   config.get("hotspot_pass", ""),
+        "pass":   config.get("hotspot_pass", "") if _asker_may_see_hotspot_pass(active) else "",
         "auto":   config.get("hotspot_auto", True),
     })
 
