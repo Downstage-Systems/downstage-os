@@ -5885,7 +5885,11 @@ def fleet_cue_timer_source():
     b = (request.get_json(silent=True) or {}) if request.method == "POST" else request.args
     ip, rip, lid = str(b.get("ip", "") or ""), str(b.get("relay", "") or ""), str(b.get("id", "") or "")
     try:
-        ipaddress.ip_address(ip or rip)
+        for a in (ip, rip):
+            if a:
+                ipaddress.ip_address(a)
+        if not (ip or rip):
+            raise ValueError
     except Exception:
         return jsonify({"ok": False, "error": "bad ip"}), 400
     if rip and not re.fullmatch(r"[A-Za-z0-9_-]{1,40}", lid):
@@ -5895,6 +5899,13 @@ def fleet_cue_timer_source():
         mode = str(b.get("mode", "")).strip().lower()
         if mode not in _TIMER_SOURCES:
             return jsonify({"ok": False, "error": "timerSource is auto, one or local"}), 400
+    if ip and rip:
+        # a light carried on another channel pauses its WiFi: when it does
+        # not answer at its own address, its Relay still does
+        try:
+            requests.get(f"http://{ip}/api/v1/timer", timeout=2, headers=_box_headers(ip=ip)).json()
+        except Exception:
+            ip = ""
     try:
         if ip:
             if mode:
