@@ -181,6 +181,29 @@
   .looks { display: flex; flex-wrap: wrap; gap: 10px; }
   .looks .btn { flex: 0 0 auto; min-width: 150px; }
 
+  /* ── Router: the ATEM's auxes, a router panel ── */
+  .rt-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+  .rt-head b { font: 700 24px var(--fd); }
+  .dests { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 18px; }
+  .dest { min-height: 104px; padding: 12px 14px; border-radius: var(--r); background: var(--panel); border: 2px solid var(--edge); text-align: left;
+    display: grid; align-content: space-between; gap: 6px; }
+  .dest small { color: var(--muted); font-size: 13px; font-weight: 600; }
+  .dest b { font: 700 26px/1.05 var(--fd); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dest em { font-style: normal; font: 600 13px var(--fb); color: var(--muted2); }
+  .dest.on { border-color: var(--text); background: var(--raised); }
+  .dest.air b { color: var(--bad-text); } .dest.pvw b { color: var(--ok-text); }
+  .srcgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+  .src { min-height: 84px; padding: 10px 12px; border-radius: var(--rb); background: var(--raised); border: 1px solid var(--edge); text-align: left;
+    display: grid; align-content: space-between; position: relative; overflow: hidden; }
+  .src b { font: 700 24px/1 var(--fd); }
+  .src small { color: var(--muted); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .src.lit { background: var(--ok-fill); border-color: var(--green); }
+  .src.lit b { color: var(--ok-text); }
+  .src::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 4px; }
+  .src.pgm::before { background: var(--red); } .src.pvw::before { background: var(--green); }
+  .rt-find { display: grid; gap: 10px; max-width: 560px; }
+  .rt-find input { height: 60px; padding: 0 16px; border-radius: var(--rb); border: 1px solid var(--edge); background: var(--ground); color: var(--text); font: 600 22px var(--fd); }
+
   /* ── Rig ── */
   .lights { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
   .light { min-height: 150px; padding: 16px; border-radius: var(--r); background: var(--panel); border: 2px solid var(--edge);
@@ -266,6 +289,7 @@
   <button data-tab="deck">Deck</button>
   <button data-tab="timer">Timer</button>
   <button data-tab="outputs">Outputs</button>
+  <button data-tab="router">Router</button>
   <button data-tab="rig">Rig</button>
   <button data-tab="tools">Tools</button>
 </nav>
@@ -383,6 +407,16 @@
       <button class="btn danger hold" id="o-black" data-hold="900" data-act="blackAll">Blackout everything<span class="hint">hold</span></button>
       <button class="btn" data-act="identify">Identify outputs</button>
     </div>
+  </section>
+
+  <section class="page" id="pg-router">
+    <div class="rt-head">
+      <b id="rt-name">ATEM</b><span class="pill off" id="rt-state">Not set up</span>
+      <span style="flex:1"></span>
+      <span class="note" id="rt-hint"></span>
+      <button class="btn" data-act="rtSetup" style="min-height:48px">Switcher</button>
+    </div>
+    <div id="rt-body"></div>
   </section>
 
   <section class="page" id="pg-rig">
@@ -896,6 +930,56 @@
     }).join('') || '<p class="note">No Cue lights found. Add them in the Browser view\'s Network tab.</p>';
   }
 
+  // ── Router: tap an aux, then the source for it. It goes at once, as a
+  // router panel does; the aux tiles say where everything is right now ──
+  S.rtAux = +store.get('ds_router_aux', '1') || 1;
+  async function pollRouter() {
+    try { const d = await getJSON('/api/v1/one/router'); if (d.ok) { S.router = d; paintRouter(); } } catch (e) {}
+  }
+  function rtSrc(st, id) { const x = (st.sources || []).find(v => v.id === id); return x ? x : { long: 'Source ' + id, short: '' }; }
+  function paintRouter() {
+    const st = S.router || {}, body = $('rt-body');
+    $('rt-name').textContent = st.product || 'ATEM';
+    const pill = $('rt-state');
+    pill.textContent = !st.ip ? 'Not set up' : st.connected ? 'Connected · ' + st.ip : (st.why || 'Connecting') + ' · ' + st.ip;
+    pill.className = 'pill ' + (!st.ip ? 'off' : st.connected ? 'ok' : 'warn');
+    if (!st.ip || S.rtSetup) { if (body.dataset.mode !== 'setup') { body.dataset.mode = 'setup'; rtFind(); } return; }
+    body.dataset.mode = 'router';
+    const auxes = st.auxes || [];
+    if (auxes.length && !auxes.some(a => a.n === S.rtAux)) S.rtAux = auxes[0].n;
+    const sel = auxes.find(a => a.n === S.rtAux);
+    $('rt-hint').textContent = sel ? 'Tap a source to put it on ' + sel.name : '';
+    const pgm = st.program || [], pvw = st.preview || [];
+    const sig = JSON.stringify([auxes, pgm, pvw, S.rtAux, (st.sources || []).length, st.connected]);
+    if (sig === S.rtSig) return;
+    S.rtSig = sig;
+    if (!st.connected && !auxes.length) { body.innerHTML = '<p class="note">' + esc(st.why || 'Connecting to the switcher…') + '</p>'; return; }
+    const dests = auxes.map(a => {
+      const x = rtSrc(st, a.source);
+      return '<button class="dest' + (a.n === S.rtAux ? ' on' : '') + (pgm.includes(a.source) ? ' air' : pvw.includes(a.source) ? ' pvw' : '') +
+        '" data-act="rtPick" data-arg="' + a.n + '"><small>' + esc(a.name) + '</small><b>' + esc(x.long) + '</b><em>' + esc(x.short) + '</em></button>';
+    }).join('');
+    const srcs = (st.sources || []).filter(x => x.aux).map(x =>
+      '<button class="src' + (sel && sel.source === x.id ? ' lit' : '') + (pgm.includes(x.id) ? ' pgm' : pvw.includes(x.id) ? ' pvw' : '') +
+      '" data-act="rtTake" data-arg="' + x.id + '"><b>' + esc(x.short || x.long) + '</b><small>' + esc(x.long) + '</small></button>').join('');
+    body.innerHTML = '<div class="h"><b>Destinations</b><span>' + auxes.length + ' aux outputs</span></div><div class="dests">' + dests + '</div>' +
+      '<div class="h"><b>Sources</b><span>red: on program · green: on preview</span></div><div class="srcgrid">' + srcs + '</div>';
+  }
+  async function rtFind() {
+    const st = S.router || {}, body = $('rt-body');
+    body.innerHTML = '<div class="card rt-find"><div class="h"><b>Which switcher?</b><span>Looking in Companion and on the network…</span></div><div id="rt-found"></div>' +
+      '<input id="rt-ip" inputmode="decimal" placeholder="Or its address, like 192.168.10.240" value="' + esc(st.ip || '') + '">' +
+      '<div class="row"><button class="btn pri" data-act="rtUse">Use this address</button>' + (st.ip ? '<button class="btn" data-act="rtCancel">Cancel</button>' : '') + '</div></div>';
+    try {
+      const d = await getJSON('/api/v1/one/router/atem'), f = d.found || [];
+      const el = $('rt-found'); if (!el) return;
+      el.innerHTML = f.length ? '<div class="stack">' + f.map(x => '<button class="btn" data-act="rtUseIp" data-arg="' + esc(x.ip) + '">' +
+          esc(x.name) + ' · ' + esc(x.ip) + ' <small>(' + esc(x.from) + ')</small></button>').join('') + '</div>'
+        : '<p class="note">None found by itself. Type its address below.</p>';
+      const h = body.querySelector('.h span'); if (h) h.textContent = f.length ? 'Tap the one to follow' : '';
+    } catch (e) {}
+  }
+
   // ── Tools ──
   function kv(rows) { return rows.filter(r => r[1] !== undefined && r[1] !== null && r[1] !== '').map(r => '<span>' + esc(r[0]) + '</span><b>' + esc(r[1]) + '</b>').join(''); }
   function upFor(sec) { sec = +sec || 0; const d = Math.floor(sec / 86400), h = Math.floor(sec % 86400 / 3600), m = Math.floor(sec % 3600 / 60); return d ? d + ' d ' + h + ' h' : h ? h + ' h ' + m + ' min' : m + ' min'; }
@@ -1030,6 +1114,17 @@
     ftOpen() { ftOpen(); }, ftClose() { ftClose(); },
     ftView(v) { store.set('ds_ft_view', v); paintTools(); },
     deckSize(v) { store.set('ds_deck', v); paintDeck(); },
+    rtPick(n) { S.rtAux = +n; store.set('ds_router_aux', n); S.rtSig = ''; paintRouter(); },
+    async rtTake(id) {
+      const st = S.router || {}, a = (st.auxes || []).find(x => x.n === S.rtAux); if (!a) return;
+      if (a.source === +id) return;
+      const d = await post('/api/v1/one/router', { aux: S.rtAux, source: +id });
+      if (d.ok) { S.router = d; S.rtSig = ''; paintRouter(); toast(a.name + ': ' + rtSrc(d, +id).long); }
+    },
+    rtSetup() { S.rtSetup = true; $('rt-body').dataset.mode = ''; paintRouter(); },
+    rtCancel() { S.rtSetup = false; S.rtSig = ''; $('rt-body').dataset.mode = ''; paintRouter(); },
+    async rtUseIp(ip) { const d = await post('/api/v1/one/router/atem', { ip }); if (d.ok) { S.rtSetup = false; S.router = d; S.rtSig = ''; $('rt-body').dataset.mode = ''; paintRouter(); setTimeout(pollRouter, 1500); } },
+    rtUse() { const v = ($('rt-ip') || {}).value || ''; if (v.trim()) A.rtUseIp(v.trim()); },
     deckLayout(v) { store.set('ds_deck_layout', v); $('d-box').dataset.src = ''; paintDeck(); },
     awake() { S.awakeWanted = !S.awakeWanted; store.set('ds_awake', S.awakeWanted ? '1' : ''); awake(S.awakeWanted); },
     toBrowser() { store.set('ds_ui', 'browser'); location.href = '/?browser=1'; },
@@ -1068,6 +1163,7 @@
     if (t === 'deck') paintDeck();
     if (t === 'outputs') { S.outSig = ''; paintOutputs(); loadLooks(); }
     if (t === 'rig') { S.rigSig = ''; paintRig(); pollFleet(); }
+    if (t === 'router') { S.rtSig = ''; pollRouter(); }
     if (t === 'tools') paintTools();
     if (t === 'timer') { paintTimer(); paintAux(); }
     paintFast();
@@ -1093,7 +1189,7 @@
   }
 
   // a link can name the tab: /touch#outputs, #aux for the aux timer, #deck-s for the deck's key size, #deck-xl for the + XL
-  const TABS = ['deck', 'timer', 'outputs', 'rig', 'tools'];
+  const TABS = ['deck', 'timer', 'outputs', 'router', 'rig', 'tools'];
   let hash = location.hash.slice(1);
   if (/^deck-[sml]$/.test(hash)) { store.set('ds_deck', hash.slice(5)); hash = 'deck'; }
   if (/^deck-(xl|vd)$/.test(hash)) { store.set('ds_deck_layout', hash.slice(5)); hash = 'deck'; }
@@ -1107,6 +1203,7 @@
   setInterval(pollTimer, 1000);
   setInterval(pollAux, 1000);
   setInterval(pollFleet, 5000);
+  setInterval(() => { if (S.tab === 'router' && $('rt-body').dataset.mode !== 'setup') pollRouter(); }, 1000);
   setInterval(paintFast, 200);
   // a wake lock or the video needs a touch first: the first one turns it on if it was wanted
   document.addEventListener('pointerdown', function once() { if (S.awakeWanted) awake(true); document.removeEventListener('pointerdown', once); });

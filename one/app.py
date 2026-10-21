@@ -19,6 +19,7 @@ import cue_ble   # BLE onboarding for Cue lights; degrades to a no-op without bl
 import mdns      # asking the network who is there, instead of sweeping it
 import relay     # pairing with Cue Relays, and holding the token each gives back
 import rigpin    # the rig PIN: the lock, known devices, strangers slowed
+import atem      # the ATEM's aux routes, for the touch page's Router
 import companion_grid   # a live picture of a Companion page, for choosing a light's button
 import cue_radio   # a USB CueLink radio (listen-only ESP32-S3), when one is plugged in
 
@@ -2477,6 +2478,116 @@ def one_aux():
                     "control": bool(load_config().get("cue_control"))})
 
 
+# ── The ATEM router (Rob, 2026-10-21: "a router style touch interface that
+# shows where all ATEM aux outputs are routed and the ability to change those
+# easily"). The One follows one switcher, chosen once; the touch page's
+# Router tab draws it. ──
+_atem = atem.Atem()
+
+
+def _atem_start():
+    ip = str(load_config().get("atem_ip", "") or "")
+    if ip:
+        _atem.set_ip(ip)
+
+
+def _atem_from_companion():
+    """The switcher Companion already talks to: its bmd-atem connections'
+    hosts, read from a copy of Companion's db (so nobody types an address
+    the rig already knows; docs/magic.md, "find, don't ask")."""
+    import sqlite3
+    import tempfile
+    found = []
+    for db in sorted(_companion_dbs(), reverse=True)[:1]:
+        tmp = tempfile.mkdtemp(prefix="ds-atem-")
+        try:
+            subprocess.run(["sudo", "sh", "-c",
+                            f'for f in "{db}" "{db}-wal" "{db}-shm"; do [ -f "$f" ] && cp "$f" "{tmp}/"; done; '
+                            f'chown -R pi "{tmp}" 2>/dev/null; chmod -R a+rw "{tmp}"'],
+                           timeout=10, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            con = sqlite3.connect(f"file:{tmp}/db.sqlite?mode=ro", uri=True)
+            text = []
+            for (t,) in con.execute("select name from sqlite_master where type='table'"):
+                try:
+                    for row in con.execute(f'select * from "{t}"'):
+                        text.extend(str(v) for v in row if isinstance(v, str) and "bmd-atem" in v)
+                except sqlite3.Error:
+                    pass
+            con.close()
+            # the connection's host sits near its module name, before or after it
+            # depending on the Companion version: take the nearest one either side
+            host_re = re.compile(r'"host"\s*:\s*"([0-9]{1,3}(?:\.[0-9]{1,3}){3})"')
+            for blob in text:
+                for m in re.finditer(r'"bmd-atem"', blob):
+                    lo = max(0, m.start() - 1500)
+                    win = blob[lo:m.end() + 1500]
+                    hosts = [(abs(h.start() + lo - m.start()), h.group(1)) for h in host_re.finditer(win)]
+                    if not hosts:
+                        continue
+                    ip = min(hosts)[1]
+                    labs = [(abs(l.start() + lo - m.start()), l.group(1)) for l in re.finditer(r'"label"\s*:\s*"([^"]{1,40})"', win)]
+                    if not any(f["ip"] == ip for f in found):
+                        found.append({"ip": ip, "name": min(labs)[1] if labs else "ATEM", "from": "Companion"})
+        except Exception as e:
+            print(f"[atem] reading Companion's connections: {e}")
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+    return found
+
+
+@app.route("/api/v1/one/router", methods=["GET", "POST"])
+def one_router():
+    """GET: the switcher, its auxes (each with the source on it), its sources
+    (names, whether they may go to an aux) and program / preview for tally.
+    POST {"aux": 1, "source": 5}: put a source on an aux. Behind the rig PIN,
+    as every output change is."""
+    if request.method == "POST":
+        b = request.get_json(silent=True) or {}
+        try:
+            aux, src = int(b.get("aux")), int(b.get("source"))
+        except (TypeError, ValueError):
+            return jsonify({"ok": False, "error": "aux and source, as numbers"}), 400
+        st = _atem.state()
+        if not st["connected"]:
+            return jsonify({"ok": False, "error": "the One is not connected to the switcher"}), 409
+        if not any(a["n"] == aux for a in st["auxes"]):
+            return jsonify({"ok": False, "error": f"this switcher has no aux {aux}"}), 400
+        if not any(x["id"] == src for x in st["sources"]):
+            return jsonify({"ok": False, "error": "the switcher has no such source"}), 400
+        _atem.route(aux, src)
+        name = next((x["long"] for x in st["sources"] if x["id"] == src), str(src))
+        _audit("ATEM_AUX", f"{request.remote_addr}: aux {aux} -> {name}")
+        # the switcher answers with AuxS; give it a moment so the reply is the new state
+        for _ in range(10):
+            time.sleep(0.05)
+            if any(a["n"] == aux and a["source"] == src for a in _atem.state()["auxes"]):
+                break
+    return jsonify({"ok": True, **_atem.state()})
+
+
+@app.route("/api/v1/one/router/atem", methods=["GET", "POST"])
+def one_router_atem():
+    """GET: switchers the One can see (Companion's ATEM connections, then
+    mDNS). POST {"ip": "..."}: follow that one ("" to stop)."""
+    if request.method == "POST":
+        ip = str((request.get_json(silent=True) or {}).get("ip", "")).strip()
+        if ip:
+            try:
+                ipaddress.ip_address(ip)
+            except ValueError:
+                return jsonify({"ok": False, "error": "an address like 192.168.10.240"}), 400
+        save_config({"atem_ip": ip})
+        _atem.set_ip(ip)
+        _audit("ATEM", f"{request.remote_addr}: follow {ip or 'nothing'}")
+        return jsonify({"ok": True, **_atem.state()})
+    seen, found = set(), []
+    for f in _atem_from_companion() + [dict(d, **{"from": "network"}) for d in atem.find()]:
+        if f["ip"] not in seen:
+            seen.add(f["ip"])
+            found.append(f)
+    return jsonify({"ok": True, "found": found, "ip": load_config().get("atem_ip", "")})
+
+
 @app.route("/touch")
 def touch_page():
     """The One for a touchscreen: an iPad by the DSM's desk (Rob, 2026-10-21:
@@ -4304,6 +4415,7 @@ _RIG_LOCKED = {
     "/network/apply", "/wifi/connect", "/wifi/disconnect", "/wifi/forget",
     "/hotspot/start", "/hotspot/stop",
     "/blackout", "/blackout/clear", "/api/v1/one/output",
+    "/api/v1/one/router", "/api/v1/one/router/atem",      # what the ATEM's auxes show
     "/presets/apply", "/presets/save", "/presets/delete",
     "/displays/source", "/displays/swap", "/displays/testcard", "/displays/identify",
     "/displays/resync", "/save", "/mode", "/reset", "/desktop", "/refresh",
@@ -9316,6 +9428,7 @@ if __name__ == "__main__":
                     rig_pin=lambda: "" if not rigpin.is_set() else rigpin.pin(),
                     take_pin=_take_relay_pin)
     relay.start()
+    _atem_start()              # the switcher the Router follows, if one was chosen
     threading.Thread(target=_cable_primary_guard, daemon=True).start()
     def _on_sigterm(signum, frame):
         # A service stop during system shutdown is our last chance to own
