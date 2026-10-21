@@ -71,8 +71,24 @@
   main { position: relative; overflow: hidden; min-height: 0; }
   .page { position: absolute; inset: 0; overflow-y: auto; padding: 20px 20px calc(24px + env(safe-area-inset-bottom)); display: none; -webkit-overflow-scrolling: touch; }
   .page.on { display: block; }
-  #pg-deck { padding: 0; }
-  #pg-deck iframe { width: 100%; height: 100%; border: 0; display: block; background: var(--ground); }
+  /* Deck: Companion's emulator at a key size chosen here (it stretches to its
+     window, which on a 13" iPad is keys over 3 cm across), and the rail */
+  #pg-deck.on { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; }
+  #pg-deck.wide { grid-template-columns: minmax(0, 1fr); }
+  #pg-deck.wide .rail { display: none; }
+  .deckwrap { display: grid; grid-template-rows: auto 1fr; gap: 12px; min-height: 0; }
+  .deckhead { display: flex; align-items: center; gap: 12px; }
+  .deckhead .seg2 button { height: 44px; }
+  .deckbox { display: flex; align-items: flex-start; justify-content: center; min-height: 0; width: 100%; margin: 0 auto; }
+  .deckbox iframe { border: 0; display: block; background: #000; border-radius: var(--r); width: 100%; aspect-ratio: 2 / 1; max-height: 100%; }
+  .deckbox .none { margin: 40px auto; text-align: center; max-width: 420px; }
+  .rail { display: grid; gap: 12px; align-content: start; }
+  .rail .clock .time { font-size: 92px; margin: 2px 0 8px; }
+  .rail .clock .title { font-size: 19px; min-height: 24px; }
+  .rail .pairs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .rail .btn { min-height: 60px; }
+  .rail .airlist { display: grid; gap: 6px; }
+  .rail .airlist div { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-radius: var(--rb); background: var(--raised); font-weight: 600; }
 
   /* ── shared pieces ── */
   .card { background: var(--panel); border: 1px solid var(--edge); border-radius: var(--r); padding: 18px; }
@@ -203,6 +219,8 @@
   /* portrait, and anything narrower than a 13" iPad on its side */
   @media (max-width: 1100px) {
     .tgrid { grid-template-columns: 1fr; }
+    #pg-deck.on { grid-template-columns: 1fr; }
+    .rail { grid-template-columns: 1fr 1fr; }
     .bar .fig.clockfig { display: none; }
   }
   @media (max-width: 820px) {
@@ -236,7 +254,37 @@
   <button data-tab="tools">Tools</button>
 </nav>
 <main>
-  <section class="page" id="pg-deck"></section>
+  <section class="page" id="pg-deck">
+    <div class="deckwrap">
+      <div class="deckhead">
+        <span class="note">Key size</span>
+        <div class="seg2" id="d-size">
+          <button data-act="deckSize" data-arg="s">Small</button><button data-act="deckSize" data-arg="m">Medium</button><button data-act="deckSize" data-arg="l">Large</button>
+        </div>
+        <span class="sp" style="flex:1"></span>
+        <span class="note" id="d-page"></span>
+      </div>
+      <div class="deckbox" id="d-box"></div>
+    </div>
+    <div class="rail">
+      <div class="card clock">
+        <div class="title" id="r-title"></div>
+        <div class="time stopped" id="r-time">-</div>
+        <button class="btn pri" id="r-start" data-act="mainStart" style="width:100%"><span class="big">START</span></button>
+      </div>
+      <div class="pairs">
+        <button class="btn plus" data-act="add" data-arg="60"><span class="big">+1</span>min</button>
+        <button class="btn plus" data-act="add" data-arg="300"><span class="big">+5</span>min</button>
+        <button class="btn minus" data-act="add" data-arg="-60"><span class="big">-1</span>min</button>
+        <button class="btn minus" data-act="add" data-arg="-300"><span class="big">-5</span>min</button>
+      </div>
+      <div class="card">
+        <div class="h"><b>On air</b></div>
+        <div class="airlist" id="r-air"><p class="note">Nothing on air.</p></div>
+      </div>
+      <button class="btn danger hold" id="d-black" data-hold="900" data-act="blackAll">Blackout<span class="hint">hold</span></button>
+    </div>
+  </section>
 
   <section class="page" id="pg-timer">
     <div class="tswitch">
@@ -493,6 +541,7 @@
     $('b-clock').textContent = clockText(serverNow());
     $('sw-main-t').textContent = mt;
     $('sw-aux-t').textContent = S.typed ? typedText() : fmt(auxLeft());
+    if (S.tab === 'deck') { const r = $('r-time'); r.textContent = mt; r.className = 'time ' + ph; }
     if (S.tab === 'timer') {
       if (S.tview === 'main') {
         const el = $('m-time');
@@ -523,7 +572,7 @@
     comp.className = 'pill ' + (s.companion_running ? 'ok' : 'warn');
     const dark = !!s.blackout;
     $('b-dark').hidden = !dark;
-    for (const id of ['o-black', 'a-black']) {
+    for (const id of ['o-black', 'a-black', 'd-black']) {
       const el = $(id); if (!el) continue;
       el.classList.toggle('hold', !dark);
       el.firstChild.textContent = dark ? (id === 'o-black' ? 'Bring everything back' : 'Bring the screen back') : (id === 'o-black' ? 'Blackout everything' : 'Blackout');
@@ -531,6 +580,45 @@
     }
     if (S.tab === 'outputs') paintOutputs();
     if (S.tab === 'tools') paintTools();
+    if (S.tab === 'deck') paintDeck();
+  }
+
+  // ── Deck: Companion's own emulator, the one the One keeps for this (the
+  // remote Companion's when Satellite is serving one) ──
+  function deckUrl() {
+    const s = S.status || {}, r = s.companion_remote;
+    const host = r && r.ip && r.ok ? r.ip : HOST;
+    // no emulator chosen yet: Companion's own chooser, as the Virtual Deck page does
+    return S.status ? 'http://' + host + ':8000/emulator/' + (s.companion_emulator_id || '') : '';
+  }
+  function paintDeck() {
+    const size = store.get('ds_deck', 'm'), u = deckUrl(), box = $('d-box');
+    for (const b of document.querySelectorAll('#d-size button')) b.classList.toggle('on', b.dataset.arg === size);
+    $('pg-deck').classList.toggle('wide', size === 'l');
+    // Companion's emulator stretches to its frame, so the frame sets the key:
+    // Small about 1.6 cm on a 13" iPad (a Stream Deck's is 1.4), Medium about
+    // 2 cm, Large the whole width with the rail put away
+    box.style.maxWidth = size === 's' ? '680px' : size === 'm' ? '860px' : '';
+    if (!u) {
+      if (box.dataset.src !== 'none') { box.dataset.src = 'none';
+        box.innerHTML = '<div class="none"><p class="note">Asking the One…</p></div>'; }
+      return;
+    }
+    if (box.dataset.src !== u) { box.dataset.src = u; box.innerHTML = '<iframe src="' + esc(u) + '" title="Companion" allow="fullscreen"></iframe>'; }
+  }
+  function paintRail() {
+    if (S.tab !== 'deck') return;
+    const t = S.timer && S.timer.state, run = t && (t.playback === 'play' || t.playback === 'roll'), lp = loadedPreset();
+    $('r-title').textContent = (t && t.title) || (lp ? lp.label : 'Nothing loaded');
+    const sb = $('r-start'); sb.classList.toggle('pause', !!run); sb.querySelector('.big').textContent = run ? 'PAUSE' : 'START';
+    const ls = lightsOf(S.fleet).filter(u => tallyOf(u.showing) === 'program');
+    const sig = JSON.stringify(ls.map(u => [u.serial, u.name]));
+    if (sig !== S.airSig) {
+      S.airSig = sig;
+      $('r-air').innerHTML = ls.length ? ls.map(u => '<div><span>' + esc(u.name || u.serial) + '</span><span class="pill air">' +
+        esc(((u.cue || {}).camera >= 0 && (u.cue || {}).camera !== null) ? 'Cam ' + u.cue.camera : 'On air') + '</span></div>').join('')
+        : '<p class="note">Nothing on air.</p>';
+    }
   }
 
   function paintTimer() {
@@ -545,6 +633,7 @@
     const sb = $('m-start');
     sb.classList.toggle('pause', !!run);
     sb.querySelector('.big').textContent = run ? 'PAUSE' : 'START';
+    paintRail();
     const p = (S.timer && S.timer.presets) || [];
     const sig = JSON.stringify(p.map(x => [x.id, x.label, x.seconds, x.loaded, x.next]));
     if (sig !== S.rdSig) {
@@ -775,6 +864,7 @@
     open(where) { window.open('http://' + HOST + where, '_blank'); },
     ftOpen() { ftOpen(); }, ftClose() { ftClose(); },
     ftView(v) { store.set('ds_ft_view', v); paintTools(); },
+    deckSize(v) { store.set('ds_deck', v); paintDeck(); },
     awake() { S.awakeWanted = !S.awakeWanted; store.set('ds_awake', S.awakeWanted ? '1' : ''); awake(S.awakeWanted); },
     toBrowser() { store.set('ds_ui', 'browser'); location.href = '/?browser=1'; },
     pin(d) { pinKey(d); }, pinBack() { pinVal = pinVal.slice(0, -1); $('pin-box').textContent = '•'.repeat(pinVal.length); },
@@ -809,7 +899,7 @@
     S.tab = t; store.set('ds_tab', t);
     for (const b of document.querySelectorAll('#tabs button')) b.classList.toggle('on', b.dataset.tab === t);
     for (const p of document.querySelectorAll('.page')) p.classList.toggle('on', p.id === 'pg-' + t);
-    if (t === 'deck' && !$('pg-deck').firstChild) $('pg-deck').innerHTML = '<iframe src="/virtual-deck" title="Virtual Deck" allow="fullscreen"></iframe>';
+    if (t === 'deck') paintDeck();
     if (t === 'outputs') { S.outSig = ''; paintOutputs(); loadLooks(); }
     if (t === 'rig') { S.rigSig = ''; paintRig(); pollFleet(); }
     if (t === 'tools') paintTools();
@@ -833,11 +923,13 @@
     try { const d = await getJSON('/api/v1/one/aux'); if (d.ok) { S.aux = d; S.auxAt = Date.now(); paintAux(); } } catch (e) {}
   }
   async function pollFleet() {
-    try { S.fleet = await getJSON('/discover/last'); paintBarLights(); if (S.tab === 'rig') paintRig(); } catch (e) {}
+    try { S.fleet = await getJSON('/discover/last'); paintBarLights(); paintRail(); if (S.tab === 'rig') paintRig(); } catch (e) {}
   }
 
-  // a link can name the tab: /touch#outputs, or #aux for the aux timer
-  const TABS = ['deck', 'timer', 'outputs', 'rig', 'tools'], hash = location.hash.slice(1);
+  // a link can name the tab: /touch#outputs, #aux for the aux timer, #deck-s for the deck's key size
+  const TABS = ['deck', 'timer', 'outputs', 'rig', 'tools'];
+  let hash = location.hash.slice(1);
+  if (/^deck-[sml]$/.test(hash)) { store.set('ds_deck', hash.slice(5)); hash = 'deck'; }
   S.tview = hash === 'aux' ? 'aux' : hash === 'timer' ? 'main' : store.get('ds_tview', 'main');
   S.awakeWanted = store.get('ds_awake', '') === '1';
   if (S.awakeWanted) $('t-awake').classList.add('on');
