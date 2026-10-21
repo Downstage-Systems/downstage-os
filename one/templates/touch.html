@@ -82,6 +82,22 @@
   .deckbox { display: flex; align-items: flex-start; justify-content: center; min-height: 0; width: 100%; margin: 0 auto; }
   .deckbox iframe { border: 0; display: block; background: #000; border-radius: var(--r); width: 100%; aspect-ratio: 2 / 1; max-height: 100%; }
   .deckbox .none { margin: 40px auto; text-align: center; max-width: 420px; }
+  /* the Stream Deck + XL, drawn here: 36 keys, the strip, six dials */
+  .xl { width: 100%; display: grid; gap: 10px; }
+  .xl .keys { display: grid; grid-template-columns: repeat(9, 1fr); gap: 8px; }
+  .xl .key { aspect-ratio: 1; border-radius: 8px; background: #000; border: 1px solid #1d232a; overflow: hidden; position: relative; touch-action: none; }
+  .xl .key img, .xl .dial img, .xl .seg img { width: 100%; height: 100%; display: block; object-fit: cover; pointer-events: none; }
+  .xl .key.down { outline: 2px solid var(--text); outline-offset: -2px; }
+  .xl .strip { display: grid; grid-template-columns: repeat(9, 1fr); gap: 8px; padding: 8px; border-radius: 8px; background: #050608; border: 1px solid #1d232a; }
+  .xl .seg { aspect-ratio: 2 / 1; border-radius: 4px; overflow: hidden; background: #000; position: relative; touch-action: none; }
+  .xl .dials { display: grid; grid-template-columns: repeat(9, 1fr); gap: 8px; }
+  .xl .dial { aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 50% 35%, #2a3139, #12161b 70%); border: 1px solid #2c343d;
+    overflow: hidden; position: relative; touch-action: none; box-shadow: 0 3px 10px rgba(0,0,0,.5); }
+  .xl .dial img { opacity: .92; border-radius: 50%; transform: scale(.78); }
+  .xl .dial i { position: absolute; left: 50%; top: 6%; width: 3px; height: 14%; margin-left: -1.5px; border-radius: 2px; background: var(--muted); transform-origin: 50% 314%; }
+  .xl .dial.down { border-color: var(--text); }
+  .xl .gap { visibility: hidden; }
+  .xl .say { font-size: 14px; color: var(--muted); }
   .rail { display: grid; gap: 12px; align-content: start; }
   .rail .clock .time { font-size: 92px; margin: 2px 0 8px; }
   .rail .clock .title { font-size: 19px; min-height: 24px; }
@@ -257,6 +273,9 @@
   <section class="page" id="pg-deck">
     <div class="deckwrap">
       <div class="deckhead">
+        <div class="seg2" id="d-layout">
+          <button data-act="deckLayout" data-arg="vd">Virtual Deck</button><button data-act="deckLayout" data-arg="xl">Stream Deck + XL</button>
+        </div>
         <span class="note">Key size</span>
         <div class="seg2" id="d-size">
           <button data-act="deckSize" data-arg="s">Small</button><button data-act="deckSize" data-arg="m">Medium</button><button data-act="deckSize" data-arg="l">Large</button>
@@ -592,8 +611,16 @@
     return S.status ? 'http://' + host + ':8000/emulator/' + (s.companion_emulator_id || '') : '';
   }
   function paintDeck() {
-    const size = store.get('ds_deck', 'm'), u = deckUrl(), box = $('d-box');
+    const size = store.get('ds_deck', 'm'), u = deckUrl(), box = $('d-box'), lay = store.get('ds_deck_layout', 'vd');
     for (const b of document.querySelectorAll('#d-size button')) b.classList.toggle('on', b.dataset.arg === size);
+    for (const b of document.querySelectorAll('#d-layout button')) b.classList.toggle('on', b.dataset.arg === lay);
+    if (lay === 'xl') {
+      $('pg-deck').classList.toggle('wide', size === 'l');
+      box.style.maxWidth = size === 's' ? '720px' : size === 'm' ? '900px' : '';
+      xlShow(box);
+      return;
+    }
+    xlStop();
     $('pg-deck').classList.toggle('wide', size === 'l');
     // Companion's emulator stretches to its frame, so the frame sets the key:
     // Small about 1.6 cm on a 13" iPad (a Stream Deck's is 1.4), Medium about
@@ -606,6 +633,144 @@
     }
     if (box.dataset.src !== u) { box.dataset.src = u; box.innerHTML = '<iframe src="' + esc(u) + '" title="Companion" allow="fullscreen"></iframe>'; }
   }
+
+  // ── Stream Deck + XL on the iPad (Rob, 2026-10-21: "allow me to choose the
+  // xl plus layout on the ipad"). Companion's emulator has keys only, no dials,
+  // so this iPad joins Companion itself as a surface over its Satellite
+  // WebSocket (port 16623), with the + XL's grid: 9 x 6, keys in rows 0-3, the
+  // strip in row 4, the six dials in row 5 at columns 0, 2, 3, 5, 6, 8 (the
+  // Companion repo's NOTES.md "Deck grid maps"). Rob's + XL pages then work
+  // as they do on the deck: a tap presses, a turn turns. It shows in
+  // Companion's Surfaces as "Downstage Touch + XL", where its page is chosen.
+  const XL_COLS = 9, XL_ROWS = 6, XL_DIALS = [0, 2, 3, 5, 6, 8], XL_PX = 160;
+  const XL = { ws: null, id: '', ok: false, why: 'Joining Companion…', imgs: {}, down: {}, retry: 0, ping: 0, built: false, angle: {} };
+  function xlId() {
+    let id = store.get('ds_xl_id', '');
+    if (!id) { id = 'DSTOUCH-' + Math.random().toString(16).slice(2, 8).toUpperCase(); store.set('ds_xl_id', id); }
+    return id;
+  }
+  function xlHost() { const s = S.status || {}, r = s.companion_remote; return r && r.ip && r.ok ? r.ip : HOST; }
+  function xlBuild(box) {
+    const key = n => '<div class="key" data-k="' + n + '"></div>';
+    let keys = ''; for (let n = 0; n < 36; n++) keys += key(n);
+    let strip = ''; for (let c = 0; c < XL_COLS; c++) strip += XL_DIALS.includes(c) ? '<div class="seg" data-k="' + (36 + c) + '"></div>' : '<div class="seg gap"></div>';
+    let dials = ''; for (let c = 0; c < XL_COLS; c++) dials += XL_DIALS.includes(c) ? '<div class="dial" data-k="' + (45 + c) + '"><i></i></div>' : '<div class="gap"></div>';
+    box.innerHTML = '<div class="xl"><div class="keys">' + keys + '</div><div class="strip">' + strip + '</div><div class="dials">' + dials + '</div>' +
+      '<p class="say" id="xl-say"></p></div>';
+    box.dataset.src = 'xl';
+    for (const [k, src] of Object.entries(XL.imgs)) xlPaintKey(+k, src);
+  }
+  function xlShow(box) {
+    if (box.dataset.src !== 'xl') xlBuild(box);
+    if (!XL.ws) xlConnect();
+    xlSay();
+  }
+  function xlSay() {
+    const el = $('xl-say'); if (!el) return;
+    el.textContent = XL.ok ? 'In Companion as ' + XL.id + ' (Downstage Touch + XL): choose its page in Companion, Surfaces. Turn a dial by dragging across it.'
+                           : XL.why;
+  }
+  function xlSend(line) { try { if (XL.ws && XL.ws.readyState === 1) XL.ws.send(line + '\n'); } catch (e) {} }
+  function xlConnect() {
+    XL.id = xlId();
+    let ws;
+    try { ws = new WebSocket('ws://' + xlHost() + ':16623'); } catch (e) { XL.why = 'Could not open Companion\'s Satellite port.'; xlSay(); return; }
+    XL.ws = ws; XL.ok = false; XL.why = 'Joining Companion…'; xlSay();
+    ws.onopen = () => {
+      xlSend('ADD-DEVICE DEVICEID="' + XL.id + '" PRODUCT_NAME="Downstage Touch + XL" KEYS_TOTAL=' + (XL_COLS * XL_ROWS) + ' KEYS_PER_ROW=' + XL_COLS +
+             ' BITMAPS=' + XL_PX + ' BITMAP_FORMAT="png" COLORS="hex" TEXT=0 BRIGHTNESS=0');
+      clearInterval(XL.ping); XL.ping = setInterval(() => xlSend('PING ds'), 2000);   // Companion drops a quiet socket after 5 s
+    };
+    ws.onmessage = e => String(e.data).split('\n').forEach(l => l && xlLine(l));
+    ws.onclose = () => {
+      clearInterval(XL.ping); XL.ws = null; XL.ok = false;
+      XL.why = 'Companion\'s Satellite port (16623) is not answering. Companion 4.0 or later, with the One on the same network.';
+      xlSay();
+      if (store.get('ds_deck_layout', 'vd') === 'xl') { clearTimeout(XL.retry); XL.retry = setTimeout(() => { if (!XL.ws && store.get('ds_deck_layout', 'vd') === 'xl') xlConnect(); }, 3000); }
+    };
+  }
+  function xlStop() {
+    clearTimeout(XL.retry); clearInterval(XL.ping);
+    if (XL.ws) { const w = XL.ws; XL.ws = null; try { xlSend('REMOVE-DEVICE DEVICEID="' + XL.id + '"'); w.close(); } catch (e) {} }
+    const box = $('d-box'); if (box && box.dataset.src === 'xl') box.dataset.src = '';
+  }
+  function xlParse(line) {
+    const sp = line.indexOf(' '), cmd = sp < 0 ? line : line.slice(0, sp), args = {};
+    const re = /([A-Za-z_]+)=("([^"]*)"|(\S*))/g; let m;
+    while ((m = re.exec(sp < 0 ? '' : line.slice(sp + 1)))) args[m[1].toUpperCase()] = m[3] !== undefined ? m[3] : m[4];
+    return [cmd.toUpperCase(), args, line.slice(sp + 1)];
+  }
+  function xlLine(line) {
+    const [cmd, a, rest] = xlParse(line);
+    if (cmd === 'ADD-DEVICE') {
+      if (/^OK/.test(rest)) { XL.ok = true; xlSay(); }
+      else if (/^ERROR/.test(rest)) { XL.ok = false; XL.why = 'Companion refused the surface: ' + (a.MESSAGE || rest); xlSay(); }
+    } else if (cmd === 'KEY-STATE') {
+      const n = +a.KEY; if (isNaN(n)) return;
+      if (a.BITMAP !== undefined) xlPaintKey(n, a.BITMAP ? xlImg(a.BITMAP) : '');
+      const el = document.querySelector('#d-box [data-k="' + n + '"]'); if (el) el.classList.toggle('down', a.PRESSED === '1' || a.PRESSED === 'true');
+    } else if (cmd === 'KEYS-CLEAR') {
+      XL.imgs = {}; for (const el of document.querySelectorAll('#d-box [data-k]')) el.innerHTML = el.classList.contains('dial') ? '<i></i>' : '';
+    } else if (cmd === 'PING') xlSend('PONG ' + rest);
+  }
+  // PNG from Companion 4.x and 5; a raw RGB square from anything older
+  function xlImg(b64) {
+    if (b64.startsWith('data:')) return b64;                     // Companion 5: a ready data URL
+    if (b64.startsWith('iVBOR')) return 'data:image/png;base64,' + b64;
+    try {
+      const raw = atob(b64), px = Math.round(Math.sqrt(raw.length / 3)); if (!px) return '';
+      const c = document.createElement('canvas'); c.width = c.height = px;
+      const g = c.getContext('2d'), im = g.createImageData(px, px);
+      for (let i = 0, j = 0; i < raw.length; i += 3, j += 4) { im.data[j] = raw.charCodeAt(i); im.data[j + 1] = raw.charCodeAt(i + 1); im.data[j + 2] = raw.charCodeAt(i + 2); im.data[j + 3] = 255; }
+      g.putImageData(im, 0, 0); return c.toDataURL();
+    } catch (e) { return ''; }
+  }
+  function xlPaintKey(n, src) {
+    XL.imgs[n] = src;
+    const el = document.querySelector('#d-box [data-k="' + n + '"]'); if (!el) return;
+    const tick = el.classList.contains('dial') ? el.querySelector('i') : null;
+    el.innerHTML = src ? '<img alt="" src="' + src + '">' : '';
+    if (tick) el.appendChild(tick);
+  }
+  // touch: a key presses on touch-down and lets go on lift; a dial is a press
+  // when tapped and a turn when dragged (a step per 22 px, sideways or round)
+  (function () {
+    let cur = null;
+    document.addEventListener('pointerdown', e => {
+      const el = e.target.closest('#d-box .xl [data-k]'); if (!el || !XL.ok) return;
+      const n = +el.dataset.k, dial = el.classList.contains('dial');
+      cur = { el, n, dial, x: e.clientX, y: e.clientY, moved: 0, pressed: false };
+      try { el.setPointerCapture(e.pointerId); } catch (_) {}
+      if (!dial) { xlSend('KEY-PRESS DEVICEID="' + XL.id + '" KEY=' + n + ' PRESSED=1'); cur.pressed = true; el.classList.add('down'); }
+      e.preventDefault();
+    });
+    document.addEventListener('pointermove', e => {
+      if (!cur || !cur.dial) return;
+      const dx = e.clientX - cur.x, dy = cur.y - e.clientY, d = Math.abs(dx) >= Math.abs(dy) ? dx : dy;
+      if (Math.abs(d) >= 22) {
+        const dir = d > 0 ? 1 : 0;
+        xlSend('KEY-ROTATE DEVICEID="' + XL.id + '" KEY=' + cur.n + ' DIRECTION=' + dir);
+        XL.angle[cur.n] = (XL.angle[cur.n] || 0) + (dir ? 15 : -15);
+        const t = cur.el.querySelector('i'); if (t) t.style.transform = 'rotate(' + XL.angle[cur.n] + 'deg)';
+        cur.x = e.clientX; cur.y = e.clientY; cur.moved++;
+      }
+    });
+    const up = () => {
+      if (!cur) return;
+      const n = cur.n;
+      if (cur.dial && !cur.moved) { xlSend('KEY-PRESS DEVICEID="' + XL.id + '" KEY=' + n + ' PRESSED=1'); setTimeout(() => xlSend('KEY-PRESS DEVICEID="' + XL.id + '" KEY=' + n + ' PRESSED=0'), 120); }
+      if (cur.pressed) { xlSend('KEY-PRESS DEVICEID="' + XL.id + '" KEY=' + cur.n + ' PRESSED=0'); cur.el.classList.remove('down'); }
+      cur = null;
+    };
+    document.addEventListener('pointerup', up);
+    document.addEventListener('pointercancel', up);
+    // a mouse wheel or trackpad over a dial turns it too
+    document.addEventListener('wheel', e => {
+      const el = e.target.closest('#d-box .xl .dial[data-k]'); if (!el || !XL.ok) return;
+      e.preventDefault();
+      xlSend('KEY-ROTATE DEVICEID="' + XL.id + '" KEY=' + el.dataset.k + ' DIRECTION=' + (e.deltaY < 0 || e.deltaX > 0 ? 1 : 0));
+    }, { passive: false });
+  })();
   function paintRail() {
     if (S.tab !== 'deck') return;
     const t = S.timer && S.timer.state, run = t && (t.playback === 'play' || t.playback === 'roll'), lp = loadedPreset();
@@ -865,6 +1030,7 @@
     ftOpen() { ftOpen(); }, ftClose() { ftClose(); },
     ftView(v) { store.set('ds_ft_view', v); paintTools(); },
     deckSize(v) { store.set('ds_deck', v); paintDeck(); },
+    deckLayout(v) { store.set('ds_deck_layout', v); $('d-box').dataset.src = ''; paintDeck(); },
     awake() { S.awakeWanted = !S.awakeWanted; store.set('ds_awake', S.awakeWanted ? '1' : ''); awake(S.awakeWanted); },
     toBrowser() { store.set('ds_ui', 'browser'); location.href = '/?browser=1'; },
     pin(d) { pinKey(d); }, pinBack() { pinVal = pinVal.slice(0, -1); $('pin-box').textContent = '•'.repeat(pinVal.length); },
@@ -926,10 +1092,11 @@
     try { S.fleet = await getJSON('/discover/last'); paintBarLights(); paintRail(); if (S.tab === 'rig') paintRig(); } catch (e) {}
   }
 
-  // a link can name the tab: /touch#outputs, #aux for the aux timer, #deck-s for the deck's key size
+  // a link can name the tab: /touch#outputs, #aux for the aux timer, #deck-s for the deck's key size, #deck-xl for the + XL
   const TABS = ['deck', 'timer', 'outputs', 'rig', 'tools'];
   let hash = location.hash.slice(1);
   if (/^deck-[sml]$/.test(hash)) { store.set('ds_deck', hash.slice(5)); hash = 'deck'; }
+  if (/^deck-(xl|vd)$/.test(hash)) { store.set('ds_deck_layout', hash.slice(5)); hash = 'deck'; }
   S.tview = hash === 'aux' ? 'aux' : hash === 'timer' ? 'main' : store.get('ds_tview', 'main');
   S.awakeWanted = store.get('ds_awake', '') === '1';
   if (S.awakeWanted) $('t-awake').classList.add('on');
