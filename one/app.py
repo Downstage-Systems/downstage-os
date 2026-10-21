@@ -2332,6 +2332,17 @@ def custom_view():
     return render_template("custom_view.html")
 
 
+def _timer_control_ok():
+    """May this request drive the timer? "Lights control timer" is the
+    choice that lets a light's touchscreen stop the show clock (off as the
+    unit ships). The One's own touch page is not a light: an operator
+    pressing START on it means it, so it drives the timer either way. It
+    says so with a header a page on another site cannot send without the
+    browser asking first (a custom header needs a CORS preflight, which this
+    unit never grants), the same reason OnTime's own controls are open."""
+    return bool(load_config().get("cue_control")) or request.headers.get("X-Downstage-Page") == "touch"
+
+
 def _one_output_state(t=None):
     """What the One's timer screen is showing on top of the timer: its own
     Blackout (the button on this page, Companion's, the Slate's: one
@@ -2396,7 +2407,7 @@ def one_aux_do():
     stop, set {"seconds"} (its duration), add {"seconds"} (either way, without
     stopping it), direction {"direction": "down"|"up"}. OnTime 4.15 has every
     one of these itself. Behind Lights control timer, like the main timer."""
-    if not load_config().get("cue_control"):
+    if not _timer_control_ok():
         return jsonify({"ok": False, "error": "timer control is off on this One - "
                                               "turn on Lights control timer in its Network tab"}), 403
     b = request.get_json(silent=True) or {}
@@ -2464,6 +2475,29 @@ def one_aux():
                     "now": int(time.time() * 1000),
                     "output": _one_output_state({"secondary_source": src}),
                     "control": bool(load_config().get("cue_control"))})
+
+
+@app.route("/touch")
+def touch_page():
+    """The One for a touchscreen: an iPad by the DSM's desk (Rob, 2026-10-21:
+    "I currently always have my ipad pro 13" with me. Lets build an
+    ipad/touch optimized version of the one GUI"). The Slate Plus's idea at
+    tablet size: Deck, Timer, Outputs, Rig and Tools a tap apart, big
+    targets, a hold for anything that can stop a show, and the OnTime timer
+    full screen at any time. Browser view stays at /, a toggle apart."""
+    return render_template("touch.html", hostname=socket.gethostname())
+
+
+@app.route("/touch.webmanifest")
+def touch_manifest():
+    """Add to Home Screen opens the touch page full screen, without Safari's bars."""
+    name = load_config().get("unit_name") or socket.gethostname()
+    return Response(json.dumps({
+        "name": f"Downstage One ({name})", "short_name": "One",
+        "start_url": "/touch", "scope": "/", "display": "fullscreen",
+        "orientation": "any", "background_color": "#0B0D10", "theme_color": "#0B0D10",
+        "icons": [{"src": "/static/apple-touch-icon.png", "sizes": "180x180", "type": "image/png"}],
+    }), mimetype="application/manifest+json")
 
 
 @app.route("/view/aux")
@@ -4022,7 +4056,7 @@ def one_timer():
                    for p in _one_presets()]
         return jsonify({"ok": True, "state": _one_timer_state(), "presets": presets,
                         "output": _one_output_state(t)})
-    if not load_config().get("cue_control"):
+    if not _timer_control_ok():
         return jsonify({"ok": False, "error": "timer control is off on this One - "
                                               "turn on Lights control timer in its Network tab"}), 403
     b = request.get_json(silent=True) or {}

@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Downstage One</title>
+<!-- Add to Home Screen: full screen, no Safari bars -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="One">
+<meta name="theme-color" content="#0B0D10">
+<link rel="manifest" href="/touch.webmanifest">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+<script>window.ONE_HOST = {{ hostname|tojson }};</script>
+{% raw %}
+<style>
+  /* The One for a touchscreen (Rob, 2026-10-21), the Slate Plus's idea at
+     iPad size, under the Downstage UI standard: Rajdhani for names and
+     figures, the system's face for words, flat surfaces in three tones,
+     colour only for data. Every target is at least 56 px; anything that can
+     stop a show is a hold, with the fill showing how long is left. */
+  @font-face { font-family: 'Rajdhani'; font-weight: 600; font-display: swap; src: url('/static/fonts/rajdhani-600.woff2') format('woff2'); }
+  @font-face { font-family: 'Rajdhani'; font-weight: 700; font-display: swap; src: url('/static/fonts/rajdhani-700.woff2') format('woff2'); }
+  :root {
+    --ground: #0B0D10; --panel: #12161B; --raised: #181D23; --edge: #232A32; --rule: #1B2128;
+    --text: #EEF1F3; --muted: #9AA4AD; --muted2: #7D8790;
+    --green: #2FD97B; --amber: #F5A524; --red: #E5484D;
+    --ok-fill: #10301D; --ok-text: #74E8A8; --bad-fill: #3A1517; --bad-text: #FF9A9D;
+    --warn-fill: #33270F; --warn-text: #F7C066; --new-fill: #0F2A3A; --new-text: #8FD3FF;
+    --fd: 'Rajdhani', -apple-system, 'Segoe UI', sans-serif;
+    --fb: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --r: 4px; --rb: 6px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; background: var(--ground); color: var(--text); overflow: hidden; }
+  body { font: 400 16px/1.4 var(--fb); -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+    display: grid; grid-template-rows: auto auto 1fr; padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left); }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; touch-action: manipulation; }
+  .num { font-family: var(--fd); font-variant-numeric: tabular-nums; }
+
+  /* ── the bar: what the show needs at a glance, on every tab ── */
+  .bar { display: flex; align-items: center; gap: 18px; padding: 10px 20px; min-height: 68px; border-bottom: 1px solid var(--rule); }
+  .bar .unit { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .bar .unit svg { width: 26px; height: 26px; color: var(--green); flex: none; }
+  .bar .unit b { font: 700 24px var(--fd); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar .sp { flex: 1; }
+  .fig { display: grid; line-height: 1; text-align: right; }
+  .fig small { font-size: 12px; color: var(--muted); margin-bottom: 3px; white-space: nowrap; }
+  .fig em { font: 700 30px var(--fd); font-style: normal; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: 999px; font: 600 13px var(--fb); white-space: nowrap; }
+  .pill.air { background: var(--bad-fill); color: var(--bad-text); }
+  .pill.dark { background: var(--bad-fill); color: var(--bad-text); animation: pulse 1.6s ease-in-out infinite; }
+  .pill.ok { background: var(--ok-fill); color: var(--ok-text); }
+  .pill.warn { background: var(--warn-fill); color: var(--warn-text); }
+  .pill.off { background: var(--raised); color: var(--muted); }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 6px rgba(229,72,77,.18); } }
+  .fullbtn { display: inline-flex; align-items: center; gap: 8px; height: 48px; padding: 0 16px; border-radius: var(--rb);
+    background: var(--raised); border: 1px solid var(--edge); font-weight: 600; white-space: nowrap; }
+  .fullbtn svg { width: 20px; height: 20px; }
+  .seg2 { display: inline-flex; padding: 3px; gap: 3px; background: var(--ground); border: 1px solid var(--edge); border-radius: var(--rb); }
+  .seg2 button { height: 40px; padding: 0 14px; border-radius: 4px; color: var(--muted2); font-weight: 600; border: 1px solid transparent; }
+  .seg2 button.on { background: var(--raised); border-color: var(--edge); color: var(--text); }
+
+  /* ── tabs: big underline targets ── */
+  .tabs { display: flex; gap: 4px; padding: 0 12px; border-bottom: 1px solid var(--edge); overflow-x: auto; scrollbar-width: none; }
+  .tabs button { flex: none; min-width: 120px; height: 58px; padding: 0 22px; font: 600 17px var(--fb); color: var(--muted);
+    border-bottom: 3px solid transparent; margin-bottom: -1px; }
+  .tabs button.on { color: var(--text); border-bottom-color: var(--green); }
+  main { position: relative; overflow: hidden; min-height: 0; }
+  .page { position: absolute; inset: 0; overflow-y: auto; padding: 20px 20px calc(24px + env(safe-area-inset-bottom)); display: none; -webkit-overflow-scrolling: touch; }
+  .page.on { display: block; }
+  #pg-deck { padding: 0; }
+  #pg-deck iframe { width: 100%; height: 100%; border: 0; display: block; background: var(--ground); }
+
+  /* ── shared pieces ── */
+  .card { background: var(--panel); border: 1px solid var(--edge); border-radius: var(--r); padding: 18px; }
+  .h { font-size: 13px; color: var(--muted); margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+  .h b { color: var(--text); font: 700 20px var(--fd); }
+  .btn { min-height: 64px; padding: 0 18px; border-radius: var(--rb); background: var(--raised); border: 1px solid var(--edge);
+    font-weight: 600; font-size: 17px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    position: relative; overflow: hidden; transition: background .12s, transform .06s; }
+  .btn:active { transform: scale(.98); }
+  .btn.pri { background: var(--green); border-color: var(--green); color: #06130B; }
+  .btn.pri.pause { background: var(--amber); border-color: var(--amber); color: #1A1204; }
+  .btn.plus { color: var(--green); } .btn.minus { color: var(--amber); }
+  .btn.danger { background: var(--bad-fill); border-color: #5A2326; color: var(--bad-text); }
+  .btn.on { border-color: var(--text); background: #222932; }
+  .btn small { font-weight: 400; font-size: 13px; color: var(--muted); }
+  .btn[disabled] { opacity: .35; }
+  .btn .big { font: 700 26px var(--fd); }
+  /* a hold: the fill grows across for as long as it takes */
+  .hold::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: rgba(255,255,255,.14); pointer-events: none; }
+  .hold.holding::before { width: 100%; transition: width var(--hold, 800ms) linear; }
+  .hold .hint { position: absolute; bottom: 6px; left: 0; right: 0; font-size: 11px; color: var(--muted); font-weight: 400; }
+  .row { display: flex; gap: 12px; } .row > * { flex: 1; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .note { font-size: 14px; color: var(--muted); }
+  .dim { color: var(--muted); }
+
+  /* ── Timer ── */
+  .tswitch { display: flex; gap: 12px; margin-bottom: 16px; }
+  .tswitch button { flex: 1; display: flex; justify-content: space-between; align-items: center; height: 64px; padding: 0 20px;
+    border-radius: var(--rb); background: var(--panel); border: 1px solid var(--edge); }
+  .tswitch button.on { border-color: var(--text); background: var(--raised); }
+  .tswitch span { font-weight: 600; } .tswitch em { font: 700 28px var(--fd); font-style: normal; font-variant-numeric: tabular-nums; }
+  .tgrid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(300px, 1fr); gap: 16px; align-items: start; }
+  .clock .title { font: 700 24px var(--fd); color: var(--muted); min-height: 30px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .clock .time { font: 700 clamp(110px, 15vw, 190px)/0.95 var(--fd); font-variant-numeric: tabular-nums; letter-spacing: -.01em; margin: 6px 0 12px; }
+  .clock .time.running { color: var(--green); } .clock .time.warning { color: var(--amber); }
+  .clock .time.danger, .clock .time.over, .clock .time.flash, .clock .time.alert { color: var(--red); }
+  .clock .time.paused { color: var(--amber); opacity: .85; } .clock .time.stopped { color: var(--text); }
+  .clock .time.typed { color: var(--amber); }
+  .prog { height: 8px; border-radius: 4px; background: var(--raised); overflow: hidden; }
+  .prog i { display: block; height: 100%; width: 0; background: var(--green); transition: width .9s linear; }
+  .meta { display: flex; justify-content: space-between; font-size: 15px; color: var(--muted); margin: 10px 0 18px; font-variant-numeric: tabular-nums; }
+  .ctrl { display: grid; grid-template-columns: 1fr 1fr 1.6fr; gap: 12px; }
+  .ctrl .startb { grid-row: span 2; min-height: 140px; }
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 12px; }
+  .steps .pair { display: grid; gap: 12px; }
+  .rundown { display: grid; gap: 8px; }
+  .rd { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px; min-height: 68px; padding: 10px 16px;
+    border-radius: var(--rb); background: var(--raised); border: 1px solid var(--edge); text-align: left; position: relative; overflow: hidden; }
+  .rd b { font: 700 21px var(--fd); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rd small { color: var(--muted); font-size: 13px; }
+  .rd.now { border-color: var(--red); box-shadow: inset 4px 0 0 var(--red); }
+  .rd.next { box-shadow: inset 4px 0 0 var(--muted2); }
+  .chip { font: 600 12px var(--fb); padding: 4px 9px; border-radius: 999px; background: var(--ground); color: var(--muted); }
+  .chip.now { background: var(--bad-fill); color: var(--bad-text); } .chip.next { background: var(--new-fill); color: var(--new-text); }
+  /* aux */
+  .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .keypad .btn { min-height: 72px; font: 700 30px var(--fd); }
+  .presets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .presets .btn { font: 700 22px var(--fd); }
+  .toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 64px; padding: 0 18px;
+    border-radius: var(--rb); background: var(--raised); border: 1px solid var(--edge); width: 100%; }
+  .toggle .sw { width: 56px; height: 32px; border-radius: 16px; background: var(--edge); position: relative; flex: none; transition: background .15s; }
+  .toggle .sw::after { content: ''; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%; background: var(--muted); transition: transform .15s, background .15s; }
+  .toggle.on .sw { background: var(--green); } .toggle.on .sw::after { transform: translateX(24px); background: #fff; }
+
+  /* ── Outputs ── */
+  .out .hd { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
+  .out .hd b { font: 700 26px var(--fd); }
+  .out .now { font: 700 22px var(--fd); margin-bottom: 14px; }
+  .srcs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 14px 0; }
+  .srcs .btn { min-height: 72px; flex-direction: column; gap: 2px; font-size: 16px; }
+  .srcs .btn.on { border-color: var(--green); box-shadow: inset 0 0 0 1px var(--green); }
+  .looks { display: flex; flex-wrap: wrap; gap: 10px; }
+  .looks .btn { flex: 0 0 auto; min-width: 150px; }
+
+  /* ── Rig ── */
+  .lights { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
+  .light { min-height: 150px; padding: 16px; border-radius: var(--r); background: var(--panel); border: 2px solid var(--edge);
+    display: grid; grid-template-rows: auto 1fr auto; text-align: left; position: relative; }
+  .light .n { font: 700 54px/1 var(--fd); }
+  .light b { font: 700 21px var(--fd); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .light small { color: var(--muted); font-size: 13px; }
+  .light .tl { position: absolute; top: 14px; right: 14px; }
+  .light.program { border-color: var(--red); box-shadow: inset 0 0 0 999px rgba(229,72,77,.12); }
+  .light.preview { border-color: var(--green); box-shadow: inset 0 0 0 999px rgba(47,217,123,.10); }
+  .light.lit { border-color: var(--muted2); }
+  .light.gone { opacity: .45; }
+
+  /* ── Tools ── */
+  .tools { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 16px; align-items: start; }
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; font-size: 15px; margin-bottom: 14px; }
+  .kv span { color: var(--muted); } .kv b { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .stack { display: grid; gap: 10px; }
+
+  /* ── full-screen timer: the iPad by the DSM ── */
+  #ft { position: fixed; inset: 0; z-index: 50; background: #000; display: none; }
+  #ft.on { display: block; }
+  #ft iframe { width: 100%; height: 100%; border: 0; display: block; }
+  #ft-x { position: absolute; top: calc(12px + env(safe-area-inset-top)); right: calc(12px + env(safe-area-inset-right)); width: 64px; height: 64px; border-radius: 50%;
+    background: rgba(24,29,35,.55); border: 1px solid rgba(255,255,255,.12); color: rgba(255,255,255,.55); font-size: 26px;
+    display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  #ft-hint { position: absolute; top: calc(22px + env(safe-area-inset-top)); right: 92px; padding: 10px 14px; border-radius: var(--rb);
+    background: rgba(24,29,35,.85); color: var(--text); font-size: 15px; transition: opacity .6s; pointer-events: none; }
+
+  /* ── sheets, toast, lost ── */
+  .scrim { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.6); display: none; align-items: center; justify-content: center; }
+  .scrim.on { display: flex; }
+  .sheet { width: min(440px, 92vw); background: var(--panel); border: 1px solid var(--edge); border-radius: 8px; padding: 22px; }
+  .sheet h3 { font: 700 26px var(--fd); margin-bottom: 4px; }
+  .pinbox { font: 700 44px var(--fd); letter-spacing: .3em; text-align: center; padding: 10px 0 16px; min-height: 76px; }
+  #toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translate(-50%, 20px); z-index: 70;
+    padding: 14px 20px; border-radius: var(--rb); background: var(--raised); border: 1px solid var(--edge); font-weight: 600;
+    opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; max-width: 90vw; }
+  #toast.on { opacity: 1; transform: translate(-50%, 0); }
+  #toast.bad { background: var(--bad-fill); color: var(--bad-text); border-color: #5A2326; }
+  #toast.warn { background: var(--warn-fill); color: var(--warn-text); }
+  #lost { display: none; padding: 10px 20px; background: var(--warn-fill); color: var(--warn-text); font-weight: 600; }
+  #lost.on { display: block; }
+
+  /* a 13" iPad has height to spare: the time and the buttons grow into it */
+  .clock .time { font-size: clamp(110px, min(15vw, 21vh), 260px); }
+  #pg-timer .ctrl .btn, #pg-timer .steps .btn { min-height: max(64px, 8.2vh); }
+  #pg-timer .ctrl .startb { min-height: max(140px, 17.4vh); }
+  .keypad .btn { min-height: max(72px, 8.4vh); }
+  .rd { min-height: max(68px, 7.6vh); }
+
+  /* portrait, and anything narrower than a 13" iPad on its side */
+  @media (max-width: 1100px) {
+    .tgrid { grid-template-columns: 1fr; }
+    .bar .fig.clockfig { display: none; }
+  }
+  @media (max-width: 820px) {
+    .grid2 { grid-template-columns: 1fr; }
+    .bar { flex-wrap: wrap; gap: 12px; }
+    .fullbtn span { display: none; }
+    .tabs button { min-width: 0; padding: 0 16px; }
+  }
+</style>
+{% endraw %}
+</head>
+<body>
+{% raw %}
+<div id="lost">The One is not answering. Still trying…</div>
+<header class="bar">
+  <div class="unit"><svg viewBox="0 0 96 96" aria-hidden="true"><rect x="6" y="10" width="84" height="66" rx="10" fill="none" stroke="currentColor" stroke-width="7"/><rect x="20" y="54" width="40" height="9" rx="4.5" fill="currentColor"/><rect x="64" y="54" width="12" height="9" rx="4.5" fill="currentColor" opacity="0.3"/><rect x="20" y="83" width="26" height="7" rx="3.5" fill="currentColor"/><rect x="50" y="83" width="26" height="7" rx="3.5" fill="currentColor"/></svg><b id="b-name">One</b></div>
+  <span class="pill dark" id="b-dark" hidden>Blackout</span>
+  <span class="pill air" id="b-air" hidden></span>
+  <div class="sp"></div>
+  <div class="fig"><small id="b-tlabel">Timer</small><em id="b-timer">-</em></div>
+  <div class="fig clockfig"><small>Time</small><em id="b-clock">-</em></div>
+  <span class="pill off" id="b-comp">Companion</span>
+  <button class="fullbtn" data-act="ftOpen" aria-label="Show the timer full screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span>Full timer</span></button>
+  <div class="seg2" role="group" aria-label="Interface"><button class="on" aria-pressed="true">Touch</button><button data-act="toBrowser" aria-pressed="false">Browser</button></div>
+</header>
+<nav class="tabs" id="tabs">
+  <button data-tab="deck">Deck</button>
+  <button data-tab="timer">Timer</button>
+  <button data-tab="outputs">Outputs</button>
+  <button data-tab="rig">Rig</button>
+  <button data-tab="tools">Tools</button>
+</nav>
+<main>
+  <section class="page" id="pg-deck"></section>
+
+  <section class="page" id="pg-timer">
+    <div class="tswitch">
+      <button id="sw-main" data-act="tview" data-arg="main"><span>Main timer</span><em id="sw-main-t">-</em></button>
+      <button id="sw-aux" data-act="tview" data-arg="aux"><span>Aux timer</span><em id="sw-aux-t">-</em></button>
+    </div>
+    <div id="tv-main" class="tgrid">
+      <div class="card clock">
+        <div class="title" id="m-title"></div>
+        <div class="time stopped" id="m-time">-</div>
+        <div class="prog"><i id="m-prog"></i></div>
+        <div class="meta"><span id="m-state">-</span><span id="m-end"></span></div>
+        <div class="ctrl">
+          <button class="btn" data-act="main" data-arg="previous">Previous</button>
+          <button class="btn" data-act="main" data-arg="next">Next</button>
+          <button class="btn pri startb" id="m-start" data-act="mainStart"><span class="big">START</span></button>
+          <button class="btn hold" data-hold="900" data-act="main" data-arg="reset" style="grid-column: span 2">Reset<span class="hint">hold</span></button>
+        </div>
+        <div class="steps">
+          <div class="pair"><button class="btn plus" data-act="add" data-arg="60"><span class="big">+1</span>min</button><button class="btn minus" data-act="add" data-arg="-60"><span class="big">-1</span>min</button></div>
+          <div class="pair"><button class="btn plus" data-act="add" data-arg="300"><span class="big">+5</span>min</button><button class="btn minus" data-act="add" data-arg="-300"><span class="big">-5</span>min</button></div>
+          <div class="pair"><button class="btn plus" data-act="add" data-arg="10"><span class="big">+10</span>s</button><button class="btn minus" data-act="add" data-arg="-10"><span class="big">-10</span>s</button></div>
+          <div class="pair"><button class="btn plus" data-act="add" data-arg="30"><span class="big">+30</span>s</button><button class="btn minus" data-act="add" data-arg="-30"><span class="big">-30</span>s</button></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="h"><b>Rundown</b><span>hold an event to load it</span></div>
+        <div class="rundown" id="m-rundown"><p class="note">Asking OnTime…</p></div>
+      </div>
+    </div>
+    <div id="tv-aux" class="tgrid" hidden>
+      <div class="card clock">
+        <div class="title" id="a-title">Aux timer 1</div>
+        <div class="time stopped" id="a-time">-</div>
+        <div class="meta"><span id="a-state">-</span><span id="a-typed"></span></div>
+        <div class="ctrl">
+          <button class="btn hold" data-hold="900" data-act="aux" data-arg="stop" style="grid-column: span 2">Stop<span class="hint">hold</span></button>
+          <button class="btn pri startb" id="a-start" data-act="auxStart"><span class="big">START</span></button>
+          <div class="seg2" style="grid-column: span 2; display: grid; grid-template-columns: 1fr 1fr;">
+            <button id="a-down" data-act="auxDir" data-arg="down" style="height:56px">Count down</button>
+            <button id="a-up" data-act="auxDir" data-arg="up" style="height:56px">Count up</button>
+          </div>
+        </div>
+        <div class="steps">
+          <div class="pair"><button class="btn plus" data-act="auxAdd" data-arg="60"><span class="big">+1</span>min</button><button class="btn minus" data-act="auxAdd" data-arg="-60"><span class="big">-1</span>min</button></div>
+          <div class="pair"><button class="btn plus" data-act="auxAdd" data-arg="10"><span class="big">+10</span>s</button><button class="btn minus" data-act="auxAdd" data-arg="-10"><span class="big">-10</span>s</button></div>
+          <div class="pair" style="grid-column: span 2">
+            <button class="toggle" id="a-shown" data-act="auxShown"><span>Aux on the timer screen</span><span class="sw"></span></button>
+            <button class="btn danger hold" id="a-black" data-hold="900" data-act="blackAll">Blackout<span class="hint">hold</span></button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="h"><b>Type a time</b><span>Set sends it, nothing goes out before</span></div>
+        <div class="keypad">
+          <button class="btn" data-act="key" data-arg="1">1</button><button class="btn" data-act="key" data-arg="2">2</button><button class="btn" data-act="key" data-arg="3">3</button>
+          <button class="btn" data-act="key" data-arg="4">4</button><button class="btn" data-act="key" data-arg="5">5</button><button class="btn" data-act="key" data-arg="6">6</button>
+          <button class="btn" data-act="key" data-arg="7">7</button><button class="btn" data-act="key" data-arg="8">8</button><button class="btn" data-act="key" data-arg="9">9</button>
+          <button class="btn" data-act="keyClear" style="font:600 18px var(--fb)">Clear</button><button class="btn" data-act="key" data-arg="0">0</button><button class="btn pri" data-act="keySet" style="font:700 22px var(--fd)">Set</button>
+        </div>
+        <div class="h" style="margin-top:18px"><b>Presets</b></div>
+        <div class="presets">
+          <button class="btn" data-act="auxPreset" data-arg="60">1:00</button><button class="btn" data-act="auxPreset" data-arg="120">2:00</button><button class="btn" data-act="auxPreset" data-arg="180">3:00</button>
+          <button class="btn" data-act="auxPreset" data-arg="300">5:00</button><button class="btn" data-act="auxPreset" data-arg="600">10:00</button><button class="btn" data-act="auxPreset" data-arg="900">15:00</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="page" id="pg-outputs">
+    <div class="grid2" id="o-outs"></div>
+    <div class="card" style="margin-top:16px">
+      <div class="h"><b>Looks</b><span>hold a look to put it on both outputs</span></div>
+      <div class="looks" id="o-looks"><p class="note">No looks saved. Save them in the Browser view's Displays tab.</p></div>
+    </div>
+    <div class="row" style="margin-top:16px">
+      <button class="btn danger hold" id="o-black" data-hold="900" data-act="blackAll">Blackout everything<span class="hint">hold</span></button>
+      <button class="btn" data-act="identify">Identify outputs</button>
+    </div>
+  </section>
+
+  <section class="page" id="pg-rig">
+    <div class="h" id="r-sum"><b>Lights</b><span>Looking…</span></div>
+    <div class="lights" id="r-lights"></div>
+    <p class="note" style="margin-top:16px">Tap a light to make it blink. Numbers, words and links are in the Browser view's Network tab.</p>
+  </section>
+
+  <section class="page" id="pg-tools">
+    <div class="tools">
+      <div class="card">
+        <div class="h"><b>Full timer</b><span>for the iPad by the desk</span></div>
+        <div class="stack">
+          <div class="seg2" id="t-ftview" style="display:grid; grid-template-columns: repeat(2, 1fr)"></div>
+          <button class="btn pri" data-act="ftOpen">Show it full screen</button>
+          <p class="note">To leave it, hold the ✕ in the corner for a second, so a bump on the desk does not.</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="h"><b>This iPad</b></div>
+        <div class="stack">
+          <button class="toggle" id="t-awake" data-act="awake"><span>Keep the screen awake</span><span class="sw"></span></button>
+          <p class="note" id="t-awake-note">Turned on by itself while the full timer shows. For a whole show, also set Settings, Display &amp; Brightness, Auto-Lock to Never.</p>
+          <p class="note">Share, then Add to Home Screen: the One opens full screen, without Safari's bars, at this page.</p>
+          <button class="btn" data-act="toBrowser">Browser view (every setting)</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="h"><b>Companion</b></div>
+        <div class="kv" id="t-comp"></div>
+        <div class="stack">
+          <button class="btn hold" data-hold="900" data-act="postTo" data-arg="/companion/restart">Restart Companion<span class="hint">hold</span></button>
+          <button class="btn" data-act="open" data-arg=":8000/">Open Companion</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="h"><b>OnTime</b></div>
+        <div class="kv" id="t-ontime"></div>
+        <div class="stack"><button class="btn" data-act="open" data-arg=":4001/editor">Open the OnTime editor</button></div>
+      </div>
+      <div class="card">
+        <div class="h"><b>Network</b></div>
+        <div class="kv" id="t-net"></div>
+      </div>
+      <div class="card">
+        <div class="h"><b>This unit</b></div>
+        <div class="kv" id="t-unit"></div>
+        <div class="stack">
+          <button class="btn hold" data-hold="1500" data-act="postTo" data-arg="/system/restart">Restart the One<span class="hint">hold</span></button>
+          <button class="btn danger hold" data-hold="1500" data-act="postTo" data-arg="/system/shutdown">Shut down<span class="hint">hold</span></button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="ft">
+  <iframe id="ft-frame" title="Timer" allow="fullscreen"></iframe>
+  <button id="ft-x" class="hold" data-hold="1000" data-act="ftClose" aria-label="Hold to leave the full timer">✕</button>
+  <div id="ft-hint">Hold ✕ to leave</div>
+</div>
+<div class="scrim" id="pin-scrim">
+  <div class="sheet">
+    <h3>Rig PIN</h3>
+    <p class="note" id="pin-why">This rig has a PIN. Enter it once and this iPad remembers.</p>
+    <div class="pinbox num" id="pin-box"></div>
+    <div class="keypad">
+      <button class="btn" data-act="pin" data-arg="1">1</button><button class="btn" data-act="pin" data-arg="2">2</button><button class="btn" data-act="pin" data-arg="3">3</button>
+      <button class="btn" data-act="pin" data-arg="4">4</button><button class="btn" data-act="pin" data-arg="5">5</button><button class="btn" data-act="pin" data-arg="6">6</button>
+      <button class="btn" data-act="pin" data-arg="7">7</button><button class="btn" data-act="pin" data-arg="8">8</button><button class="btn" data-act="pin" data-arg="9">9</button>
+      <button class="btn" data-act="pinCancel" style="font:600 17px var(--fb)">Cancel</button><button class="btn" data-act="pin" data-arg="0">0</button><button class="btn" data-act="pinBack" style="font:600 17px var(--fb)">Delete</button>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+<video id="awake-v" src="/static/keepawake.mp4" muted playsinline loop preload="auto" style="position:fixed;width:1px;height:1px;opacity:0;pointer-events:none"></video>
+
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const HOST = location.hostname;
+  const S = { status: null, timer: null, timerAt: 0, aux: null, auxAt: 0, fleet: null, looks: null,
+              tab: 'timer', tview: 'main', typed: '', misses: 0, pinWait: null };
+  const store = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } },
+                  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  // ── talking to the One ──
+  async function getJSON(path) {
+    const r = await fetch(path, { cache: 'no-store' });
+    return r.json();
+  }
+  // Every change goes through here: it says it is the One's own touch page
+  // (so the timer answers it as an operator), and a rig PIN refusal opens the
+  // keypad and tries again once the PIN is in.
+  async function post(path, body, again) {
+    let r, d = {};
+    try {
+      r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Downstage-Page': 'touch' },
+                              body: JSON.stringify(body || {}) });
+      try { d = await r.json(); } catch (e) {}
+    } catch (e) { toast('The One did not answer.', 'bad'); return { ok: false }; }
+    if (r.status === 401 && d.needs && !again) {
+      const ok = await askPin(d.error === 'wrong rig PIN' ? 'That PIN was wrong. Try again.' : null);
+      return ok ? post(path, body, true) : { ok: false };
+    }
+    if (!r.ok || d.ok === false) toast(d.error || d.message || ('The One answered ' + r.status), 'bad');
+    return Object.assign({ status: r.status }, d);
+  }
+
+  // ── toast ──
+  let toastT = 0;
+  function toast(msg, kind) {
+    const t = $('toast');
+    t.textContent = msg; t.className = 'on' + (kind ? ' ' + kind : '');
+    clearTimeout(toastT); toastT = setTimeout(() => t.className = '', 2600);
+  }
+
+  // ── time ──
+  const pad = n => String(n).padStart(2, '0');
+  function fmt(ms) {
+    if (ms === null || ms === undefined || isNaN(ms)) return '-';
+    const neg = ms < 0, a = Math.abs(ms);
+    // count down by ceiling, as OnTime shows it: 4:59.2 left reads 5:00
+    const t = neg ? Math.floor(a / 1000) : Math.ceil(a / 1000);
+    const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60;
+    return (neg ? '-' : '') + (h ? h + ':' + pad(m) : m) + ':' + pad(s);
+  }
+  function clockText(d) {
+    let h = d.getHours(); const m = d.getMinutes(), ap = h < 12 ? 'AM' : 'PM';
+    h = h % 12 || 12; return h + ':' + pad(m) + ' ' + ap;
+  }
+  function serverNow() {
+    const c = S.status && S.status.clock;
+    return c && c.epoch ? new Date(c.epoch * 1000 + (Date.now() - S.statusAt)) : new Date();
+  }
+
+  // ── the main timer, ticked here between polls so it moves smoothly ──
+  function mainLeft() {
+    const t = S.timer && S.timer.state;
+    if (!t || t.no_timer) return null;
+    const run = t.playback === 'play' || t.playback === 'roll';
+    return run ? t.left_ms - (Date.now() - S.timerAt) : t.left_ms;
+  }
+  function loadedPreset() {
+    const p = (S.timer && S.timer.presets) || [];
+    return p.find(x => x.loaded) || null;
+  }
+  function mainPhase() {
+    const t = S.timer && S.timer.state;
+    if (!t || t.no_timer) return 'stopped';
+    return t.phase || 'stopped';
+  }
+  function mainText() {
+    const t = S.timer && S.timer.state, lp = loadedPreset();
+    if (!t || t.no_timer) return '-';
+    if (lp && lp.kind === 'clock') return clockText(serverNow());
+    if (!lp && !t.total_ms && !t.left_ms) return '-';
+    return fmt(mainLeft());
+  }
+  function auxLeft() {
+    const a = S.aux && (S.aux.aux || [])[0];
+    if (!a || a.current === null || a.current === undefined) return null;
+    if (!a.running) return a.current;
+    const dt = Date.now() - S.auxAt;
+    return a.direction === 'count-up' ? a.current + dt : a.current - dt;
+  }
+
+  function paintFast() {
+    const ph = mainPhase(), mt = mainText();
+    const b = $('b-timer');
+    b.textContent = mt;
+    b.style.color = { running: 'var(--green)', warning: 'var(--amber)', danger: 'var(--red)', flash: 'var(--red)', over: 'var(--red)', alert: 'var(--red)', paused: 'var(--amber)' }[ph] || 'var(--text)';
+    $('b-clock').textContent = clockText(serverNow());
+    $('sw-main-t').textContent = mt;
+    $('sw-aux-t').textContent = S.typed ? typedText() : fmt(auxLeft());
+    if (S.tab === 'timer') {
+      if (S.tview === 'main') {
+        const el = $('m-time');
+        el.textContent = mt; el.className = 'time ' + ph;
+        const t = S.timer && S.timer.state, left = mainLeft();
+        if (t && t.total_ms > 0 && left !== null) $('m-prog').style.width = Math.max(0, Math.min(100, 100 * (1 - left / t.total_ms))) + '%';
+        else $('m-prog').style.width = '0';
+        const run = t && (t.playback === 'play' || t.playback === 'roll');
+        $('m-end').textContent = run && left > 0 ? 'Ends ' + clockText(new Date(Date.now() + left)) : '';
+      } else {
+        const el = $('a-time');
+        if (S.typed) { el.textContent = typedText(); el.className = 'time typed'; }
+        else {
+          const a = S.aux && (S.aux.aux || [])[0];
+          el.textContent = fmt(auxLeft());
+          el.className = 'time ' + (!a ? 'stopped' : a.running ? 'running' : a.playback === 'pause' ? 'paused' : 'stopped');
+        }
+      }
+    }
+  }
+
+  // ── what changes once a poll ──
+  function paintStatus() {
+    const s = S.status || {};
+    $('b-name').textContent = s.name || window.ONE_HOST || 'One';
+    const comp = $('b-comp');
+    comp.textContent = s.companion_running ? 'Companion live' : s.companion_installed ? 'Companion stopped' : 'No Companion';
+    comp.className = 'pill ' + (s.companion_running ? 'ok' : 'warn');
+    const dark = !!s.blackout;
+    $('b-dark').hidden = !dark;
+    for (const id of ['o-black', 'a-black']) {
+      const el = $(id); if (!el) continue;
+      el.classList.toggle('hold', !dark);
+      el.firstChild.textContent = dark ? (id === 'o-black' ? 'Bring everything back' : 'Bring the screen back') : (id === 'o-black' ? 'Blackout everything' : 'Blackout');
+      el.querySelector('.hint').textContent = dark ? 'tap' : 'hold';
+    }
+    if (S.tab === 'outputs') paintOutputs();
+    if (S.tab === 'tools') paintTools();
+  }
+
+  function paintTimer() {
+    const t = S.timer && S.timer.state;
+    const run = t && (t.playback === 'play' || t.playback === 'roll');
+    const lp = loadedPreset();
+    $('m-title').textContent = (t && t.title) || (lp ? lp.label : 'Nothing loaded on the One');
+    $('m-state').textContent = !t || t.no_timer ? 'OnTime is not answering'
+      : !lp && !t.total_ms ? 'Nothing loaded: hold an event in the rundown'
+      : run ? (t.added_ms ? 'Running · ' + (t.added_ms > 0 ? '+' : '-') + fmt(Math.abs(t.added_ms)) + ' added' : 'Running')
+      : t.playback === 'pause' ? 'Paused' : 'Ready';
+    const sb = $('m-start');
+    sb.classList.toggle('pause', !!run);
+    sb.querySelector('.big').textContent = run ? 'PAUSE' : 'START';
+    const p = (S.timer && S.timer.presets) || [];
+    const sig = JSON.stringify(p.map(x => [x.id, x.label, x.seconds, x.loaded, x.next]));
+    if (sig !== S.rdSig) {
+      S.rdSig = sig;
+      $('m-rundown').innerHTML = p.length ? p.map(x =>
+        '<button class="rd hold' + (x.loaded ? ' now' : x.next ? ' next' : '') + '" data-hold="600" data-act="load" data-arg="' + esc(x.id) + '">' +
+          '<span><b>' + esc(x.label || 'Untitled') + '</b><small>' + (x.kind === 'clock' ? 'Time of day' : fmt(x.seconds * 1000)) + '</small></span>' +
+          (x.loaded ? '<span class="chip now">Now</span>' : x.next ? '<span class="chip next">Next</span>' : '<span></span>') + '</button>').join('')
+        : '<p class="note">The rundown is empty. Add events in the OnTime editor (Tools).</p>';
+    }
+  }
+
+  function paintAux() {
+    const a = S.aux && (S.aux.aux || [])[0], o = (S.aux && S.aux.output) || {};
+    $('a-title').textContent = (a && a.name) || 'Aux timer 1';
+    $('a-state').textContent = !a ? 'OnTime is not answering'
+      : (a.running ? 'Running' : a.playback === 'pause' ? 'Paused' : 'Stopped') + ' · counting ' + (a.direction === 'count-up' ? 'up' : 'down') + ' · set to ' + fmt(a.duration);
+    $('a-typed').textContent = S.typed ? 'New time, not sent yet · live ' + fmt(auxLeft()) : '';
+    const sb = $('a-start');
+    sb.classList.toggle('pause', !!(a && a.running));
+    sb.querySelector('.big').textContent = a && a.running ? 'PAUSE' : 'START';
+    $('a-down').classList.toggle('on', !!a && a.direction !== 'count-up');
+    $('a-up').classList.toggle('on', !!a && a.direction === 'count-up');
+    $('a-shown').classList.toggle('on', o.aux_shown === 1);
+  }
+
+  // ── Outputs ──
+  const SOURCES = [
+    ['/timer', 'Stage timer'], ['cleantimer', 'Clean timer'], ['/countdown', 'Countdown'],
+    ['/backstage', 'Backstage'], ['/studio', 'Studio clock'], ['aux1', 'Aux timer 1'],
+    ['companion', 'Companion'], ['welcome', 'Unit info'], ['off', 'Off'],
+  ];
+  const srcName = k => (SOURCES.find(x => x[0] === k) || [0, { config: 'Setup page', external: 'Web page', custom: 'Custom view', '/info': 'Public info', '/op': 'Operator', '/cuesheet': 'Cue sheet', '/rundown': 'Rundown', '/timeline': 'Timeline' }[k] || (String(k || '').startsWith('pattern') ? 'Test pattern' : k || '-')])[1];
+  function paintOutputs() {
+    const s = S.status || {}, bo = s.blackout_outputs || [], hc = s.hdmi_connected || {}, names = s.hdmi_names || {};
+    const sig = JSON.stringify([s.hdmi1_source, s.hdmi2_source, bo, hc, names]);
+    if (sig === S.outSig) return;
+    S.outSig = sig;
+    $('o-outs').innerHTML = [1, 2].map(n => {
+      const cur = s['hdmi' + n + '_source'], dark = bo.includes(n);
+      const conn = hc[n] !== undefined ? hc[n] : hc[String(n)];
+      const nm = names[n] || names[String(n)];
+      return '<div class="card out">' +
+        '<div class="hd"><b>HDMI ' + n + '</b><span class="pill ' + (dark ? 'dark' : conn === false ? 'off' : 'ok') + '">' +
+          (dark ? 'Blacked out' : conn === false ? 'No display' : esc(nm || 'Display connected')) + '</span></div>' +
+        '<div class="now">' + esc(srcName(cur)) + '</div>' +
+        '<button class="toggle' + (dark ? ' on' : '') + '" data-act="blackOne" data-arg="' + n + '"><span>Black out HDMI ' + n + '</span><span class="sw"></span></button>' +
+        '<div class="srcs">' + SOURCES.map(([k, label]) =>
+          '<button class="btn hold' + (k === cur ? ' on' : '') + '" data-hold="500" data-act="source" data-arg="' + n + '|' + esc(k) + '">' + esc(label) + '</button>').join('') + '</div>' +
+        '<p class="note">Hold a source to put it on HDMI ' + n + '.</p></div>';
+    }).join('');
+  }
+  async function loadLooks() {
+    try {
+      const d = await getJSON('/presets');
+      const p = d.presets || [];
+      $('o-looks').innerHTML = p.length ? p.map(x =>
+        '<button class="btn hold" data-hold="700" data-act="look" data-arg="' + esc(x.name) + '">' + esc(x.name) + '</button>').join('')
+        : '<p class="note">No looks saved. Save them in the Browser view\'s Displays tab.</p>';
+    } catch (e) {}
+  }
+
+  // ── Rig ──
+  const rgb = c => /^#[0-9a-f]{6}$/i.test(c || '') ? [1, 3, 5].map(i => parseInt(c.substr(i, 2), 16)) : null;
+  function tallyOf(col) {
+    const c = rgb(col); if (!c || !(c[0] + c[1] + c[2])) return '';
+    if (c[0] > 150 && c[1] < 110 && c[2] < 110) return 'program';
+    if (c[1] > 150 && c[0] < 130 && c[2] < 150) return 'preview';
+    return 'lit';
+  }
+  function lightsOf(d) {
+    return ((d && d.units) || []).filter(u => u.product === 'Cue' && (u.ip || (((u.cue || {}).link || {}).relayed)));
+  }
+  function paintBarLights() {
+    const ls = lightsOf(S.fleet), air = ls.filter(u => tallyOf(u.showing) === 'program').length;
+    const p = $('b-air');
+    p.hidden = !air; p.textContent = air + ' on air';
+  }
+  function paintRig() {
+    const ls = lightsOf(S.fleet);
+    const air = ls.filter(u => tallyOf(u.showing) === 'program').length;
+    $('r-sum').innerHTML = '<b>Lights</b><span>' + (ls.length ? ls.length + ' found' + (air ? ' · ' + air + ' on air' : ' · none on air') : 'none found on this network') + '</span>';
+    const sig = JSON.stringify(ls.map(u => [u.serial, u.name, u.showing, (u.cue || {}).camera, u.health_ok]));
+    if (sig === S.rigSig) return;
+    S.rigSig = sig;
+    $('r-lights').innerHTML = ls.map(u => {
+      const c = u.cue || {}, t = tallyOf(u.showing), L = c.link || {};
+      const cam = c.camera !== undefined && c.camera !== null && +c.camera >= 0 ? +c.camera : '';
+      const model = String(u.model || 'Cue').replace(/^Downstage /, '');
+      return '<button class="light ' + t + (u.health_ok === false ? ' gone' : '') + '" data-act="blink" data-arg="' + esc(u.serial) + '">' +
+        '<span class="n">' + esc(cam === '' ? '·' : cam) + '</span>' +
+        '<span><b>' + esc(u.name || model) + '</b><br><small>' + esc(model) + (L.relayed ? ' · through ' + esc(L.via_name || L.via || 'its Relay') : '') + '</small></span>' +
+        '<span class="tl">' + (t === 'program' ? '<span class="pill air">On air</span>' : t === 'preview' ? '<span class="pill ok">Preview</span>' : '') + '</span>' +
+        '</button>';
+    }).join('') || '<p class="note">No Cue lights found. Add them in the Browser view\'s Network tab.</p>';
+  }
+
+  // ── Tools ──
+  function kv(rows) { return rows.filter(r => r[1] !== undefined && r[1] !== null && r[1] !== '').map(r => '<span>' + esc(r[0]) + '</span><b>' + esc(r[1]) + '</b>').join(''); }
+  function upFor(sec) { sec = +sec || 0; const d = Math.floor(sec / 86400), h = Math.floor(sec % 86400 / 3600), m = Math.floor(sec % 3600 / 60); return d ? d + ' d ' + h + ' h' : h ? h + ' h ' + m + ' min' : m + ' min'; }
+  function paintTools() {
+    const s = S.status || {}, w = s.wifi || {};
+    $('t-comp').innerHTML = kv([['State', s.companion_running ? 'Running' : s.companion_installed ? 'Stopped' : 'Not installed']]);
+    $('t-ontime').innerHTML = kv([['State', s.ontime_running ? 'Running' : s.ontime_installed ? 'Stopped' : 'Not installed'],
+                                  ['Loaded', (loadedPreset() || {}).label || 'Nothing']]);
+    $('t-net').innerHTML = kv([['Address', s.local_ip || s.ip], ['On', s.net_iface === 'eth0' ? 'Ethernet' : w.ssid ? 'WiFi ' + w.ssid : s.net_iface],
+                               ['Hotspot', s.hotspot_active ? 'On · ' + (s.hotspot_ssid || '') : 'Off']]);
+    $('t-unit').innerHTML = kv([['Name', s.name], ['Serial', s.serial], ['Downstage OS', s.os_version],
+                                ['Temperature', s.cpu_temp ? Math.round(s.cpu_temp) + ' °C' : ''], ['Up', s.uptime ? (typeof s.uptime === 'number' ? upFor(s.uptime) : s.uptime) : '']]);
+    const v = store.get('ds_ft_view', '/timer');
+    $('t-ftview').innerHTML = FTVIEWS.map(([k, label]) => '<button class="' + (k === v ? 'on' : '') + '" data-act="ftView" data-arg="' + k + '" style="height:56px">' + label + '</button>').join('');
+  }
+
+  // ── full timer ──
+  const FTVIEWS = [['/timer', 'Stage timer'], ['/countdown', 'Countdown'], ['/backstage', 'Backstage'], ['aux1', 'Aux timer 1']];
+  function ftUrl() {
+    const v = store.get('ds_ft_view', '/timer');
+    return v === 'aux1' ? '/view/aux?n=1' : 'http://' + HOST + ':4001' + v;
+  }
+  let hintT = 0;
+  function ftOpen() {
+    const f = $('ft'), fr = $('ft-frame'), u = ftUrl();
+    if (fr.dataset.src !== u) { fr.src = u; fr.dataset.src = u; }
+    f.classList.add('on');
+    const h = $('ft-hint'); h.style.opacity = 1; clearTimeout(hintT); hintT = setTimeout(() => h.style.opacity = 0, 3000);
+    const rq = f.requestFullscreen || f.webkitRequestFullscreen;
+    if (rq) { try { const p = rq.call(f); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
+    awake(true, true);
+  }
+  function ftClose() {
+    $('ft').classList.remove('on');
+    const ex = document.exitFullscreen || document.webkitExitFullscreen;
+    if ((document.fullscreenElement || document.webkitFullscreenElement) && ex) { try { ex.call(document); } catch (e) {} }
+    if (!S.awakeWanted) awake(false, true);
+  }
+  // a tap on the timer shows the way out again
+  $('ft').addEventListener('pointerdown', e => {
+    if (e.target.closest('#ft-x')) return;
+    const h = $('ft-hint'); h.style.opacity = 1; clearTimeout(hintT); hintT = setTimeout(() => h.style.opacity = 0, 2500);
+  });
+
+  // ── keep the screen awake: a real wake lock where Safari allows one (it
+  // needs HTTPS), otherwise a silent one-pixel video on a loop ──
+  let lock = null;
+  async function awake(on, quiet) {
+    const v = $('awake-v');
+    if (on) {
+      try { if (navigator.wakeLock && window.isSecureContext) lock = await navigator.wakeLock.request('screen'); } catch (e) { lock = null; }
+      if (!lock) { try { await v.play(); } catch (e) {} }
+    } else {
+      try { if (lock) await lock.release(); } catch (e) {}
+      lock = null; v.pause();
+    }
+    if (!quiet) $('t-awake').classList.toggle('on', !!on);
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && (S.awakeWanted || $('ft').classList.contains('on'))) awake(true, true);
+  });
+
+  // ── rig PIN keypad ──
+  let pinVal = '';
+  function askPin(why) {
+    pinVal = ''; $('pin-box').textContent = '';
+    $('pin-why').textContent = why || 'This rig has a PIN. Enter it once and this iPad remembers.';
+    $('pin-scrim').classList.add('on');
+    return new Promise(res => S.pinWait = res);
+  }
+  async function pinKey(d) {
+    if (pinVal.length >= 6) return;
+    pinVal += d; $('pin-box').textContent = '•'.repeat(pinVal.length);
+    if (pinVal.length < 6) return;
+    let r, j = {};
+    try { r = await fetch('/rig/unlock', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin: pinVal }) }); j = await r.json(); } catch (e) {}
+    if (j.ok) { $('pin-scrim').classList.remove('on'); toast('Unlocked. This iPad knows the rig PIN now.'); const w = S.pinWait; S.pinWait = null; w && w(true); return; }
+    pinVal = ''; $('pin-box').textContent = '';
+    $('pin-why').textContent = j.error === 'wrong rig PIN' ? 'That PIN was wrong. Try again.' : (j.error || 'Not unlocked. Try again.');
+  }
+
+  // ── typing an aux time, microwave style: digits fill from the right ──
+  function typedSecs() {
+    const d = S.typed.padStart(6, '0'), h = +d.slice(0, 2), m = +d.slice(2, 4), s = +d.slice(4, 6);
+    return h * 3600 + m * 60 + s;
+  }
+  function typedText() {
+    const d = S.typed.padStart(6, '0'), h = +d.slice(0, 2), m = d.slice(2, 4), s = d.slice(4, 6);
+    return h ? h + ':' + m + ':' + s : (+m) + ':' + s;
+  }
+
+  // ── what each control does ──
+  const A = {
+    tab(t) { setTab(t); },
+    tview(v) { S.tview = v; store.set('ds_tview', v); $('tv-main').hidden = v !== 'main'; $('tv-aux').hidden = v !== 'aux';
+               $('sw-main').classList.toggle('on', v === 'main'); $('sw-aux').classList.toggle('on', v === 'aux'); paintTimer(); paintAux(); paintFast(); },
+    async main(action) { const d = await post('/api/v1/one/timer', { action }); if (d.ok) { take(d); pollTimer(); } },
+    async mainStart() { const t = S.timer && S.timer.state, run = t && (t.playback === 'play' || t.playback === 'roll');
+                        const d = await post('/api/v1/one/timer', { action: run ? 'pause' : 'start' }); if (d.ok) { take(d); pollTimer(); } },
+    async add(secs) { const d = await post('/api/v1/one/timer', { action: 'add', seconds: +secs }); if (d.ok) { take(d); pollTimer(); } },
+    async load(id) { const d = await post('/api/v1/one/timer', { action: 'load', id }); if (d.ok) { toast('Loaded.'); pollTimer(); } },
+    async aux(action) { const d = await post('/api/v1/one/aux', { action }); if (d.ok) takeAux(d.aux); },
+    async auxStart() { const a = S.aux && (S.aux.aux || [])[0]; const d = await post('/api/v1/one/aux', { action: a && a.running ? 'pause' : 'start' }); if (d.ok) takeAux(d.aux); },
+    async auxAdd(secs) { const d = await post('/api/v1/one/aux', { action: 'add', seconds: +secs }); if (d.ok) takeAux(d.aux); },
+    async auxDir(dir) { const d = await post('/api/v1/one/aux', { action: 'direction', direction: dir }); if (d.ok) takeAux(d.aux); },
+    async auxPreset(secs) { S.typed = ''; const d = await post('/api/v1/one/aux', { action: 'set', seconds: +secs }); if (d.ok) takeAux(d.aux); },
+    key(k) { if (S.typed.length >= 6 || (!S.typed && k === '0')) return; S.typed += k; paintAux(); paintFast(); },
+    keyClear() { S.typed = ''; paintAux(); paintFast(); },
+    async keySet() { if (!S.typed) return; const secs = typedSecs(); if (!secs) { S.typed = ''; paintFast(); return; }
+                     const d = await post('/api/v1/one/aux', { action: 'set', seconds: secs }); if (d.ok) { S.typed = ''; takeAux(d.aux); } },
+    async auxShown() { const o = (S.aux && S.aux.output) || {}; const d = await post('/api/v1/one/output', { aux: o.aux_shown !== 1, n: 1 });
+                       if (d.ok && S.aux) { S.aux.output = d.output; paintAux(); } },
+    async blackAll() { const dark = S.status && S.status.blackout;
+                       const d = await post('/api/v1/one/output', { blackout: !dark }); if (d.ok) { toast(dark ? 'Back on.' : 'Blacked out.'); pollStatus(); } },
+    async blackOne(n) { const bo = (S.status && S.status.blackout_outputs) || [];
+                        const d = await post(bo.includes(+n) ? '/blackout/clear' : '/blackout', { output: +n }); if (d.ok) pollStatus(); },
+    async source(arg) { const [n, source] = arg.split('|'); const d = await post('/displays/source', { output: +n, source });
+                        if (d.ok) { toast('HDMI ' + n + ': ' + srcName(source)); S.outSig = ''; setTimeout(pollStatus, 400); } },
+    async look(name) { const d = await post('/presets/apply', { name }); if (d.ok !== false) { toast('Look: ' + name); setTimeout(pollStatus, 400); } },
+    async identify() { await post('/displays/identify', {}); toast('Showing the output numbers.'); },
+    async blink(serial) {
+      const u = lightsOf(S.fleet).find(x => x.serial === serial); if (!u) return;
+      const L = (u.cue || {}).link || {};
+      if (u.ip && !L.no_ip) { const d = await post('/fleet/identify', { ip: u.ip, product: 'Cue' }); if (d.ok) toast((u.name || 'The light') + ' is blinking.'); return; }
+      const r = ((S.fleet && S.fleet.units) || []).find(x => x.product === 'Relay' && (x.serial === L.via || x.name === L.via_name));
+      if (!r) { toast('Not reachable from here.', 'warn'); return; }
+      const d = await post('/fleet/relay/api', { ip: r.ip, path: 'identify', method: 'POST', body: { id: serial } });
+      if (d.ok !== false) toast((u.name || 'The light') + ' is blinking.');
+    },
+    async postTo(path) { const d = await post(path, {}); if (d.ok !== false) toast(d.message || 'Done.'); },
+    open(where) { window.open('http://' + HOST + where, '_blank'); },
+    ftOpen() { ftOpen(); }, ftClose() { ftClose(); },
+    ftView(v) { store.set('ds_ft_view', v); paintTools(); },
+    awake() { S.awakeWanted = !S.awakeWanted; store.set('ds_awake', S.awakeWanted ? '1' : ''); awake(S.awakeWanted); },
+    toBrowser() { store.set('ds_ui', 'browser'); location.href = '/?browser=1'; },
+    pin(d) { pinKey(d); }, pinBack() { pinVal = pinVal.slice(0, -1); $('pin-box').textContent = '•'.repeat(pinVal.length); },
+    pinCancel() { $('pin-scrim').classList.remove('on'); const w = S.pinWait; S.pinWait = null; w && w(false); },
+  };
+
+  // taps: [data-act] that is not a hold
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-act], [data-tab]');
+    if (!b || b.classList.contains('hold') || b.disabled) return;
+    if (b.dataset.tab) { setTab(b.dataset.tab); return; }
+    const f = A[b.dataset.act]; if (f) f(b.dataset.arg);
+  });
+  // holds: the fill runs for data-hold ms; lifting early, or sliding off, cancels
+  let held = null;
+  document.addEventListener('pointerdown', e => {
+    const b = e.target.closest('.hold[data-act]');
+    if (!b || b.disabled) return;
+    const ms = +b.dataset.hold || 800;
+    b.style.setProperty('--hold', ms + 'ms');
+    b.classList.add('holding');
+    held = { b, t: setTimeout(() => { b.classList.remove('holding'); held = null; if (navigator.vibrate) navigator.vibrate(20);
+                                      const f = A[b.dataset.act]; if (f) f(b.dataset.arg); }, ms) };
+  });
+  const letGo = () => { if (!held) return; clearTimeout(held.t); held.b.classList.remove('holding'); held = null; };
+  document.addEventListener('pointerup', letGo);
+  document.addEventListener('pointercancel', letGo);
+  document.addEventListener('pointermove', e => { if (held && !held.b.contains(document.elementFromPoint(e.clientX, e.clientY))) letGo(); });
+  document.addEventListener('contextmenu', e => e.preventDefault());
+
+  function setTab(t) {
+    S.tab = t; store.set('ds_tab', t);
+    for (const b of document.querySelectorAll('#tabs button')) b.classList.toggle('on', b.dataset.tab === t);
+    for (const p of document.querySelectorAll('.page')) p.classList.toggle('on', p.id === 'pg-' + t);
+    if (t === 'deck' && !$('pg-deck').firstChild) $('pg-deck').innerHTML = '<iframe src="/virtual-deck" title="Virtual Deck" allow="fullscreen"></iframe>';
+    if (t === 'outputs') { S.outSig = ''; paintOutputs(); loadLooks(); }
+    if (t === 'rig') { S.rigSig = ''; paintRig(); pollFleet(); }
+    if (t === 'tools') paintTools();
+    if (t === 'timer') { paintTimer(); paintAux(); }
+    paintFast();
+  }
+
+  // ── polling ──
+  function take(d) { if (d && d.state && S.timer) { S.timer.state = d.state; S.timerAt = Date.now(); paintTimer(); paintFast(); } }
+  function takeAux(a) { if (a && S.aux) { S.aux.aux = [a].concat((S.aux.aux || []).slice(1)); S.auxAt = Date.now(); paintAux(); paintFast(); } }
+  async function pollStatus() {
+    try {
+      S.status = await getJSON('/status'); S.statusAt = Date.now(); S.misses = 0; $('lost').classList.remove('on');
+      paintStatus();
+    } catch (e) { if (++S.misses >= 3) $('lost').classList.add('on'); }
+  }
+  async function pollTimer() {
+    try { const d = await getJSON('/api/v1/one/timer'); if (d.ok) { S.timer = d; S.timerAt = Date.now(); paintTimer(); } } catch (e) {}
+  }
+  async function pollAux() {
+    try { const d = await getJSON('/api/v1/one/aux'); if (d.ok) { S.aux = d; S.auxAt = Date.now(); paintAux(); } } catch (e) {}
+  }
+  async function pollFleet() {
+    try { S.fleet = await getJSON('/discover/last'); paintBarLights(); if (S.tab === 'rig') paintRig(); } catch (e) {}
+  }
+
+  // a link can name the tab: /touch#outputs, or #aux for the aux timer
+  const TABS = ['deck', 'timer', 'outputs', 'rig', 'tools'], hash = location.hash.slice(1);
+  S.tview = hash === 'aux' ? 'aux' : hash === 'timer' ? 'main' : store.get('ds_tview', 'main');
+  S.awakeWanted = store.get('ds_awake', '') === '1';
+  if (S.awakeWanted) $('t-awake').classList.add('on');
+  A.tview(S.tview);
+  setTab(hash === 'aux' ? 'timer' : TABS.includes(hash) ? hash : store.get('ds_tab', 'timer'));
+  pollStatus(); pollTimer(); pollAux(); pollFleet();
+  setInterval(pollStatus, 2000);
+  setInterval(pollTimer, 1000);
+  setInterval(pollAux, 1000);
+  setInterval(pollFleet, 5000);
+  setInterval(paintFast, 200);
+  // a wake lock or the video needs a touch first: the first one turns it on if it was wanted
+  document.addEventListener('pointerdown', function once() { if (S.awakeWanted) awake(true); document.removeEventListener('pointerdown', once); });
+})();
+</script>
+{% endraw %}
+</body>
+</html>
