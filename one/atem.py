@@ -20,8 +20,11 @@ Blackmagic's own clients use it:
   happen, and drops a client that stops acking.
 
 What is read: _pin (the model), InPr (every source's names and where it may
-go), AuxS (each aux's source), PrgI / PrvI (program and preview, for tally on
-the source keys). What is sent: CAuS (put a source on an aux).
+go), AuxS (each aux's source), PrgI / PrvI (each M/E's program and preview).
+TrPs tells when an M/E is mid-transition.
+What is sent: CAuS (put a source on an aux), CPgI / CPvI (put a source on an
+M/E's program, a cut, or its preview), DCut / DAut (an M/E's CUT and AUTO) - Rob, 2026-10-22: "allow me to change
+all connected aux outputs as well as all MEs from the router".
 
 Nothing here blocks the caller: a thread keeps the connection and the state;
 the app reads state() and calls route().
@@ -69,21 +72,30 @@ class Atem:
         self.aux = {}                 # aux index (0-based) -> source id
         self.program = {}             # M/E -> source id
         self.preview = {}
+        self.moving = {}              # M/E -> mid-transition (TrPs)
         self._pending = {}            # packet id -> (bytes, sent at, tries)
         self.why = ""
 
     # ── what the app sees ──
     def state(self):
         with self._lock:
+            # where a source may go, as the switcher says; only an old switcher
+            # that says nothing for any source gets every source everywhere
+            says_aux = any(v["avail"] for v in self.inputs.values())
+            says_me = any(v["me"] for v in self.inputs.values())
             return {
                 "ip": self._ip, "connected": self._up and self._ready, "why": self.why,
                 "product": self.product,
                 "auxes": [{"n": a + 1, "source": s,
                            "name": (self.inputs.get(8001 + a) or {}).get("long") or f"Aux {a + 1}"}
                           for a, s in sorted(self.aux.items())],
+                "mes": [{"n": m + 1, "program": self.program.get(m), "preview": self.preview.get(m),
+                         "transition": bool(self.moving.get(m))}
+                        for m in sorted(set(self.program) | set(self.preview))],
                 "sources": [{"id": i, "long": v["long"], "short": v["short"],
                              # an old switcher that does not say where a source may go: offer it
-                             "aux": bool(v["avail"] & AUX_OK) or v["avail"] == 0}
+                             "aux": bool(v["avail"] & AUX_OK) if says_aux else True,
+                             "me": [m + 1 for m in range(8) if v["me"] & (1 << m)] if says_me else None}
                             for i, v in sorted(self.inputs.items())],
                 "program": sorted(set(self.program.values())),
                 "preview": sorted(set(self.preview.values())),
@@ -112,6 +124,24 @@ class Atem:
                 return False
         data = struct.pack("!BBH", 0x01, int(aux) - 1, int(source))
         self._send_commands([("CAuS", data)])
+        return True
+
+    def route_me(self, me, bus, source):
+        """Put `source` on M/E `me` (1-based): bus "program" cuts it to air,
+        "preview" sets it up for the next transition."""
+        with self._lock:
+            if not (self._up and self._ready):
+                return False
+        name = "CPgI" if bus == "program" else "CPvI"
+        self._send_commands([(name, struct.pack("!BBH", int(me) - 1, 0, int(source)))])
+        return True
+
+    def transition(self, me, kind):
+        """An M/E's CUT ("cut") or AUTO ("auto"), as the buttons on the panel."""
+        with self._lock:
+            if not (self._up and self._ready):
+                return False
+        self._send_commands([("DCut" if kind == "cut" else "DAut", struct.pack("!BBBB", int(me) - 1, 0, 0, 0))])
         return True
 
     # ── the connection ──
@@ -257,13 +287,16 @@ class Atem:
         elif name == "InPr" and len(d) >= 26:
             sid = struct.unpack("!H", d[0:2])[0]
             self.inputs[sid] = {"long": _cstr(d[2:22]), "short": _cstr(d[22:26]),
-                                "avail": d[34] if len(d) > 34 else 0}
+                                "avail": d[34] if len(d) > 34 else 0,
+                                "me": d[35] if len(d) > 35 else 0}     # a bit per M/E it may go to
         elif name == "AuxS" and len(d) >= 4:
             self.aux[d[0]] = struct.unpack("!H", d[2:4])[0]
         elif name == "PrgI" and len(d) >= 4:
             self.program[d[0]] = struct.unpack("!H", d[2:4])[0]
         elif name == "PrvI" and len(d) >= 4:
             self.preview[d[0]] = struct.unpack("!H", d[2:4])[0]
+        elif name == "TrPs" and len(d) >= 2:
+            self.moving[d[0]] = bool(d[1] & 0x01)
         elif name == "InCm":
             self._ready = True
             self.why = ""

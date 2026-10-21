@@ -191,6 +191,19 @@
   .dest b { font: 700 26px/1.05 var(--fd); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .dest em { font-style: normal; font: 600 13px var(--fb); color: var(--muted2); }
   .dest.on { border-color: var(--text); background: var(--raised); }
+  .dest.bus-pgm { box-shadow: inset 0 4px 0 var(--red); } .dest.bus-pvw { box-shadow: inset 0 4px 0 var(--green); }
+  /* an M/E: its program and preview, then CUT, AUTO and the lock that holds those two */
+  .merow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 130px 130px 120px; gap: 12px; margin-bottom: 12px; }
+  .merow .tbtn { min-height: 104px; border-radius: var(--r); font: 700 26px var(--fd); letter-spacing: .04em; }
+  .merow .cut { background: var(--raised); border: 2px solid var(--edge); }
+  .merow .auto { background: var(--raised); border: 2px solid var(--edge); }
+  .merow .auto.moving { background: var(--bad-fill); border-color: var(--red); color: var(--bad-text); }
+  .merow .tbtn[disabled] { opacity: .3; }
+  .merow .lockb { min-height: 104px; border-radius: var(--r); background: var(--panel); border: 2px solid var(--edge); display: grid; place-items: center; align-content: center; gap: 4px; font-weight: 600; font-size: 14px; color: var(--muted); }
+  .merow .lockb svg { width: 26px; height: 26px; }
+  .merow .lockb.on { border-color: var(--amber); color: var(--warn-text); background: var(--warn-fill); }
+  @media (max-width: 1100px) { .merow { grid-template-columns: 1fr 1fr; } .merow .tbtn, .merow .lockb { min-height: 72px; } }
+  .src.hold .hint { left: auto; right: 10px; bottom: 8px; text-align: right; font-size: 11px; color: var(--muted); }
   .dest.air b { color: var(--bad-text); } .dest.pvw b { color: var(--ok-text); }
   .srcgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
   .src { min-height: 84px; padding: 10px 12px; border-radius: var(--rb); background: var(--raised); border: 1px solid var(--edge); text-align: left;
@@ -289,7 +302,7 @@
   <button data-tab="deck">Deck</button>
   <button data-tab="timer">Timer</button>
   <button data-tab="outputs">Outputs</button>
-  <button data-tab="router">Router</button>
+  <button data-tab="router">ATEM Router</button>
   <button data-tab="rig">Rig</button>
   <button data-tab="tools">Tools</button>
 </nav>
@@ -930,13 +943,26 @@
     }).join('') || '<p class="note">No Cue lights found. Add them in the Browser view\'s Network tab.</p>';
   }
 
-  // ── Router: tap an aux, then the source for it. It goes at once, as a
-  // router panel does; the aux tiles say where everything is right now ──
-  S.rtAux = +store.get('ds_router_aux', '1') || 1;
+  // ── ATEM Router: tap a destination (an aux, or an M/E's program or
+  // preview), then its source. An aux or a preview goes at once, as a router
+  // panel does; an M/E's program is a cut to air, so it is a short hold ──
+  S.rtDest = store.get('ds_router_dest', 'aux:1');
   async function pollRouter() {
     try { const d = await getJSON('/api/v1/one/router'); if (d.ok) { S.router = d; paintRouter(); } } catch (e) {}
   }
-  function rtSrc(st, id) { const x = (st.sources || []).find(v => v.id === id); return x ? x : { long: 'Source ' + id, short: '' }; }
+  function rtSrc(st, id) { const x = (st.sources || []).find(v => v.id === id); return x ? x : { long: id === undefined || id === null ? '-' : 'Source ' + id, short: '' }; }
+  // which M/Es have CUT and AUTO locked, on this iPad (Rob, 2026-10-22: "a
+  // Lock Button that locks those 2 buttons so no changes can make by accident")
+  function rtLocks() { try { const v = JSON.parse(store.get('ds_me_locks', '[]')); return Array.isArray(v) ? v : []; } catch (e) { return []; } }
+  function rtDests(st) {
+    const out = [];
+    for (const m of st.mes || []) {
+      out.push({ key: 'me:' + m.n + ':program', label: 'M/E ' + m.n + ' Program', source: m.program, kind: 'pgm', me: m.n, bus: 'program' });
+      out.push({ key: 'me:' + m.n + ':preview', label: 'M/E ' + m.n + ' Preview', source: m.preview, kind: 'pvw', me: m.n, bus: 'preview' });
+    }
+    for (const a of st.auxes || []) out.push({ key: 'aux:' + a.n, label: a.name, source: a.source, kind: 'aux', aux: a.n });
+    return out;
+  }
   function paintRouter() {
     const st = S.router || {}, body = $('rt-body');
     $('rt-name').textContent = st.product || 'ATEM';
@@ -945,25 +971,42 @@
     pill.className = 'pill ' + (!st.ip ? 'off' : st.connected ? 'ok' : 'warn');
     if (!st.ip || S.rtSetup) { if (body.dataset.mode !== 'setup') { body.dataset.mode = 'setup'; rtFind(); } return; }
     body.dataset.mode = 'router';
-    const auxes = st.auxes || [];
-    if (auxes.length && !auxes.some(a => a.n === S.rtAux)) S.rtAux = auxes[0].n;
-    const sel = auxes.find(a => a.n === S.rtAux);
-    $('rt-hint').textContent = sel ? 'Tap a source to put it on ' + sel.name : '';
+    const dests = rtDests(st);
+    if (dests.length && !dests.some(d => d.key === S.rtDest)) S.rtDest = (dests.find(d => d.kind === 'aux') || dests[0]).key;
+    const sel = dests.find(d => d.key === S.rtDest);
+    $('rt-hint').textContent = !sel ? '' : sel.kind === 'pgm' ? 'Hold a source to cut it to ' + sel.label : 'Tap a source to put it on ' + sel.label;
     const pgm = st.program || [], pvw = st.preview || [];
-    const sig = JSON.stringify([auxes, pgm, pvw, S.rtAux, (st.sources || []).length, st.connected]);
+    const locks = rtLocks();
+    const sig = JSON.stringify([dests, pgm, pvw, S.rtDest, (st.sources || []).length, st.connected, st.mes, locks]);
     if (sig === S.rtSig) return;
     S.rtSig = sig;
-    if (!st.connected && !auxes.length) { body.innerHTML = '<p class="note">' + esc(st.why || 'Connecting to the switcher…') + '</p>'; return; }
-    const dests = auxes.map(a => {
-      const x = rtSrc(st, a.source);
-      return '<button class="dest' + (a.n === S.rtAux ? ' on' : '') + (pgm.includes(a.source) ? ' air' : pvw.includes(a.source) ? ' pvw' : '') +
-        '" data-act="rtPick" data-arg="' + a.n + '"><small>' + esc(a.name) + '</small><b>' + esc(x.long) + '</b><em>' + esc(x.short) + '</em></button>';
-    }).join('');
-    const srcs = (st.sources || []).filter(x => x.aux).map(x =>
-      '<button class="src' + (sel && sel.source === x.id ? ' lit' : '') + (pgm.includes(x.id) ? ' pgm' : pvw.includes(x.id) ? ' pvw' : '') +
-      '" data-act="rtTake" data-arg="' + x.id + '"><b>' + esc(x.short || x.long) + '</b><small>' + esc(x.long) + '</small></button>').join('');
-    body.innerHTML = '<div class="h"><b>Destinations</b><span>' + auxes.length + ' aux outputs</span></div><div class="dests">' + dests + '</div>' +
-      '<div class="h"><b>Sources</b><span>red: on program · green: on preview</span></div><div class="srcgrid">' + srcs + '</div>';
+    if (!st.connected && !dests.length) { body.innerHTML = '<p class="note">' + esc(st.why || 'Connecting to the switcher…') + '</p>'; return; }
+    const tile = d => {
+      const x = rtSrc(st, d.source);
+      return '<button class="dest' + (d.key === S.rtDest ? ' on' : '') + (d.kind === 'pgm' ? ' bus-pgm' : d.kind === 'pvw' ? ' bus-pvw' : '') +
+        (d.kind === 'aux' && pgm.includes(d.source) ? ' air' : d.kind === 'aux' && pvw.includes(d.source) ? ' pvw' : '') +
+        '" data-act="rtPick" data-arg="' + esc(d.key) + '"><small>' + esc(d.label) + '</small><b>' + esc(x.long) + '</b><em>' + esc(x.short) + '</em></button>';
+    };
+    const mes = dests.filter(d => d.kind !== 'aux'), auxes = dests.filter(d => d.kind === 'aux');
+    const ok = x => !sel ? false : sel.kind === 'aux' ? x.aux : (x.me === null || x.me.includes(sel.me));
+    const holdIt = sel && sel.kind === 'pgm';
+    const srcs = (st.sources || []).filter(ok).map(x =>
+      '<button class="src' + (holdIt ? ' hold' : '') + (sel && sel.source === x.id ? ' lit' : '') + (pgm.includes(x.id) ? ' pgm' : pvw.includes(x.id) ? ' pvw' : '') +
+      '"' + (holdIt ? ' data-hold="600"' : '') + ' data-act="rtTake" data-arg="' + x.id + '"><b>' + esc(x.short || x.long) + '</b><small>' + esc(x.long) + '</small>' +
+      (holdIt ? '<span class="hint">hold</span>' : '') + '</button>').join('');
+    const lockSvg = on => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"/>' +
+      (on ? '<path d="M8 11V8a4 4 0 0 1 8 0v3"/>' : '<path d="M8 11V8a4 4 0 0 1 7.5-2"/>') + '</svg>';
+    const meRow = m => {
+      const locked = locks.includes(m.n), pg = dests.find(d => d.key === 'me:' + m.n + ':program'), pv = dests.find(d => d.key === 'me:' + m.n + ':preview');
+      return '<div class="merow">' + tile(pg) + tile(pv) +
+        '<button class="tbtn cut"' + (locked ? ' disabled' : '') + ' data-act="rtTrans" data-arg="' + m.n + ':cut">CUT</button>' +
+        '<button class="tbtn auto' + (m.transition ? ' moving' : '') + '"' + (locked ? ' disabled' : '') + ' data-act="rtTrans" data-arg="' + m.n + ':auto">AUTO</button>' +
+        '<button class="lockb' + (locked ? ' on' : '') + '" data-act="rtLock" data-arg="' + m.n + '" aria-pressed="' + locked + '">' + lockSvg(locked) + (locked ? 'Locked' : 'Lock') + '</button></div>';
+    };
+    body.innerHTML =
+      ((st.mes || []).length ? '<div class="h"><b>M/Es</b><span>program is on air · Lock holds CUT and AUTO</span></div>' + (st.mes || []).map(meRow).join('') : '') +
+      (auxes.length ? '<div class="h"><b>Aux outputs</b><span>' + auxes.length + '</span></div><div class="dests">' + auxes.map(tile).join('') + '</div>' : '') +
+      '<div class="h"><b>Sources</b><span>' + (sel ? 'for ' + esc(sel.label) + ' · ' : '') + 'red: on program · green: on preview</span></div><div class="srcgrid">' + srcs + '</div>';
   }
   async function rtFind() {
     const st = S.router || {}, body = $('rt-body');
@@ -1114,12 +1157,24 @@
     ftOpen() { ftOpen(); }, ftClose() { ftClose(); },
     ftView(v) { store.set('ds_ft_view', v); paintTools(); },
     deckSize(v) { store.set('ds_deck', v); paintDeck(); },
-    rtPick(n) { S.rtAux = +n; store.set('ds_router_aux', n); S.rtSig = ''; paintRouter(); },
+    rtPick(key) { S.rtDest = key; store.set('ds_router_dest', key); S.rtSig = ''; paintRouter(); },
+    async rtTrans(arg) {
+      const [me, kind] = arg.split(':');
+      if (rtLocks().includes(+me)) return;                // locked: CUT and AUTO do nothing
+      const d = await post('/api/v1/one/router', { me: +me, action: kind });
+      if (d.ok) { S.router = d; S.rtSig = ''; paintRouter(); setTimeout(pollRouter, 400); }
+    },
+    rtLock(me) {
+      const l = rtLocks(), n = +me, next = l.includes(n) ? l.filter(x => x !== n) : l.concat(n);
+      store.set('ds_me_locks', JSON.stringify(next)); S.rtSig = ''; paintRouter();
+      toast('M/E ' + n + (next.includes(n) ? ': CUT and AUTO locked' : ': CUT and AUTO unlocked'));
+    },
     async rtTake(id) {
-      const st = S.router || {}, a = (st.auxes || []).find(x => x.n === S.rtAux); if (!a) return;
-      if (a.source === +id) return;
-      const d = await post('/api/v1/one/router', { aux: S.rtAux, source: +id });
-      if (d.ok) { S.router = d; S.rtSig = ''; paintRouter(); toast(a.name + ': ' + rtSrc(d, +id).long); }
+      const st = S.router || {}, sel = rtDests(st).find(d => d.key === S.rtDest); if (!sel) return;
+      if (sel.source === +id) return;
+      const body = sel.kind === 'aux' ? { aux: sel.aux, source: +id } : { me: sel.me, bus: sel.bus, source: +id };
+      const d = await post('/api/v1/one/router', body);
+      if (d.ok) { S.router = d; S.rtSig = ''; paintRouter(); toast(sel.label + ': ' + rtSrc(d, +id).long); }
     },
     rtSetup() { S.rtSetup = true; $('rt-body').dataset.mode = ''; paintRouter(); },
     rtCancel() { S.rtSetup = false; S.rtSig = ''; $('rt-body').dataset.mode = ''; paintRouter(); },

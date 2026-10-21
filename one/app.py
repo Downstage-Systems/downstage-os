@@ -2537,30 +2537,65 @@ def _atem_from_companion():
 
 @app.route("/api/v1/one/router", methods=["GET", "POST"])
 def one_router():
-    """GET: the switcher, its auxes (each with the source on it), its sources
-    (names, whether they may go to an aux) and program / preview for tally.
-    POST {"aux": 1, "source": 5}: put a source on an aux. Behind the rig PIN,
-    as every output change is."""
+    """GET: the switcher, its auxes and M/Es (each with the source on it), its
+    sources (names, where they may go) and program / preview for tally.
+    POST {"aux": 1, "source": 5} puts a source on an aux; {"me": 1, "bus":
+    "program" | "preview", "source": 5} on an M/E (program is a cut, on air);
+    {"me": 1, "action": "cut" | "auto"} is that M/E's CUT or AUTO.
+    Behind the rig PIN, as every output change is."""
     if request.method == "POST":
         b = request.get_json(silent=True) or {}
+        act = str(b.get("action", "")).lower()
+        if act in ("cut", "auto"):
+            try:
+                me = int(b.get("me"))
+            except (TypeError, ValueError):
+                return jsonify({"ok": False, "error": "which M/E?"}), 400
+            st = _atem.state()
+            if not st["connected"]:
+                return jsonify({"ok": False, "error": "the One is not connected to the switcher"}), 409
+            if not any(m["n"] == me for m in st["mes"]):
+                return jsonify({"ok": False, "error": f"this switcher has no M/E {me}"}), 400
+            was = next(m for m in st["mes"] if m["n"] == me)
+            _atem.transition(me, act)
+            _audit("ATEM_ME", f"{request.remote_addr}: M/E {me} {act.upper()}")
+            for _ in range(10):     # a cut swaps program and preview at once; an auto starts moving
+                time.sleep(0.05)
+                now = next((m for m in _atem.state()["mes"] if m["n"] == me), was)
+                if now["program"] != was["program"] or now["transition"]:
+                    break
+            return jsonify({"ok": True, **_atem.state()})
         try:
-            aux, src = int(b.get("aux")), int(b.get("source"))
-        except (TypeError, ValueError):
-            return jsonify({"ok": False, "error": "aux and source, as numbers"}), 400
+            src = int(b.get("source"))
+            aux = int(b["aux"]) if b.get("aux") is not None else None
+            me = int(b["me"]) if b.get("me") is not None else None
+        except (TypeError, ValueError, KeyError):
+            return jsonify({"ok": False, "error": "aux (or me and bus) and source, as numbers"}), 400
+        bus = str(b.get("bus", "")).lower()
         st = _atem.state()
         if not st["connected"]:
             return jsonify({"ok": False, "error": "the One is not connected to the switcher"}), 409
-        if not any(a["n"] == aux for a in st["auxes"]):
-            return jsonify({"ok": False, "error": f"this switcher has no aux {aux}"}), 400
         if not any(x["id"] == src for x in st["sources"]):
             return jsonify({"ok": False, "error": "the switcher has no such source"}), 400
-        _atem.route(aux, src)
         name = next((x["long"] for x in st["sources"] if x["id"] == src), str(src))
-        _audit("ATEM_AUX", f"{request.remote_addr}: aux {aux} -> {name}")
-        # the switcher answers with AuxS; give it a moment so the reply is the new state
+        if aux is not None:
+            if not any(a["n"] == aux for a in st["auxes"]):
+                return jsonify({"ok": False, "error": f"this switcher has no aux {aux}"}), 400
+            _atem.route(aux, src)
+            _audit("ATEM_AUX", f"{request.remote_addr}: aux {aux} -> {name}")
+            done = lambda s: any(a["n"] == aux and a["source"] == src for a in s["auxes"])
+        elif me is not None and bus in ("program", "preview"):
+            if not any(m["n"] == me for m in st["mes"]):
+                return jsonify({"ok": False, "error": f"this switcher has no M/E {me}"}), 400
+            _atem.route_me(me, bus, src)
+            _audit("ATEM_ME", f"{request.remote_addr}: M/E {me} {bus} -> {name}")
+            done = lambda s: any(m["n"] == me and m[bus] == src for m in s["mes"])
+        else:
+            return jsonify({"ok": False, "error": "say aux, or me with bus program or preview"}), 400
+        # the switcher answers with AuxS / PrgI / PrvI; wait a moment so the reply is the new state
         for _ in range(10):
             time.sleep(0.05)
-            if any(a["n"] == aux and a["source"] == src for a in _atem.state()["auxes"]):
+            if done(_atem.state()):
                 break
     return jsonify({"ok": True, **_atem.state()})
 
