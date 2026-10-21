@@ -2643,6 +2643,30 @@
         </div>
       </div>
 
+      <!-- The ATEM the touch page's ATEM Router follows, chosen here too (Rob,
+           2026-10-22: "add it"). One switcher for the whole unit. -->
+      <div class="field full-only">
+        <div class="section-label">ATEM switcher</div>
+        <div class="local-panel">
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap">
+            <span class="status-badge missing" id="atem-badge">Not set</span>
+            <span style="font-size:13px; color:var(--muted)" id="atem-note"></span>
+          </div>
+          <div id="atem-found" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px"></div>
+          <div class="channel-row" style="margin-top:12px">
+            <span class="channel-label">Address</span>
+            <input type="text" id="atem-ip" placeholder="192.168.10.240" inputmode="decimal"
+                   style="flex:1; min-width:0" autocomplete="off" spellcheck="false">
+            <button class="btn-sm success" onclick="atemUse(document.getElementById('atem-ip').value)">Use</button>
+            <button class="btn-sm" onclick="atemFind()">Find</button>
+            <button class="btn-sm" id="atem-stop" style="display:none" onclick="atemStop()">Stop following</button>
+          </div>
+          <div class="external-url-hint" style="display:block; margin-top:8px">The touch page's ATEM Router follows this switcher:
+            every M/E and aux output, routed from an iPad. Find lists the ATEM your Companion already uses and any ATEM on the network.
+            The One talks to the switcher itself, so the router works without Companion and does not take its connection.</div>
+        </div>
+      </div>
+
       </div><!-- /tpane-companion -->
       <div class="tpane full-only" id="tpane-network">
       <!-- Network (IP) -->
@@ -5989,6 +6013,49 @@
   function openCompanion() {
     openPanel(`http://${compHost()}:8000`, 'Companion');
   }
+  // ── the ATEM the touch page's router follows ──
+  async function atemPaint() {
+    try {
+      const d = await (await fetch('/api/v1/one/router', { cache: 'no-store' })).json();
+      const b = document.getElementById('atem-badge'), n = document.getElementById('atem-note');
+      if (!b) return;
+      b.textContent = !d.ip ? 'Not set' : d.connected ? 'Connected' : 'Connecting';
+      b.className = 'status-badge ' + (d.ip && d.connected ? 'running' : 'missing');
+      n.textContent = !d.ip ? 'Pick the switcher below, or type its address.'
+        : (d.product ? d.product + ' · ' : '') + d.ip + (d.connected ? ' · ' + (d.mes || []).length + ' M/E, ' + (d.auxes || []).length + ' aux' : (d.why ? ' · ' + d.why : ''));
+      const ip = document.getElementById('atem-ip');
+      if (ip && document.activeElement !== ip && !ip.value) ip.value = d.ip || '';
+      document.getElementById('atem-stop').style.display = d.ip ? '' : 'none';
+    } catch (e) {}
+  }
+  async function atemFind() {
+    const el = document.getElementById('atem-found');
+    el.innerHTML = '<span style="font-size:13px; color:var(--muted)">Looking in Companion and on the network…</span>';
+    try {
+      const d = await (await fetch('/api/v1/one/router/atem', { cache: 'no-store' })).json();
+      const f = d.found || [];
+      el.innerHTML = f.length ? f.map(x => '<button class="btn-sm" onclick="atemUse(\'' + x.ip + '\')">' +
+          fxEsc(x.name) + ' · ' + fxEsc(x.ip) + ' <span style="color:var(--muted)">(' + fxEsc(x.from) + ')</span></button>').join('')
+        : '<span style="font-size:13px; color:var(--muted)">None found by itself. Type its address.</span>';
+    } catch (e) { el.innerHTML = ''; }
+  }
+  async function atemUse(ip) {
+    ip = String(ip || '').trim();
+    if (!ip) { showToast('Type the switcher\'s address, or Find it.', 'warning'); return; }
+    const r = await fetch('/api/v1/one/router/atem', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ip }) });
+    const d = await r.json().catch(() => ({}));
+    if (!d.ok) { showToast(d.error || 'Not changed.', 'error'); return; }
+    document.getElementById('atem-ip').value = ip;
+    showToast('Following the switcher at ' + ip + '.', 'success');
+    atemPaint(); setTimeout(atemPaint, 2000);
+  }
+  async function atemStop() {
+    if (!confirm('Stop following the switcher? The touch page\'s ATEM Router goes blank until one is chosen again.')) return;
+    const r = await fetch('/api/v1/one/router/atem', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ip: '' }) });
+    const d = await r.json().catch(() => ({}));
+    if (d.ok) { document.getElementById('atem-ip').value = ''; showToast('Not following a switcher.', 'success'); atemPaint(); }
+  }
+
   let emulatorId = '';
   async function setEmulatorId() {
     const id = document.getElementById('emulator-id').value.trim();
@@ -6445,6 +6512,7 @@
     // top-anchored page: a tab switch puts the chrome back at the top
     if (window.scrollY > 0) window.scrollTo(0, 0);
     try { localStorage.setItem('ds1-setup-tab', t); } catch (e) {}
+    if (t === 'companion') { atemPaint(); if (!window._atemFound) { window._atemFound = true; atemFind(); } }
     // returning to the previews after a visit elsewhere - re-arm virtual tiles
     if (t === 'displays' && window._lastSetupTab && window._lastSetupTab !== 'displays')
       reviveVirtualPreviews();
