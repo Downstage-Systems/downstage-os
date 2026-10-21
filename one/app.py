@@ -6148,6 +6148,51 @@ def fleet_cue_timer_source():
     return jsonify({"ok": True, "source": src if src in _TIMER_SOURCES else None})
 
 
+def _relay_light(rip, lid):
+    """One carried light as its Relay lists it ({} when it does not)."""
+    status, ans = _relay_api(rip, f"cue/{lid}")
+    c = ans.get("cue") if isinstance(ans.get("cue"), dict) else ans
+    if status != 200 or not c.get("id"):
+        status, ans = _relay_api(rip, "cues")
+        c = next((x for x in (ans.get("cues") or []) if str(x.get("id")) == lid), {})
+    return c if isinstance(c, dict) else {}
+
+
+@app.route("/fleet/cue/camop", methods=["GET", "POST"])
+def fleet_cue_camop():
+    """Cam Op Mode on a Cue Lite (Rob, 2026-10-22: "add the cam op toggle to
+    all web guis/relay/one and the lite gui"): its screen held on its tally
+    page, no menus and no presses, a padlock in its top bar; held 3 s on its
+    glass, it unlocks. It is the light's lock set to "tally", through the
+    Relay that carries it (Relay and Lite 0.164.0). A light that does not
+    report "lock", or is not a Lite, answers on null and gets no switch."""
+    b = (request.get_json(silent=True) or {}) if request.method == "POST" else request.args
+    rip, lid = str(b.get("relay", "") or ""), str(b.get("id", "") or "")
+    try:
+        ipaddress.ip_address(rip)
+    except Exception:
+        return jsonify({"ok": False, "error": "bad ip"}), 400
+    if not re.fullmatch(r"[A-Za-z0-9_-]{1,40}", lid):
+        return jsonify({"ok": False, "error": "which light"}), 400
+    want = None
+    if request.method == "POST":
+        want = bool(b.get("on"))
+        status, ans, _n = _relay_cue_post(rip, lid, {"lock": "tally" if want else "off"})
+        if status != 200 or not ans.get("ok", True):
+            return jsonify({"ok": False, "error": ans.get("error") or f"the Relay answered {status}"}), 200
+        _audit("CUE_CAMOP", f"{lid} via {rip} -> {'on' if want else 'off'}")
+    # the Relay hands it on over CueLink; read until the light says so (as timer source)
+    deadline = time.time() + (4 if want is not None else 0)
+    while True:
+        c = _relay_light(rip, lid)
+        lock = c.get("lock")
+        on = None if lock is None or str(c.get("model", "")).lower() != "lite" else lock == "tally"
+        if want is None or on == want or time.time() > deadline:
+            break
+        time.sleep(0.5)
+    return jsonify({"ok": True, "on": on, "lock": lock})
+
+
 @app.route("/fleet/cue/label", methods=["POST"])
 def fleet_cue_label():
     """Rename a Cue light from the fleet card. The light restarts to

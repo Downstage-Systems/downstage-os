@@ -4364,7 +4364,7 @@
       // One's timer by itself, a swipe from its tally, so no light needs to be
       // driven by the timer. Pointing a light at this One's Companion - for a
       // Companion that runs here - is a link in Details instead.
-      cueWhereSec(u, i) + cueTimerSrcSec(u, i) +
+      cueWhereSec(u, i) + cueTimerSrcSec(u, i) + cueCamOpSec(u, i) +
       ((L.enabled !== undefined || i.noIp) ? '<div class="fx-sec"><div class="fx-h">CueLink</div>' +
         // the link's own buttons and these share one row
         (link.includes('id="fx-link-btns"') ? link.replace(/<\/div>$/, shareBtn + offBtn + '</div>')
@@ -4463,6 +4463,54 @@
                 : t.source === mode ? cueInfo(u).name + ': ' + W[mode] + ' timer.'
                 : 'Sent. ' + cueInfo(u).name + ' still says ' + (W[t.source] || 'nothing') + ': check it in a moment.',
                 !d.ok ? 'error' : t.source === mode ? 'success' : 'warning');
+    } catch (e) { showToast('Could not reach the One.', 'error'); }
+    t.busy = false; if (_fxOpen) fxSheet();
+  }
+  // ---- Cam Op Mode: a Cue Lite held on its tally page ----
+  // (Rob, 2026-10-22: "add the cam op toggle to all web guis/relay/one and
+  // the lite gui"; Relay and Lite 0.164.0.) The light's lock set to "tally",
+  // through the Relay that carries it. Only a Lite that reports a lock gets it.
+  let _fxCamOp = {};   // light serial -> {on, at, busy, loading}
+  function cueCamOpSec(u, i) {
+    if (i.kind !== 'camera') return '';
+    const w = cueTsrcWhere(u, i);
+    if (!w || !w.relay) return '';
+    const t = _fxCamOp[u.serial];
+    if (!t || Date.now() - t.at > 15000) cueCamOpLoad(u.serial, { relay: w.relay, id: w.id });
+    if (!t || t.on === null || t.on === undefined) return '';
+    return '<div class="fx-sec"><div class="fx-h">Cam Op Mode</div>' +
+      '<div class="toggle-row"><span class="toggle-label">Tally only, no menus; held 3 s on its glass, it unlocks.</span>' +
+      '<button class="toggle' + (t.on ? ' on' : '') + '"' + (t.busy ? ' disabled' : '') + ' aria-pressed="' + !!t.on + '" title="Cam Op Mode" ' +
+      'onclick="cueCamOpSet(\'' + u.serial + '\',' + !t.on + ')"></button></div></div>';
+  }
+  async function cueCamOpLoad(key, where) {
+    const t = _fxCamOp[key] || (_fxCamOp[key] = { on: null, at: 0 });
+    if (t.loading) return;
+    t.loading = true; t.at = Date.now();
+    try {
+      const d = await (await fetch('/fleet/cue/camop?' + new URLSearchParams(where))).json();
+      const was = t.on;
+      if (d.ok) t.on = d.on;
+      if (_fxOpen && t.on !== was) fxSheet();
+    } catch (e) {}
+    t.loading = false;
+  }
+  async function cueCamOpSet(key, on) {
+    const u = ((_fxData && _fxData.units) || []).find(x => (x.serial || x.ip) === key);
+    const t = _fxCamOp[key];
+    if (!u || !t) return;
+    const w = cueTsrcWhere(u, cueInfo(u));
+    if (!w || !w.relay) return;
+    t.busy = true; if (_fxOpen) fxSheet();
+    try {
+      const d = await (await fetch('/fleet/cue/camop', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ relay: w.relay, id: w.id, on }) })).json();
+      if (d.ok) { t.on = d.on; t.at = Date.now(); }
+      const nm = cueInfo(u).name;
+      showToast(!d.ok ? 'Not changed: ' + (d.error || 'no answer')
+                : t.on === on ? nm + (on ? ': Cam Op Mode on.' : ': Cam Op Mode off.')
+                : 'Sent. ' + nm + ' has not confirmed yet: check it in a moment.',
+                !d.ok ? 'error' : t.on === on ? 'success' : 'warning');
     } catch (e) { showToast('Could not reach the One.', 'error'); }
     t.busy = false; if (_fxOpen) fxSheet();
   }
