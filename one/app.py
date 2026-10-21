@@ -2498,7 +2498,10 @@ def _atem_from_companion():
     import sqlite3
     import tempfile
     found = []
-    for db in sorted(_companion_dbs(), reverse=True)[:1]:
+    def _ver(pth):
+        m = re.search(r"/v(\d+)\.(\d+)/", str(pth))
+        return (int(m.group(1)), int(m.group(2))) if m else (0, 0)
+    for db in sorted(_companion_dbs(), key=_ver, reverse=True)[:1]:
         tmp = tempfile.mkdtemp(prefix="ds-atem-")
         try:
             subprocess.run(["sudo", "sh", "-c",
@@ -2516,7 +2519,9 @@ def _atem_from_companion():
             con.close()
             # the connection's host sits near its module name, before or after it
             # depending on the Companion version: take the nearest one either side
-            host_re = re.compile(r'"host"\s*:\s*"([0-9]{1,3}(?:\.[0-9]{1,3}){3})"')
+            # "host" when typed in Companion; "bonjourHost" ("ip:9910") when it
+            # was picked from Companion's list of switchers found (0001's ATEM)
+            host_re = re.compile(r'"(?:host|bonjourHost)"\s*:\s*"([0-9]{1,3}(?:\.[0-9]{1,3}){3})(?::[0-9]+)?"')
             for blob in text:
                 for m in re.finditer(r'"bmd-atem"', blob):
                     lo = max(0, m.start() - 1500)
