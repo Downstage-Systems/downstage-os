@@ -179,6 +179,11 @@
   .srcs .btn { min-height: 72px; flex-direction: column; gap: 2px; font-size: 16px; }
   .srcs .btn.on { border-color: var(--green); box-shadow: inset 0 0 0 1px var(--green); }
   .looks { display: flex; flex-wrap: wrap; gap: 10px; }
+  .ctopts { display: grid; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--rule); }
+  .ctopts .toggle { min-height: 56px; text-align: left; }
+  .ctcol { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; padding: 0 18px; border-radius: var(--rb); background: var(--raised); border: 1px solid var(--edge); }
+  .ctcol input[type=color] { width: 72px; height: 40px; border: 1px solid var(--edge); border-radius: 6px; background: none; padding: 0; }
+  .ctmore { width: 100%; min-height: 52px; }
   .looks .btn { flex: 0 0 auto; min-width: 150px; }
 
   /* ── Router: the ATEM's auxes, a router panel ── */
@@ -881,7 +886,7 @@
   const srcName = k => (SOURCES.find(x => x[0] === k) || [0, { config: 'Setup page', external: 'Web page', custom: 'Custom view', '/info': 'Public info', '/op': 'Operator', '/cuesheet': 'Cue sheet', '/rundown': 'Rundown', '/timeline': 'Timeline' }[k] || (String(k || '').startsWith('pattern') ? 'Test pattern' : k || '-')])[1];
   function paintOutputs() {
     const s = S.status || {}, bo = s.blackout_outputs || [], hc = s.hdmi_connected || {}, names = s.hdmi_names || {};
-    const sig = JSON.stringify([s.hdmi1_source, s.hdmi2_source, bo, hc, names]);
+    const sig = JSON.stringify([s.hdmi1_source, s.hdmi2_source, bo, hc, names, S.ct, S.ctOpen]);
     if (sig === S.outSig) return;
     S.outSig = sig;
     $('o-outs').innerHTML = [1, 2].map(n => {
@@ -895,9 +900,41 @@
         '<button class="toggle' + (dark ? ' on' : '') + '" data-act="blackOne" data-arg="' + n + '"><span>Black out HDMI ' + n + '</span><span class="sw"></span></button>' +
         '<div class="srcs">' + SOURCES.map(([k, label]) =>
           '<button class="btn hold' + (k === cur ? ' on' : '') + '" data-hold="500" data-act="source" data-arg="' + n + '|' + esc(k) + '">' + esc(label) + '</button>').join('') + '</div>' +
-        '<p class="note">Hold a source to put it on HDMI ' + n + '.</p></div>';
+        '<p class="note">Hold a source to put it on HDMI ' + n + '.</p>' + ctPanel(n) + '</div>';
     }).join('');
   }
+  // the Custom timer's look, per HDMI, as the Browser view's Custom Timer chip
+  // (Rob, 2026-10-22: "i dont see a way to edit the custom views on the ipad").
+  // A change shows at once on an output showing it; the iPad's full timer
+  // uses HDMI 1's.
+  S.ctOpen = {};
+  const CT_FLAGS = [['freeze', 'Freeze at 00:00', 'instead of counting up into overtime'], ['hideprogress', 'Hide progress bar', ''],
+                    ['hideclock', 'Hide time of day', ''], ['hidecards', 'Hide message cards', ''], ['hidephase', 'Hide phase colours', 'the warning and overtime colours']];
+  async function loadCt() { try { const d = await getJSON('/displays/custom-timer'); if (d.ok) { S.ct = d.outputs; S.outSig = ''; paintOutputs(); } } catch (e) {} }
+  function ctPanel(n) {
+    const o = (S.ct || {})[n];
+    if (!o) return '';
+    const open = !!S.ctOpen[n];
+    let h = '<button class="btn ctmore" data-act="ctOpen" data-arg="' + n + '" style="margin-top:12px">Custom timer options' + (open ? ' ▴' : ' ▾') + '</button>';
+    if (!open) return h;
+    h += '<div class="ctopts">' + CT_FLAGS.map(([k, label, sub]) =>
+      '<button class="toggle' + (o[k] ? ' on' : '') + '" data-act="ctFlag" data-arg="' + n + '|' + k + '"><span>' + label +
+        (sub ? '<br><small class="dim" style="font-size:13px">' + sub + '</small>' : '') + '</span><span class="sw"></span></button>').join('') +
+      '<label class="ctcol"><span>Key colour <small class="dim">(the background: black for direct video, or your chroma key)</small></span>' +
+        '<input type="color" data-ct="' + n + '|keycolour" value="#' + esc(o.keycolour) + '"></label>' +
+      '<label class="ctcol"><span>Timer colour</span><input type="color" data-ct="' + n + '|timercolour" value="#' + esc(o.timercolour) + '"></label>' +
+      '<p class="note">' + (n === 1 ? 'The iPad\'s full timer uses these too. ' : '') + 'Shows at once on HDMI ' + n + ' when it is on the Custom timer.</p></div>';
+    return h;
+  }
+  async function ctSet(n, body) {
+    const d = await post('/displays/custom-timer', Object.assign({ output: +n }, body));
+    if (d.ok) { S.ct = d.outputs; S.outSig = ''; paintOutputs(); if (+n === 1) { const fr = $('ft-frame'); if (fr) fr.dataset.src = ''; } }
+  }
+  document.addEventListener('change', e => {
+    const el = e.target.closest('input[data-ct]'); if (!el) return;
+    const [n, k] = el.dataset.ct.split('|');
+    ctSet(n, { [k]: el.value.replace('#', '') });
+  });
   async function loadLooks() {
     try {
       const d = await getJSON('/presets');
@@ -1160,6 +1197,8 @@
     ftOpen() { ftOpen(); }, ftClose() { ftClose(); },
     ftView(v) { store.set('ds_ft_view2', v); paintTools(); },
     deckSize(v) { store.set('ds_deck', v); paintDeck(); },
+    ctOpen(n) { S.ctOpen[n] = !S.ctOpen[n]; S.outSig = ''; paintOutputs(); },
+    ctFlag(arg) { const [n, k] = arg.split('|'), o = (S.ct || {})[n] || {}; ctSet(n, { [k]: !o[k] }); },
     rtPick(key) { S.rtDest = key; store.set('ds_router_dest', key); S.rtSig = ''; paintRouter(); },
     async rtTrans(arg) {
       const [me, kind] = arg.split(':');
@@ -1190,6 +1229,19 @@
     pinCancel() { $('pin-scrim').classList.remove('on'); const w = S.pinWait; S.pinWait = null; w && w(false); },
   };
 
+  // after a hold has fired, the lift (and the click Safari makes of it) lands
+  // on whatever is now under the finger: eat it, before anything else sees it
+  // (however long the finger stays down after the hold: the lift, then the
+  // one click made of it, then nothing more)
+  for (const ev of ['pointerup', 'touchend', 'mouseup', 'click']) {
+    document.addEventListener(ev, e => {
+      const w = S.swallow;
+      if (!w || Date.now() > w.until) { S.swallow = null; return; }
+      e.preventDefault(); e.stopPropagation();
+      if (ev === 'click') S.swallow = null;
+      else if (w.lift) S.swallow = { lift: false, until: Date.now() + 700 };   // the click follows within a moment
+    }, true);
+  }
   // taps: [data-act] that is not a hold
   document.addEventListener('click', e => {
     const b = e.target.closest('[data-act], [data-tab]');
@@ -1206,6 +1258,9 @@
     b.style.setProperty('--hold', ms + 'ms');
     b.classList.add('holding');
     held = { b, t: setTimeout(() => { b.classList.remove('holding'); held = null; if (navigator.vibrate) navigator.vibrate(20);
+                                      // the finger is still down: what it lifts on must not be pressed too
+                                      // (the ✕ closes the full timer, and the lift landed on Browser; Rob, 2026-10-22)
+                                      S.swallow = { lift: true, until: Date.now() + 15000 };
                                       const f = A[b.dataset.act]; if (f) f(b.dataset.arg); }, ms) };
   });
   const letGo = () => { if (!held) return; clearTimeout(held.t); held.b.classList.remove('holding'); held = null; };
@@ -1219,7 +1274,7 @@
     for (const b of document.querySelectorAll('#tabs button')) b.classList.toggle('on', b.dataset.tab === t);
     for (const p of document.querySelectorAll('.page')) p.classList.toggle('on', p.id === 'pg-' + t);
     if (t === 'deck') paintDeck();
-    if (t === 'outputs') { S.outSig = ''; paintOutputs(); loadLooks(); }
+    if (t === 'outputs') { S.outSig = ''; paintOutputs(); loadLooks(); loadCt(); }
     if (t === 'rig') { S.rigSig = ''; paintRig(); pollFleet(); }
     if (t === 'router') { S.rtSig = ''; pollRouter(); }
     if (t === 'tools') paintTools();

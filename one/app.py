@@ -2333,6 +2333,45 @@ def custom_view():
     return render_template("custom_view.html")
 
 
+_CT_FLAGS = ("freeze", "hideprogress", "hideclock", "hidecards", "hidephase")
+
+
+@app.route("/displays/custom-timer", methods=["GET", "POST"])
+def displays_custom_timer():
+    """The Custom Timer's options for each HDMI, read and changed one at a
+    time (Rob, 2026-10-22: "i dont see a way to edit the custom views on the
+    ipad"). /save would rewrite everything it is not sent, so the touch page
+    changes just these: POST {"output": 1, "hideclock": true, "keycolour":
+    "00ff00", ...}. An output showing the Custom Timer reloads with them;
+    nothing else moves (its window signature is its URL)."""
+    if request.method == "POST":
+        b = request.get_json(silent=True) or {}
+        try:
+            n = int(b.get("output", 0))
+        except (TypeError, ValueError):
+            n = 0
+        if n not in (1, 2):
+            return jsonify({"ok": False, "error": "output is 1 or 2"}), 400
+        upd = {f"hdmi{n}_ct_{k}": bool(b[k]) for k in _CT_FLAGS if k in b}
+        for k, d in (("keycolour", "000000"), ("timercolour", "ffffff")):
+            if k in b:
+                upd[f"hdmi{n}_ct_{k}"] = _hex6(b[k], d)
+        if not upd:
+            return jsonify({"ok": False, "error": "nothing to change"}), 400
+        save_config(upd)
+        _audit("CUSTOM_TIMER", f"{request.remote_addr}: HDMI {n} {upd}")
+        if load_config().get(f"hdmi{n}_source") == "cleantimer":
+            threading.Thread(target=launch_all_windows, daemon=True).start()
+    cfg = load_config()
+    out = {}
+    for n in (1, 2):
+        o = {k: bool(cfg.get(f"hdmi{n}_ct_{k}", True)) for k in _CT_FLAGS}
+        o["keycolour"] = _hex6(cfg.get(f"hdmi{n}_ct_keycolour"), "000000")
+        o["timercolour"] = _hex6(cfg.get(f"hdmi{n}_ct_timercolour"), "ffffff")
+        out[str(n)] = o
+    return jsonify({"ok": True, "outputs": out})
+
+
 @app.route("/view/custom-timer")
 def custom_timer_view():
     """The Custom Timer, as HDMI 1 shows it (or ?output=2), for a screen that
@@ -4472,7 +4511,7 @@ _RIG_LOCKED = {
     "/blackout", "/blackout/clear", "/api/v1/one/output",
     "/api/v1/one/router", "/api/v1/one/router/atem",      # what the ATEM's auxes show
     "/presets/apply", "/presets/save", "/presets/delete",
-    "/displays/source", "/displays/swap", "/displays/testcard", "/displays/identify",
+    "/displays/source", "/displays/custom-timer", "/displays/swap", "/displays/testcard", "/displays/identify",
     "/displays/resync", "/save", "/mode", "/reset", "/desktop", "/refresh",
     "/unit-name", "/fleet/relay/unpair",
 }
