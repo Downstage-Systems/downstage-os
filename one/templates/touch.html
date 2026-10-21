@@ -874,7 +874,7 @@
 
   // ── Outputs ──
   const SOURCES = [
-    ['/timer', 'Stage timer'], ['cleantimer', 'Clean timer'], ['/countdown', 'Countdown'],
+    ['cleantimer', 'Custom timer'], ['/timer', 'Stage timer'], ['/countdown', 'Countdown'],
     ['/backstage', 'Backstage'], ['/studio', 'Studio clock'], ['aux1', 'Aux timer 1'],
     ['companion', 'Companion'], ['welcome', 'Unit info'], ['off', 'Off'],
   ];
@@ -1035,15 +1035,18 @@
                                ['Hotspot', s.hotspot_active ? 'On · ' + (s.hotspot_ssid || '') : 'Off']]);
     $('t-unit').innerHTML = kv([['Name', s.name], ['Serial', s.serial], ['Downstage OS', s.os_version],
                                 ['Temperature', s.cpu_temp ? Math.round(s.cpu_temp) + ' °C' : ''], ['Up', s.uptime ? (typeof s.uptime === 'number' ? upFor(s.uptime) : s.uptime) : '']]);
-    const v = store.get('ds_ft_view', '/timer');
+    const v = ftView();
     $('t-ftview').innerHTML = FTVIEWS.map(([k, label]) => '<button class="' + (k === v ? 'on' : '') + '" data-act="ftView" data-arg="' + k + '" style="height:56px">' + label + '</button>').join('');
   }
 
   // ── full timer ──
-  const FTVIEWS = [['/timer', 'Stage timer'], ['/countdown', 'Countdown'], ['/backstage', 'Backstage'], ['aux1', 'Aux timer 1']];
+  // the Custom timer is the default (Rob, 2026-10-22): HDMI 1's, with its key
+  // colour, timer colour and hide options from the Browser view's Displays tab
+  const FTVIEWS = [['custom', 'Custom timer'], ['/timer', 'Stage timer'], ['/countdown', 'Countdown'], ['/backstage', 'Backstage'], ['aux1', 'Aux timer 1']];
+  function ftView() { const v = store.get('ds_ft_view2', 'custom'); return FTVIEWS.some(x => x[0] === v) ? v : 'custom'; }
   function ftUrl() {
-    const v = store.get('ds_ft_view', '/timer');
-    return v === 'aux1' ? '/view/aux?n=1' : 'http://' + HOST + ':4001' + v;
+    const v = ftView();
+    return v === 'custom' ? '/view/custom-timer' : v === 'aux1' ? '/view/aux?n=1' : 'http://' + HOST + ':4001' + v;
   }
   let hintT = 0;
   function ftOpen() {
@@ -1155,7 +1158,7 @@
     async postTo(path) { const d = await post(path, {}); if (d.ok !== false) toast(d.message || 'Done.'); },
     open(where) { window.open('http://' + HOST + where, '_blank'); },
     ftOpen() { ftOpen(); }, ftClose() { ftClose(); },
-    ftView(v) { store.set('ds_ft_view', v); paintTools(); },
+    ftView(v) { store.set('ds_ft_view2', v); paintTools(); },
     deckSize(v) { store.set('ds_deck', v); paintDeck(); },
     rtPick(key) { S.rtDest = key; store.set('ds_router_dest', key); S.rtSig = ''; paintRouter(); },
     async rtTrans(arg) {

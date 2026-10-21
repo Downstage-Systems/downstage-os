@@ -2333,6 +2333,21 @@ def custom_view():
     return render_template("custom_view.html")
 
 
+@app.route("/view/custom-timer")
+def custom_timer_view():
+    """The Custom Timer, as HDMI 1 shows it (or ?output=2), for a screen that
+    is not the One's: the touch page's full timer on an iPad by the desk
+    (Rob, 2026-10-22: "make the default full timer the custom view"). OnTime's
+    timer view with that output's key colour, timer colour and hide options."""
+    try:
+        n = 2 if int(request.args.get("output", 1)) == 2 else 1
+    except ValueError:
+        n = 1
+    host = request.host.rsplit(":", 1)[0]
+    from flask import redirect
+    return redirect(f"http://{host}:4001/timer/?" + _cleantimer_params(n), code=302)
+
+
 def _timer_control_ok():
     """May this request drive the timer? "Lights control timer" is the
     choice that lets a light's touchscreen stop the show clock (off as the
