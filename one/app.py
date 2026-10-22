@@ -4894,7 +4894,11 @@ def fleet_relay_light():
         return jsonify({"ok": False, "error": "bad ip"}), 400
     body = {k: v for k, v in (b.get("set") or {}).items()
             if k in ("number", "text", "brightness", "talent", "identify", "name", "lock",
-                     "release", "follow", "tally", "color", "pattern", "clear")}
+                     "release", "follow", "tally", "color", "pattern", "clear",
+                     # the Slate Plus's light sheet, on the touch page too (2026-10-22):
+                     # the word under its number, words for 10 / 30 s or until
+                     # cleared, mirroring another light, a tap pressing its key
+                     "tallyWord", "message", "messageSecs", "mirror", "touchPress")}
     if not body:
         return jsonify({"ok": False, "error": "nothing to set"}), 400
     if not light and b.get("n") is None:
@@ -4932,7 +4936,8 @@ def fleet_relay_unpair():
 # An allowlist rather than a passthrough: this unit will proxy these and
 # nothing else.
 RELAY_API_GET = {"device", "cues", "offers", "job", "check", "status"}
-RELAY_API_POST = {"offers", "adopt", "switch", "job", "check", "identify"}
+RELAY_API_POST = {"offers", "adopt", "switch", "job", "check", "identify",
+                  "alert"}   # every light it carries pulses red (the touch page's Alert all)
 
 
 def _relay_api(ip, path, body=None, method="GET", timeout=8):

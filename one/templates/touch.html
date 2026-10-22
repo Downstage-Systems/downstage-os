@@ -246,18 +246,70 @@
   .rt-find { display: grid; gap: 10px; max-width: 560px; }
   .rt-find input { height: 60px; padding: 0 16px; border-radius: var(--rb); border: 1px solid var(--edge); background: var(--ground); color: var(--text); font: 600 22px var(--fd); }
 
-  /* ── Rig ── */
+  /* ── Rig: the Slate Plus's Lights page at tablet size (Rob, 2026-10-22: "i
+     really like the lights section on that ... lets use some features from
+     the plus"): four figures, Talk and Alert all, a light asking to join,
+     a tile per light, and a sheet from the right with its settings ── */
+  .rigtop { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) auto; gap: 14px; align-items: center; padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid var(--rule); }
+  .rigtop .st small { display: block; font-size: 13px; color: var(--muted); }
+  .rigtop .st em { display: block; font: 700 30px/1.1 var(--fd); font-style: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rigtop .st span { display: block; font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rigtop .st.ok em { color: var(--green); } .rigtop .st.air em { color: var(--red); } .rigtop .st.warn em { color: var(--amber); }
+  .rigtop .acts { display: flex; gap: 10px; }
+  .rigtop .acts .btn { min-height: 64px; min-width: 130px; }
+  .offer { display: flex; align-items: center; gap: 12px; padding: 12px 16px; margin-bottom: 14px; border-radius: var(--r); background: var(--new-fill); color: var(--new-text); font-weight: 600; }
+  .offer span { flex: 1; } .offer .btn { min-height: 56px; min-width: 120px; }
   .lights { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
-  .light { min-height: 150px; padding: 16px; border-radius: var(--r); background: var(--panel); border: 2px solid var(--edge);
-    display: grid; grid-template-rows: auto 1fr auto; text-align: left; position: relative; }
-  .light .n { font: 700 54px/1 var(--fd); }
-  .light b { font: 700 21px var(--fd); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .light small { color: var(--muted); font-size: 13px; }
-  .light .tl { position: absolute; top: 14px; right: 14px; }
-  .light.program { border-color: var(--red); box-shadow: inset 0 0 0 999px rgba(229,72,77,.12); }
-  .light.preview { border-color: var(--green); box-shadow: inset 0 0 0 999px rgba(47,217,123,.10); }
-  .light.lit { border-color: var(--muted2); }
+  .light { min-height: 156px; padding: 14px 16px; border-radius: var(--r); background: var(--panel); border: 1px solid var(--edge);
+    display: grid; grid-template-rows: auto 1fr auto; gap: 6px; text-align: left; position: relative; }
+  .light .top { display: flex; justify-content: space-between; align-items: flex-start; }
+  .light .n { font: 700 46px/1 var(--fd); }
+  .light .who { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .light .who b { font: 700 21px var(--fd); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .light .who small { color: var(--muted); font-size: 13px; }
+  .light .face { width: 36px; height: 36px; flex: none; }
+  .light .foot { display: flex; justify-content: space-between; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .light.program { border-color: var(--red); background: #2A1416; }
+  .light.preview { border-color: var(--green); background: #10241A; }
   .light.gone { opacity: .45; }
+  .pill.stby { background: var(--warn-fill); color: var(--warn-text); }
+  .bars { display: inline-flex; align-items: flex-end; gap: 2px; height: 12px; margin-right: 6px; vertical-align: -1px; }
+  .bars i { width: 3px; background: var(--edge); border-radius: 1px; } .bars i.on { background: var(--muted); }
+  .bars.weak i.on { background: var(--amber); }
+  /* the sheet: from the right on an iPad, the whole glass on a phone */
+  #light-scrim { justify-content: flex-end; align-items: stretch; }
+  #light-sheet { width: min(600px, 100vw); max-height: none; height: 100%; border-radius: 0; border-width: 0 0 0 1px; overflow-y: auto;
+    padding: 18px 20px calc(24px + env(safe-area-inset-bottom)); animation: slidein .18s ease-out; }
+  @keyframes slidein { from { transform: translateX(40px); opacity: .4; } }
+  .lhead { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+  .lhead .face { width: 56px; height: 56px; flex: none; }
+  .lhead h3 { font: 700 28px var(--fd); display: flex; align-items: center; gap: 10px; }
+  .lhead p { color: var(--muted); font-size: 14px; }
+  .lhead .x { margin-left: auto; width: 56px; height: 56px; border-radius: 8px; background: var(--raised); border: 1px solid var(--edge); font-size: 20px; flex: none; }
+  .lacts { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 8px; }
+  .lacts .btn { min-height: 64px; }
+  .lset { display: grid; grid-template-columns: 150px 1fr; align-items: center; gap: 12px; min-height: 68px; padding: 6px 0; border-top: 1px solid var(--rule); }
+  .lset > span { color: var(--muted); font-size: 15px; }
+  .lset .val { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .lset .val small { color: var(--muted); font-size: 13px; }
+  .lset button.go { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 56px; text-align: left; font: 700 19px var(--fd); }
+  .lset button.go::after { content: '›'; color: var(--muted); font-size: 26px; font-weight: 400; }
+  .step { display: inline-flex; align-items: center; gap: 8px; }
+  .step .btn { min-height: 56px; min-width: 60px; font: 700 24px var(--fd); }
+  .step b { min-width: 64px; text-align: center; font: 700 26px var(--fd); }
+  .segs { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; width: 100%; }
+  .segs .btn { min-height: 56px; }
+  .segs .btn.on { border-color: var(--green); box-shadow: inset 0 0 0 1px var(--green); background: #10241A; color: var(--ok-text); }
+  .lset .toggle { min-height: 56px; padding: 0 14px; }
+  /* Talk and the button picker */
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chips .btn { min-height: 56px; }
+  .chips .btn.on { border-color: var(--green); box-shadow: inset 0 0 0 1px var(--green); }
+  .fgrid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
+  .fgrid button { aspect-ratio: 1; border-radius: 6px; background: #000; border: 1px solid #1d232a; overflow: hidden; padding: 0; position: relative; }
+  .fgrid button img { width: 100%; height: 100%; display: block; }
+  .fgrid button.on { outline: 3px solid var(--green); outline-offset: -1px; }
+  #grid-sheet { width: min(900px, 96vw); }
 
   /* ── Tools ── */
   .tools { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 16px; align-items: start; }
@@ -409,6 +461,16 @@
     .xl .keys, .xl .strip, .xl .dials { gap: 4px; }
     .sheet { padding: 16px; } .sheet.wide { width: 96vw; }
     .lrow .btn { min-height: 54px; font-size: 15px; }
+    /* the Rig on a phone: the figures two by two, Talk and Alert all a row of their own */
+    .rigtop { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .rigtop .st em { font-size: 24px; }
+    .rigtop .acts { grid-column: 1 / -1; } .rigtop .acts .btn { flex: 1; min-width: 0; }
+    .offer { flex-wrap: wrap; } .offer span { flex-basis: 100%; }
+    .lset { grid-template-columns: 1fr; gap: 6px; padding: 10px 0; }
+    .lacts .btn { min-height: 56px; }
+    .lhead h3 { font-size: 22px; flex-wrap: wrap; }
+    #light-sheet { padding: 14px 14px calc(20px + env(safe-area-inset-bottom)); }
+    .fgrid { gap: 4px; }
   }
 </style>
 {% endraw %}
@@ -593,11 +655,7 @@
     <div id="rt-body"></div>
   </section>
 
-  <section class="page" id="pg-rig">
-    <div class="h" id="r-sum"><b>Lights</b><span>Looking…</span></div>
-    <div class="lights" id="r-lights"></div>
-    <p class="note" style="margin-top:16px">Tap a light for its number, words, brightness and the rest.</p>
-  </section>
+  <section class="page" id="pg-rig"><div id="r-body"><p class="note">Looking for lights…</p></div></section>
 
   <section class="page" id="pg-tools">
     <div class="tools">
@@ -679,7 +737,28 @@
     <div id="pick-body"></div>
   </div>
 </div>
-<div class="scrim" id="light-scrim"><div class="sheet wide" id="light-sheet"></div></div>
+<div class="scrim" id="light-scrim"><div class="sheet" id="light-sheet"></div></div>
+<div class="scrim" id="grid-scrim">
+  <div class="sheet wide" id="grid-sheet">
+    <div class="shead"><div><h3 id="fg-title">Follows</h3><p class="note" id="fg-say"></p></div><button class="x" data-act="followClose" aria-label="Close">✕</button></div>
+    <div class="row" style="align-items:center; margin-bottom:12px">
+      <button class="btn" data-act="followPage" data-arg="-1" style="flex:0 0 72px">-</button>
+      <b id="fg-page" style="text-align:center; font: 700 22px var(--fd)">Page 1</b>
+      <button class="btn" data-act="followPage" data-arg="1" style="flex:0 0 72px">+</button>
+    </div>
+    <div class="fgrid" id="fg-grid"></div>
+    <button class="btn" data-act="followNone" style="width:100%; margin-top:12px">Not a button: its number</button>
+  </div>
+</div>
+<div class="scrim" id="talk-scrim">
+  <div class="sheet wide">
+    <div class="shead"><div><h3>Talk</h3><p class="note">Words on their faces: pick who, tap the words.</p></div><button class="x" data-act="talkClose" aria-label="Close">✕</button></div>
+    <div class="h"><b>To</b></div><div class="chips" id="tk-to"></div>
+    <div class="h" style="margin-top:14px"><b>For</b></div><div class="segs" id="tk-secs" style="margin-bottom:14px"></div>
+    <div class="h"><b>Words</b><span>tap to send · hold to remove</span></div><div class="srcs" id="tk-words" style="margin:0"></div>
+    <button class="btn" data-act="talkClear" style="width:100%; margin-top:14px">Clear their messages</button>
+  </div>
+</div>
 <div id="toast"></div>
 <video id="awake-v" src="/static/keepawake.mp4" muted playsinline loop preload="auto" style="position:fixed;width:1px;height:1px;opacity:0;pointer-events:none"></video>
 
@@ -1225,7 +1304,10 @@
       : '<p class="note">No looks yet: set the outputs as you want them, then Save current look.</p>';
   }
 
-  // ── Rig ──
+  // ── Rig: the Slate Plus's Lights page (Rob, 2026-10-22). What the lights
+  // are comes from the fleet; what a carried light is doing, from its Relay's
+  // list (tally, signal, battery, follow, lock...), read every two seconds
+  // while this tab is open. ──
   const rgb = c => /^#[0-9a-f]{6}$/i.test(c || '') ? [1, 3, 5].map(i => parseInt(c.substr(i, 2), 16)) : null;
   function tallyOf(col) {
     const c = rgb(col); if (!c || !(c[0] + c[1] + c[2])) return '';
@@ -1236,28 +1318,122 @@
   function lightsOf(d) {
     return ((d && d.units) || []).filter(u => u.product === 'Cue' && (u.ip || (((u.cue || {}).link || {}).relayed)));
   }
+  const relaysOf = () => ((S.fleet && S.fleet.units) || []).filter(u => u.product === 'Relay' && u.ip);
+  const lightKind = u => { const m = String((u && u.model) || 'Cue').replace(/^Downstage /, ''); return /lite|camera|pro/i.test(m) ? 'lite' : /360/.test(m) ? '360' : /mini|og/i.test(m) ? 'mini' : 'round'; };
+  S.relayData = {};   // relay ip -> {cues, status, offers, at}
+  async function pollRelays() {
+    await Promise.all(relaysOf().map(async r => {
+      try {
+        const [c, st, of] = await Promise.all([
+          getJSON2('/fleet/relay/api', { ip: r.ip, path: 'cues', method: 'GET' }),
+          getJSON2('/fleet/relay/api', { ip: r.ip, path: 'status', method: 'GET' }),
+          getJSON2('/fleet/relay/api', { ip: r.ip, path: 'offers', method: 'GET' })]);
+        S.relayData[r.ip] = { cues: c.cues || [], status: st, offers: of, at: Date.now() };
+      } catch (e) {}
+    }));
+    if (S.tab === 'rig') paintRig();
+    if (L.serial) paintLight();
+  }
+  // a read through the One's Relay proxy (a POST, but nothing changes: no toast, no PIN)
+  async function getJSON2(path, body) {
+    const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    return r.json();
+  }
+  // every light, as one record: the fleet's view, with its Relay's when it carries it
+  function rigLights() {
+    const out = [], seen = new Set();
+    const relays = relaysOf();
+    for (const u of lightsOf(S.fleet)) {
+      let r = null, cue = null;
+      for (const x of relays) {
+        const c = ((S.relayData[x.ip] || {}).cues || []).find(c => c.id === u.serial);
+        if (c && (c.carrier === x.serial || !cue)) { r = x; cue = c; if (c.carrier === x.serial) break; }
+      }
+      seen.add(u.serial);
+      out.push(rigRecord(u.serial, u, r, cue));
+    }
+    for (const x of relays) for (const c of ((S.relayData[x.ip] || {}).cues || [])) {
+      if (seen.has(c.id) || c.carrier !== x.serial) continue;
+      seen.add(c.id); out.push(rigRecord(c.id, null, x, c));
+    }
+    return out.sort((a, b) => (a.n || 99) - (b.n || 99) || String(a.name).localeCompare(b.name));
+  }
+  function rigRecord(id, u, r, cue) {
+    const carried = !!(cue && r && cue.carrier === r.serial);
+    const st = (cue && cue.state) || {};
+    const kind = lightKind(u || { model: cue && cue.model });
+    const c = (u && u.cue) || {};
+    const cam = c.camera !== undefined && c.camera !== null && +c.camera >= 0 ? +c.camera : null;
+    let tally = carried ? (st.tally === 'program' ? 'program' : st.tally === 'preview' ? 'preview' : '') : (u ? tallyOf(u.showing) : '');
+    if (tally === 'lit') tally = '';
+    const online = carried ? cue.online !== false : !!(u && u.health_ok !== false);
+    const model = String((u && u.model) || ({ cue: 'Downstage Cue', lite: 'Cue Lite', '360': 'Cue 360', mini: 'Cue Mini' }[cue && cue.model] || 'Cue')).replace(/^Downstage /, '');
+    return { id, u, r, cue, carried, st, kind, model, tally, online,
+             n: (cue && cue.n) || cam || 0, name: (cue && cue.name) || (u && u.name) || model,
+             level: cue ? cue.level : null, battery: cue ? cue.battery : null, charging: !!(cue && cue.charging),
+             fw: (cue && cue.fw) || (u && u.version) || '', colour: (u && u.showing) || st.color || '#000000' };
+  }
+  // a light drawn small, lit by its tally, as the Slate draws it
+  function faceSvg(x, cls) {
+    const col = x.tally === 'program' ? '#E5484D' : x.tally === 'preview' ? '#2FD97B' : '#0B0D10';
+    const ring = x.tally ? col : '#3A434D';
+    const k = x.kind;
+    const g = k === 'round' ? '<circle cx="24" cy="24" r="21" fill="#12161B" stroke="' + ring + '" stroke-width="2"/><circle cx="24" cy="24" r="16" fill="' + col + '"/>'
+      : k === 'lite' ? '<rect x="4" y="9" width="40" height="30" rx="6" fill="#12161B" stroke="' + ring + '" stroke-width="2"/><rect x="9" y="14" width="30" height="20" rx="3" fill="' + col + '"/>'
+      : k === '360' ? '<rect x="6" y="28" width="36" height="12" rx="3" fill="#12161B" stroke="#3A434D" stroke-width="2"/><rect x="12" y="12" width="24" height="16" rx="4" fill="' + (x.tally ? col : '#EEF1F3') + '"/>'
+      : '<rect x="10" y="10" width="28" height="28" rx="5" fill="#12161B" stroke="' + ring + '" stroke-width="2"/><rect x="16" y="16" width="16" height="16" rx="2" fill="' + col + '"/>';
+    return '<svg class="' + (cls || 'face') + '" viewBox="0 0 48 48" aria-hidden="true">' + g + '</svg>';
+  }
+  function barsOf(level) {
+    if (level === null || level === undefined) return '';
+    const n = level > -55 ? 4 : level > -65 ? 3 : level > -75 ? 2 : 1;
+    return '<span class="bars' + (n <= 1 ? ' weak' : '') + '">' + [5, 7, 9, 12].map((h, i) => '<i class="' + (i < n ? 'on' : '') + '" style="height:' + h + 'px"></i>').join('') + '</span>' + level + ' dBm';
+  }
+  function pillOf(x) {
+    if (!x.online) return '<span class="pill off">Not heard</span>';
+    if (x.tally === 'program') return '<span class="pill air">On air</span>';
+    if (x.tally === 'preview') return '<span class="pill ok">Preview</span>';
+    if (x.battery !== null && x.battery !== undefined && x.battery < 20 && !x.charging) return '<span class="pill warn">Low battery</span>';
+    return '<span class="pill stby">Standby</span>';
+  }
   function paintBarLights() {
-    const ls = lightsOf(S.fleet), air = ls.filter(u => tallyOf(u.showing) === 'program').length;
+    const air = rigLights().filter(x => x.tally === 'program').length;
     const p = $('b-air');
     p.hidden = !air; p.textContent = air + ' on air';
   }
   function paintRig() {
-    const ls = lightsOf(S.fleet);
-    const air = ls.filter(u => tallyOf(u.showing) === 'program').length;
-    $('r-sum').innerHTML = '<b>Lights</b><span>' + (ls.length ? ls.length + ' found' + (air ? ' · ' + air + ' on air' : ' · none on air') : 'none found on this network') + '</span>';
-    const sig = JSON.stringify(ls.map(u => [u.serial, u.name, u.showing, (u.cue || {}).camera, u.health_ok]));
-    if (sig === S.rigSig) return;
-    S.rigSig = sig;
-    $('r-lights').innerHTML = ls.map(u => {
-      const c = u.cue || {}, t = tallyOf(u.showing), L = c.link || {};
-      const cam = c.camera !== undefined && c.camera !== null && +c.camera >= 0 ? +c.camera : '';
-      const model = String(u.model || 'Cue').replace(/^Downstage /, '');
-      return '<button class="light ' + t + (u.health_ok === false ? ' gone' : '') + '" data-act="lightOpen" data-arg="' + esc(u.serial) + '">' +
-        '<span class="n">' + esc(cam === '' ? '·' : cam) + '</span>' +
-        '<span><b>' + esc(u.name || model) + '</b><br><small>' + esc(model) + (L.relayed ? ' · through ' + esc(L.via_name || L.via || 'its Relay') : '') + '</small></span>' +
-        '<span class="tl">' + (t === 'program' ? '<span class="pill air">On air</span>' : t === 'preview' ? '<span class="pill ok">Preview</span>' : '') + '</span>' +
-        '</button>';
-    }).join('') || '<p class="note">No Cue lights found. Add them in the Browser view\'s Network tab.</p>';
+    const ls = rigLights();
+    const on = ls.filter(x => x.online), air = ls.filter(x => x.tally === 'program'), pvw = ls.filter(x => x.tally === 'preview');
+    const rel = relaysOf()[0], rs = rel && (S.relayData[rel.ip] || {}).status;
+    const s = S.status || {};
+    const compLive = rs ? !!(rs.live || rs.one) : !!s.companion_running;
+    const camOf = x => 'Cam ' + (x.n || '?');
+    const stat = (label, val, sub, cls) => '<div class="st ' + (cls || '') + '"><small>' + label + '</small><em>' + esc(val) + '</em><span>' + esc(sub) + '</span></div>';
+    const alertOn = relaysOf().some(r => ((S.relayData[r.ip] || {}).status || {}).alert);
+    const top = stat('Linked', ls.length ? on.length + ' of ' + ls.length : 'None', ls.length - on.length ? (ls.length - on.length) + ' not heard' : ls.length ? 'all heard' : 'no lights found', on.length ? 'ok' : '') +
+      stat('On air', air.length ? air.map(camOf).join(', ') : 'None', air.map(x => x.name).join(', ') || 'nothing live', air.length ? 'air' : '') +
+      stat('Preview', pvw.length ? pvw.map(camOf).join(', ') : 'None', pvw.map(x => x.name).join(', ') || 'nothing on preview', pvw.length ? 'ok' : '') +
+      stat('Companion', compLive ? 'Live' : 'Lost', rs ? (rs.one ? 'the One\'s' : rs.compHost || '') : (s.companion_running ? 'on this One' : 'not running'), compLive ? 'ok' : 'warn') +
+      '<div class="acts"><button class="btn" data-act="talkOpen">Talk</button>' +
+      (alertOn ? '<button class="btn live" data-act="rigAlert" data-arg="0">Clear alert</button>'
+               : '<button class="btn danger hold" data-hold="1000" data-act="rigAlert" data-arg="1">Alert all<span class="hint">hold 1 s</span></button>') + '</div>';
+    // one light asking to join, at a time, as on the Plus
+    let offer = '';
+    for (const r of relaysOf()) {
+      const o = (S.relayData[r.ip] || {}).offers || {};
+      const ask = (o.adopt || []).find(l => l.kind === 'asks') || (o.adopt || [])[0];
+      if (ask) { offer = '<div class="offer"><span>' + esc(ask.name || ask.id) + ' asks to join this rig.</span>' +
+        '<button class="btn" data-act="offerId" data-arg="' + esc(r.ip) + '|' + esc(ask.id) + '">Identify</button>' +
+        '<button class="btn pri" data-act="offerAdopt" data-arg="' + esc(r.ip) + '|' + esc(ask.id) + '">Adopt</button></div>'; break; }
+    }
+    const tiles = ls.map(x => '<button class="light ' + (x.online ? x.tally : 'gone') + '" data-act="lightOpen" data-arg="' + esc(x.id) + '">' +
+        '<span class="top"><span class="n">' + (x.n || '·') + '</span>' + pillOf(x) + '</span>' +
+        '<span class="who">' + faceSvg(x) + '<span style="min-width:0"><b>' + esc(x.name) + '</b><small>' + esc(x.model) + '</small></span></span>' +
+        '<span class="foot"><span>' + (x.online ? barsOf(x.level) : 'not heard') + '</span><span>' +
+          (x.battery !== null && x.battery !== undefined ? (x.charging ? 'charging ' : '') + x.battery + '%' : '') + '</span></span></button>').join('');
+    const html = '<div class="rigtop">' + top + '</div>' + offer + '<div class="lights">' + (tiles || '<p class="note">No Cue lights found yet. A Relay or a Cue on this network shows up here by itself.</p>') + '</div>';
+    if (html !== S.rigHtml) { S.rigHtml = html; $('r-body').innerHTML = html; }
+    paintBarLights();
   }
 
   // ── ATEM Router: tap a destination (an aux, or an M/E's program or
@@ -1340,85 +1516,148 @@
     } catch (e) {}
   }
 
-  // ── a light's sheet: what the Browser view's light sheet does for it,
-  // here (Rob, 2026-10-22: "If touch shows something, it should work").
-  // A light carried by a Relay is set through it (number, words,
-  // brightness, Talent, name); a light on WiFi is renamed and opened itself.
-  const L = { serial: '', relay: null, cue: null, tsrc: undefined, camop: undefined, busy: false };
-  const lightKind = u => { const m = String(u.model || 'Cue').replace(/^Downstage /, ''); return /lite|camera|pro/i.test(m) ? 'lite' : /360/.test(m) ? '360' : /mini|og/i.test(m) ? 'mini' : 'round'; };
-  function lightRelay(u) {
-    const Lk = (u.cue || {}).link || {}, units = (S.fleet && S.fleet.units) || [];
-    return units.find(x => x.product === 'Relay' && (x.serial === Lk.via || (Lk.via_name && x.name === Lk.via_name))) ||
-           units.find(x => x.product === 'Relay' && ((((x.cue || {}).link || {}).guests) || []).some(g => g.id === u.serial)) || null;
-  }
+  // ── a light's sheet, as the Slate Plus's: show-day actions first (Identify,
+  // Message, Release), then its settings, each one working (Rob, 2026-10-22:
+  // "If touch shows something, it should work"). A carried light is set
+  // through its Relay; a light on WiFi alone is renamed and opened itself. ──
+  const L = { serial: '', tsrc: undefined, camop: undefined };
   const verAtLeast = (v, want) => { const a = String(v || '').split('.').map(n => parseInt(n, 10) || 0), b = want.split('.').map(Number);
     for (let k = 0; k < b.length; k++) if ((a[k] || 0) !== b[k]) return (a[k] || 0) > b[k]; return true; };
+  const lightNow = () => rigLights().find(x => x.id === L.serial) || null;
   async function lightLoad() {
-    const u = lightsOf(S.fleet).find(x => x.serial === L.serial); if (!u) return;
-    const r = lightRelay(u);
-    L.relay = r; L.cue = null;
-    if (r) {
-      const d = await post('/fleet/relay/api', { ip: r.ip, path: 'cues', method: 'GET' });
-      L.cue = ((d.cues || []).find(c => c.id === u.serial)) || null;
-    }
-    const k = lightKind(u), Lk = (u.cue || {}).link || {};
+    const x = lightNow(); if (!x) return;
     const where = {};
-    if (u.ip && !Lk.no_ip && verAtLeast(u.version, '0.149.3')) where.ip = u.ip;
-    if (r) { where.relay = r.ip; where.id = u.serial; }
-    L.tsrc = undefined; L.camop = undefined;
-    if (k === 'round' && (where.ip || where.relay)) {
+    const Lk = ((x.u || {}).cue || {}).link || {};
+    if (x.u && x.u.ip && !Lk.no_ip && verAtLeast(x.u.version, '0.149.3')) where.ip = x.u.ip;
+    if (x.r) { where.relay = x.r.ip; where.id = x.id; }
+    if (x.kind === 'round' && (where.ip || where.relay)) {
       try { const t = await getJSON('/fleet/cue/timer-source?' + new URLSearchParams(where)); L.tsrc = t.ok ? t.source : null; } catch (e) {}
     }
-    if (k === 'lite' && r) {
-      try { const c = await getJSON('/fleet/cue/camop?' + new URLSearchParams({ relay: r.ip, id: u.serial })); L.camop = c.ok ? c.on : null; } catch (e) {}
+    if (x.kind === 'lite' && x.r) {
+      try { const c = await getJSON('/fleet/cue/camop?' + new URLSearchParams({ relay: x.r.ip, id: x.id })); L.camop = c.ok ? c.on : null; } catch (e) {}
     }
     paintLight();
   }
   function paintLight() {
-    const u = lightsOf(S.fleet).find(x => x.serial === L.serial), el = $('light-sheet');
-    if (!u) { el.innerHTML = '<p class="note">That light has gone from the list.</p>'; return; }
-    const c = u.cue || {}, Lk = c.link || {}, k = lightKind(u), cue = L.cue, st = (cue && cue.state) || {};
-    const carried = !!(cue && L.relay && cue.carrier === L.relay.serial);
-    const wifi = !!(u.ip && !Lk.no_ip);
-    const model = String(u.model || 'Cue').replace(/^Downstage /, '');
-    const num = cue && cue.n ? cue.n : (c.camera !== undefined && c.camera !== null && +c.camera >= 0 ? c.camera : '');
-    let h = '<div class="shead"><div><h3>' + esc(u.name || model) + '</h3><p class="note">' + esc(model) + (num !== '' ? ' · Cue ' + esc(num) : '') +
-      (carried ? ' · through ' + esc(L.relay.name || 'its Relay') : '') + (wifi ? ' · ' + esc(u.ip) : '') + '</p></div>' +
+    const x = lightNow(), el = $('light-sheet');
+    if (!x) { el.innerHTML = '<div class="lhead"><h3>Gone</h3><button class="x" data-act="lightClose" aria-label="Close">✕</button></div><p class="note">That light has gone from the list.</p>'; return; }
+    const cue = x.cue || {}, st = x.st, wifi = !!(x.u && x.u.ip && !((((x.u || {}).cue || {}).link || {}).no_ip));
+    const pill = pillOf(x);
+    const sub = [x.model + (x.fw ? ' ' + x.fw : ''), x.level !== null && x.level !== undefined ? x.level + ' dBm' : '', x.battery !== null && x.battery !== undefined ? x.battery + '%' : '',
+                 x.carried ? 'through ' + (x.r.name || 'its Relay') : wifi ? x.u.ip : ''].filter(Boolean).join(' · ');
+    let h = '<div class="lhead">' + faceSvg(x) + '<div style="min-width:0"><h3>' + (x.n ? x.n + ' ' : '') + esc(x.name) + ' ' + pill + '</h3><p>' + esc(sub) + '</p></div>' +
       '<button class="x" data-act="lightClose" aria-label="Close">✕</button></div>';
-    h += '<div class="lrow"><button class="btn" data-act="blink" data-arg="' + esc(u.serial) + '">Identify</button>' +
-         '<button class="btn" data-act="lightName">Rename</button>' +
-         (wifi ? '<button class="btn" data-act="open" data-arg="@' + esc(u.ip) + '">Its page</button>' : '<span></span>') + '</div>';
-    if (carried) {
-      h += '<div class="lsec"><b>Cue number</b><div class="lrow"><button class="btn" data-act="lightNum">' + (cue.n ? 'Number ' + esc(cue.n) : 'Set a number') + '</button>' +
-           '<button class="btn" data-act="lightNumZero">Follow its camera</button><span></span></div></div>';
-      h += '<div class="lsec"><b>Words on its face</b><div class="lrow"><button class="btn" data-act="lightWords" style="grid-column: span 2">' + (st.text ? esc(st.text) : 'Add words') + '</button>' +
-           (st.text ? '<button class="btn hold" data-hold="600" data-act="lightWordsClear">Clear<span class="hint">hold</span></button>' : '<span></span>') + '</div></div>';
-      h += '<div class="lsec"><b>Brightness · <span id="l-bv">' + (st.brightness !== undefined ? st.brightness : 100) + '</span>%</b>' +
-           '<input class="bright" type="range" min="5" max="100" step="5" value="' + (st.brightness !== undefined ? st.brightness : 100) + '" id="l-bright"></div>';
-      h += '<div class="lsec"><button class="toggle' + (st.talent ? ' on' : '') + '" data-act="lightTalent"><span>Talent mode<br><small class="dim" style="font-size:13px">big, plain tally for the person on camera</small></span><span class="sw"></span></button></div>';
-    } else if (L.relay === null && !wifi) {
-      h += '<p class="note">Not reachable from here: no WiFi of its own and no Relay carrying it.</p>';
+    const canMsg = x.carried && (x.kind === 'round' || x.kind === 'lite');
+    h += '<div class="lacts"><button class="btn pri" data-act="blink" data-arg="' + esc(x.id) + '">Identify</button>' +
+      (canMsg ? '<button class="btn" data-act="talkOpen" data-arg="' + esc(x.id) + '">Message</button>' : wifi ? '<button class="btn" data-act="open" data-arg="@' + esc(x.u.ip) + '">Its page</button>' : '<span></span>') +
+      (x.carried ? '<button class="btn danger hold" data-hold="1000" data-act="lightRelease">Release<span class="hint">hold 1 s</span></button>' : '<span></span>') + '</div>';
+    const row = (label, val) => '<div class="lset"><span>' + label + '</span><div class="val">' + val + '</div></div>';
+    h += row('Name', '<button class="go" data-act="lightName">' + esc(x.name) + '</button>');
+    if (x.carried) {
+      h += row('Camera number', '<span class="step"><button class="btn" data-act="lightNumStep" data-arg="-1">-</button><b>' + (cue.n || '-') + '</b>' +
+        '<button class="btn" data-act="lightNumStep" data-arg="1">+</button></span><small>' + (cue.n ? 'shows as Cam ' + cue.n : 'follows its camera') + '</small>');
+      const b = st.brightness !== undefined ? st.brightness : 100;
+      h += row('Brightness', '<span class="step"><button class="btn" data-act="lightBright" data-arg="-10">-</button><b>' + b + '%</b>' +
+        '<button class="btn" data-act="lightBright" data-arg="10">+</button></span>');
     }
-    if (L.tsrc) {
-      h += '<div class="lsec"><b>Timer source</b><div class="lrow">' + ['auto', 'one', 'local'].map(m =>
-        '<button class="btn' + (L.tsrc === m ? ' on' : '') + '" data-act="lightTsrc" data-arg="' + m + '">' + { auto: 'Auto', one: 'One', local: 'Local' }[m] + '</button>').join('') + '</div>' +
-        '<p class="note">' + { auto: "The One's timer when one is found, unless this Cue's own is running.", one: "Always the One's timer.", local: "Always this Cue's own timer, even with a One on the network." }[L.tsrc] + '</p></div>';
+    if (L.tsrc) h += row('Timer source', '<div class="segs">' + ['auto', 'one', 'local'].map(m =>
+        '<button class="btn' + (L.tsrc === m ? ' on' : '') + '" data-act="lightTsrc" data-arg="' + m + '">' + { auto: 'Auto', one: 'One', local: 'Local' }[m] + '</button>').join('') + '</div>');
+    if (x.carried && cue.tallyWord !== undefined)
+      h += row('Tally word on its face', '<button class="toggle' + (cue.tallyWord ? ' on' : '') + '" data-act="lightTallyWord"><span>PROGRAM under the number</span><span class="sw"></span></button>');
+    if (x.carried)
+      h += row('Talent Mode', '<button class="toggle' + (st.talent ? ' on' : '') + '" data-act="lightTalent"><span>On: red only when live, dark otherwise</span><span class="sw"></span></button>');
+    if (x.carried) {
+      const f = cue.follow;
+      h += row('Follows', '<button class="go" data-act="followOpen">' + (f && f.page ? 'Page ' + f.page + ' · row ' + (f.row + 1) + ' · button ' + (f.col + 1) : 'Not a button: its number') + '</button>');
+      const m = cue.mirrors ? rigLights().find(y => y.carried && y.n === cue.mirrors) : null;
+      h += row('Linked to', '<button class="go" data-act="mirrorPick">' + (cue.mirrors ? 'Mirrors Cam ' + cue.mirrors + (m ? ' (' + esc(m.name) + ')' : '') : 'Its own key') + '</button>');
     }
-    if (L.camop === true || L.camop === false) {
-      h += '<div class="lsec"><button class="toggle' + (L.camop ? ' on' : '') + '" data-act="lightCamop"><span>Cam Op Mode<br><small class="dim" style="font-size:13px">Tally only, no menus; held 3 s on its glass, it unlocks.</small></span><span class="sw"></span></button></div>';
+    if (x.carried && x.kind === 'round' && cue.lock !== undefined) {
+      const lk = cue.lock || 'off';
+      h += row('Lock', '<div class="segs">' + [['off', 'Off'], ['timer', 'Timer'], ['tally', 'Tally'], ['auto', 'Auto']].map(([k, t]) =>
+        '<button class="btn' + (lk === k ? ' on' : '') + '" data-act="lightLock" data-arg="' + k + '">' + t + '</button>').join('') + '</div>');
     }
-    if (!L.cue && L.relay) h += '<p class="note">Asking ' + esc(L.relay.name || 'the Relay') + '…</p>';
-    el.innerHTML = h;
-    const br = $('l-bright');
-    if (br) {
-      br.oninput = () => { $('l-bv').textContent = br.value; };
-      br.onchange = () => lightSet({ brightness: +br.value });
-    }
+    if (L.camop === true || L.camop === false)
+      h += row('Cam Op Mode', '<button class="toggle' + (L.camop ? ' on' : '') + '" data-act="lightCamop"><span>Tally only, no menus; held 3 s on its glass, it unlocks</span><span class="sw"></span></button>');
+    if (!x.carried && !wifi) h += '<p class="note" style="margin-top:12px">Not reachable from here: no WiFi of its own and no Relay carrying it.</p>';
+    if (x.r && !x.cue) h += '<p class="note" style="margin-top:12px">Asking ' + esc(x.r.name || 'the Relay') + '…</p>';
+    // the sheet keeps its scroll as it updates
+    const top = el.scrollTop;
+    if (el.dataset.html !== h) { el.dataset.html = h; el.innerHTML = h; el.scrollTop = top; }
   }
-  async function lightSet(set) {
-    const u = lightsOf(S.fleet).find(x => x.serial === L.serial); if (!u || !L.relay) return;
-    const d = await post('/fleet/relay/light', { ip: L.relay.ip, id: u.serial, n: L.cue && L.cue.n, set });
-    if (d.ok) { toast('Sent to ' + (L.relay.name || 'the Relay') + '.'); setTimeout(lightLoad, 700); }
+  async function lightSet(set, said) {
+    const x = lightNow(); if (!x || !x.r) return;
+    const d = await post('/fleet/relay/light', { ip: x.r.ip, id: x.id, n: x.cue && x.cue.n, set });
+    if (d.ok) { if (said) toast(said); setTimeout(pollRelays, 500); setTimeout(pollRelays, 1500); }
+    return d;
+  }
+
+  // ── Follows: the Companion button its own key follows, picked from a page of
+  // them as Companion draws them (the Slate Plus 0.169.0; the Browser view's
+  // picker) ──
+  const FG = { page: 1, rows: 4, cols: 8, host: '', port: 16622, imgs: {}, rev: 0, timer: 0 };
+  function followHost(x) {
+    const rel = ((x && x.r) || {}).relay || {};
+    return { host: rel.host || HOST, port: rel.port || 16622 };
+  }
+  async function followLoad(full) {
+    try {
+      const d = await getJSON('/companion/grid?' + new URLSearchParams({ host: FG.host, port: FG.port, page: FG.page, rows: FG.rows, cols: FG.cols, since: full ? 0 : FG.rev }));
+      if (!d.ok) { $('fg-say').textContent = d.error || 'Companion is not answering.'; return; }
+      if (d.full) FG.imgs = {};
+      for (const b of d.buttons || []) FG.imgs[b.row + '/' + b.col] = b.img ? 'data:image/' + (b.fmt || 'png') + ';base64,' + b.img : '';
+      FG.rev = d.rev;
+      paintFollow();
+    } catch (e) {}
+  }
+  function paintFollow() {
+    const x = lightNow(), f = (x && x.cue && x.cue.follow) || null;
+    let h = '';
+    for (let r = 0; r < FG.rows; r++) for (let c = 0; c < FG.cols; c++) {
+      const on = f && f.page === FG.page && f.row === r && f.col === c;
+      const src = FG.imgs[r + '/' + c];
+      h += '<button class="' + (on ? 'on' : '') + '" data-act="followSet" data-arg="' + r + '|' + c + '">' + (src ? '<img alt="" src="' + src + '">' : '') + '</button>';
+    }
+    $('fg-grid').innerHTML = h;
+    $('fg-page').textContent = (FG.names && FG.names[FG.page]) ? 'Page ' + FG.page + ': ' + FG.names[FG.page] : 'Page ' + FG.page;
+  }
+  async function followOpen() {
+    const x = lightNow(); if (!x) return;
+    const w = followHost(x);
+    FG.host = w.host; FG.port = w.port;
+    const f = x.cue && x.cue.follow;
+    FG.page = f && f.page ? f.page : 1;
+    $('fg-title').textContent = 'What ' + x.name + ' follows';
+    $('fg-say').textContent = 'Tap a button: its key follows it, and pressing it presses that button.';
+    $('grid-scrim').classList.add('on');
+    paintFollow(); followLoad(true);
+    clearInterval(FG.timer); FG.timer = setInterval(() => followLoad(false), 1000);
+    try { const p = await getJSON('/companion/pages?' + new URLSearchParams({ host: FG.host })); if (p.ok) { FG.names = Object.fromEntries((p.pages || []).map(q => [q.page, q.name])); paintFollow(); } } catch (e) {}
+  }
+  function followClose() { clearInterval(FG.timer); $('grid-scrim').classList.remove('on'); }
+
+  // ── Talk: words on the lights' faces, for 10 s, 30 s or until cleared (the
+  // Relay's "message", round Cues and Lites) ──
+  const T = { to: new Set(), secs: 10 };
+  const talkPhrases = () => { try { const v = JSON.parse(store.get('ds_talk', 'null')); if (Array.isArray(v)) return v; } catch (e) {} return ['5 MIN', '2 MIN', 'WRAP UP', 'STAND BY', 'SPEAK UP', 'LOOK UP']; };
+  const talkable = () => rigLights().filter(x => x.carried && x.online && (x.kind === 'round' || x.kind === 'lite'));
+  function paintTalk() {
+    const ls = talkable(), all = ls.length && ls.every(x => T.to.has(x.id));
+    $('tk-to').innerHTML = ls.map(x => '<button class="btn' + (T.to.has(x.id) ? ' on' : '') + '" data-act="talkTo" data-arg="' + esc(x.id) + '">' + faceSvg(x, 'face') + ' ' + (x.n ? x.n + ' ' : '') + esc(x.name) + '</button>').join('') +
+      (ls.length ? '<button class="btn' + (all ? ' on' : '') + '" data-act="talkAll">All lights</button>' : '<p class="note">No round Cue or Lite is carried right now.</p>');
+    $('tk-words').innerHTML = talkPhrases().map((t, i) => '<button class="btn" data-act="talkSend" data-long="talkDel" data-arg="' + i + '">' + esc(t) + '</button>').join('') +
+      '<button class="btn" data-act="talkWrite">Write…</button>';
+    $('tk-secs').innerHTML = [[10, '10 s'], [30, '30 s'], [-1, 'Until cleared']].map(([v, t]) => '<button class="btn' + (T.secs === v ? ' on' : '') + '" data-act="talkSecs" data-arg="' + v + '">' + t + '</button>').join('');
+  }
+  async function talkSend(words, secs) {
+    const ls = talkable().filter(x => T.to.has(x.id));
+    if (!ls.length) { toast('Choose who it is for first.', 'warn'); return; }
+    let ok = 0;
+    for (const x of ls) {
+      const d = await post('/fleet/relay/light', { ip: x.r.ip, id: x.id, n: x.cue && x.cue.n, set: { message: words, messageSecs: secs } });
+      if (d.ok) ok++;
+    }
+    toast(words ? '"' + words + '" on ' + ok + ' of ' + ls.length + ' light' + (ls.length > 1 ? 's' : '') : 'Messages cleared on ' + ok + ' light' + (ok === 1 ? '' : 's'));
   }
 
   // ── Messages (Rob, 2026-10-22: "Add message control for Ontime on the
@@ -1609,47 +1848,98 @@
                         if (d.ok) { toast('HDMI ' + n + ': ' + srcName(source)); S.outSig = ''; setTimeout(pollStatus, 400); } },
     askOk() { askDone($('ask-in').value); }, askCancel() { askDone(null); },
     pickVal(v) { pickDone(v); }, pickCancel() { pickDone(null); },
-    lightOpen(serial) { L.serial = serial; L.cue = null; L.tsrc = undefined; L.camop = undefined; $('light-scrim').classList.add('on'); paintLight(); lightLoad(); },
+    lightOpen(id) { L.serial = id; L.tsrc = undefined; L.camop = undefined; $('light-sheet').dataset.html = ''; $('light-scrim').classList.add('on'); paintLight(); lightLoad(); pollRelays(); },
     lightClose() { $('light-scrim').classList.remove('on'); L.serial = ''; },
     async lightName() {
-      const u = lightsOf(S.fleet).find(x => x.serial === L.serial); if (!u) return;
-      const v = await askText('Rename', 'Shows here, on the Relay and in Companion.', u.name || '', 'Rename');
+      const x = lightNow(); if (!x) return;
+      const v = await askText('Rename', 'Shows here, on the Relay and in Companion.', x.name || '', 'Rename');
       if (v === null || !v.trim()) return;
-      const Lk = (u.cue || {}).link || {};
-      if (u.ip && !Lk.no_ip) {
-        const d = await post('/fleet/cue/label', { ip: u.ip, label: v.trim().slice(0, 24) });
-        if (d.ok) toast('Renamed. The light restarts to take its new name.');
-      } else lightSet({ name: v.trim().slice(0, 24) });
+      const wifi = x.u && x.u.ip && !((((x.u || {}).cue || {}).link || {}).no_ip);
+      if (x.carried) lightSet({ name: v.trim().slice(0, 23) }, 'Renamed.');
+      else if (wifi) { const d = await post('/fleet/cue/label', { ip: x.u.ip, label: v.trim().slice(0, 24) }); if (d.ok) toast('Renamed. The light restarts to take its new name.'); }
     },
-    async lightNum() {
-      const v = await askText('Cue number', 'The number Companion drives it by, 1 to 99.', L.cue && L.cue.n ? String(L.cue.n) : '', 'Set', 'numeric');
-      if (v === null) return;
-      const n = parseInt(v, 10);
-      if (isNaN(n) || n < 1 || n > 99) { toast('A number from 1 to 99.', 'warn'); return; }
-      lightSet({ number: n });
+    lightNumStep(dir) {
+      const x = lightNow(); if (!x || !x.cue) return;
+      const n = Math.max(1, Math.min(99, (x.cue.n || 0) + +dir));
+      if (n !== x.cue.n) lightSet({ number: n }, 'Cam ' + n + '.');
     },
-    lightNumZero() { lightSet({ number: 0 }); },
-    async lightWords() {
-      const v = await askText('Words on its face', 'Up to 24 characters.', (L.cue && L.cue.state && L.cue.state.text) || '', 'Show');
-      if (v === null) return;
-      lightSet({ text: v.slice(0, 24) });
+    lightBright(step) {
+      const x = lightNow(); if (!x) return;
+      const b = Math.max(10, Math.min(100, (x.st.brightness !== undefined ? x.st.brightness : 100) + +step));
+      lightSet({ brightness: b }, 'Brightness ' + b + '%.');
     },
-    lightWordsClear() { lightSet({ text: '' }); },
-    lightTalent() { lightSet({ talent: !(L.cue && L.cue.state && L.cue.state.talent) }); },
+    lightTallyWord() { const x = lightNow(); if (x && x.cue) lightSet({ tallyWord: !x.cue.tallyWord }, x.cue.tallyWord ? 'Tally word off.' : 'Tally word on.'); },
+    lightTalent() { const x = lightNow(); if (x) lightSet({ talent: !x.st.talent }, x.st.talent ? 'Talent Mode off.' : 'Talent Mode on.'); },
+    lightLock(k) { lightSet({ lock: k }, k === 'off' ? 'Unlocked.' : 'Locked: ' + k + '.'); },
+    async lightRelease() {
+      const x = lightNow(); if (!x) return;
+      const d = await lightSet({ release: true }, x.name + ' let go.');
+      if (d && d.ok) A.lightClose();
+    },
     async lightTsrc(m) {
-      const u = lightsOf(S.fleet).find(x => x.serial === L.serial); if (!u) return;
-      const Lk = (u.cue || {}).link || {}, w = {};
-      if (u.ip && !Lk.no_ip && verAtLeast(u.version, '0.149.3')) w.ip = u.ip;
-      if (L.relay) { w.relay = L.relay.ip; w.id = u.serial; }
+      const x = lightNow(); if (!x) return;
+      const Lk = ((x.u || {}).cue || {}).link || {}, w = {};
+      if (x.u && x.u.ip && !Lk.no_ip && verAtLeast(x.u.version, '0.149.3')) w.ip = x.u.ip;
+      if (x.r) { w.relay = x.r.ip; w.id = x.id; }
       const d = await post('/fleet/cue/timer-source', Object.assign(w, { mode: m }));
       if (d.ok) { L.tsrc = d.source; paintLight(); toast(d.source === m ? 'Timer source: ' + { auto: 'Auto', one: 'One', local: 'Local' }[m] : 'Sent; the light has not confirmed yet.', d.source === m ? '' : 'warn'); }
     },
     async lightCamop() {
-      if (!L.relay) return;
+      const x = lightNow(); if (!x || !x.r) return;
       const want = !L.camop;
-      const d = await post('/fleet/cue/camop', { relay: L.relay.ip, id: L.serial, on: want });
+      const d = await post('/fleet/cue/camop', { relay: x.r.ip, id: x.id, on: want });
       if (d.ok) { L.camop = d.on; paintLight(); toast(d.on === want ? 'Cam Op Mode ' + (want ? 'on.' : 'off.') : 'Sent; the light has not confirmed yet.', d.on === want ? '' : 'warn'); }
     },
+    async mirrorPick() {
+      const x = lightNow(); if (!x || !x.carried) return;
+      // a light that mirrors is never mirrored, and never mirrors itself (the Relay's rule)
+      const others = rigLights().filter(y => y.carried && y.r && y.r.serial === x.r.serial && y.id !== x.id && y.n && !(y.cue || {}).mirrors);
+      const k = await askPick('What ' + x.name + ' shows', 'It shows what that light shows, as its own. Its own key gives it back.',
+        [['own', 'Its own key']].concat(others.map(y => ['n' + y.n, 'Mirror Cam ' + y.n + ' (' + y.name + ')'])));
+      if (!k) return;
+      lightSet({ mirror: k === 'own' ? false : +k.slice(1) }, k === 'own' ? 'Its own key.' : 'Mirroring Cam ' + k.slice(1) + '.');
+    },
+    followOpen() { followOpen(); }, followClose() { followClose(); },
+    followPage(d) { FG.page = Math.max(1, Math.min(99, FG.page + +d)); FG.imgs = {}; paintFollow(); followLoad(true); },
+    async followSet(arg) {
+      const [r, c] = arg.split('|').map(Number);
+      const d = await lightSet({ follow: { page: FG.page, row: r, col: c } }, 'Follows page ' + FG.page + ', row ' + (r + 1) + ', button ' + (c + 1) + '.');
+      if (d && d.ok) followClose();
+    },
+    async followNone() { const d = await lightSet({ follow: false }, 'Its own key, by its number.'); if (d && d.ok) followClose(); },
+    async rigAlert(on) {
+      const want = on === '1';
+      for (const r of relaysOf()) await post('/fleet/relay/api', { ip: r.ip, path: 'alert', method: 'POST', body: { on: want } });
+      toast(want ? 'Every light pulses red until you clear it.' : 'Alert cleared.', want ? 'bad' : '');
+      setTimeout(pollRelays, 400);
+    },
+    async offerId(arg) { const [ip, id] = arg.split('|'); await post('/fleet/relay/api', { ip, path: 'identify', method: 'POST', body: { id } }); toast('It is blinking.'); },
+    async offerAdopt(arg) {
+      const [ip, id] = arg.split('|');
+      const d = await post('/fleet/relay/api', { ip, path: 'adopt', method: 'POST', body: { ids: [id] } });
+      if (d.ok !== false) toast(d.message || 'Adopting…');
+      setTimeout(pollRelays, 1500);
+    },
+    talkOpen(id) { T.to = new Set(id ? [id] : []); $('talk-scrim').classList.add('on'); paintTalk(); },
+    talkClose() { $('talk-scrim').classList.remove('on'); },
+    talkTo(id) { T.to.has(id) ? T.to.delete(id) : T.to.add(id); paintTalk(); },
+    talkAll() { const ls = talkable(), all = ls.every(x => T.to.has(x.id)); T.to = new Set(all ? [] : ls.map(x => x.id)); paintTalk(); },
+    talkSecs(v) { T.secs = +v; paintTalk(); },
+    talkSend(i) { const t = talkPhrases()[+i]; if (t !== undefined) talkSend(t, T.secs); },
+    async talkWrite() {
+      const v = await askText('Write', 'Words for their faces (up to 24 characters). Saved for next time.', '', 'Send');
+      if (v === null || !v.trim()) return;
+      const w = v.trim().toUpperCase().slice(0, 24);
+      const list = talkPhrases().filter(x => x !== w).concat(w);
+      store.set('ds_talk', JSON.stringify(list.slice(-12)));
+      paintTalk(); talkSend(w, T.secs);
+    },
+    async talkDel(i) {
+      const list = talkPhrases(), t = list[+i]; if (t === undefined) return;
+      if (!(await askChoice(t, 'Remove it from the words?', 'Remove'))) return;
+      store.set('ds_talk', JSON.stringify(list.filter((_, j) => j !== +i))); paintTalk();
+    },
+    talkClear() { talkSend('', 0); },
     lookEdit() { S.lookEdit = !S.lookEdit; paintLooks(); },
     async lookSave() {
       const name = await askText('Save current look', 'Both outputs as they are now, their Custom timer options and web pages, under one name.', '', 'Save');
@@ -1778,7 +2068,7 @@
     if (t === 'deck') paintDeck();
     if (t === 'outputs') { S.outSig = ''; paintOutputs(); loadLooks(); loadCt(); loadSources(); }
     else if ($('o-prev-1')) paintPreviews();       // leaving Outputs stops the grabs
-    if (t === 'rig') { S.rigSig = ''; paintRig(); pollFleet(); }
+    if (t === 'rig') { S.rigHtml = ''; paintRig(); pollFleet(); pollRelays(); }
     if (t === 'router') { S.rtSig = ''; pollRouter(); }
     if (t === 'msg') { S.msgSig = ''; pollMsg(); }
     if (t === 'tools') paintTools();
@@ -1820,6 +2110,11 @@
   setInterval(pollTimer, 1000);
   setInterval(pollAux, 1000);
   setInterval(pollFleet, 5000);
+  // the Relays' lists: every 2 s on the Rig tab or a light's sheet, every 6 s otherwise (the bar's on air)
+  let relayTick = 0;
+  setInterval(() => { relayTick++; if (S.tab === 'rig' || L.serial || relayTick % 3 === 0) pollRelays(); }, 2000);
+  $('grid-scrim').addEventListener('click', e => { if (e.target.id === 'grid-scrim') followClose(); });
+  $('talk-scrim').addEventListener('click', e => { if (e.target.id === 'talk-scrim') A.talkClose(); });
   setInterval(() => { if (S.tab === 'msg' && !$('ask-scrim').classList.contains('on')) pollMsg(); }, 1500);
   setInterval(() => { if (S.tab === 'router' && $('rt-body').dataset.mode !== 'setup') pollRouter(); }, 1000);
   setInterval(paintFast, 200);
