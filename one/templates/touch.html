@@ -34,7 +34,8 @@
   }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   [hidden] { display: none !important; }
-  html, body { height: 100%; background: var(--ground); color: var(--text); overflow: hidden; }
+  html, body { height: 100%; background: var(--ground); color: var(--text); overflow: hidden;
+    overscroll-behavior: none; }   /* no rubber-band of the whole page on iOS: only a tab's own content scrolls */
   body { font: 400 16px/1.4 var(--fb); -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
     display: grid; grid-template-rows: auto auto 1fr; padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left); }
   button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; touch-action: manipulation; }
@@ -64,12 +65,16 @@
   .seg2 button.on { background: var(--raised); border-color: var(--edge); color: var(--text); }
 
   /* ── tabs: big underline targets ── */
-  .tabs { display: flex; gap: 4px; padding: 0 12px; border-bottom: 1px solid var(--edge); overflow-x: auto; scrollbar-width: none; }
+  /* the tab strip slides sideways and never up or down (Rob, 2026-10-22) */
+  .tabs { display: flex; gap: 4px; padding: 0 12px; border-bottom: 1px solid var(--edge); overflow-x: auto; overflow-y: hidden;
+    scrollbar-width: none; touch-action: pan-x; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .bar { touch-action: manipulation; }
   .tabs button { flex: none; min-width: 120px; height: 58px; padding: 0 22px; font: 600 17px var(--fb); color: var(--muted);
     border-bottom: 3px solid transparent; margin-bottom: -1px; }
   .tabs button.on { color: var(--text); border-bottom-color: var(--green); }
   main { position: relative; overflow: hidden; min-height: 0; }
-  .page { position: absolute; inset: 0; overflow-y: auto; padding: 20px 20px calc(24px + env(safe-area-inset-bottom)); display: none; -webkit-overflow-scrolling: touch; }
+  .page { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; padding: 20px 20px calc(24px + env(safe-area-inset-bottom)); display: none; -webkit-overflow-scrolling: touch; }
   .page.on { display: block; }
   /* Deck: Companion's emulator at a key size chosen here (it stretches to its
      window, which on a 13" iPad is keys over 3 cm across), and the rail */
@@ -170,6 +175,15 @@
   .toggle .sw { width: 56px; height: 32px; border-radius: 16px; background: var(--edge); position: relative; flex: none; transition: background .15s; }
   .toggle .sw::after { content: ''; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%; background: var(--muted); transition: transform .15s, background .15s; }
   .toggle.on .sw { background: var(--green); } .toggle.on .sw::after { transform: translateX(24px); background: #fff; }
+
+  /* ── Messages: OnTime's timer message and the line under the timer ── */
+  .msgnow { min-height: 140px; padding: 18px; border-radius: var(--r); background: #000; border: 2px solid var(--edge); display: flex; align-items: center; justify-content: center;
+    text-align: center; font: 700 40px/1.15 var(--fd); color: var(--muted2); overflow-wrap: anywhere; margin-bottom: 12px; }
+  .msgnow.up { border-color: var(--green); color: #fff; }
+  .msgnow.blink { animation: msgblink 1s steps(2) infinite; }
+  @keyframes msgblink { 50% { opacity: .25; } }
+  #pg-msg .stack { gap: 12px; }
+  .btn.live { background: var(--bad-fill); border-color: #5A2326; color: var(--bad-text); }
 
   /* ── Outputs ── */
   /* what each output is showing, as the Browser view's previews: the HDMI's
@@ -305,6 +319,33 @@
     .fullbtn span { display: none; }
     .tabs button { min-width: 0; padding: 0 16px; }
   }
+  /* a phone on its side (Rob, 2026-10-22: "make sure both vertical and
+     horizontal modes work"): little height, so a slim bar and tabs, and the
+     time beside its controls instead of above them */
+  @media (max-height: 520px) and (orientation: landscape) {
+    .bar { min-height: 0; padding: 6px 14px; gap: 12px; flex-wrap: nowrap; }
+    .bar .unit b { font-size: 19px; } .bar .unit svg { width: 22px; height: 22px; }
+    .fig small { display: none; } .fig em { font-size: 22px; }
+    .bar .fig.clockfig { display: none; }
+    .pill { height: 26px; font-size: 12px; }
+    .fullbtn { height: 36px; padding: 0 12px; } .fullbtn span { display: none; }
+    .seg2 button { height: 30px; padding: 0 10px; font-size: 13px; }
+    .tabs button { height: 42px; min-width: 0; padding: 0 14px; font-size: 15px; }
+    .page { padding: 10px 12px calc(14px + env(safe-area-inset-bottom)); }
+    .tswitch { margin-bottom: 10px; } .tswitch button { height: 48px; } .tswitch em { font-size: 22px; }
+    #tv-main .clock, #tv-aux .clock { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 0 16px; align-items: start; }
+    .clock > .title, .clock > .time, .clock > .prog, .clock > .meta { grid-column: 1; }
+    .clock > .ctrl { grid-column: 2; grid-row: 1 / span 4; }
+    .clock > .steps { grid-column: 1 / -1; }
+    .clock .time { font-size: 22vh; margin: 2px 0 8px; }
+    .ctrl { grid-template-columns: 1fr 1fr; }
+    .ctrl .startb { grid-row: auto; grid-column: span 2; order: -1; }
+    #pg-timer .ctrl .btn, #pg-timer .steps .btn { min-height: 54px; }
+    #pg-timer .ctrl .startb { min-height: 64px; }
+    .steps { grid-template-columns: repeat(4, 1fr); }
+    .msgnow { min-height: 90px; font-size: 30px; }
+    .dest { min-height: 80px; } .merow .tbtn, .merow .lockb { min-height: 80px; }
+  }
   /* an iPhone (Rob, 2026-10-22: "the touch version should probably be iOS
      mobile optimized as well"): one column, the bar in two short lines,
      the tabs a scrolling strip, the time as wide as the glass */
@@ -373,6 +414,7 @@
 <nav class="tabs" id="tabs">
   <button data-tab="deck">Deck</button>
   <button data-tab="timer">Timer</button>
+  <button data-tab="msg">Messages</button>
   <button data-tab="outputs">Outputs</button>
   <button data-tab="router">ATEM Router</button>
   <button data-tab="rig">Rig</button>
@@ -482,6 +524,35 @@
     </div>
   </section>
 
+  <section class="page" id="pg-msg">
+    <div class="tgrid">
+      <div class="stack">
+        <div class="card">
+          <div class="h"><b>Timer message</b><span id="m-say">on OnTime's timer screens</span></div>
+          <div class="msgnow" id="m-now" data-act="msgEdit">Tap to type a message</div>
+          <div class="row">
+            <button class="btn pri" id="m-show" data-act="msgShow"><span class="big">SHOW</span></button>
+            <button class="btn" id="m-blink" data-act="msgBlink">Blink</button>
+          </div>
+          <div class="row" style="margin-top:12px">
+            <button class="btn" data-act="msgEdit">Type a message</button>
+            <button class="btn hold" data-hold="600" data-act="msgClear">Clear<span class="hint">hold</span></button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="h"><b>Under the timer</b><span>OnTime's secondary line</span></div>
+          <div class="msgnow" id="m-sec" data-act="secEdit" style="min-height:84px; font-size:28px">Tap to type a line</div>
+          <button class="toggle" id="m-secshow" data-act="secShow"><span>Show under the timer<br><small class="dim" style="font-size:13px">instead of the aux timer, on OnTime's timer view</small></span><span class="sw"></span></button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="h"><b>Saved messages</b><span>tap to put one up · hold to remove</span><span style="flex:1"></span>
+          <button class="btn" data-act="msgSave" style="min-height:48px">+ Save</button></div>
+        <div class="srcs" id="m-saved" style="margin:0"></div>
+      </div>
+    </div>
+  </section>
+
   <section class="page" id="pg-outputs">
     <div class="grid2" id="o-outs"></div>
     <div class="card" style="margin-top:16px">
@@ -584,6 +655,12 @@
     <p class="note" id="ask-note"></p>
     <input class="txt" id="ask-in" autocomplete="off" autocapitalize="words" spellcheck="false">
     <div class="row"><button class="btn" data-act="askCancel">Cancel</button><button class="btn pri" data-act="askOk" id="ask-ok">Save</button></div>
+  </div>
+</div>
+<div class="scrim" id="pick-scrim">
+  <div class="sheet wide">
+    <div class="shead"><div><h3 id="pick-title"></h3><p class="note" id="pick-note"></p></div><button class="x" data-act="pickCancel" aria-label="Close">✕</button></div>
+    <div id="pick-body"></div>
   </div>
 </div>
 <div class="scrim" id="light-scrim"><div class="sheet wide" id="light-sheet"></div></div>
@@ -956,18 +1033,25 @@
   }
 
   // ── Outputs ──
-  const SOURCES = [
-    ['cleantimer', 'Custom timer'], ['/timer', 'Stage timer'], ['/countdown', 'Countdown'],
-    ['/backstage', 'Backstage'], ['/studio', 'Studio clock'], ['aux1', 'Aux timer 1'],
-    ['companion', 'Companion'], ['welcome', 'Unit info'], ['off', 'Off'],
-  ];
-  const srcName = k => (SOURCES.find(x => x[0] === k) || [0, { config: 'Setup page', external: 'Web page', custom: 'Custom view', '/info': 'Public info', '/op': 'Operator', '/cuesheet': 'Cue sheet', '/rundown': 'Rundown', '/timeline': 'Timeline' }[k] || (String(k || '').startsWith('pattern') ? 'Test pattern' : k || '-')])[1];
+  // the views this menu offers live on the One (Rob, 2026-10-22): six to start,
+  // more added from a view's long-press in the Browser view or with Add a
+  // view here, and one taken off with a long-press on it here
+  let SOURCES = [['cleantimer', 'Custom Timer'], ['/studio', 'Studio Clock'], ['/info', 'Public Info'],
+                 ['pattern-card', 'Test Card'], ['aux1', 'Aux Timer 1'], ['/timer', 'Stage Timer']];
+  let ALLSRC = {};
+  async function loadSources() {
+    try {
+      const d = await getJSON('/api/v1/one/touch-sources');
+      if (d.ok) { SOURCES = d.sources.map(x => [x.key, x.label]); ALLSRC = Object.fromEntries(d.all.map(x => [x.key, x.label])); S.outSig = ''; if (S.tab === 'outputs') paintOutputs(); }
+    } catch (e) {}
+  }
+  const srcName = k => ALLSRC[k] || (SOURCES.find(x => x[0] === k) || [0, { external: 'Web page', custom: 'Custom view' }[k] || (String(k || '').startsWith('pattern') ? 'Test pattern' : k || '-')])[1];
   function paintOutputs() {
     const s = S.status || {}, bo = s.blackout_outputs || [], hc = s.hdmi_connected || {}, names = s.hdmi_names || {};
     if (!$('o-out-1')) $('o-outs').innerHTML = [1, 2].map(n =>
       '<div class="card out" id="o-out-' + n + '"><div class="prev" id="o-prev-' + n + '" data-act="prevRearm" data-arg="' + n + '"></div><div class="obody"></div></div>').join('');
     paintPreviews();
-    const sig = JSON.stringify([s.hdmi1_source, s.hdmi2_source, bo, hc, names, S.ct, S.ctOpen]);
+    const sig = JSON.stringify([s.hdmi1_source, s.hdmi2_source, bo, hc, names, S.ct, S.ctOpen, SOURCES]);
     if (sig === S.outSig) return;
     S.outSig = sig;
     [1, 2].forEach(n => { $('o-out-' + n).querySelector('.obody').innerHTML = (() => {
@@ -979,8 +1063,9 @@
         '<div class="now">' + esc(srcName(cur)) + '</div>' +
         '<button class="toggle' + (dark ? ' on' : '') + '" data-act="blackOne" data-arg="' + n + '"><span>Black out HDMI ' + n + '</span><span class="sw"></span></button>' +
         '<div class="srcs">' + SOURCES.map(([k, label]) =>
-          '<button class="btn hold' + (k === cur ? ' on' : '') + '" data-hold="500" data-act="source" data-arg="' + n + '|' + esc(k) + '">' + esc(label) + '</button>').join('') + '</div>' +
-        '<p class="note">Hold a source to put it on HDMI ' + n + '.</p>' + ctPanel(n);
+          '<button class="btn' + (k === cur ? ' on' : '') + '" data-act="source" data-long="srcMenu" data-arg="' + n + '|' + esc(k) + '">' + esc(label) + '</button>').join('') +
+          '<button class="btn" data-act="srcAdd" style="color:var(--muted)">+ Add a view</button></div>' +
+        '<p class="note">Tap a view to put it on HDMI ' + n + '. Press and hold one to take it off this menu.</p>' + ctPanel(n);
     })(); });
   }
   // The previews stream only while the Outputs tab is in view: each one is a
@@ -999,7 +1084,7 @@
       if (mode === 'off') { box.innerHTML = ''; continue; }
       if (mode === 'none') { box.innerHTML = '<div class="msg">No display on HDMI ' + n + '</div>'; prevTag(box, n, mode, bo.includes(n)); continue; }
       if (mode === 'live') {
-        box.innerHTML = '<img alt="HDMI ' + n + '">';
+        box.innerHTML = '<img alt="">';
         prevArm(box, n, 0);
       } else {
         box.innerHTML = '<iframe title="HDMI ' + n + ' preview" tabindex="-1"></iframe>';
@@ -1024,7 +1109,13 @@
   // a grab that fails (the One may still be ending the last one) tries again, slower each time
   function prevArm(box, n, attempt) {
     const img = box.querySelector('img'); if (!img) return;
-    img.onerror = () => { if (attempt < 4 && box.dataset.key.startsWith('live')) setTimeout(() => prevArm(box, n, attempt + 1), 1500 * (attempt + 1)); };
+    // no picture yet: say so, never a broken-image mark
+    img.onerror = () => {
+      img.style.visibility = 'hidden';
+      if (!box.querySelector('.msg')) box.insertAdjacentHTML('beforeend', '<div class="msg">No picture from HDMI ' + n + ' yet: tap to try again</div>');
+      if (attempt < 4 && box.dataset.key.startsWith('live')) setTimeout(() => prevArm(box, n, attempt + 1), 1500 * (attempt + 1));
+    };
+    img.onload = () => { img.style.visibility = ''; const m = box.querySelector('.msg'); if (m) m.remove(); };
     img.src = '/stream/hdmi' + n + '?t=' + Date.now();
   }
   window.addEventListener('resize', () => { for (const n of [1, 2]) { const b = $('o-prev-' + n); if (b) prevScale(b); } });
@@ -1072,6 +1163,22 @@
     setTimeout(() => { i.focus(); i.select(); }, 50);
     return new Promise(res => askWait = res);
   }
+  // a choice in a sheet: askChoice is yes / no, askPick one of a list
+  let pickWait = null;
+  function pickOpen(title, note, html) {
+    $('pick-title').textContent = title; $('pick-note').textContent = note || ''; $('pick-body').innerHTML = html;
+    $('pick-scrim').classList.add('on');
+    return new Promise(res => pickWait = res);
+  }
+  function pickDone(v) { $('pick-scrim').classList.remove('on'); const w = pickWait; pickWait = null; if (w) w(v); }
+  function askChoice(title, note, yes) {
+    return pickOpen(title, note, '<div class="row"><button class="btn" data-act="pickCancel">Cancel</button><button class="btn danger" data-act="pickVal" data-arg="1">' + esc(yes) + '</button></div>').then(v => v === '1');
+  }
+  function askPick(title, note, items) {
+    return pickOpen(title, note, '<div class="srcs" style="margin:0">' + items.map(([k, label]) =>
+      '<button class="btn" data-act="pickVal" data-arg="' + esc(k) + '">' + esc(label) + '</button>').join('') + '</div>');
+  }
+  $('pick-scrim').addEventListener('click', e => { if (e.target.id === 'pick-scrim') pickDone(null); });
   function askDone(v) { $('ask-scrim').classList.remove('on'); $('ask-in').blur(); const w = askWait; askWait = null; if (w) w(v); }
   $('ask-in').addEventListener('keydown', e => { if (e.key === 'Enter') askDone($('ask-in').value); });
 
@@ -1291,6 +1398,30 @@
     if (d.ok) { toast('Sent to ' + (L.relay.name || 'the Relay') + '.'); setTimeout(lightLoad, 700); }
   }
 
+  // ── Messages (Rob, 2026-10-22: "Add message control for Ontime on the
+  // touch pages menu"): what OnTime's timer screens say, and the line under
+  // the timer. A saved message goes up with one tap. ──
+  async function pollMsg() { try { const d = await getJSON('/api/v1/one/message'); if (d.ok) { S.msg = d; paintMsg(); } else { $('m-say').textContent = d.error || ''; } } catch (e) {} }
+  function paintMsg() {
+    const m = S.msg || {}; if (!$('m-now')) return;
+    const now = $('m-now');
+    now.textContent = m.text || 'Tap to type a message';
+    now.className = 'msgnow' + (m.visible && m.text ? ' up' : '') + (m.visible && m.blink ? ' blink' : '');
+    $('m-say').textContent = m.visible ? 'ON SCREEN now' : 'on OnTime\'s timer screens';
+    const sb = $('m-show'); sb.className = 'btn ' + (m.visible ? 'live' : 'pri'); sb.querySelector('.big').textContent = m.visible ? 'HIDE' : 'SHOW';
+    $('m-blink').classList.toggle('on', !!m.blink);
+    $('m-sec').textContent = m.secondary || 'Tap to type a line';
+    $('m-sec').className = 'msgnow' + (m.secondary_source === 'secondary' && m.secondary ? ' up' : '');
+    $('m-secshow').classList.toggle('on', m.secondary_source === 'secondary');
+    const sig = JSON.stringify(m.saved || []);
+    if (sig !== S.msgSig) {
+      S.msgSig = sig;
+      $('m-saved').innerHTML = (m.saved || []).map((t, i) => '<button class="btn" data-act="msgPut" data-long="msgDel" data-arg="' + i + '">' + esc(t) + '</button>').join('') ||
+        '<p class="note">Nothing saved yet. Type a message, then + Save.</p>';
+    }
+  }
+  async function msgPost(body) { const d = await post('/api/v1/one/message', body); if (d.ok) { S.msg = d; paintMsg(); } return d; }
+
   // ── Tools ──
   function kv(rows) { return rows.filter(r => r[1] !== undefined && r[1] !== null && r[1] !== '').map(r => '<span>' + esc(r[0]) + '</span><b>' + esc(r[1]) + '</b>').join(''); }
   function upFor(sec) { sec = +sec || 0; const d = Math.floor(sec / 86400), h = Math.floor(sec % 86400 / 3600), m = Math.floor(sec % 3600 / 60); return d ? d + ' d ' + h + ' h' : h ? h + ' h ' + m + ' min' : m + ' min'; }
@@ -1410,9 +1541,51 @@
                        const d = await post('/api/v1/one/output', { blackout: !dark }); if (d.ok) { toast(dark ? 'Back on.' : 'Blacked out.'); pollStatus(); } },
     async blackOne(n) { const bo = (S.status && S.status.blackout_outputs) || [];
                         const d = await post(bo.includes(+n) ? '/blackout/clear' : '/blackout', { output: +n }); if (d.ok) pollStatus(); },
+    async msgEdit() {
+      const v = await askText('Timer message', 'Shows on OnTime\'s timer screens when you tap Show.', (S.msg || {}).text || '', 'Set');
+      if (v !== null) msgPost({ text: v });
+    },
+    msgShow() { const m = S.msg || {}; if (!m.visible && !m.text) { A.msgEdit(); return; } msgPost({ visible: !m.visible }); },
+    msgBlink() { msgPost({ blink: !(S.msg || {}).blink }); },
+    msgClear() { msgPost({ text: '', visible: false, blink: false }); },
+    msgPut(i) { const t = ((S.msg || {}).saved || [])[+i]; if (t !== undefined) msgPost({ text: t, visible: true }).then(d => { if (d.ok) toast('On screen: ' + t); }); },
+    async msgSave() {
+      const cur = (S.msg || {}).text || '';
+      const v = await askText('Save a message', 'It joins the saved list on every iPad and phone.', cur, 'Save');
+      if (v === null || !v.trim()) return;
+      const saved = ((S.msg || {}).saved || []).filter(x => x !== v.trim()).concat(v.trim());
+      msgPost({ saved });
+    },
+    async msgDel(i) {
+      const list = (S.msg || {}).saved || [], t = list[+i]; if (t === undefined) return;
+      if (!(await askChoice(t, 'Remove it from the saved messages?', 'Remove'))) return;
+      msgPost({ saved: list.filter((_, j) => j !== +i) });
+    },
+    async secEdit() {
+      const v = await askText('Under the timer', 'A line under the timer on OnTime\'s timer view.', (S.msg || {}).secondary || '', 'Set');
+      if (v !== null) msgPost({ secondary: v });
+    },
+    secShow() { msgPost({ secondary_shown: (S.msg || {}).secondary_source !== 'secondary' }); },
+    async srcMenu(arg) {
+      const k = arg.split('|')[1];
+      const yes = await askChoice(srcName(k), 'Take it off the touch menu? It stays in the Browser view, and Add a view puts it back.', 'Take it off');
+      if (!yes) return;
+      const d = await post('/api/v1/one/touch-sources', { remove: k });
+      if (d.ok) { SOURCES = d.sources.map(x => [x.key, x.label]); S.outSig = ''; paintOutputs(); toast(srcName(k) + ' is off the menu.'); }
+    },
+    async srcAdd() {
+      const have = new Set(SOURCES.map(x => x[0]));
+      const left = Object.entries(ALLSRC).filter(([k]) => !have.has(k));
+      if (!left.length) { toast('Every view is on the menu already.'); return; }
+      const k = await askPick('Add a view', 'It joins this menu on every iPad and phone.', left);
+      if (!k) return;
+      const d = await post('/api/v1/one/touch-sources', { add: k });
+      if (d.ok) { SOURCES = d.sources.map(x => [x.key, x.label]); S.outSig = ''; paintOutputs(); toast(srcName(k) + ' added.'); }
+    },
     async source(arg) { const [n, source] = arg.split('|'); const d = await post('/displays/source', { output: +n, source });
                         if (d.ok) { toast('HDMI ' + n + ': ' + srcName(source)); S.outSig = ''; setTimeout(pollStatus, 400); } },
     askOk() { askDone($('ask-in').value); }, askCancel() { askDone(null); },
+    pickVal(v) { pickDone(v); }, pickCancel() { pickDone(null); },
     lightOpen(serial) { L.serial = serial; L.cue = null; L.tsrc = undefined; L.camop = undefined; $('light-scrim').classList.add('on'); paintLight(); lightLoad(); },
     lightClose() { $('light-scrim').classList.remove('on'); L.serial = ''; },
     async lightName() {
@@ -1522,6 +1695,9 @@
   // on whatever is now under the finger: eat it, before anything else sees it
   // (however long the finger stays down after the hold: the lift, then the
   // one click made of it, then nothing more)
+  // a new touch is never the hold's own lift: iOS can end a long press with
+  // a cancel rather than a lift, and the next real tap must not be eaten
+  document.addEventListener('pointerdown', () => { S.swallow = null; }, true);
   for (const ev of ['pointerup', 'touchend', 'mouseup', 'click']) {
     document.addEventListener(ev, e => {
       const w = S.swallow;
@@ -1554,6 +1730,19 @@
                                       const f = A[b.dataset.act]; if (f) f(b.dataset.arg); }, ms) };
   });
   const letGo = () => { if (!held) return; clearTimeout(held.t); held.b.classList.remove('holding'); held = null; };
+  // a long press (data-long) opens a choice about the thing, as on an
+  // iPad; a tap still does its data-act. The lift after it is eaten too.
+  let longT = null, longAt = null;
+  document.addEventListener('pointerdown', e => {
+    const b = e.target.closest('[data-long]'); if (!b || b.disabled) return;
+    longAt = { x: e.clientX, y: e.clientY };
+    longT = setTimeout(() => { longT = null; S.swallow = { lift: true, until: Date.now() + 15000 }; if (navigator.vibrate) navigator.vibrate(15);
+                               const f = A[b.dataset.long]; if (f) f(b.dataset.arg); }, 550);
+  });
+  const longOff = () => { if (longT) { clearTimeout(longT); longT = null; } };
+  document.addEventListener('pointerup', longOff);
+  document.addEventListener('pointercancel', longOff);
+  document.addEventListener('pointermove', e => { if (longT && longAt && Math.hypot(e.clientX - longAt.x, e.clientY - longAt.y) > 12) longOff(); });
   document.addEventListener('pointerup', letGo);
   document.addEventListener('pointercancel', letGo);
   document.addEventListener('pointermove', e => { if (held && !held.b.contains(document.elementFromPoint(e.clientX, e.clientY))) letGo(); });
@@ -1564,10 +1753,11 @@
     for (const b of document.querySelectorAll('#tabs button')) b.classList.toggle('on', b.dataset.tab === t);
     for (const p of document.querySelectorAll('.page')) p.classList.toggle('on', p.id === 'pg-' + t);
     if (t === 'deck') paintDeck();
-    if (t === 'outputs') { S.outSig = ''; paintOutputs(); loadLooks(); loadCt(); }
+    if (t === 'outputs') { S.outSig = ''; paintOutputs(); loadLooks(); loadCt(); loadSources(); }
     else if ($('o-prev-1')) paintPreviews();       // leaving Outputs stops the grabs
     if (t === 'rig') { S.rigSig = ''; paintRig(); pollFleet(); }
     if (t === 'router') { S.rtSig = ''; pollRouter(); }
+    if (t === 'msg') { S.msgSig = ''; pollMsg(); }
     if (t === 'tools') paintTools();
     if (t === 'timer') { paintTimer(); paintAux(); }
     paintFast();
@@ -1593,7 +1783,7 @@
   }
 
   // a link can name the tab: /touch#outputs, #aux for the aux timer, #deck-s for the deck's key size, #deck-xl for the + XL
-  const TABS = ['deck', 'timer', 'outputs', 'router', 'rig', 'tools'];
+  const TABS = ['deck', 'timer', 'msg', 'outputs', 'router', 'rig', 'tools'];
   let hash = location.hash.slice(1);
   if (/^deck-[sml]$/.test(hash)) { store.set('ds_deck', hash.slice(5)); hash = 'deck'; }
   if (/^deck-(xl|vd)$/.test(hash)) { store.set('ds_deck_layout', hash.slice(5)); hash = 'deck'; }
@@ -1607,6 +1797,7 @@
   setInterval(pollTimer, 1000);
   setInterval(pollAux, 1000);
   setInterval(pollFleet, 5000);
+  setInterval(() => { if (S.tab === 'msg' && !$('ask-scrim').classList.contains('on')) pollMsg(); }, 1500);
   setInterval(() => { if (S.tab === 'router' && $('rt-body').dataset.mode !== 'setup') pollRouter(); }, 1000);
   setInterval(paintFast, 200);
   // a wake lock or the video needs a touch first: the first one turns it on if it was wanted

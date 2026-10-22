@@ -2682,6 +2682,127 @@ def one_router_atem():
     return jsonify({"ok": True, "found": found, "ip": load_config().get("atem_ip", "")})
 
 
+# ── The touch page's Outputs menu: which views it offers (Rob, 2026-10-22:
+# "What if the touch outputs only had 4 to start. Custom, studio view, info
+# and test card. Then on the browser, you can right click (hold on
+# mobile/ipad) on a view and add it to the touch menu. And in the touch menu
+# the same action allows you to remove it", then "also add aux timer view
+# and maybe one more to make it even"). Kept on the unit, so a view added in
+# the Browser view is on every iPad. ──
+TOUCH_SOURCES_DEFAULT = ["cleantimer", "/studio", "/info", "pattern-card", "aux1", "/timer"]
+TOUCH_SOURCE_LABELS = {
+    "cleantimer": "Custom Timer", "/timer": "Stage Timer", "/countdown": "Countdown",
+    "/backstage": "Backstage / Crew", "/studio": "Studio Clock", "/timeline": "Timeline",
+    "/info": "Public Info", "aux1": "Aux Timer 1", "aux2": "Aux Timer 2", "aux3": "Aux Timer 3",
+    "/op": "Operator", "/cuesheet": "Cue Sheet", "/editor": "Editor", "/timercontrol": "Timer Control",
+    "/messagecontrol": "Message Control", "/rundown": "Rundown", "pattern-card": "Test Card",
+    "pattern-bars": "SMPTE Bars", "pattern-grid": "Grid", "pattern-ramp": "Gray Ramp",
+    "pattern-sync": "Sync Clock", "pattern-dvd": "DVD", "welcome": "Unit Info", "config": "Config UI",
+    "companion": "Companion", "off": "Off",
+}
+
+
+def _touch_sources():
+    v = load_config().get("touch_sources")
+    if not isinstance(v, list):
+        return list(TOUCH_SOURCES_DEFAULT)
+    return [k for k in v if k in TOUCH_SOURCE_LABELS]
+
+
+@app.route("/api/v1/one/touch-sources", methods=["GET", "POST"])
+def touch_sources():
+    """GET: the views on the touch page's Outputs menu, in order, and every
+    view it could offer. POST {"add": key} / {"remove": key} / {"reset": true}."""
+    if request.method == "POST":
+        b = request.get_json(silent=True) or {}
+        cur = _touch_sources()
+        if b.get("reset"):
+            cur = list(TOUCH_SOURCES_DEFAULT)
+        elif b.get("add") in TOUCH_SOURCE_LABELS:
+            if b["add"] not in cur:
+                cur.append(b["add"])
+        elif b.get("remove") in TOUCH_SOURCE_LABELS:
+            cur = [k for k in cur if k != b["remove"]]
+        else:
+            return jsonify({"ok": False, "error": "add or remove a view by its key"}), 400
+        save_config({"touch_sources": cur})
+    return jsonify({"ok": True, "sources": [{"key": k, "label": TOUCH_SOURCE_LABELS[k]} for k in _touch_sources()],
+                    "all": [{"key": k, "label": v} for k, v in TOUCH_SOURCE_LABELS.items()]})
+
+
+# ── OnTime's messages from the touch page (Rob, 2026-10-22: "Add message
+# control for Ontime on the touch pages menu"). Set over OnTime's WebSocket:
+# its HTTP path leaves , / ? & encoded in the text (4.15, tried on 0001),
+# the socket takes it as typed. Read from its poll. ──
+def _ontime_ws_send(tag, payload, timeout=3):
+    import base64
+    s = socket.create_connection(("127.0.0.1", 4001), timeout=timeout)
+    try:
+        s.sendall(("GET /ws HTTP/1.1\r\nHost: 127.0.0.1:4001\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n"
+                   f"Sec-WebSocket-Key: {base64.b64encode(os.urandom(16)).decode()}\r\nSec-WebSocket-Version: 13\r\n\r\n").encode())
+        if b" 101 " not in s.recv(512).split(b"\r\n", 1)[0]:
+            raise RuntimeError("OnTime refused its socket")
+        p = json.dumps({"tag": tag, "payload": payload}).encode()
+        m = os.urandom(4)
+        n = len(p)
+        hdr = bytes([0x81]) + (bytes([0x80 | n]) if n < 126 else bytes([0x80 | 126]) + n.to_bytes(2, "big"))
+        s.sendall(hdr + m + bytes(c ^ m[i % 4] for i, c in enumerate(p)))
+        time.sleep(0.15)
+    finally:
+        try:
+            s.close()
+        except OSError:
+            pass
+
+
+def _ontime_message():
+    try:
+        p = requests.get("http://127.0.0.1:4001/api/poll", timeout=1.0).json()["payload"]
+        m = p.get("message") or {}
+        t = m.get("timer") or {}
+        return {"text": t.get("text") or "", "visible": bool(t.get("visible")), "blink": bool(t.get("blink")),
+                "secondary": m.get("secondary") or "", "secondary_source": t.get("secondarySource")}
+    except Exception:
+        return None
+
+
+@app.route("/api/v1/one/message", methods=["GET", "POST"])
+def one_message():
+    """GET: the timer message (text, shown, blinking), the secondary message,
+    and the saved messages. POST any of {"text", "visible", "blink",
+    "secondary", "secondary_shown"}, or {"saved": [..]} to keep a list."""
+    if request.method == "POST":
+        b = request.get_json(silent=True) or {}
+        if isinstance(b.get("saved"), list):
+            saved = [str(x)[:160] for x in b["saved"] if str(x).strip()][:40]
+            save_config({"touch_messages": saved})
+        timer = {}
+        if "text" in b:
+            timer["text"] = str(b["text"])[:400]
+        for k in ("visible", "blink"):
+            if k in b:
+                timer[k] = bool(b[k])
+        if "secondary_shown" in b:
+            timer["secondarySource"] = "secondary" if b["secondary_shown"] else None
+        payload = {}
+        if timer:
+            payload["timer"] = timer
+        if "secondary" in b:
+            payload["secondary"] = str(b["secondary"])[:400]
+        if payload:
+            try:
+                _ontime_ws_send("message", payload)
+            except Exception as e:
+                return jsonify({"ok": False, "error": f"OnTime did not take it ({str(e)[:60]})"}), 502
+            _audit("ONTIME_MESSAGE", f"{request.remote_addr}: {json.dumps(payload)[:120]}")
+            time.sleep(0.1)
+    m = _ontime_message()
+    if m is None:
+        return jsonify({"ok": False, "error": "OnTime is not answering"}), 200
+    return jsonify({"ok": True, **m, "saved": load_config().get("touch_messages",
+                    ["5 minutes", "Wrap up", "Time's up", "Speak up", "Mic check", "Stand by"])})
+
+
 @app.route("/touch")
 def touch_page():
     """The One for a touchscreen: an iPad by the DSM's desk (Rob, 2026-10-21:

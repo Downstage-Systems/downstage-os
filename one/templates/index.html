@@ -6434,6 +6434,55 @@
     }, { passive: false });
   }
 
+  // ── Right-click (long-press on a phone or iPad) a view: add it to the
+  // touch page's Outputs menu, or take it off (Rob, 2026-10-22: "on the
+  // browser, you can right click (hold on mobile/ipad) on a view and add it
+  // to the touch menu"). The menu is the unit's, so every iPad follows. ──
+  let _touchSrc = null;
+  async function touchSrcLoad() {
+    try { const d = await (await fetch('/api/v1/one/touch-sources', { cache: 'no-store' })).json(); if (d.ok) _touchSrc = d.sources.map(x => x.key); } catch (e) {}
+    return _touchSrc || [];
+  }
+  async function openSourceMenu(e, chip) {
+    if (e.preventDefault) e.preventDefault();
+    const key = chip.dataset.source;
+    if (!key || key === 'external') return;
+    const on = (await touchSrcLoad()).includes(key);
+    const label = (chip.querySelector('.source-chip-label') || {}).textContent || key;
+    const menu = document.getElementById('ctx-menu');
+    menu.innerHTML = '<div class="ctx-title">' + fxEsc(label) + '</div>' +
+      '<button class="ctx-item" onclick="touchSrcSet(\'' + key + '\',' + !on + ',\'' + fxEsc(label).replace(/'/g, '') + '\')">' +
+        '<svg viewBox="0 0 24 24"><path d="' + (on ? 'M19 13H5v-2h14v2z' : 'M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z') + '"/></svg>' +
+        (on ? 'Remove from touch menu' : 'Add to touch menu') + '</button>';
+    menu.style.display = 'block';
+    _ctxOpenedAt = Date.now();
+    const r = menu.getBoundingClientRect();
+    menu.style.left = Math.max(4, Math.min(e.clientX, window.innerWidth - r.width - 8)) + 'px';
+    menu.style.top = Math.max(4, Math.min(e.clientY, window.innerHeight - r.height - 8)) + 'px';
+  }
+  async function touchSrcSet(key, add, label) {
+    forceCloseCtxMenu();
+    const r = await fetch('/api/v1/one/touch-sources', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(add ? { add: key } : { remove: key }) });
+    const d = await r.json().catch(() => ({}));
+    if (d.ok) { _touchSrc = d.sources.map(x => x.key); showToast(label + (add ? ' is on the touch menu.' : ' is off the touch menu.'), 'success'); }
+    else showToast(d.error || 'Not changed.', 'error');
+  }
+  document.querySelectorAll('.source-chip[data-source]').forEach(chip => {
+    chip.addEventListener('contextmenu', e => openSourceMenu(e, chip));
+    let lp = null, fired = false;
+    chip.addEventListener('touchstart', e => {
+      fired = false;
+      const t = e.touches[0];
+      lp = setTimeout(() => { fired = true; if (navigator.vibrate) navigator.vibrate(15);
+        openSourceMenu({ clientX: t.clientX, clientY: t.clientY }, chip); }, 550);
+    }, { passive: true });
+    chip.addEventListener('touchmove', () => clearTimeout(lp), { passive: true });
+    chip.addEventListener('touchcancel', () => clearTimeout(lp));
+    // a long press must not also choose the view
+    chip.addEventListener('touchend', e => { clearTimeout(lp); if (fired) e.preventDefault(); }, { passive: false });
+  });
+
   let _ctxOpenedAt = 0;
   function closeCtxMenu() {
     // grace period: the long-press gesture's own ghosts (synthetic click,
