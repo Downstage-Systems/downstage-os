@@ -40,7 +40,7 @@
   html, body { height: 100%; background: var(--ground); color: var(--text); overflow: hidden;
     overscroll-behavior: none; }   /* no rubber-band of the whole page on iOS: only a tab's own content scrolls */
   body { font: 400 16px/1.4 var(--fb); -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
-    display: grid; grid-template-rows: auto auto 1fr; padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left); }
+    display: grid; grid-template-rows: auto auto auto minmax(0, 1fr); padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left); }
   button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; touch-action: manipulation; }
   .num { font-family: var(--fd); font-variant-numeric: tabular-nums; }
 
@@ -351,9 +351,59 @@
   #toast.on { opacity: 1; transform: translate(-50%, 0); }
   #toast.bad { background: var(--bad-fill); color: var(--bad-text); border-color: #5A2326; }
   #toast.warn { background: var(--warn-fill); color: var(--warn-text); }
-  #lost { display: none; padding: 10px 20px; background: var(--warn-fill); color: var(--warn-text); font-weight: 600; }
+  #lost { display: none !important; padding: 10px 20px; background: var(--warn-fill); color: var(--warn-text); font-weight: 600; }
   #lost.on { display: block; }
 
+  /* ── the Plus's warning strip: one line under the bar, the most urgent
+     first, red only for Blackout (the show), amber for the rest ── */
+  #strip { display: block; }
+  #strip:empty { height: 0; }
+  #strip .s { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 8px 20px; font-weight: 600; font-size: 15px; width: 100%; text-align: left; }
+  #strip .s.amber { background: var(--warn-fill); color: var(--warn-text); }
+  #strip .s.red { background: var(--bad-fill); color: var(--bad-text); }
+  #strip .s b { font: 700 17px var(--fd); }
+  #strip .s span { flex: 1; }
+  /* ── Lock and hand over: the padlock in the bar ── */
+  .lockbtn { width: 48px; height: 48px; border-radius: var(--rb); background: var(--raised); border: 1px solid var(--edge); display: grid; place-items: center; position: relative; overflow: hidden; flex: none; }
+  .lockbtn svg { width: 22px; height: 22px; }
+  .lockbtn.on { background: var(--warn-fill); border-color: var(--amber); color: var(--warn-text); }
+  body.locked .tabs button:not(.on) { display: none; }
+  body.locked .bar .seg2 { display: none; }
+  body.watch #pg-timer .ctrl, body.watch #pg-timer .steps, body.watch #tv-aux > .card:last-child { display: none; }
+  body.watch #pg-timer .rd { pointer-events: none; }
+  body.watch #pg-timer .h span { display: none; }
+  /* ── Outputs as the Plus's One page ── */
+  .srcrow { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 64px; padding: 0 16px; border-radius: var(--rb); background: var(--raised); border: 1px solid var(--edge); text-align: left; margin-bottom: 12px; }
+  .srcrow i { width: 6px; align-self: stretch; margin: 12px 0; border-radius: 3px; flex: none; }
+  .srcrow b { font: 700 24px var(--fd); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .srcrow::after { content: '›'; color: var(--muted); font-size: 28px; }
+  .outacts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .outacts .btn { min-height: 64px; }
+  .outacts .btn.on { border-color: var(--new-text); color: var(--new-text); background: var(--new-fill); }
+  .looks .btn.live { border-color: var(--green); background: #10241A; }
+  .looks .btn.live small { display: block; color: var(--ok-text); font-size: 12px; }
+  .unitrow { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; margin-top: 16px; padding: 0 18px; border-radius: var(--r); background: var(--panel); border: 1px solid var(--edge); text-align: left; color: var(--muted); }
+  .unitrow span { flex: 1; } .unitrow b { color: var(--text); font-weight: 600; }
+  .unitrow::after { content: '›'; font-size: 26px; }
+  .scrim.side { justify-content: flex-end; align-items: stretch; }
+  .sheet.side { width: min(560px, 100vw); max-height: none; height: 100%; border-radius: 0; border-width: 0 0 0 1px; overflow-y: auto;
+    padding: 18px 20px calc(24px + env(safe-area-inset-bottom)); animation: slidein .18s ease-out; }
+  .srow { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 64px; padding: 0 14px; border-bottom: 1px solid var(--rule); text-align: left; }
+  .srow i { width: 6px; height: 36px; border-radius: 3px; flex: none; }
+  .srow b { font: 700 21px var(--fd); flex: 1; }
+  .srow small { color: var(--muted); font-size: 13px; }
+  .srow.live b { color: var(--ok-text); }
+  /* ── Talk, as the Plus's ── */
+  .twords { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .twords .btn { min-height: 76px; font: 700 20px var(--fd); }
+  .twords .btn.c-amber { color: var(--amber); } .twords .btn.c-red { color: var(--red); } .twords .btn.c-green { color: var(--green); }
+  .twords .btn.clear { background: var(--bad-fill); border-color: #5A2326; color: var(--bad-text); font: 600 17px var(--fb); }
+  .proof { margin-top: 14px; padding: 14px 18px; border-radius: var(--r); background: var(--ok-fill); color: var(--ok-text); font-weight: 600; display: flex; gap: 12px; }
+  .proof span { flex: 1; } .proof small { color: var(--muted); font-weight: 400; }
+  .proof.part { background: var(--warn-fill); color: var(--warn-text); }
+  .colours { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
+  .colours .btn { min-height: 52px; }
+  .colours .btn.on { box-shadow: inset 0 0 0 2px currentColor; }
   /* a 13" iPad has height to spare: the time and the buttons grow into it */
   .clock .time { font-size: clamp(110px, min(15vw, 21vh), 260px); }
   #pg-timer .ctrl .btn, #pg-timer .steps .btn { min-height: max(64px, 8.2vh); }
@@ -420,6 +470,8 @@
     .bar .fig.clockfig { display: none; }
     #b-comp { order: 4; }
     .fullbtn { order: 5; height: 40px; padding: 0 12px; margin-left: auto; }
+    .lockbtn { order: 6; width: 40px; height: 40px; }
+    #strip .s { padding: 8px 12px; font-size: 14px; flex-wrap: wrap; gap: 2px 8px; } #strip .s span { flex-basis: 100%; }
     .bar .seg2 { order: 2; margin-left: auto; }
     .bar .seg2 button { height: 34px; padding: 0 10px; font-size: 14px; }
     .tabs { padding: 0 4px; }
@@ -487,8 +539,10 @@
   <div class="fig clockfig"><small>Time</small><em id="b-clock">-</em></div>
   <span class="pill off" id="b-comp">Companion</span>
   <button class="fullbtn" data-act="ftOpen" aria-label="Show the timer full screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span>Full timer</span></button>
+  <button class="lockbtn" id="b-lock" data-act="lockOpen" aria-label="Lock and hand over"></button>
   <div class="seg2" role="group" aria-label="Interface"><button class="on" aria-pressed="true">Touch</button><button data-act="toBrowser" aria-pressed="false">Browser</button></div>
 </header>
+<div id="strip"></div>
 <nav class="tabs" id="tabs">
   <button data-tab="deck">Deck</button>
   <button data-tab="timer">Timer</button>
@@ -632,6 +686,7 @@
   </section>
 
   <section class="page" id="pg-outputs">
+    <div class="rigtop" id="o-top"></div>
     <div class="grid2" id="o-outs"></div>
     <div class="card" style="margin-top:16px">
       <div class="h"><b>Looks</b><span id="o-looks-say">hold a look to put it on both outputs</span><span style="flex:1"></span>
@@ -639,10 +694,7 @@
         <button class="btn pri" data-act="lookSave" style="min-height:48px">Save current look</button></div>
       <div class="looks" id="o-looks"><p class="note">No looks yet: set the outputs as you want them, then Save current look.</p></div>
     </div>
-    <div class="row" style="margin-top:16px">
-      <button class="btn danger hold" id="o-black" data-hold="900" data-act="blackAll">Blackout everything<span class="hint">hold</span></button>
-      <button class="btn" data-act="identify">Identify outputs</button>
-    </div>
+    <button class="unitrow" id="o-unit" data-act="unitOpen"></button>
   </section>
 
   <section class="page" id="pg-router">
@@ -737,6 +789,16 @@
     <div id="pick-body"></div>
   </div>
 </div>
+<div class="scrim" id="word-scrim">
+  <div class="sheet">
+    <h3>Words</h3>
+    <p class="note">In capitals on their faces, up to 24 characters, in this colour.</p>
+    <input class="txt" id="wd-in" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="24">
+    <div class="colours" id="wd-col"></div>
+    <div class="row"><button class="btn danger" data-act="wordRemove">Remove</button><button class="btn" data-act="wordCancel">Cancel</button><button class="btn pri" data-act="wordSave">Save</button></div>
+  </div>
+</div>
+<div class="scrim side" id="src-scrim"><div class="sheet side" id="src-sheet"></div></div>
 <div class="scrim" id="light-scrim"><div class="sheet" id="light-sheet"></div></div>
 <div class="scrim" id="grid-scrim">
   <div class="sheet wide" id="grid-sheet">
@@ -754,9 +816,10 @@
   <div class="sheet wide">
     <div class="shead"><div><h3>Talk</h3><p class="note">Words on their faces: pick who, tap the words.</p></div><button class="x" data-act="talkClose" aria-label="Close">✕</button></div>
     <div class="h"><b>To</b></div><div class="chips" id="tk-to"></div>
-    <div class="h" style="margin-top:14px"><b>For</b></div><div class="segs" id="tk-secs" style="margin-bottom:14px"></div>
-    <div class="h"><b>Words</b><span>tap to send · hold to remove</span></div><div class="srcs" id="tk-words" style="margin:0"></div>
-    <button class="btn" data-act="talkClear" style="width:100%; margin-top:14px">Clear their messages</button>
+    <div class="h" style="margin-top:14px"><b>Show for</b></div><div class="segs" id="tk-secs" style="margin-bottom:14px"></div>
+    <div class="h"><b>Words</b><span>tap to send · hold one to change it</span><span style="flex:1"></span><button class="btn" data-act="wordAdd" style="min-height:44px">+ Words</button></div>
+    <div class="twords" id="tk-words"></div>
+    <div id="tk-proof"></div>
   </div>
 </div>
 <div id="toast"></div>
@@ -893,7 +956,7 @@
     comp.className = 'pill ' + (s.companion_running ? 'ok' : 'warn');
     const dark = !!s.blackout;
     $('b-dark').hidden = !dark;
-    for (const id of ['o-black', 'a-black', 'd-black']) {
+    for (const id of ['a-black', 'd-black']) {
       const el = $(id); if (!el) continue;
       el.classList.toggle('hold', !dark);
       el.firstChild.textContent = dark ? (id === 'o-black' ? 'Bring everything back' : 'Bring the screen back') : (id === 'o-black' ? 'Blackout everything' : 'Blackout');
@@ -902,6 +965,8 @@
     if (S.tab === 'outputs') paintOutputs();
     if (S.tab === 'tools') paintTools();
     if (S.tab === 'deck') paintDeck();
+    if (S.tab === 'outputs') paintLooks();
+    paintStrip();
   }
 
   // ── Deck: Companion's own emulator, the one the One keeps for this (the
@@ -1152,8 +1217,10 @@
     const s = S.status || {}, bo = s.blackout_outputs || [], hc = s.hdmi_connected || {}, names = s.hdmi_names || {};
     if (!$('o-out-1')) $('o-outs').innerHTML = [1, 2].map(n =>
       '<div class="card out" id="o-out-' + n + '"><div class="prev" id="o-prev-' + n + '" data-act="prevRearm" data-arg="' + n + '"></div><div class="obody"></div></div>').join('');
-    paintPreviews();
-    const sig = JSON.stringify([s.hdmi1_source, s.hdmi2_source, bo, hc, names, S.ct, S.ctOpen, SOURCES]);
+    paintPreviews(); paintOutTop();
+    if (S.srcFor) paintSrcSheet();
+    const tco = s.testcard_outputs || [];
+    const sig = JSON.stringify([s.hdmi1_source, s.hdmi2_source, bo, hc, names, S.ct, S.ctOpen, SOURCES, tco]);
     if (sig === S.outSig) return;
     S.outSig = sig;
     [1, 2].forEach(n => { $('o-out-' + n).querySelector('.obody').innerHTML = (() => {
@@ -1162,12 +1229,10 @@
       const nm = names[n] || names[String(n)];
       return '<div class="hd"><b>HDMI ' + n + '</b><span class="pill ' + (dark ? 'dark' : conn === false ? 'off' : 'ok') + '">' +
           (dark ? 'Blacked out' : conn === false ? 'No display' : esc(nm || 'Display connected')) + '</span></div>' +
-        '<div class="now">' + esc(srcName(cur)) + '</div>' +
-        '<button class="toggle' + (dark ? ' on' : '') + '" data-act="blackOne" data-arg="' + n + '"><span>Black out HDMI ' + n + '</span><span class="sw"></span></button>' +
-        '<div class="srcs">' + SOURCES.map(([k, label]) =>
-          '<button class="btn' + (k === cur ? ' on' : '') + '" data-act="source" data-long="srcMenu" data-arg="' + n + '|' + esc(k) + '">' + esc(label) + '</button>').join('') +
-          '<button class="btn" data-act="srcAdd" style="color:var(--muted)">+ Add a view</button></div>' +
-        '<p class="note">Tap a view to put it on HDMI ' + n + '. Press and hold one to take it off this menu.</p>' + ctPanel(n);
+        '<button class="srcrow" data-act="srcOpen" data-arg="' + n + '"><i style="background:' + srcColour(cur) + '"></i><b>' + esc(srcName(cur)) + '</b></button>' +
+        '<div class="outacts"><button class="btn' + (tco.includes(n) ? ' on' : '') + '" data-act="testcard" data-arg="' + n + '">' + (tco.includes(n) ? 'Test card on' : 'Test card') + '</button>' +
+        (dark ? '<button class="btn live" data-act="blackOne" data-arg="' + n + '">Bring back</button>'
+              : '<button class="btn danger hold" data-hold="1000" data-act="blackOne" data-arg="' + n + '">Black<span class="hint">hold 1 s</span></button>') + '</div>' + ctPanel(n);
     })(); });
   }
   // The previews stream only while the Outputs tab is in view: each one is a
@@ -1300,8 +1365,107 @@
         ? '<span class="look"><button class="btn" disabled>' + esc(x.name) + '</button>' +
             '<button class="btn small hold" data-hold="700" data-act="lookUpdate" data-arg="' + esc(x.name) + '">Update<span class="hint">hold</span></button>' +
             '<button class="btn small danger hold" data-hold="900" data-act="lookDelete" data-arg="' + esc(x.name) + '">Delete<span class="hint">hold</span></button></span>'
-        : '<button class="btn hold" data-hold="700" data-act="look" data-arg="' + esc(x.name) + '">' + esc(x.name) + '</button>').join('')
+        : (() => { const st = S.status || {}, live = x.hdmi1_source === st.hdmi1_source && x.hdmi2_source === st.hdmi2_source;
+            return '<button class="btn hold' + (live ? ' live' : '') + '" data-hold="700" data-act="look" data-arg="' + esc(x.name) + '">' + esc(x.name) + (live ? '<small>live</small>' : '') + '</button>'; })()).join('')
       : '<p class="note">No looks yet: set the outputs as you want them, then Save current look.</p>';
+  }
+
+  // ── the Plus's warning strip (Rob, 2026-10-22: "build 1 to 4"): at most one
+  // line under the bar, the most urgent first, saying what is wrong and what
+  // to do; a tap goes where it is fixed ──
+  function paintStrip() {
+    const s = S.status || {}, bo = s.blackout_outputs || [];
+    let w = null;
+    if (S.misses >= 3) w = ['amber', 'The One is not answering.', 'Still trying. Check it is on and on this network.', ''];
+    else if (s.blackout) w = ['red', 'Blackout is on.', (bo.length === 1 ? 'HDMI ' + bo[0] + ' is dark' : 'Every output is dark') + '. Tap to bring it back on Outputs.', 'outputs'];
+    else if (s.companion_installed && !s.companion_running) w = ['amber', 'Companion is not running.', 'The Deck and the lights’ keys are dark: restart it in Tools.', 'tools'];
+    else {
+      const ls = rigLights(), gone = ls.find(x => x.carried && !x.online);
+      const low = ls.find(x => x.online && x.battery !== null && x.battery !== undefined && x.battery < 20 && !x.charging);
+      const rel = relaysOf().find(r => { const st = (S.relayData[r.ip] || {}).status; return st && st.live === false && !st.one; });
+      if (rel) w = ['amber', 'Companion lost.', (rel.name || 'The Relay') + ' cannot reach Companion: its lights hold their last tally.', 'rig'];
+      else if (gone) w = ['amber', gone.name + ' is not heard.', 'Check its power, or bring it closer to ' + (gone.r && gone.r.name || 'its Relay') + '.', 'rig'];
+      else if (low) w = ['amber', low.name + '’s battery is at ' + low.battery + '%.', 'Charge it before the show.', 'rig'];
+    }
+    const h = w ? '<button class="s ' + w[0] + '"' + (w[3] ? ' data-act="tab" data-arg="' + w[3] + '"' : '') + '><b>' + esc(w[1]) + '</b><span>' + esc(w[2]) + '</span></button>' : '';
+    if ($('strip').innerHTML !== h) $('strip').innerHTML = h;
+  }
+
+  // ── Lock and hand over (the Plus's, 0.157.0): the iPad shows one thing until
+  // the padlock is held 3 s. Kept on this device, so a reload stays locked ──
+  S.lock = store.get('ds_lock', '');
+  const lockTab = () => S.lock === 'deck' ? 'deck' : 'timer';
+  const padSvg = on => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"/>' +
+    (on ? '<path d="M8 11V8a4 4 0 0 1 8 0v3"/>' : '<path d="M8 11V8a4 4 0 0 1 7.5-2"/>') + '</svg>';
+  function applyLock() {
+    const on = !!S.lock, b = $('b-lock');
+    document.body.classList.toggle('locked', on);
+    document.body.classList.toggle('watch', S.lock === 'watch');
+    b.classList.toggle('on', on); b.classList.toggle('hold', on);
+    b.dataset.act = on ? 'unlock' : 'lockOpen'; b.dataset.hold = '3000';
+    b.innerHTML = padSvg(on);
+    b.setAttribute('aria-label', on ? 'Locked: hold 3 s to unlock' : 'Lock and hand over');
+    b.title = on ? 'Hold 3 s to unlock' : 'Lock and hand over';
+    if (on) {
+      for (const id of ['light-scrim', 'grid-scrim', 'talk-scrim', 'pick-scrim', 'ask-scrim', 'src-scrim']) { const e = $(id); if (e) e.classList.remove('on'); }
+      setTab(lockTab());
+      if (S.lock !== 'deck') A.tview('main');
+    }
+  }
+
+  // ── Outputs as the Plus's One page: four figures, each HDMI as one row in
+  // its source's colour (tap for the list), Test card and Black, the looks
+  // with the live one edged green, and Unit and power ──
+  const srcColour = k => k === 'cleantimer' ? '#EEF1F3' : /^aux/.test(k) ? '#F5A524' : k === 'companion' ? '#8E6FE6' :
+    /^pattern/.test(k) ? '#4EA8DE' : (k === 'off' || k === 'welcome' || k === 'config') ? '#7D8790' : '#2FD97B';
+  const srcFrom = k => k === 'cleantimer' ? 'OnTime, styled on the One' : /^aux/.test(k) ? 'an OnTime aux timer' : k === 'companion' ? 'Companion' :
+    /^pattern/.test(k) ? 'a test pattern' : k === 'welcome' ? 'this One' : k === 'off' ? 'nothing' : k === 'config' ? 'this page' : 'an OnTime view';
+  function paintOutTop() {
+    const s = S.status || {}, bo = s.blackout_outputs || [], hc = s.hdmi_connected || {};
+    const conn = n => hc[n] !== undefined ? hc[n] : hc[String(n)];
+    const live = [1, 2].filter(n => conn(n) && !bo.includes(n)).length;
+    const hot = s.cpu_temp && s.cpu_temp >= 75;
+    const up = s.uptime ? (typeof s.uptime === 'number' ? upFor(s.uptime) : s.uptime) : '';
+    const stat = (label, val, sub, cls) => '<div class="st ' + (cls || '') + '"><small>' + label + '</small><em>' + esc(val) + '</em><span>' + esc(sub) + '</span></div>';
+    const dark = !!s.blackout;
+    const h = stat('Outputs', live + ' live', bo.length ? 'HDMI ' + bo.join(' and ') + ' black' : 'none black', live ? 'ok' : 'warn') +
+      stat('Companion', s.companion_running ? 'Live' : 'Stopped', s.companion_running ? 'running here' : 'not running', s.companion_running ? 'ok' : 'warn') +
+      stat('Time of day', clockText(serverNow()), 'the One’s clock', '') +
+      stat('Unit', hot ? 'Hot' : 'OK', [s.cpu_temp ? Math.round(s.cpu_temp) + ' °C' : '', up ? 'up ' + up : ''].filter(Boolean).join(' · '), hot ? 'warn' : 'ok') +
+      '<div class="acts"><button class="btn" data-act="identify">Identify outputs</button>' +
+      (dark ? '<button class="btn live" data-act="blackAll">Bring everything back</button>'
+            : '<button class="btn danger hold" data-hold="1000" data-act="blackAll">Blackout all<span class="hint">hold 1 s</span></button>') + '</div>';
+    if ($('o-top').innerHTML !== h) $('o-top').innerHTML = h;
+    const u = '<span>One <b>' + esc(s.name || window.ONE_HOST || '') + '</b> · ' + esc(s.local_ip || s.ip || '') + ' · ' + esc(s.os_version || '') + '</span>Unit and power';
+    if ($('o-unit').innerHTML !== u) $('o-unit').innerHTML = u;
+  }
+  function paintSrcSheet() {
+    const n = S.srcFor, s = S.status || {}, cur = s['hdmi' + n + '_source'];
+    if (!n) return;
+    $('src-sheet').innerHTML = '<div class="lhead"><div><h3>HDMI ' + n + '</h3><p>Tap a view to put it on HDMI ' + n + '. Hold one to take it off this list.</p></div>' +
+      '<button class="x" data-act="srcClose" aria-label="Close">✕</button></div>' +
+      SOURCES.map(([k, label]) => '<button class="srow' + (k === cur ? ' live' : '') + '" data-act="source" data-long="srcMenu" data-arg="' + n + '|' + esc(k) + '">' +
+        '<i style="background:' + srcColour(k) + '"></i><span style="flex:1"><b>' + esc(label) + '</b><br><small>' + srcFrom(k) + '</small></span>' +
+        (k === cur ? '<span class="pill ok">Live</span>' : '') + '</button>').join('') +
+      '<button class="srow" data-act="srcAdd"><i style="background:var(--edge)"></i><b style="color:var(--muted)">+ Add a view</b></button>';
+  }
+
+  // ── Talk's words, on the One (as the Plus's: each in the colour it shows in) ──
+  async function loadTalkWords() { try { const d = await getJSON('/api/v1/one/talk-words'); if (d.ok) { S.talkWords = d.words; if ($('talk-scrim').classList.contains('on')) paintTalk(); } } catch (e) {} }
+  async function saveTalkWords(words) { const d = await post('/api/v1/one/talk-words', { words }); if (d.ok) { S.talkWords = d.words; paintTalk(); } }
+  let wordWait = null;
+  function editWord(i) {
+    const w = (S.talkWords || [])[+i] || ['', 'white'];
+    S.wordEdit = { i: +i, colour: w[1] };
+    $('wd-in').value = w[0];
+    paintWordColours();
+    $('word-scrim').classList.add('on');
+    setTimeout(() => $('wd-in').focus(), 50);
+  }
+  function paintWordColours() {
+    $('wd-col').innerHTML = [['white', 'White'], ['amber', 'Amber'], ['red', 'Red'], ['green', 'Green']].map(([c, t]) =>
+      '<button class="btn c-' + c + (S.wordEdit.colour === c ? ' on' : '') + '" data-act="wordColour" data-arg="' + c + '" style="color:' +
+      { white: 'var(--text)', amber: 'var(--amber)', red: 'var(--red)', green: 'var(--green)' }[c] + '">' + t + '</button>').join('');
   }
 
   // ── Rig: the Slate Plus's Lights page (Rob, 2026-10-22). What the lights
@@ -1333,6 +1497,7 @@
     }));
     if (S.tab === 'rig') paintRig();
     if (L.serial) paintLight();
+    paintStrip();
   }
   // a read through the One's Relay proxy (a POST, but nothing changes: no toast, no PIN)
   async function getJSON2(path, body) {
@@ -1636,29 +1801,42 @@
   }
   function followClose() { clearInterval(FG.timer); $('grid-scrim').classList.remove('on'); }
 
-  // ── Talk: words on the lights' faces, for 10 s, 30 s or until cleared (the
-  // Relay's "message", round Cues and Lites) ──
-  const T = { to: new Set(), secs: 10 };
-  const talkPhrases = () => { try { const v = JSON.parse(store.get('ds_talk', 'null')); if (Array.isArray(v)) return v; } catch (e) {} return ['5 MIN', '2 MIN', 'WRAP UP', 'STAND BY', 'SPEAK UP', 'LOOK UP']; };
+  // ── Talk, as the Plus's (Rob, 2026-10-22): pick who, tap the words (each in
+  // the colour it shows in on the faces), see that they landed. Until cleared
+  // by default, so STANDBY stays up until Clear. A word held is edited. ──
+  const T = { to: new Set(), secs: -1, proof: null };
   const talkable = () => rigLights().filter(x => x.carried && x.online && (x.kind === 'round' || x.kind === 'lite'));
+  const listNames = a => a.length <= 1 ? (a[0] || '') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1];
   function paintTalk() {
     const ls = talkable(), all = ls.length && ls.every(x => T.to.has(x.id));
     $('tk-to').innerHTML = ls.map(x => '<button class="btn' + (T.to.has(x.id) ? ' on' : '') + '" data-act="talkTo" data-arg="' + esc(x.id) + '">' + faceSvg(x, 'face') + ' ' + (x.n ? x.n + ' ' : '') + esc(x.name) + '</button>').join('') +
       (ls.length ? '<button class="btn' + (all ? ' on' : '') + '" data-act="talkAll">All lights</button>' : '<p class="note">No round Cue or Lite is carried right now.</p>');
-    $('tk-words').innerHTML = talkPhrases().map((t, i) => '<button class="btn" data-act="talkSend" data-long="talkDel" data-arg="' + i + '">' + esc(t) + '</button>').join('') +
-      '<button class="btn" data-act="talkWrite">Write…</button>';
     $('tk-secs').innerHTML = [[10, '10 s'], [30, '30 s'], [-1, 'Until cleared']].map(([v, t]) => '<button class="btn' + (T.secs === v ? ' on' : '') + '" data-act="talkSecs" data-arg="' + v + '">' + t + '</button>').join('');
+    $('tk-words').innerHTML = (S.talkWords || []).map((w, i) => '<button class="btn c-' + esc(w[1]) + '" data-act="talkSend" data-long="talkEdit" data-arg="' + i + '">' + esc(w[0]) + '</button>').join('') +
+      '<button class="btn" data-act="talkWrite">Write</button><button class="btn clear" data-act="talkClear">Clear</button>';
+    paintProof();
   }
-  async function talkSend(words, secs) {
+  function paintProof() {
+    const p = T.proof;
+    if (!p) { $('tk-proof').innerHTML = ''; return; }
+    const ago = Math.round((Date.now() - p.at) / 1000);
+    const said = p.words ? p.words + ' is showing on ' + listNames(p.ok) + (p.secs === -1 ? ', until cleared.' : ' for ' + p.secs + ' s.') : 'Cleared on ' + listNames(p.ok) + '.';
+    $('tk-proof').innerHTML = '<div class="proof' + (p.bad.length ? ' part' : '') + '"><span>' + esc(p.ok.length ? said : 'Nothing landed.') +
+      (p.bad.length ? ' No answer from ' + esc(listNames(p.bad)) + '.' : '') + '</span><small>' + (ago < 2 ? 'just now' : ago + ' s ago') + '</small></div>';
+  }
+  async function talkSend(words, colour, secs) {
     const ls = talkable().filter(x => T.to.has(x.id));
-    if (!ls.length) { toast('Choose who it is for first.', 'warn'); return; }
-    let ok = 0;
-    for (const x of ls) {
-      const d = await post('/fleet/relay/light', { ip: x.r.ip, id: x.id, n: x.cue && x.cue.n, set: { message: words, messageSecs: secs } });
-      if (d.ok) ok++;
-    }
-    toast(words ? '"' + words + '" on ' + ok + ' of ' + ls.length + ' light' + (ls.length > 1 ? 's' : '') : 'Messages cleared on ' + ok + ' light' + (ok === 1 ? '' : 's'));
+    if (!ls.length) { toast('Pick who first.', 'warn'); return; }
+    const ok = [], bad = [];
+    await Promise.all(ls.map(async x => {
+      const set = words ? { message: words, messageSecs: secs, messageColor: colour || 'white' } : { message: '', messageSecs: 0 };
+      const d = await post('/fleet/relay/light', { ip: x.r.ip, id: x.id, n: x.cue && x.cue.n, set });
+      (d.ok ? ok : bad).push(x.name);
+    }));
+    T.proof = { words, secs, ok, bad, at: Date.now() };
+    paintTalk();
   }
+  setInterval(() => { if (T.proof && $('talk-scrim').classList.contains('on')) paintProof(); }, 1000);
 
   // ── Messages (Rob, 2026-10-22: "Add message control for Ontime on the
   // touch pages menu"): what OnTime's timer screens say, and the line under
@@ -1833,7 +2011,7 @@
       const yes = await askChoice(srcName(k), 'Take it off the touch menu? It stays in the Browser view, and Add a view puts it back.', 'Take it off');
       if (!yes) return;
       const d = await post('/api/v1/one/touch-sources', { remove: k });
-      if (d.ok) { SOURCES = d.sources.map(x => [x.key, x.label]); S.outSig = ''; paintOutputs(); toast(srcName(k) + ' is off the menu.'); }
+      if (d.ok) { SOURCES = d.sources.map(x => [x.key, x.label]); S.outSig = ''; paintOutputs(); paintSrcSheet(); toast(srcName(k) + ' is off the menu.'); }
     },
     async srcAdd() {
       const have = new Set(SOURCES.map(x => x[0]));
@@ -1842,10 +2020,10 @@
       const k = await askPick('Add a view', 'It joins this menu on every iPad and phone.', left);
       if (!k) return;
       const d = await post('/api/v1/one/touch-sources', { add: k });
-      if (d.ok) { SOURCES = d.sources.map(x => [x.key, x.label]); S.outSig = ''; paintOutputs(); toast(srcName(k) + ' added.'); }
+      if (d.ok) { SOURCES = d.sources.map(x => [x.key, x.label]); S.outSig = ''; paintOutputs(); paintSrcSheet(); toast(srcName(k) + ' added.'); }
     },
     async source(arg) { const [n, source] = arg.split('|'); const d = await post('/displays/source', { output: +n, source });
-                        if (d.ok) { toast('HDMI ' + n + ': ' + srcName(source)); S.outSig = ''; setTimeout(pollStatus, 400); } },
+                        if (d.ok) { toast('HDMI ' + n + ': ' + srcName(source)); S.outSig = ''; A.srcClose(); setTimeout(pollStatus, 400); } },
     askOk() { askDone($('ask-in').value); }, askCancel() { askDone(null); },
     pickVal(v) { pickDone(v); }, pickCancel() { pickDone(null); },
     lightOpen(id) { L.serial = id; L.tsrc = undefined; L.camop = undefined; $('light-sheet').dataset.html = ''; $('light-scrim').classList.add('on'); paintLight(); lightLoad(); pollRelays(); },
@@ -1920,26 +2098,59 @@
       if (d.ok !== false) toast(d.message || 'Adopting…');
       setTimeout(pollRelays, 1500);
     },
-    talkOpen(id) { T.to = new Set(id ? [id] : []); $('talk-scrim').classList.add('on'); paintTalk(); },
+    talkOpen(id) { T.to = new Set(id ? [id] : []); $('talk-scrim').classList.add('on'); paintTalk(); loadTalkWords(); },
     talkClose() { $('talk-scrim').classList.remove('on'); },
     talkTo(id) { T.to.has(id) ? T.to.delete(id) : T.to.add(id); paintTalk(); },
     talkAll() { const ls = talkable(), all = ls.every(x => T.to.has(x.id)); T.to = new Set(all ? [] : ls.map(x => x.id)); paintTalk(); },
     talkSecs(v) { T.secs = +v; paintTalk(); },
-    talkSend(i) { const t = talkPhrases()[+i]; if (t !== undefined) talkSend(t, T.secs); },
+    talkSend(i) { const w = (S.talkWords || [])[+i]; if (w) talkSend(w[0], w[1], T.secs); },
     async talkWrite() {
-      const v = await askText('Write', 'Words for their faces (up to 24 characters). Saved for next time.', '', 'Send');
+      const v = await askText('Write', 'A one-off, in white, up to 24 characters. To keep words, hold one of the words and change it.', '', 'Send');
       if (v === null || !v.trim()) return;
-      const w = v.trim().toUpperCase().slice(0, 24);
-      const list = talkPhrases().filter(x => x !== w).concat(w);
-      store.set('ds_talk', JSON.stringify(list.slice(-12)));
-      paintTalk(); talkSend(w, T.secs);
+      talkSend(v.trim().toUpperCase().slice(0, 24), 'white', T.secs);
     },
-    async talkDel(i) {
-      const list = talkPhrases(), t = list[+i]; if (t === undefined) return;
-      if (!(await askChoice(t, 'Remove it from the words?', 'Remove'))) return;
-      store.set('ds_talk', JSON.stringify(list.filter((_, j) => j !== +i))); paintTalk();
+    talkClear() { talkSend('', 'white', 0); },
+    talkEdit(i) { editWord(i); },
+    wordColour(c) { S.wordEdit.colour = c; paintWordColours(); },
+    wordSave() {
+      const v = $('wd-in').value.trim().toUpperCase().slice(0, 24);
+      const list = (S.talkWords || []).map(w => w.slice());
+      if (!v) { toast('Type the words first.', 'warn'); return; }
+      list[S.wordEdit.i] = [v, S.wordEdit.colour];
+      $('word-scrim').classList.remove('on'); saveTalkWords(list);
     },
-    talkClear() { talkSend('', 0); },
+    wordRemove() {
+      const list = (S.talkWords || []).filter((_, j) => j !== S.wordEdit.i);
+      $('word-scrim').classList.remove('on'); saveTalkWords(list);
+    },
+    wordAdd() { S.wordEdit = { i: (S.talkWords || []).length, colour: 'white' }; $('wd-in').value = ''; paintWordColours(); $('word-scrim').classList.add('on'); },
+    wordCancel() { $('word-scrim').classList.remove('on'); },
+    async lockOpen() {
+      const k = await askPick('Lock and hand over', 'It shows one thing until the padlock is held for 3 seconds.',
+        [['deck', 'The Deck only'], ['timer', 'The Timer only'], ['watch', 'Watch the timer: no buttons']]);
+      if (!k) return;
+      S.lock = k; store.set('ds_lock', k); applyLock();
+      toast('Locked. Hold the padlock 3 s to unlock.');
+    },
+    unlock() { S.lock = ''; store.set('ds_lock', ''); applyLock(); toast('Unlocked.'); },
+    srcOpen(n) { S.srcFor = +n; paintSrcSheet(); $('src-scrim').classList.add('on'); },
+    srcClose() { $('src-scrim').classList.remove('on'); S.srcFor = 0; },
+    async testcard(n) {
+      const on = !((S.status || {}).testcard_outputs || []).includes(+n);
+      const d = await post('/displays/testcard', { output: +n, on });
+      if (d.ok) { toast(on ? 'Test card on HDMI ' + n + '.' : 'HDMI ' + n + ' back to its source.'); setTimeout(pollStatus, 600); }
+    },
+    unitOpen() {
+      const s = S.status || {}, w = s.wifi || {};
+      pickOpen('Unit and power', (s.name || '') + ' · ' + (s.serial || ''),
+        '<div class="kv">' + kv([['Address', s.local_ip || s.ip], ['On', s.net_iface === 'eth0' ? 'Ethernet' : w.ssid ? 'WiFi ' + w.ssid : s.net_iface],
+          ['Temperature', s.cpu_temp ? Math.round(s.cpu_temp) + ' °C' : ''], ['Up', s.uptime ? (typeof s.uptime === 'number' ? upFor(s.uptime) : s.uptime) : ''],
+          ['Downstage OS', s.os_version], ['OnTime', s.ontime_running ? 'running' : 'stopped'], ['Companion', s.companion_running ? 'running' : 'stopped']]) + '</div>' +
+        '<div class="stack">' +
+        '<button class="btn hold" data-hold="1000" data-act="postTo" data-arg="/companion/restart">Restart Companion<span class="hint">hold 1 s</span></button>' +
+        '<button class="btn hold" data-hold="1500" data-act="postTo" data-arg="/system/restart">Reboot the One<span class="hint">hold</span></button>' +
+        '<button class="btn danger hold" data-hold="1500" data-act="postTo" data-arg="/system/shutdown">Power off<span class="hint">hold</span></button></div>');
+    },
     lookEdit() { S.lookEdit = !S.lookEdit; paintLooks(); },
     async lookSave() {
       const name = await askText('Save current look', 'Both outputs as they are now, their Custom timer options and web pages, under one name.', '', 'Save');
@@ -2062,6 +2273,7 @@
   document.addEventListener('contextmenu', e => e.preventDefault());
 
   function setTab(t) {
+    if (S.lock && t !== lockTab()) return;          // handed over: one thing only
     S.tab = t; store.set('ds_tab', t);
     for (const b of document.querySelectorAll('#tabs button')) b.classList.toggle('on', b.dataset.tab === t);
     for (const p of document.querySelectorAll('.page')) p.classList.toggle('on', p.id === 'pg-' + t);
@@ -2081,9 +2293,9 @@
   function takeAux(a) { if (a && S.aux) { S.aux.aux = [a].concat((S.aux.aux || []).slice(1)); S.auxAt = Date.now(); paintAux(); paintFast(); } }
   async function pollStatus() {
     try {
-      S.status = await getJSON('/status'); S.statusAt = Date.now(); S.misses = 0; $('lost').classList.remove('on');
+      S.status = await getJSON('/status'); S.statusAt = Date.now(); S.misses = 0;
       paintStatus();
-    } catch (e) { if (++S.misses >= 3) $('lost').classList.add('on'); }
+    } catch (e) { ++S.misses; paintStrip(); }
   }
   async function pollTimer() {
     try { const d = await getJSON('/api/v1/one/timer'); if (d.ok) { S.timer = d; S.timerAt = Date.now(); paintTimer(); } } catch (e) {}
@@ -2104,7 +2316,9 @@
   S.awakeWanted = store.get('ds_awake', '') === '1';
   if (S.awakeWanted) $('t-awake').classList.add('on');
   A.tview(S.tview);
-  setTab(hash === 'aux' ? 'timer' : TABS.includes(hash) ? hash : store.get('ds_tab', 'timer'));
+  if (!S.lock) setTab(hash === 'aux' ? 'timer' : TABS.includes(hash) ? hash : store.get('ds_tab', 'timer'));
+  applyLock();
+  loadTalkWords();
   pollStatus(); pollTimer(); pollAux(); pollFleet();
   setInterval(pollStatus, 2000);
   setInterval(pollTimer, 1000);

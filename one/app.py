@@ -2803,6 +2803,30 @@ def one_message():
                     ["5 minutes", "Wrap up", "Time's up", "Speak up", "Mic check", "Stand by"])})
 
 
+# Talk's words for the lights' faces, each with the colour it shows in (the
+# Slate Plus's ten, Rob 2026-10-22: "build 1 to 4"). On the unit, so the
+# iPad and the phone say the same things.
+TALK_WORDS_DEFAULT = [["STANDBY", "amber"], ["5 MIN", "amber"], ["1 MIN", "amber"], ["WRAP UP", "red"],
+                      ["STOP", "red"], ["THANK YOU", "green"], ["SLOW DOWN", "white"], ["LOUDER", "white"],
+                      ["LOOK AT CAM 2", "white"], ["Q AND A NEXT", "white"]]
+
+
+@app.route("/api/v1/one/talk-words", methods=["GET", "POST"])
+def talk_words():
+    if request.method == "POST":
+        words = (request.get_json(silent=True) or {}).get("words")
+        if not isinstance(words, list):
+            return jsonify({"ok": False, "error": "words is a list of [words, colour]"}), 400
+        clean = []
+        for w in words[:24]:
+            if isinstance(w, list) and len(w) == 2 and str(w[0]).strip():
+                c = str(w[1]) if str(w[1]) in ("white", "amber", "red", "green") else "white"
+                clean.append([str(w[0]).strip().upper()[:24], c])
+        save_config({"talk_words": clean})
+    v = load_config().get("talk_words")
+    return jsonify({"ok": True, "words": v if isinstance(v, list) else TALK_WORDS_DEFAULT})
+
+
 @app.route("/touch")
 def touch_page():
     """The One for a touchscreen: an iPad by the DSM's desk (Rob, 2026-10-21:
@@ -4898,7 +4922,7 @@ def fleet_relay_light():
                      # the Slate Plus's light sheet, on the touch page too (2026-10-22):
                      # the word under its number, words for 10 / 30 s or until
                      # cleared, mirroring another light, a tap pressing its key
-                     "tallyWord", "message", "messageSecs", "mirror", "touchPress")}
+                     "tallyWord", "message", "messageSecs", "messageColor", "mirror", "touchPress")}
     if not body:
         return jsonify({"ok": False, "error": "nothing to set"}), 400
     if not light and b.get("n") is None:
