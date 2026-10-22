@@ -172,6 +172,13 @@
   .toggle.on .sw { background: var(--green); } .toggle.on .sw::after { transform: translateX(24px); background: #fff; }
 
   /* ── Outputs ── */
+  /* what each output is showing, as the Browser view's previews: the HDMI's
+     own picture when a display is on it, the source drawn here when not */
+  .prev { position: relative; aspect-ratio: 16 / 9; background: #000; border: 1px solid var(--edge); border-radius: var(--r); overflow: hidden; margin-bottom: 14px; }
+  .prev img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
+  .prev iframe { position: absolute; left: 0; top: 0; width: 1280px; height: 720px; border: 0; transform-origin: 0 0; pointer-events: none; }
+  .prev .tag { position: absolute; left: 8px; top: 8px; z-index: 2; }
+  .prev .msg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--muted2); font-weight: 600; }
   .out .hd { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
   .out .hd b { font: 700 26px var(--fd); }
   .out .now { font: 700 22px var(--fd); margin-bottom: 14px; }
@@ -257,6 +264,18 @@
   .sheet { width: min(440px, 92vw); background: var(--panel); border: 1px solid var(--edge); border-radius: 8px; padding: 22px; }
   .sheet h3 { font: 700 26px var(--fd); margin-bottom: 4px; }
   .pinbox { font: 700 44px var(--fd); letter-spacing: .3em; text-align: center; padding: 10px 0 16px; min-height: 76px; }
+  .sheet.wide { width: min(620px, 94vw); max-height: 88vh; overflow-y: auto; }
+  .sheet .shead { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+  .sheet .shead .x { width: 48px; height: 48px; border-radius: 50%; background: var(--raised); border: 1px solid var(--edge); font-size: 20px; flex: none; }
+  .sheet input.txt { width: 100%; height: 60px; padding: 0 16px; border-radius: var(--rb); border: 1px solid var(--edge); background: var(--ground); color: var(--text); font: 600 22px var(--fd); margin: 10px 0 14px; }
+  .lsec { padding: 14px 0; border-top: 1px solid var(--rule); display: grid; gap: 10px; }
+  .lsec > b { font: 700 18px var(--fd); }
+  .lrow { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .lrow .btn { min-height: 60px; }
+  .lrow .btn.on { border-color: var(--green); box-shadow: inset 0 0 0 1px var(--green); }
+  input[type=range].bright { width: 100%; height: 44px; accent-color: var(--green); }
+  .look { display: inline-flex; gap: 6px; align-items: stretch; }
+  .look .btn.small { min-height: 64px; min-width: 0; padding: 0 12px; font-size: 14px; }
   #toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translate(-50%, 20px); z-index: 70;
     padding: 14px 20px; border-radius: var(--rb); background: var(--raised); border: 1px solid var(--edge); font-weight: 600;
     opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; max-width: 90vw; }
@@ -285,6 +304,54 @@
     .bar { flex-wrap: wrap; gap: 12px; }
     .fullbtn span { display: none; }
     .tabs button { min-width: 0; padding: 0 16px; }
+  }
+  /* an iPhone (Rob, 2026-10-22: "the touch version should probably be iOS
+     mobile optimized as well"): one column, the bar in two short lines,
+     the tabs a scrolling strip, the time as wide as the glass */
+  @media (max-width: 600px) {
+    body { font-size: 15px; }
+    .bar { padding: 8px 12px; gap: 8px 10px; min-height: 0; }
+    .bar .unit b { font-size: 20px; }
+    .bar .sp { display: none; }
+    .bar .fig { order: 3; text-align: left; }
+    .bar .fig em { font-size: 24px; }
+    .bar .fig.clockfig { display: none; }
+    #b-comp { order: 4; }
+    .fullbtn { order: 5; height: 40px; padding: 0 12px; margin-left: auto; }
+    .bar .seg2 { order: 2; margin-left: auto; }
+    .bar .seg2 button { height: 34px; padding: 0 10px; font-size: 14px; }
+    .tabs { padding: 0 4px; }
+    .tabs button { height: 50px; padding: 0 14px; font-size: 16px; }
+    .page { padding: 12px 12px calc(20px + env(safe-area-inset-bottom)); }
+    .card { padding: 14px; }
+    .tswitch { gap: 8px; } .tswitch button { height: 56px; padding: 0 12px; } .tswitch em { font-size: 22px; }
+    .clock .time { font-size: 25vw; }
+    .ctrl { grid-template-columns: 1fr 1fr; }
+    .ctrl .startb { grid-row: auto; grid-column: span 2; min-height: 84px; order: -1; }
+    #pg-timer .ctrl .startb { min-height: 84px; }
+    .ctrl > [style*="span 2"] { grid-column: span 2; }
+    .steps { grid-template-columns: repeat(2, 1fr); }
+    .steps .pair[style*="span 2"] { grid-column: span 2; }
+    .srcs { grid-template-columns: repeat(2, 1fr); }
+    .dests { grid-template-columns: repeat(2, 1fr); }
+    .dest { min-height: 84px; } .dest b { font-size: 20px; }
+    .srcgrid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .src { min-height: 70px; padding: 8px; } .src b { font-size: 19px; }
+    .merow { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .merow .tbtn, .merow .lockb { min-height: 60px; font-size: 20px; }
+    .merow .lockb { grid-column: span 2; display: flex; gap: 8px; justify-content: center; align-items: center; }
+    .lights { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .light { min-height: 120px; padding: 12px; } .light .n { font-size: 40px; }
+    .tools { grid-template-columns: 1fr; }
+    .rt-head { gap: 8px; } .rt-head #rt-hint { display: none; }
+    .looks .btn { min-width: 0; flex: 1 1 40%; }
+    #pg-deck.on { gap: 12px; }
+    .rail { grid-template-columns: 1fr; }
+    .rail .clock .time { font-size: 72px; }
+    .deckhead { flex-wrap: wrap; }
+    .xl .keys, .xl .strip, .xl .dials { gap: 4px; }
+    .sheet { padding: 16px; } .sheet.wide { width: 96vw; }
+    .lrow .btn { min-height: 54px; font-size: 15px; }
   }
 </style>
 {% endraw %}
@@ -418,8 +485,10 @@
   <section class="page" id="pg-outputs">
     <div class="grid2" id="o-outs"></div>
     <div class="card" style="margin-top:16px">
-      <div class="h"><b>Looks</b><span>hold a look to put it on both outputs</span></div>
-      <div class="looks" id="o-looks"><p class="note">No looks saved. Save them in the Browser view's Displays tab.</p></div>
+      <div class="h"><b>Looks</b><span id="o-looks-say">hold a look to put it on both outputs</span><span style="flex:1"></span>
+        <button class="btn" data-act="lookEdit" id="o-looks-edit" style="min-height:48px">Edit</button>
+        <button class="btn pri" data-act="lookSave" style="min-height:48px">Save current look</button></div>
+      <div class="looks" id="o-looks"><p class="note">No looks yet: set the outputs as you want them, then Save current look.</p></div>
     </div>
     <div class="row" style="margin-top:16px">
       <button class="btn danger hold" id="o-black" data-hold="900" data-act="blackAll">Blackout everything<span class="hint">hold</span></button>
@@ -440,7 +509,7 @@
   <section class="page" id="pg-rig">
     <div class="h" id="r-sum"><b>Lights</b><span>Looking…</span></div>
     <div class="lights" id="r-lights"></div>
-    <p class="note" style="margin-top:16px">Tap a light to make it blink. Numbers, words and links are in the Browser view's Network tab.</p>
+    <p class="note" style="margin-top:16px">Tap a light for its number, words, brightness and the rest.</p>
   </section>
 
   <section class="page" id="pg-tools">
@@ -509,6 +578,15 @@
     </div>
   </div>
 </div>
+<div class="scrim" id="ask-scrim">
+  <div class="sheet">
+    <h3 id="ask-title"></h3>
+    <p class="note" id="ask-note"></p>
+    <input class="txt" id="ask-in" autocomplete="off" autocapitalize="words" spellcheck="false">
+    <div class="row"><button class="btn" data-act="askCancel">Cancel</button><button class="btn pri" data-act="askOk" id="ask-ok">Save</button></div>
+  </div>
+</div>
+<div class="scrim" id="light-scrim"><div class="sheet wide" id="light-sheet"></div></div>
 <div id="toast"></div>
 <video id="awake-v" src="/static/keepawake.mp4" muted playsinline loop preload="auto" style="position:fixed;width:1px;height:1px;opacity:0;pointer-events:none"></video>
 
@@ -886,23 +964,71 @@
   const srcName = k => (SOURCES.find(x => x[0] === k) || [0, { config: 'Setup page', external: 'Web page', custom: 'Custom view', '/info': 'Public info', '/op': 'Operator', '/cuesheet': 'Cue sheet', '/rundown': 'Rundown', '/timeline': 'Timeline' }[k] || (String(k || '').startsWith('pattern') ? 'Test pattern' : k || '-')])[1];
   function paintOutputs() {
     const s = S.status || {}, bo = s.blackout_outputs || [], hc = s.hdmi_connected || {}, names = s.hdmi_names || {};
+    if (!$('o-out-1')) $('o-outs').innerHTML = [1, 2].map(n =>
+      '<div class="card out" id="o-out-' + n + '"><div class="prev" id="o-prev-' + n + '" data-act="prevRearm" data-arg="' + n + '"></div><div class="obody"></div></div>').join('');
+    paintPreviews();
     const sig = JSON.stringify([s.hdmi1_source, s.hdmi2_source, bo, hc, names, S.ct, S.ctOpen]);
     if (sig === S.outSig) return;
     S.outSig = sig;
-    $('o-outs').innerHTML = [1, 2].map(n => {
+    [1, 2].forEach(n => { $('o-out-' + n).querySelector('.obody').innerHTML = (() => {
       const cur = s['hdmi' + n + '_source'], dark = bo.includes(n);
       const conn = hc[n] !== undefined ? hc[n] : hc[String(n)];
       const nm = names[n] || names[String(n)];
-      return '<div class="card out">' +
-        '<div class="hd"><b>HDMI ' + n + '</b><span class="pill ' + (dark ? 'dark' : conn === false ? 'off' : 'ok') + '">' +
+      return '<div class="hd"><b>HDMI ' + n + '</b><span class="pill ' + (dark ? 'dark' : conn === false ? 'off' : 'ok') + '">' +
           (dark ? 'Blacked out' : conn === false ? 'No display' : esc(nm || 'Display connected')) + '</span></div>' +
         '<div class="now">' + esc(srcName(cur)) + '</div>' +
         '<button class="toggle' + (dark ? ' on' : '') + '" data-act="blackOne" data-arg="' + n + '"><span>Black out HDMI ' + n + '</span><span class="sw"></span></button>' +
         '<div class="srcs">' + SOURCES.map(([k, label]) =>
           '<button class="btn hold' + (k === cur ? ' on' : '') + '" data-hold="500" data-act="source" data-arg="' + n + '|' + esc(k) + '">' + esc(label) + '</button>').join('') + '</div>' +
-        '<p class="note">Hold a source to put it on HDMI ' + n + '.</p>' + ctPanel(n) + '</div>';
-    }).join('');
+        '<p class="note">Hold a source to put it on HDMI ' + n + '.</p>' + ctPanel(n);
+    })(); });
   }
+  // The previews stream only while the Outputs tab is in view: each one is a
+  // screen grab running on the One, so a hidden tab must not keep it busy.
+  function paintPreviews() {
+    const s = S.status || {}, hc = s.hdmi_connected || {}, bo = s.blackout_outputs || [];
+    const live = S.tab === 'outputs' && document.visibilityState === 'visible';
+    for (const n of [1, 2]) {
+      const box = $('o-prev-' + n); if (!box) continue;
+      const conn = hc[n] !== undefined ? hc[n] : hc[String(n)];
+      const mode = !live ? 'off' : conn ? 'live' : s.virtual_previews === false ? 'none' : 'virtual';
+      const src = s['hdmi' + n + '_source'] || '';
+      const key = mode + '|' + (mode === 'virtual' ? src : '');
+      if (box.dataset.key === key) { prevTag(box, n, mode, bo.includes(n)); continue; }
+      box.dataset.key = key;
+      if (mode === 'off') { box.innerHTML = ''; continue; }
+      if (mode === 'none') { box.innerHTML = '<div class="msg">No display on HDMI ' + n + '</div>'; prevTag(box, n, mode, bo.includes(n)); continue; }
+      if (mode === 'live') {
+        box.innerHTML = '<img alt="HDMI ' + n + '">';
+        prevArm(box, n, 0);
+      } else {
+        box.innerHTML = '<iframe title="HDMI ' + n + ' preview" tabindex="-1"></iframe>';
+        getJSON('/source/url/' + n).then(d => {
+          let u = String(d.url || '').replace('//localhost', '//' + HOST).replace('//127.0.0.1', '//' + HOST);
+          if (!u) return;
+          u += (u.includes('?') ? '&' : '?') + 'preview=1';
+          const f = box.querySelector('iframe'); if (f) f.src = u;
+          prevScale(box);
+        }).catch(() => {});
+      }
+      prevTag(box, n, mode, bo.includes(n));
+    }
+  }
+  function prevTag(box, n, mode, dark) {
+    let t = box.querySelector('.tag');
+    if (!t) { t = document.createElement('span'); t.className = 'tag pill'; box.appendChild(t); }
+    t.className = 'tag pill ' + (dark ? 'dark' : mode === 'live' ? 'ok' : 'warn');
+    t.textContent = dark ? 'Blacked out' : mode === 'live' ? 'Live' : mode === 'virtual' ? 'Virtual: no display' : 'No display';
+  }
+  function prevScale(box) { const f = box.querySelector('iframe'), w = box.getBoundingClientRect().width; if (f && w > 0) f.style.transform = 'scale(' + (w / 1280) + ')'; }
+  // a grab that fails (the One may still be ending the last one) tries again, slower each time
+  function prevArm(box, n, attempt) {
+    const img = box.querySelector('img'); if (!img) return;
+    img.onerror = () => { if (attempt < 4 && box.dataset.key.startsWith('live')) setTimeout(() => prevArm(box, n, attempt + 1), 1500 * (attempt + 1)); };
+    img.src = '/stream/hdmi' + n + '?t=' + Date.now();
+  }
+  window.addEventListener('resize', () => { for (const n of [1, 2]) { const b = $('o-prev-' + n); if (b) prevScale(b); } });
+  document.addEventListener('visibilitychange', () => { if ($('o-prev-1')) paintPreviews(); });
   // the Custom timer's look, per HDMI, as the Browser view's Custom Timer chip
   // (Rob, 2026-10-22: "i dont see a way to edit the custom views on the ipad").
   // A change shows at once on an output showing it; the iPad's full timer
@@ -935,14 +1061,38 @@
     const [n, k] = el.dataset.ct.split('|');
     ctSet(n, { [k]: el.value.replace('#', '') });
   });
+  // ── a line of text from the iPad's keyboard (a look's name, a light's
+  // name or words): Cancel means cancel ──
+  let askWait = null;
+  function askText(title, note, value, okLabel, mode) {
+    $('ask-title').textContent = title; $('ask-note').textContent = note || '';
+    const i = $('ask-in'); i.value = value || ''; i.inputMode = mode || 'text';
+    $('ask-ok').textContent = okLabel || 'Save';
+    $('ask-scrim').classList.add('on');
+    setTimeout(() => { i.focus(); i.select(); }, 50);
+    return new Promise(res => askWait = res);
+  }
+  function askDone(v) { $('ask-scrim').classList.remove('on'); $('ask-in').blur(); const w = askWait; askWait = null; if (w) w(v); }
+  $('ask-in').addEventListener('keydown', e => { if (e.key === 'Enter') askDone($('ask-in').value); });
+
+  // ── Looks: the whole of both outputs under a name, made, updated and
+  // removed here as in the Browser view (Rob, 2026-10-22: "If touch shows
+  // something, it should work") ──
+  S.looks = [];
   async function loadLooks() {
-    try {
-      const d = await getJSON('/presets');
-      const p = d.presets || [];
-      $('o-looks').innerHTML = p.length ? p.map(x =>
-        '<button class="btn hold" data-hold="700" data-act="look" data-arg="' + esc(x.name) + '">' + esc(x.name) + '</button>').join('')
-        : '<p class="note">No looks saved. Save them in the Browser view\'s Displays tab.</p>';
-    } catch (e) {}
+    try { const d = await getJSON('/presets'); S.looks = d.presets || []; paintLooks(); } catch (e) {}
+  }
+  function paintLooks() {
+    const p = S.looks || [], edit = !!S.lookEdit;
+    $('o-looks-edit').textContent = edit ? 'Done' : 'Edit';
+    $('o-looks-edit').hidden = !p.length;
+    $('o-looks-say').textContent = edit ? 'Update saves the outputs as they are now into that look' : 'hold a look to put it on both outputs';
+    $('o-looks').innerHTML = p.length ? p.map(x => edit
+        ? '<span class="look"><button class="btn" disabled>' + esc(x.name) + '</button>' +
+            '<button class="btn small hold" data-hold="700" data-act="lookUpdate" data-arg="' + esc(x.name) + '">Update<span class="hint">hold</span></button>' +
+            '<button class="btn small danger hold" data-hold="900" data-act="lookDelete" data-arg="' + esc(x.name) + '">Delete<span class="hint">hold</span></button></span>'
+        : '<button class="btn hold" data-hold="700" data-act="look" data-arg="' + esc(x.name) + '">' + esc(x.name) + '</button>').join('')
+      : '<p class="note">No looks yet: set the outputs as you want them, then Save current look.</p>';
   }
 
   // ── Rig ──
@@ -972,7 +1122,7 @@
       const c = u.cue || {}, t = tallyOf(u.showing), L = c.link || {};
       const cam = c.camera !== undefined && c.camera !== null && +c.camera >= 0 ? +c.camera : '';
       const model = String(u.model || 'Cue').replace(/^Downstage /, '');
-      return '<button class="light ' + t + (u.health_ok === false ? ' gone' : '') + '" data-act="blink" data-arg="' + esc(u.serial) + '">' +
+      return '<button class="light ' + t + (u.health_ok === false ? ' gone' : '') + '" data-act="lightOpen" data-arg="' + esc(u.serial) + '">' +
         '<span class="n">' + esc(cam === '' ? '·' : cam) + '</span>' +
         '<span><b>' + esc(u.name || model) + '</b><br><small>' + esc(model) + (L.relayed ? ' · through ' + esc(L.via_name || L.via || 'its Relay') : '') + '</small></span>' +
         '<span class="tl">' + (t === 'program' ? '<span class="pill air">On air</span>' : t === 'preview' ? '<span class="pill ok">Preview</span>' : '') + '</span>' +
@@ -1058,6 +1208,87 @@
         : '<p class="note">None found by itself. Type its address below.</p>';
       const h = body.querySelector('.h span'); if (h) h.textContent = f.length ? 'Tap the one to follow' : '';
     } catch (e) {}
+  }
+
+  // ── a light's sheet: what the Browser view's light sheet does for it,
+  // here (Rob, 2026-10-22: "If touch shows something, it should work").
+  // A light carried by a Relay is set through it (number, words,
+  // brightness, Talent, name); a light on WiFi is renamed and opened itself.
+  const L = { serial: '', relay: null, cue: null, tsrc: undefined, camop: undefined, busy: false };
+  const lightKind = u => { const m = String(u.model || 'Cue').replace(/^Downstage /, ''); return /lite|camera|pro/i.test(m) ? 'lite' : /360/.test(m) ? '360' : /mini|og/i.test(m) ? 'mini' : 'round'; };
+  function lightRelay(u) {
+    const Lk = (u.cue || {}).link || {}, units = (S.fleet && S.fleet.units) || [];
+    return units.find(x => x.product === 'Relay' && (x.serial === Lk.via || (Lk.via_name && x.name === Lk.via_name))) ||
+           units.find(x => x.product === 'Relay' && ((((x.cue || {}).link || {}).guests) || []).some(g => g.id === u.serial)) || null;
+  }
+  const verAtLeast = (v, want) => { const a = String(v || '').split('.').map(n => parseInt(n, 10) || 0), b = want.split('.').map(Number);
+    for (let k = 0; k < b.length; k++) if ((a[k] || 0) !== b[k]) return (a[k] || 0) > b[k]; return true; };
+  async function lightLoad() {
+    const u = lightsOf(S.fleet).find(x => x.serial === L.serial); if (!u) return;
+    const r = lightRelay(u);
+    L.relay = r; L.cue = null;
+    if (r) {
+      const d = await post('/fleet/relay/api', { ip: r.ip, path: 'cues', method: 'GET' });
+      L.cue = ((d.cues || []).find(c => c.id === u.serial)) || null;
+    }
+    const k = lightKind(u), Lk = (u.cue || {}).link || {};
+    const where = {};
+    if (u.ip && !Lk.no_ip && verAtLeast(u.version, '0.149.3')) where.ip = u.ip;
+    if (r) { where.relay = r.ip; where.id = u.serial; }
+    L.tsrc = undefined; L.camop = undefined;
+    if (k === 'round' && (where.ip || where.relay)) {
+      try { const t = await getJSON('/fleet/cue/timer-source?' + new URLSearchParams(where)); L.tsrc = t.ok ? t.source : null; } catch (e) {}
+    }
+    if (k === 'lite' && r) {
+      try { const c = await getJSON('/fleet/cue/camop?' + new URLSearchParams({ relay: r.ip, id: u.serial })); L.camop = c.ok ? c.on : null; } catch (e) {}
+    }
+    paintLight();
+  }
+  function paintLight() {
+    const u = lightsOf(S.fleet).find(x => x.serial === L.serial), el = $('light-sheet');
+    if (!u) { el.innerHTML = '<p class="note">That light has gone from the list.</p>'; return; }
+    const c = u.cue || {}, Lk = c.link || {}, k = lightKind(u), cue = L.cue, st = (cue && cue.state) || {};
+    const carried = !!(cue && L.relay && cue.carrier === L.relay.serial);
+    const wifi = !!(u.ip && !Lk.no_ip);
+    const model = String(u.model || 'Cue').replace(/^Downstage /, '');
+    const num = cue && cue.n ? cue.n : (c.camera !== undefined && c.camera !== null && +c.camera >= 0 ? c.camera : '');
+    let h = '<div class="shead"><div><h3>' + esc(u.name || model) + '</h3><p class="note">' + esc(model) + (num !== '' ? ' · Cue ' + esc(num) : '') +
+      (carried ? ' · through ' + esc(L.relay.name || 'its Relay') : '') + (wifi ? ' · ' + esc(u.ip) : '') + '</p></div>' +
+      '<button class="x" data-act="lightClose" aria-label="Close">✕</button></div>';
+    h += '<div class="lrow"><button class="btn" data-act="blink" data-arg="' + esc(u.serial) + '">Identify</button>' +
+         '<button class="btn" data-act="lightName">Rename</button>' +
+         (wifi ? '<button class="btn" data-act="open" data-arg="@' + esc(u.ip) + '">Its page</button>' : '<span></span>') + '</div>';
+    if (carried) {
+      h += '<div class="lsec"><b>Cue number</b><div class="lrow"><button class="btn" data-act="lightNum">' + (cue.n ? 'Number ' + esc(cue.n) : 'Set a number') + '</button>' +
+           '<button class="btn" data-act="lightNumZero">Follow its camera</button><span></span></div></div>';
+      h += '<div class="lsec"><b>Words on its face</b><div class="lrow"><button class="btn" data-act="lightWords" style="grid-column: span 2">' + (st.text ? esc(st.text) : 'Add words') + '</button>' +
+           (st.text ? '<button class="btn hold" data-hold="600" data-act="lightWordsClear">Clear<span class="hint">hold</span></button>' : '<span></span>') + '</div></div>';
+      h += '<div class="lsec"><b>Brightness · <span id="l-bv">' + (st.brightness !== undefined ? st.brightness : 100) + '</span>%</b>' +
+           '<input class="bright" type="range" min="5" max="100" step="5" value="' + (st.brightness !== undefined ? st.brightness : 100) + '" id="l-bright"></div>';
+      h += '<div class="lsec"><button class="toggle' + (st.talent ? ' on' : '') + '" data-act="lightTalent"><span>Talent mode<br><small class="dim" style="font-size:13px">big, plain tally for the person on camera</small></span><span class="sw"></span></button></div>';
+    } else if (L.relay === null && !wifi) {
+      h += '<p class="note">Not reachable from here: no WiFi of its own and no Relay carrying it.</p>';
+    }
+    if (L.tsrc) {
+      h += '<div class="lsec"><b>Timer source</b><div class="lrow">' + ['auto', 'one', 'local'].map(m =>
+        '<button class="btn' + (L.tsrc === m ? ' on' : '') + '" data-act="lightTsrc" data-arg="' + m + '">' + { auto: 'Auto', one: 'One', local: 'Local' }[m] + '</button>').join('') + '</div>' +
+        '<p class="note">' + { auto: "The One's timer when one is found, unless this Cue's own is running.", one: "Always the One's timer.", local: "Always this Cue's own timer, even with a One on the network." }[L.tsrc] + '</p></div>';
+    }
+    if (L.camop === true || L.camop === false) {
+      h += '<div class="lsec"><button class="toggle' + (L.camop ? ' on' : '') + '" data-act="lightCamop"><span>Cam Op Mode<br><small class="dim" style="font-size:13px">Tally only, no menus; held 3 s on its glass, it unlocks.</small></span><span class="sw"></span></button></div>';
+    }
+    if (!L.cue && L.relay) h += '<p class="note">Asking ' + esc(L.relay.name || 'the Relay') + '…</p>';
+    el.innerHTML = h;
+    const br = $('l-bright');
+    if (br) {
+      br.oninput = () => { $('l-bv').textContent = br.value; };
+      br.onchange = () => lightSet({ brightness: +br.value });
+    }
+  }
+  async function lightSet(set) {
+    const u = lightsOf(S.fleet).find(x => x.serial === L.serial); if (!u || !L.relay) return;
+    const d = await post('/fleet/relay/light', { ip: L.relay.ip, id: u.serial, n: L.cue && L.cue.n, set });
+    if (d.ok) { toast('Sent to ' + (L.relay.name || 'the Relay') + '.'); setTimeout(lightLoad, 700); }
   }
 
   // ── Tools ──
@@ -1181,6 +1412,63 @@
                         const d = await post(bo.includes(+n) ? '/blackout/clear' : '/blackout', { output: +n }); if (d.ok) pollStatus(); },
     async source(arg) { const [n, source] = arg.split('|'); const d = await post('/displays/source', { output: +n, source });
                         if (d.ok) { toast('HDMI ' + n + ': ' + srcName(source)); S.outSig = ''; setTimeout(pollStatus, 400); } },
+    askOk() { askDone($('ask-in').value); }, askCancel() { askDone(null); },
+    lightOpen(serial) { L.serial = serial; L.cue = null; L.tsrc = undefined; L.camop = undefined; $('light-scrim').classList.add('on'); paintLight(); lightLoad(); },
+    lightClose() { $('light-scrim').classList.remove('on'); L.serial = ''; },
+    async lightName() {
+      const u = lightsOf(S.fleet).find(x => x.serial === L.serial); if (!u) return;
+      const v = await askText('Rename', 'Shows here, on the Relay and in Companion.', u.name || '', 'Rename');
+      if (v === null || !v.trim()) return;
+      const Lk = (u.cue || {}).link || {};
+      if (u.ip && !Lk.no_ip) {
+        const d = await post('/fleet/cue/label', { ip: u.ip, label: v.trim().slice(0, 24) });
+        if (d.ok) toast('Renamed. The light restarts to take its new name.');
+      } else lightSet({ name: v.trim().slice(0, 24) });
+    },
+    async lightNum() {
+      const v = await askText('Cue number', 'The number Companion drives it by, 1 to 99.', L.cue && L.cue.n ? String(L.cue.n) : '', 'Set', 'numeric');
+      if (v === null) return;
+      const n = parseInt(v, 10);
+      if (isNaN(n) || n < 1 || n > 99) { toast('A number from 1 to 99.', 'warn'); return; }
+      lightSet({ number: n });
+    },
+    lightNumZero() { lightSet({ number: 0 }); },
+    async lightWords() {
+      const v = await askText('Words on its face', 'Up to 24 characters.', (L.cue && L.cue.state && L.cue.state.text) || '', 'Show');
+      if (v === null) return;
+      lightSet({ text: v.slice(0, 24) });
+    },
+    lightWordsClear() { lightSet({ text: '' }); },
+    lightTalent() { lightSet({ talent: !(L.cue && L.cue.state && L.cue.state.talent) }); },
+    async lightTsrc(m) {
+      const u = lightsOf(S.fleet).find(x => x.serial === L.serial); if (!u) return;
+      const Lk = (u.cue || {}).link || {}, w = {};
+      if (u.ip && !Lk.no_ip && verAtLeast(u.version, '0.149.3')) w.ip = u.ip;
+      if (L.relay) { w.relay = L.relay.ip; w.id = u.serial; }
+      const d = await post('/fleet/cue/timer-source', Object.assign(w, { mode: m }));
+      if (d.ok) { L.tsrc = d.source; paintLight(); toast(d.source === m ? 'Timer source: ' + { auto: 'Auto', one: 'One', local: 'Local' }[m] : 'Sent; the light has not confirmed yet.', d.source === m ? '' : 'warn'); }
+    },
+    async lightCamop() {
+      if (!L.relay) return;
+      const want = !L.camop;
+      const d = await post('/fleet/cue/camop', { relay: L.relay.ip, id: L.serial, on: want });
+      if (d.ok) { L.camop = d.on; paintLight(); toast(d.on === want ? 'Cam Op Mode ' + (want ? 'on.' : 'off.') : 'Sent; the light has not confirmed yet.', d.on === want ? '' : 'warn'); }
+    },
+    lookEdit() { S.lookEdit = !S.lookEdit; paintLooks(); },
+    async lookSave() {
+      const name = await askText('Save current look', 'Both outputs as they are now, their Custom timer options and web pages, under one name.', '', 'Save');
+      if (name === null || !name.trim()) return;
+      const n = name.trim();
+      if ((S.looks || []).some(x => x.name === n)) {
+        const again = await askText('Replace "' + n + '"?', 'A look with this name exists. Save to replace it, or change the name.', n, 'Save');
+        if (again === null || !again.trim()) return;
+        return A.lookSaveAs(again.trim());
+      }
+      return A.lookSaveAs(n);
+    },
+    async lookSaveAs(n) { const d = await post('/presets/save', { name: n }); if (d.ok !== false) { S.looks = d.presets || S.looks; paintLooks(); toast('Saved: ' + n); } },
+    async lookUpdate(n) { await A.lookSaveAs(n); },
+    async lookDelete(n) { const d = await post('/presets/delete', { name: n }); if (d.ok !== false) { S.looks = d.presets || []; if (!S.looks.length) S.lookEdit = false; paintLooks(); toast('Deleted: ' + n); } },
     async look(name) { const d = await post('/presets/apply', { name }); if (d.ok !== false) { toast('Look: ' + name); setTimeout(pollStatus, 400); } },
     async identify() { await post('/displays/identify', {}); toast('Showing the output numbers.'); },
     async blink(serial) {
@@ -1193,10 +1481,11 @@
       if (d.ok !== false) toast((u.name || 'The light') + ' is blinking.');
     },
     async postTo(path) { const d = await post(path, {}); if (d.ok !== false) toast(d.message || 'Done.'); },
-    open(where) { window.open('http://' + HOST + where, '_blank'); },
+    open(where) { window.open(where[0] === '@' ? 'http://' + where.slice(1) + '/' : 'http://' + HOST + where, '_blank'); },
     ftOpen() { ftOpen(); }, ftClose() { ftClose(); },
     ftView(v) { store.set('ds_ft_view2', v); paintTools(); },
     deckSize(v) { store.set('ds_deck', v); paintDeck(); },
+    prevRearm(n) { const b = $('o-prev-' + n); if (b) { b.dataset.key = ''; paintPreviews(); } },
     ctOpen(n) { S.ctOpen[n] = !S.ctOpen[n]; S.outSig = ''; paintOutputs(); },
     ctFlag(arg) { const [n, k] = arg.split('|'), o = (S.ct || {})[n] || {}; ctSet(n, { [k]: !o[k] }); },
     rtPick(key) { S.rtDest = key; store.set('ds_router_dest', key); S.rtSig = ''; paintRouter(); },
@@ -1242,6 +1531,7 @@
       else if (w.lift) S.swallow = { lift: false, until: Date.now() + 700 };   // the click follows within a moment
     }, true);
   }
+  $('light-scrim').addEventListener('click', e => { if (e.target.id === 'light-scrim') A.lightClose(); });
   // taps: [data-act] that is not a hold
   document.addEventListener('click', e => {
     const b = e.target.closest('[data-act], [data-tab]');
@@ -1275,6 +1565,7 @@
     for (const p of document.querySelectorAll('.page')) p.classList.toggle('on', p.id === 'pg-' + t);
     if (t === 'deck') paintDeck();
     if (t === 'outputs') { S.outSig = ''; paintOutputs(); loadLooks(); loadCt(); }
+    else if ($('o-prev-1')) paintPreviews();       // leaving Outputs stops the grabs
     if (t === 'rig') { S.rigSig = ''; paintRig(); pollFleet(); }
     if (t === 'router') { S.rtSig = ''; pollRouter(); }
     if (t === 'tools') paintTools();
