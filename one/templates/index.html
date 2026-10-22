@@ -5993,10 +5993,10 @@
 
   async function updateCompanion() {
     const ch = companionChannel === 'beta' ? 'beta' : 'stable';
-    if (confirm('Download a backup of the Companion config to this computer first?\n\nRecommended before any update - pages, connections and surfaces, restorable if a migration misbehaves.\n\nOK downloads the backup and continues; Cancel skips the backup.')) {
-      downloadCompanionConfig();
-    }
-    if (!confirm(`Update Companion to the latest ${ch} version?\n\nThis takes 2-3 minutes and restarts the service - Stream Decks go dark during the update. The current version is recorded so you can revert afterwards.`)) return;
+    // one question, and nothing lands on the phone or laptop asking it: the
+    // One keeps its own copy of the config first (Rob, 2026-10-22: an update
+    // from his iPhone downloaded a .tgz to it). "Back up" still downloads one.
+    if (!confirm(`Update Companion to the latest ${ch} version?\n\nThis takes 2-3 minutes and restarts the service - Stream Decks go dark during the update. The One keeps a backup of your pages, connections and surfaces first, and records this version so you can revert.`)) return;
     const btn = document.getElementById('companion-inline-update-btn');
     if (btn) { btn.disabled = true; btn.innerHTML = spinnerHTML('Updating…'); }
     showToast('Updating Companion - this may take a few minutes…', 'info');

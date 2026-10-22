@@ -7578,6 +7578,31 @@ def jobs_status():
     return jsonify(_JOB)
 
 
+COMPANION_BACKUPS = Path("/home/pi/companion-backups")   # outside the app dir: an OS update swaps that
+
+
+def _companion_backup_onboard(tag):
+    """Keep a copy of Companion's config ON the unit before an update (Rob,
+    2026-10-22: updating from his iPhone downloaded a .tgz to the phone,
+    because the page offered the backup as a download). The newest five stay."""
+    try:
+        COMPANION_BACKUPS.mkdir(parents=True, exist_ok=True)
+        name = f"companion-config-{re.sub(r'[^0-9A-Za-z.+-]', '', tag or 'unknown')}-{time.strftime('%Y%m%d-%H%M%S')}.tgz"
+        out = COMPANION_BACKUPS / name
+        subprocess.run(["sudo", "tar", "czf", str(out), "--exclude=*.stale*",
+                        "-C", "/home/companion/.config", "companion-nodejs"],
+                       check=True, timeout=120, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(["sudo", "chown", "pi:pi", str(out)], timeout=10,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        for old in sorted(COMPANION_BACKUPS.glob("companion-config-*.tgz"), key=lambda p: p.stat().st_mtime)[:-5]:
+            old.unlink(missing_ok=True)
+        _audit("COMPANION", f"config kept on the unit before the update: {name}")
+        return name
+    except Exception as e:
+        print(f"[companion] on-unit backup failed: {e}")
+        return ""
+
+
 @app.route("/companion/update", methods=["POST"])
 def companion_update():
     channel = load_config().get("companion_channel", "stable")
@@ -7585,6 +7610,7 @@ def companion_update():
     prev    = _companion_installed_version_str()
 
     def work():
+        _companion_backup_onboard(prev)     # first, so a migration that misbehaves can be undone
         # companion-update is already installed and handles stable/beta correctly.
         # Calling it with one arg (channel only, no version) lets it pick the
         # latest from the bitfocus API - which also handles downgrades from beta.
