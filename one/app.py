@@ -4621,9 +4621,9 @@ def _box_refusal(r, who=""):
     if r.status_code == 401:
         # one PIN for the rig now, named "the rig PIN" wherever an owner reads
         # it (Rob, 2026-10-18)
-        return f"{name} refused this unit's rig PIN - check it is the same PIN as on {name}"
+        return f"{name} refused this unit's Cue PIN - check it is the same PIN as on {name}"
     if r.status_code == 403:
-        return f"{name} has a rig PIN: enter the same rig PIN on this unit"
+        return f"{name} has a Cue PIN: enter the same Cue PIN on this unit"
     if r.status_code == 429:
         # a box slowing us for wrong PINs: its own words, and never a retry
         # before it says (docs/control-token.md, "The lockout on the wire")
@@ -4631,7 +4631,7 @@ def _box_refusal(r, who=""):
             said = str((r.json() or {}).get("error", "") or "")
         except Exception:
             said = ""
-        return said or f"{name} is slowing this unit for wrong rig PINs: try again in {r.headers.get('Retry-After', '30')} s"
+        return said or f"{name} is slowing this unit for wrong Cue PINs: try again in {r.headers.get('Retry-After', '30')} s"
     return ""
 
 
@@ -4710,7 +4710,7 @@ def _rig_may_manage():
         return True, 200, {}, {}
     presented = auth[7:].strip() if auth[:7].lower() == "bearer " else ""
     if not presented:
-        return False, 401, {"ok": False, "error": "this rig has a PIN: enter it to do that",
+        return False, 401, {"ok": False, "error": "this Cue system has a PIN: enter it to do that",
                             "needs": rigpin.NEEDS}, {}
     status, body = rigpin.try_pin(presented)
     return status == 200, status, body, {}
@@ -4795,7 +4795,7 @@ def rig_state():
 def rig_unlock():
     """A browser types the PIN once and becomes a known device."""
     if not rigpin.is_set():
-        return jsonify({"ok": False, "error": "this rig has no PIN"}), 404
+        return jsonify({"ok": False, "error": "this Cue system has no PIN"}), 404
     remote, auth, cookie, ck = _rig_who()
     typed = str((request.get_json(silent=True) or {}).get("pin", "") or "").strip()
     status, body = rigpin.try_pin(typed)
@@ -4808,7 +4808,7 @@ def rig_reveal():
     """The PIN, to a known device or the console, on its own request: never
     in /status or any other answer (docs/control-token.md, "Decided")."""
     if not rigpin.is_set():
-        return jsonify({"ok": False, "error": "this rig has no PIN"}), 404
+        return jsonify({"ok": False, "error": "this Cue system has no PIN"}), 404
     remote, auth, cookie, ck = _rig_who()
     if not rigpin.known(remote, cookie, ck):
         return jsonify({"ok": False, "error": rigpin.FORGOTTEN}), 403
@@ -4830,7 +4830,7 @@ def rig_clear():
         ok, status, body, headers = _rig_may_manage()
         if not ok:
             if status == 401 and not auth:
-                body = dict(body, error="Clearing a forgotten rig PIN needs hands on this unit: its own "
+                body = dict(body, error="Clearing a forgotten Cue PIN needs hands on this unit: its own "
                                         "screen, or its hotspot (the name and password are printed on it).")
             return _rig_refuse(status, body, headers)
     return _rig_clear_all("cleared on the unit" if rigpin.is_console(remote, ck) else
@@ -4852,7 +4852,7 @@ def rig_secure():
             return _rig_refuse(status, body, headers)
         return _rig_clear_all("Unsecure this rig on the One")
     if rigpin.is_set():
-        return jsonify({"ok": False, "error": "this rig is secured already: unsecure it first to make a new PIN"}), 409
+        return jsonify({"ok": False, "error": "this Cue system is secured already: unsecure it first to make a new PIN"}), 409
     for rid, ip, tok, name in relay.paired_relays():
         status, ans = _relay_secure(ip, tok, True)
         if status == 200 and ans.get("token"):

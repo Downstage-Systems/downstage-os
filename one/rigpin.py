@@ -83,7 +83,7 @@ def valid_new(p):
     """A PIN someone types on this unit's page: six digits."""
     p = str(p or "").strip()
     if len(p) != DIGITS or not p.isdigit():
-        return f"a rig PIN is {DIGITS} digits"
+        return f"a Cue PIN is {DIGITS} digits"
     return ""
 
 
@@ -200,7 +200,7 @@ def try_pin(presented):
     """Check one presented PIN: (status, body). No slowing, no counting."""
     if presented and hmac.compare_digest(str(presented), pin()):
         return 200, {"ok": True}
-    return 401, {"ok": False, "error": "wrong rig PIN", "needs": NEEDS}
+    return 401, {"ok": False, "error": "wrong Cue PIN", "needs": NEEDS}
 
 
 def _bearer(auth):
@@ -214,6 +214,6 @@ def check(remote, auth="", cookie="", header_key=""):
         return True, 200, {}
     presented = _bearer(auth)
     if not presented:
-        return False, 401, {"ok": False, "error": "this rig has a PIN: enter it to do that", "needs": NEEDS}
+        return False, 401, {"ok": False, "error": "this Cue system has a PIN: enter it to do that", "needs": NEEDS}
     status, body = try_pin(presented)
     return status == 200, status, body

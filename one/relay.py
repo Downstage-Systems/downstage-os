@@ -166,7 +166,7 @@ def pair(ip, rid=""):
                 "error": ans.get("error") or f"the Relay is slowing this unit: try again in {wait} s"}
     if status == 409 and (ans.get("needs") == "rig PIN" or "has a PIN" in str(ans.get("error", ""))):
         return {"ok": False, "id": rid, "ip": ip, "paired": False, "needs_pin": True,
-                "error": "this Relay has a rig PIN: enter the same rig PIN on this One, "
+                "error": "this Relay has a Cue PIN: enter the same Cue PIN on this One, "
                          "or pair from the Relay's page"}
     if status == 409:
         other = ans.get("paired") or {}

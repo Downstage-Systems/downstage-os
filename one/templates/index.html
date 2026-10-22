@@ -2001,7 +2001,7 @@
       <button class="stat" id="st-timer" onclick="pillGo('timer')"><span>Timer</span><em id="st-timer-v">-</em><small id="st-timer-c">Asking OnTime</small></button>
       <button class="stat" id="st-out" onclick="pillGo('displays')"><span>Outputs</span><em id="st-out-v">-</em><small id="st-out-c"></small></button>
       <button class="stat" id="st-comp" onclick="pillGo('companion')"><span>Companion</span><em id="st-comp-v">-</em><small id="st-comp-c"></small></button>
-      <button class="stat" id="st-lights" onclick="pillGo('network')"><span>Lights</span><em id="st-lights-v">-</em><small id="st-lights-c"></small></button>
+      <button class="stat" id="st-lights" onclick="pillGo('network')"><span>Cue</span><em id="st-lights-v">-</em><small id="st-lights-c"></small></button>
     </div>
   </header>
 
@@ -2677,7 +2677,7 @@
           <div class="fleet-hdr-right">
             <span class="fleet-ts" id="fleet-ts"></span>
             <button class="btn-sm" id="cue-ctl-btn" onclick="cueControlToggle()" title="Let Cue lights with a screen start, pause and step this unit's timer. Off unless you turn it on.">Lights control timer: off</button>
-            <button class="btn-sm" id="cue-token-btn" onclick="rigOpen()" title="Open: anyone on this network can change this rig. Secure it.">Rig PIN: open</button>
+            <button class="btn-sm" id="cue-token-btn" onclick="rigOpen()" title="Open: anyone on this network can change this Cue system. Secure it.">Cue PIN: open</button>
             <button class="btn-sm danger" id="cue-alert-btn" style="display:none" title="Every light following this unit's timer pulses red until cleared">Alert timer lights</button>
             <button class="btn-sm" id="fleet-scan-btn" onclick="fleetScan()">Scan for units</button>
           </div>
@@ -3043,7 +3043,7 @@
 <!-- The rig PIN (docs/control-token.md): one dialog behind the Rig PIN button -->
 <div class="modal-overlay" id="rig-modal">
   <div class="modal" style="max-width:440px">
-    <h3>Rig PIN</h3>
+    <h3>Cue PIN</h3>
     <div id="rig-body"></div>
   </div>
 </div>
@@ -3700,7 +3700,7 @@
     el.classList.toggle('on', splits.length > 0);
     el.innerHTML = splits.map(s =>
       '<div><b>Split across WiFi channels on ' + fxEsc(s.ssid) + '.</b> ' +
-        s.chans.map(c => 'Channel ' + c.ch + (c.ch === s.ref ? ' (the rig)' : '') + ': ' + c.names.map(fxEsc).join(', ')).join(' · ') + '</div>').join('') +
+        s.chans.map(c => 'Channel ' + c.ch + (c.ch === s.ref ? ' (the Cue system)' : '') + ': ' + c.names.map(fxEsc).join(', ')).join(' · ') + '</div>').join('') +
       (splits.length ? '<div class="fu-sub">CueLink only reaches lights on the same channel. A linked light moves itself to its ' +
         'Cue\'s channel once it has been dark for a minute; one that stays apart has no access point of this network on that ' +
         'channel strong enough where it is.</div>' : '');
@@ -3745,7 +3745,7 @@
     if (i.linked) chips.push(fxChip('via ' + fxShort(i.via), 'link'));
     else if (i.L.waiting) chips.push(fxChip('waiting for ' + fxShort(i.L.via_name || i.L.chosen || 'its Cue'), 'warn'));
     else if (i.carried) chips.push(fxChip('carrying ' + i.carried + (+i.L.max > 1 ? ' of ' + i.L.max : ''), i.L.max && i.carried >= +i.L.max ? 'warn' : 'link'));
-    if (_fxApart[u.serial]) chips.push(fxChip('Ch ' + i.c.wifi_ch + ', rig on ' + _fxApart[u.serial], 'warn'));
+    if (_fxApart[u.serial]) chips.push(fxChip('Ch ' + i.c.wifi_ch + ', the Cue system on ' + _fxApart[u.serial], 'warn'));
     if (i.c.talent) chips.push(fxChip('Talent', 'tal'));
     const m = i.radioOnly ? '' : cueShowMode(i);   // over the air we cannot tell
     if (m === 'button') chips.push(fxChip('Button ' + cueLoc(i.c.follow), 'co'));
@@ -4157,8 +4157,8 @@
     // signal to draw, so say where it is. A light that wants the rig token
     // says so up front rather than failing the adopt with a refusal.
     const where = l => (l.via === 'lan' ? fxChip('on your network', 'link') : fxSignal(l.rssi)) +
-      (l.needs ? '<span title="This light has a PIN set. The Relay needs the matching rig PIN to adopt it.">' +
-        fxChip('needs the rig PIN', 'warn') + '</span>' : '');
+      (l.needs ? '<span title="This light has a PIN set. The Relay needs the matching Cue PIN to adopt it.">' +
+        fxChip('needs the Cue PIN', 'warn') + '</span>' : '');
     const label = l => l.name || (l.model + ' ' + l.id.slice(-4));
     // The body goes through fxEsc: JSON's double quotes inside a double-quoted
     // onclick cut the handler off at the ids list, and the button did nothing at all
@@ -4194,14 +4194,14 @@
   function relayCheckBlock(u, r) {
     const c = r.check;
     if (!c) return '<div class="fx-actions left"><button class="fx-btn" onclick="relayAct(\'' + u.ip +
-      '\',\'check\',{},\'checking\')">Check the rig</button></div>';
+      '\',\'check\',{},\'checking\')">Check all lights</button></div>';
     if (c.running) {
       // the Relay says which one is blinking now (at = its index, -1 when
       // done) and ticks off the ones already done, so the page can name it
       const lights = c.lights || [], now = lights[c.at] || null;
       return '<p class="fx-note">' + (now
           ? 'Checking <b>' + fxEsc((now.cue ? 'Cue ' + now.cue + ' \u00b7 ' : '') + (now.name || fxShort(now.id))) + '</b>\u2026 it blinks for two seconds.'
-          : 'Checking the rig\u2026') + '</p>' +
+          : 'Checking all lights\u2026') + '</p>' +
         (lights.length ? '<div class="fx-carried">' + lights.map((l, n) =>
           '<div class="fx-carried-row"><span>' + fxEsc(l.name || fxShort(l.id)) + '</span>' +
           (n === c.at ? fxChip('blinking', 'warn') : l.blinked ? fxChip('done', 'ok') : fxChip('waiting', 'link')) +
@@ -4265,7 +4265,7 @@
           '</div>').join('') + '</div>' : '') +
       '</div>' +
       '<div class="fx-sec"><div class="fx-sec-label">Adopt and switch</div>' + relayOffers(u, r) + '</div>' +
-      '<div class="fx-sec"><div class="fx-sec-label">Check the rig</div>' + relayCheckBlock(u, r) + '</div>';
+      '<div class="fx-sec"><div class="fx-sec-label">Check all lights</div>' + relayCheckBlock(u, r) + '</div>';
   }
 
   function fxSheet(first) {
@@ -4298,7 +4298,7 @@
               // or one it found through another One
               (u.relay.host && u.relay.mine ? ' <span class="fx-dim">(this One)</span>' : u.relay.host && u.relay.found ? ' <span class="fx-dim">(found)</span>' : '') +
               (u.relay.live ? ' <span class="fx-ok">live</span>' : u.relay.why ? '<div class="fu-sub">' + fxEsc(u.relay.why) + '</div>' : '')) +
-            fxRow('Rig PIN', rigRelayLine(u.serial)) +
+            fxRow('Cue PIN', rigRelayLine(u.serial)) +
             fxRow('CueLink', 'ch ' + fxEsc(u.relay.ch) + ' · ' + fxEsc(u.relay.tune) + ' · ' + fxEsc(u.relay.heard) + ' heard' +
               (u.relay.move_wait ? '<div class="fu-sub">' + fxEsc(u.relay.move_wait) + '</div>' : '')) +
             fxRow('Ethernet', fxEsc(u.relay.eth) + (u.relay.mbps ? ' · ' + u.relay.mbps + ' Mbps' : '') + ' · ' + (u.relay.static ? 'static' : 'DHCP')) : '') +
@@ -5001,9 +5001,9 @@
     try { window._rigState = await (await fetch('/rig/state')).json(); } catch (e) { return; }
     const s = window._rigState, b = document.getElementById('cue-token-btn');
     if (!b) return;
-    b.textContent = 'Rig PIN: ' + (!s.set ? 'open' : s.known || s.console ? 'on' : 'locked');
-    b.title = !s.set ? 'Open: anyone on this network can change this rig. Secure it.'
-      : 'This rig has a PIN: restart, power, network, blackout, looks and sources ask for it.';
+    b.textContent = 'Cue PIN: ' + (!s.set ? 'open' : s.known || s.console ? 'on' : 'locked');
+    b.title = !s.set ? 'Open: anyone on this network can change this Cue system. Secure it.'
+      : 'This Cue system has a PIN: restart, power, network, blackout, looks and sources ask for it.';
     b.dataset.on = s.set ? '1' : '';
     if (document.getElementById('rig-modal').classList.contains('open') && !_rigShown) rigRender();
   }
@@ -5031,28 +5031,28 @@
     if (note) _rigNote = note;
     let h = _rigNote ? '<p class="fx-note">' + fxEsc(_rigNote) + '</p>' : '';
     if (_rigShown) {      // just made here: shown once, to the browser that made it
-      el.innerHTML = '<p>The rig PIN:</p><div class="rig-big">' + fxEsc(_rigShown) + '</div>' +
+      el.innerHTML = '<p>The Cue PIN:</p><div class="rig-big">' + fxEsc(_rigShown) + '</div>' +
         '<p class="fx-note">Write it down. The Slate and the Companion connection need it typed once.</p>' +
         '<div class="modal-btns">' + btn('I have written it down', 'rigClose(true)', 'btn-primary') + '</div>';
       return;
     }
     if (!s.set) {
-      h += '<p class="fx-note">Open: anyone on this network can change this rig.</p>' +
-        '<div class="modal-btns">' + btn('Secure this rig', 'rigSecure()', 'btn-primary') +
+      h += '<p class="fx-note">Open: anyone on this network can change this Cue system.</p>' +
+        '<div class="modal-btns">' + btn('Secure this Cue system', 'rigSecure()', 'btn-primary') +
         btn('Use my own PIN', 'rigSetOwn()') + btn('Close', 'rigClose()', 'btn-ghost') + '</div>';
     } else if (s.known || s.console) {
       h += '<div class="rig-big" id="rig-shown">••••</div>' +
         (s.from ? '<p class="fx-note">From ' + fxEsc(s.from) + '.</p>' : '') +
         '<div class="modal-btns">' +
         '<button class="btn-sm" onpointerdown="rigRevealHold(true)" onpointerup="rigRevealHold(false)" onpointerleave="rigRevealHold(false)" title="Hold for two seconds">Hold to reveal</button>' +
-        btn('Change', 'rigSetOwn()') + btn('Unsecure this rig', 'rigUnsecure()') + btn('Close', 'rigClose(true)', 'btn-ghost') + '</div>';
+        btn('Change', 'rigSetOwn()') + btn('Unsecure this Cue system', 'rigUnsecure()') + btn('Close', 'rigClose(true)', 'btn-ghost') + '</div>';
     } else {
-      h += '<input id="rig-pin-in" type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="Rig PIN (six digits)" onkeydown="if(event.key===\'Enter\')rigUnlock()">' +
+      h += '<input id="rig-pin-in" type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="Cue PIN (six digits)" onkeydown="if(event.key===\'Enter\')rigUnlock()">' +
         '<div class="modal-btns">' + btn('Unlock', 'rigUnlock()', 'btn-primary') + btn('Cancel', 'rigClose(false)', 'btn-ghost') + '</div>' +
         '<p class="fx-note">' + fxEsc(s.forgotten || '') + ' ' + fxEsc(s.relayLine || '') + '</p>';
     }
     if (s.set && (s.console || s.hotspot))
-      h += '<div class="modal-btns">' + btn('Clear the rig PIN', 'rigClear()', 'fx-btn warn') + '</div>';
+      h += '<div class="modal-btns">' + btn('Clear the Cue PIN', 'rigClear()', 'fx-btn warn') + '</div>';
     el.innerHTML = h;
     // a redraw must not take the field away from someone typing: after a
     // wrong PIN the next try goes straight in
@@ -5069,12 +5069,12 @@
     const i = document.getElementById('rig-pin-in'), pin = ((i && i.value) || '').trim();
     if (!pin) return;
     const d = await rigPost('/rig/unlock', { pin });
-    if (d.ok) { showToast('Unlocked: this browser knows the rig PIN now.', 'success'); await rigPaint(); rigClose(true); return; }
+    if (d.ok) { showToast('Unlocked: this browser knows the Cue PIN now.', 'success'); await rigPaint(); rigClose(true); return; }
     showToast(d.error || 'Not unlocked.', 'error');
     await rigPaint(); rigRender();
   }
   async function rigSecure() {
-    if (!confirm('Secure this rig?\n\nRestart, power, network, blackout, looks and sources will ask for a six-digit rig PIN on any browser that has not entered it. This unit’s own screen and its Companion never ask.')) return;
+    if (!confirm('Secure this Cue system?\n\nRestart, power, network, blackout, looks and sources will ask for a six-digit Cue PIN on any browser that has not entered it. This unit’s own screen and its Companion never ask.')) return;
     const d = await rigPost('/rig/secure', { on: true });
     if (!d.ok) { showToast(d.error || 'Not secured.', 'error'); return; }
     await rigPaint();
@@ -5082,24 +5082,24 @@
     else { showToast(d.message || 'Secured.', 'success'); rigRender(d.message); }
   }
   async function rigSetOwn() {
-    const v = prompt('A rig PIN for this unit (six digits):', '');
+    const v = prompt('A Cue PIN for this unit (six digits):', '');
     if (v === null) return;                       // Cancel means cancel
     if (!v.trim()) return;                        // clearing is Unsecure, asked on its own
     const d = await rigPost('/fleet/cue/token', { token: v.trim() });
-    showToast(d.ok ? 'Rig PIN saved.' : (d.error || 'Not saved.'), d.ok ? 'success' : 'error');
+    showToast(d.ok ? 'Cue PIN saved.' : (d.error || 'Not saved.'), d.ok ? 'success' : 'error');
     await rigPaint(); rigRender();
   }
   async function rigUnsecure() {
-    if (!confirm('Unsecure this rig?\n\nThe Relay and this One both open: anyone on this network can change the rig again.')) return;
+    if (!confirm('Unsecure this Cue system?\n\nThe Relay and this One both open: anyone on this network can change the Cue system again.')) return;
     const d = await rigPost('/rig/secure', { on: false });
     if (!d.ok) { showToast(d.error || 'Not unsecured.', 'error'); return; }
-    showToast('This rig is open.' + ((d.relays || []).some(x => /keeps its PIN/.test(x)) ? ' A Relay was not reached and keeps its PIN.' : ''), 'success');
+    showToast('This Cue system is open.' + ((d.relays || []).some(x => /keeps its PIN/.test(x)) ? ' A Relay was not reached and keeps its PIN.' : ''), 'success');
     await rigPaint(); rigRender();
   }
   async function rigClear() {
-    if (!confirm('Clear the rig PIN?\n\nThis unit opens, and any Relay it can reach opens too.')) return;
+    if (!confirm('Clear the Cue PIN?\n\nThis unit opens, and any Relay it can reach opens too.')) return;
     const d = await rigPost('/rig/clear', {});
-    showToast(d.ok ? 'Rig PIN cleared: this rig is open.' : (d.error || 'Not cleared.'), d.ok ? 'success' : 'error');
+    showToast(d.ok ? 'Cue PIN cleared: this Cue system is open.' : (d.error || 'Not cleared.'), d.ok ? 'success' : 'error');
     await rigPaint(); rigRender();
   }
   function rigRevealHold(down) {
@@ -5118,7 +5118,7 @@
   function rigRelayLine(id) {
     const s = window._rigState, r = s && (s.relays || []).find(x => x.id === id);
     if (!r) return '-';
-    if (r.needsPin) return '<span class="fx-bad">Asks for the rig PIN</span><div class="fu-sub">Enter the same rig PIN on this One (Rig PIN on the Fleet tab), or pair from the Relay’s page.</div>';
+    if (r.needsPin) return '<span class="fx-bad">Asks for the Cue PIN</span><div class="fu-sub">Enter the same Cue PIN on this One (Cue PIN on the Fleet tab), or pair from the Relay’s page.</div>';
     if (r.opened) return 'Opened<div class="fu-sub">Its PIN was cleared at the Relay, so this One stopped sending it. This One keeps its own until cleared here.</div>';
     return r.secured ? '<span class="fx-ok">Secured</span>' : 'Open';
   }

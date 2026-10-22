@@ -549,7 +549,7 @@
   <button data-tab="msg">Messages</button>
   <button data-tab="outputs">Outputs</button>
   <button data-tab="router">ATEM Router</button>
-  <button data-tab="rig">Rig</button>
+  <button data-tab="rig">Cue</button>
   <button data-tab="tools">Tools</button>
 </nav>
 <main>
@@ -764,8 +764,8 @@
 </div>
 <div class="scrim" id="pin-scrim">
   <div class="sheet">
-    <h3>Rig PIN</h3>
-    <p class="note" id="pin-why">This rig has a PIN. Enter it once and this iPad remembers.</p>
+    <h3>Cue PIN</h3>
+    <p class="note" id="pin-why">This Cue system has a PIN. Enter it once and this iPad remembers.</p>
     <div class="pinbox num" id="pin-box"></div>
     <div class="keypad">
       <button class="btn" data-act="pin" data-arg="1">1</button><button class="btn" data-act="pin" data-arg="2">2</button><button class="btn" data-act="pin" data-arg="3">3</button>
@@ -852,7 +852,7 @@
       try { d = await r.json(); } catch (e) {}
     } catch (e) { toast('The One did not answer.', 'bad'); return { ok: false }; }
     if (r.status === 401 && d.needs && !again) {
-      const ok = await askPin(d.error === 'wrong rig PIN' ? 'That PIN was wrong. Try again.' : null);
+      const ok = await askPin(/^wrong (rig|Cue) PIN$/.test(d.error || '') ? 'That PIN was wrong. Try again.' : null);
       return ok ? post(path, body, true) : { ok: false };
     }
     if (!r.ok || d.ok === false) toast(d.error || d.message || ('The One answered ' + r.status), 'bad');
@@ -1587,7 +1587,7 @@
     for (const r of relaysOf()) {
       const o = (S.relayData[r.ip] || {}).offers || {};
       const ask = (o.adopt || []).find(l => l.kind === 'asks') || (o.adopt || [])[0];
-      if (ask) { offer = '<div class="offer"><span>' + esc(ask.name || ask.id) + ' asks to join this rig.</span>' +
+      if (ask) { offer = '<div class="offer"><span>' + esc(ask.name || ask.id) + ' asks to join this Cue system.</span>' +
         '<button class="btn" data-act="offerId" data-arg="' + esc(r.ip) + '|' + esc(ask.id) + '">Identify</button>' +
         '<button class="btn pri" data-act="offerAdopt" data-arg="' + esc(r.ip) + '|' + esc(ask.id) + '">Adopt</button></div>'; break; }
     }
@@ -1931,7 +1931,7 @@
   let pinVal = '';
   function askPin(why) {
     pinVal = ''; $('pin-box').textContent = '';
-    $('pin-why').textContent = why || 'This rig has a PIN. Enter it once and this iPad remembers.';
+    $('pin-why').textContent = why || 'This Cue system has a PIN. Enter it once and this iPad remembers.';
     $('pin-scrim').classList.add('on');
     return new Promise(res => S.pinWait = res);
   }
@@ -1941,9 +1941,9 @@
     if (pinVal.length < 6) return;
     let r, j = {};
     try { r = await fetch('/rig/unlock', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin: pinVal }) }); j = await r.json(); } catch (e) {}
-    if (j.ok) { $('pin-scrim').classList.remove('on'); toast('Unlocked. This iPad knows the rig PIN now.'); const w = S.pinWait; S.pinWait = null; w && w(true); return; }
+    if (j.ok) { $('pin-scrim').classList.remove('on'); toast('Unlocked. This iPad knows the Cue PIN now.'); const w = S.pinWait; S.pinWait = null; w && w(true); return; }
     pinVal = ''; $('pin-box').textContent = '';
-    $('pin-why').textContent = j.error === 'wrong rig PIN' ? 'That PIN was wrong. Try again.' : (j.error || 'Not unlocked. Try again.');
+    $('pin-why').textContent = /^wrong (rig|Cue) PIN$/.test(j.error || '') ? 'That PIN was wrong. Try again.' : (j.error || 'Not unlocked. Try again.');
   }
 
   // ── typing an aux time, microwave style: digits fill from the right ──
