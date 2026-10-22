@@ -2,12 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<!-- no viewport-fit=cover and a solid status bar (Rob, 2026-10-22, iPhone 17
+     Pro Max: "the top of the touch ui begins to blur"): iOS 26 softens what
+     sits under the status bar, so the page starts below it instead -->
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Downstage One</title>
 <!-- Add to Home Screen: full screen, no Safari bars -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="One">
 <meta name="theme-color" content="#0B0D10">
 <link rel="manifest" href="/touch.webmanifest">
@@ -345,6 +348,12 @@
     .steps { grid-template-columns: repeat(4, 1fr); }
     .msgnow { min-height: 90px; font-size: 30px; }
     .dest { min-height: 80px; } .merow .tbtn, .merow .lockb { min-height: 80px; }
+    /* the deck: as big as the height allows, no key sizes, the rail put away */
+    .sizeonly { display: none !important; }
+    #d-layout { margin: 0 auto; }
+    .deckwrap { gap: 8px; }
+    .deckbox iframe { max-height: calc(100vh - 150px); }
+    .xl { max-width: calc((100vh - 150px) * 1.45); margin: 0 auto; }
   }
   /* an iPhone (Rob, 2026-10-22: "the touch version should probably be iOS
      mobile optimized as well"): one column, the bar in two short lines,
@@ -387,6 +396,13 @@
     .rt-head { gap: 8px; } .rt-head #rt-hint { display: none; }
     .looks .btn { min-width: 0; flex: 1 1 40%; }
     #pg-deck.on { gap: 12px; }
+    .sizeonly { display: none !important; }
+    #d-layout { width: 100%; display: grid; grid-template-columns: 1fr 1fr; }
+    #d-layout button { height: 44px; }
+    .deckwrap { grid-template-rows: auto auto; }
+    .deckbox iframe { max-height: none; }   /* upright: as wide as the glass, the rail under it */
+    #pg-deck.on { display: block; }          /* stack and scroll, never squeeze the deck */
+    #pg-deck .rail { margin-top: 12px; }
     .rail { grid-template-columns: 1fr; }
     .rail .clock .time { font-size: 72px; }
     .deckhead { flex-wrap: wrap; }
@@ -427,8 +443,8 @@
         <div class="seg2" id="d-layout">
           <button data-act="deckLayout" data-arg="vd">Virtual Deck</button><button data-act="deckLayout" data-arg="xl">Stream Deck + XL</button>
         </div>
-        <span class="note">Key size</span>
-        <div class="seg2" id="d-size">
+        <span class="note sizeonly">Key size</span>
+        <div class="seg2 sizeonly" id="d-size">
           <button data-act="deckSize" data-arg="s">Small</button><button data-act="deckSize" data-arg="m">Medium</button><button data-act="deckSize" data-arg="l">Large</button>
         </div>
         <span class="sp" style="flex:1"></span>
@@ -817,8 +833,15 @@
     // no emulator chosen yet: Companion's own chooser, as the Virtual Deck page does
     return S.status ? 'http://' + host + ':8000/emulator/' + (s.companion_emulator_id || '') : '';
   }
+  // a phone has no room for key sizes (Rob, 2026-10-22: "large is the best in
+  // the vertical mode ... deck is messed up, ipad is fine"): the deck takes the
+  // whole width, with the rail under it upright and put away on its side
+  const isPhone = () => matchMedia('(max-width: 600px)').matches || matchMedia('(max-height: 520px) and (orientation: landscape)').matches;
+  const phoneSide = () => matchMedia('(max-height: 520px) and (orientation: landscape)').matches;
+  window.addEventListener('resize', () => { if (S.tab === 'deck') paintDeck(); });
   function paintDeck() {
-    const size = store.get('ds_deck', 'm'), u = deckUrl(), box = $('d-box'), lay = store.get('ds_deck_layout', 'vd');
+    const phone = isPhone();
+    const size = phone ? (phoneSide() ? 'l' : 'phone') : store.get('ds_deck', 'm'), u = deckUrl(), box = $('d-box'), lay = store.get('ds_deck_layout', 'vd');
     for (const b of document.querySelectorAll('#d-size button')) b.classList.toggle('on', b.dataset.arg === size);
     for (const b of document.querySelectorAll('#d-layout button')) b.classList.toggle('on', b.dataset.arg === lay);
     if (lay === 'xl') {
