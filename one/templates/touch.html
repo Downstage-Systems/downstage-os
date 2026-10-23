@@ -1517,8 +1517,11 @@
       seen.add(u.serial);
       out.push(rigRecord(u.serial, u, r, cue));
     }
+    // the Relay's own list adds what the fleet missed: a light it carries, and
+    // one it remembers but does not hear now, drawn as Not heard (as the Plus)
     for (const x of relays) for (const c of ((S.relayData[x.ip] || {}).cues || [])) {
-      if (seen.has(c.id) || c.carrier !== x.serial) continue;
+      if (seen.has(c.id)) continue;
+      if (c.carrier && c.carrier !== x.serial) continue;      // carried by another Relay: its own list has it
       seen.add(c.id); out.push(rigRecord(c.id, null, x, c));
     }
     return out.sort((a, b) => (a.n || 99) - (b.n || 99) || String(a.name).localeCompare(b.name));
