@@ -268,6 +268,7 @@
   .light .who b { font: 700 21px var(--fd); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .light .who small { color: var(--muted); font-size: 13px; }
   .light .face { width: 36px; height: 36px; flex: none; }
+  .mno { color: var(--amber) !important; }
   .light .foot { display: flex; justify-content: space-between; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
   .light.program { border-color: var(--red); background: #2A1416; }
   .light.preview { border-color: var(--green); background: #10241A; }
@@ -1542,7 +1543,9 @@
              level: cue ? cue.level : null, battery: cue ? cue.battery : null, charging: !!(cue && cue.charging),
              fw: (cue && cue.fw) || (u && u.version) || '', colour: (u && u.showing) || st.color || '#000000',
              // lent to a Slate in demo mode (Relay 0.175.1): linked to it over CueLink, not to the Relay
-             demo: (cue && cue.demo) || '' };
+             demo: (cue && cue.demo) || '',
+             // why its touch-to-mirror was just refused, for 60 s (Relay 0.180.1)
+             mirrorNo: (cue && cue.mirrorNo) || '' };
   }
   // a light drawn small, lit by its tally, as the Slate draws it
   function faceSvg(x, cls) {
@@ -1603,7 +1606,8 @@
     }
     const tiles = ls.map(x => '<button class="light ' + (x.online ? x.tally : x.demo ? '' : 'gone') + '" data-act="lightOpen" data-arg="' + esc(x.id) + '">' +
         '<span class="top"><span class="n">' + (x.n || '·') + '</span>' + pillOf(x) + '</span>' +
-        '<span class="who">' + faceSvg(x) + '<span style="min-width:0"><b>' + esc(x.name) + '</b><small>' + esc(x.model) + '</small></span></span>' +
+        '<span class="who">' + faceSvg(x) + '<span style="min-width:0"><b>' + esc(x.name) + '</b>' +
+          (x.mirrorNo ? '<small class="mno">' + esc(x.mirrorNo) + '</small>' : '<small>' + esc(x.model) + '</small>') + '</span></span>' +
         '<span class="foot"><span>' + (x.online ? barsOf(x.level) : x.demo ? 'on CueLink with the ' + esc(x.demo) : 'not heard') + '</span><span>' +
           (x.battery !== null && x.battery !== undefined ? (x.charging ? 'charging ' : '') + x.battery + '%' : '') + '</span></span></button>').join('');
     const html = '<div class="rigtop">' + top + '</div>' + offer + '<div class="lights">' + (tiles || '<p class="note">No Cue lights found yet. A Relay or a Cue on this network shows up here by itself.</p>') + '</div>';
@@ -1753,7 +1757,8 @@
       const f = cue.follow;
       h += row('Follows', '<button class="go" data-act="followOpen">' + (f && f.page ? 'Page ' + f.page + ' · row ' + (f.row + 1) + ' · button ' + (f.col + 1) : 'Not a button: its number') + '</button>');
       const m = cue.mirrors ? rigLights().find(y => y.carried && y.n === cue.mirrors) : null;
-      h += row('Linked to', '<button class="go" data-act="mirrorPick">' + (cue.mirrors ? 'Mirrors Cam ' + cue.mirrors + (m ? ' (' + esc(m.name) + ')' : '') : 'Its own key') + '</button>');
+      h += row('Linked to', '<button class="go" data-act="mirrorPick">' + (cue.mirrors ? 'Mirrors Cam ' + cue.mirrors + (m ? ' (' + esc(m.name) + ')' : '') : 'Its own key') + '</button>' +
+        (x.mirrorNo ? '<small class="mno">Refused: ' + esc(x.mirrorNo) + '</small>' : ''));
     }
     if (x.carried && x.kind === 'round' && cue.lock !== undefined) {
       const lk = cue.lock || 'off';

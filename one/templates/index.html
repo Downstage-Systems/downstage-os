@@ -4259,6 +4259,7 @@
       return '<div class="fx-carried-row"><span>' + fxEsc((c.n ? c.n + ' · ' : '') + nm(c)) + '</span>' +
         fxSignal(c.level) + (c.online ? '' : fxChip('not heard', 'bad')) +
         (c.talent ? fxChip('Talent', 'tal') : '') +
+        (c.mirrorNo ? fxChip(c.mirrorNo, 'warn') : '') +   // its touch-to-mirror refused, for 60 s (Relay 0.180.1)
         (tw.length ? '<span title="Companion drives lights by number: give one of them another (No.).">' +
           fxChip('number ' + c.n + ' is also ' + tw.map(nm).join(', '), 'warn') + '</span>' : '') +
         '<span class="fx-btns-tight">' +
