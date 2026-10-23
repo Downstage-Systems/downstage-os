@@ -3742,7 +3742,10 @@
     else chips.push(fxChip(i.lit ? 'Live' : 'Standby', i.lit ? 'ok' : 'stby'));   // standby is amber, not green
     if (i.radioOnly) chips.push(fxChip(i.air && i.air.gone ? 'Last heard ' + fxAge(i.air.age) : 'Heard over CueLink', i.air && i.air.gone ? 'warn' : 'link'));
     if (i.air && i.air.setup) chips.push(fxChip('In setup', 'warn'));
-    if (i.linked) chips.push(fxChip('via ' + fxShort(i.via), 'link'));
+    // in a demo on a Slate (the One marks it by the Relay's rule): say so in
+    // its chip, so nobody hunts for it (R&D, 2026-10-22)
+    if (i.L.demo) chips.push(fxChip('In a demo on the Slate', 'link'));
+    else if (i.linked) chips.push(fxChip('via ' + fxShort(i.via), 'link'));
     else if (i.L.waiting) chips.push(fxChip('waiting for ' + fxShort(i.L.via_name || i.L.chosen || 'its Cue'), 'warn'));
     else if (i.carried) chips.push(fxChip('carrying ' + i.carried + (+i.L.max > 1 ? ' of ' + i.L.max : ''), i.L.max && i.carried >= +i.L.max ? 'warn' : 'link'));
     if (_fxApart[u.serial]) chips.push(fxChip('Ch ' + i.c.wifi_ch + ', the Cue system on ' + _fxApart[u.serial], 'warn'));

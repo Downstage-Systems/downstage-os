@@ -5772,6 +5772,12 @@ def _add_carried_cues(units, prev=None):
             lk["via_name"] = names.get(lk["via"], lk["via"])
             lk["via_ip"] = ips.get(lk["via"], "")
         g = guest_of.get(u.get("serial", ""))
+        # in a demo on a Slate: linked through one and nobody carries it (the
+        # Relay's own rule, 0.175.1), so its card says so (R&D, 2026-10-22)
+        if str(lk.get("via") or "").startswith("DSSLT") and g is None:
+            lk["demo"] = "Slate"
+        else:
+            lk.pop("demo", None)
         if lk.get("relayed") and g is not None:
             # A light with its own WiFi, carried: its Cue follows its button for
             # it (both 0.80+), so whether that works is the Cue's to say
