@@ -273,6 +273,7 @@
   .light.preview { border-color: var(--green); background: #10241A; }
   .light.gone { opacity: .45; }
   .pill.stby { background: var(--warn-fill); color: var(--warn-text); }
+  .pill.new { background: var(--new-fill); color: var(--new-text); }
   .bars { display: inline-flex; align-items: flex-end; gap: 2px; height: 12px; margin-right: 6px; vertical-align: -1px; }
   .bars i { width: 3px; background: var(--edge); border-radius: 1px; } .bars i.on { background: var(--muted); }
   .bars.weak i.on { background: var(--amber); }
@@ -1380,7 +1381,7 @@
     else if (s.blackout) w = ['red', 'Blackout is on.', (bo.length === 1 ? 'HDMI ' + bo[0] + ' is dark' : 'Every output is dark') + '. Tap to bring it back on Outputs.', 'outputs'];
     else if (s.companion_installed && !s.companion_running) w = ['amber', 'Companion is not running.', 'The Deck and the lights’ keys are dark: restart it in Tools.', 'tools'];
     else {
-      const ls = rigLights(), gone = ls.find(x => x.carried && !x.online);
+      const ls = rigLights(), gone = ls.find(x => x.carried && !x.online && !x.demo);
       const low = ls.find(x => x.online && x.battery !== null && x.battery !== undefined && x.battery < 20 && !x.charging);
       const rel = relaysOf().find(r => { const st = (S.relayData[r.ip] || {}).status; return st && st.live === false && !st.one; });
       if (rel) w = ['amber', 'Companion lost.', (rel.name || 'The Relay') + ' cannot reach Companion: its lights hold their last tally.', 'rig'];
@@ -1539,7 +1540,9 @@
     return { id, u, r, cue, carried, st, kind, model, tally, online,
              n: (cue && cue.n) || cam || 0, name: (cue && cue.name) || (u && u.name) || model,
              level: cue ? cue.level : null, battery: cue ? cue.battery : null, charging: !!(cue && cue.charging),
-             fw: (cue && cue.fw) || (u && u.version) || '', colour: (u && u.showing) || st.color || '#000000' };
+             fw: (cue && cue.fw) || (u && u.version) || '', colour: (u && u.showing) || st.color || '#000000',
+             // lent to a Slate in demo mode (Relay 0.175.1): linked to it over CueLink, not to the Relay
+             demo: (cue && cue.demo) || '' };
   }
   // a light drawn small, lit by its tally, as the Slate draws it
   function faceSvg(x, cls) {
@@ -1558,6 +1561,7 @@
     return '<span class="bars' + (n <= 1 ? ' weak' : '') + '">' + [5, 7, 9, 12].map((h, i) => '<i class="' + (i < n ? 'on' : '') + '" style="height:' + h + 'px"></i>').join('') + '</span>' + level + ' dBm';
   }
   function pillOf(x) {
+    if (x.demo) return '<span class="pill new">In a demo on the ' + esc(x.demo.replace(/^Slate.*/, 'Slate')) + '</span>';
     if (!x.online) return '<span class="pill off">Not heard</span>';
     if (x.tally === 'program') return '<span class="pill air">On air</span>';
     if (x.tally === 'preview') return '<span class="pill ok">Preview</span>';
@@ -1572,13 +1576,16 @@
   function paintRig() {
     const ls = rigLights();
     const on = ls.filter(x => x.online), air = ls.filter(x => x.tally === 'program'), pvw = ls.filter(x => x.tally === 'preview');
+    const demo = ls.filter(x => x.demo && !x.online);
     const rel = relaysOf()[0], rs = rel && (S.relayData[rel.ip] || {}).status;
     const s = S.status || {};
     const compLive = rs ? !!(rs.live || rs.one) : !!s.companion_running;
     const camOf = x => 'Cam ' + (x.n || '?');
     const stat = (label, val, sub, cls) => '<div class="st ' + (cls || '') + '"><small>' + label + '</small><em>' + esc(val) + '</em><span>' + esc(sub) + '</span></div>';
     const alertOn = relaysOf().some(r => ((S.relayData[r.ip] || {}).status || {}).alert);
-    const top = stat('Linked', ls.length ? on.length + ' of ' + ls.length : 'None', ls.length - on.length ? (ls.length - on.length) + ' not heard' : ls.length ? 'all heard' : 'no lights found', on.length ? 'ok' : '') +
+    const unheard = ls.length - on.length - demo.length;
+    const top = stat('Linked', ls.length ? on.length + ' of ' + ls.length : 'None',
+        [unheard ? unheard + ' not heard' : '', demo.length ? demo.length + ' in a demo' : ''].filter(Boolean).join(', ') || (ls.length ? 'all heard' : 'no lights found'), on.length ? 'ok' : '') +
       stat('On air', air.length ? air.map(camOf).join(', ') : 'None', air.map(x => x.name).join(', ') || 'nothing live', air.length ? 'air' : '') +
       stat('Preview', pvw.length ? pvw.map(camOf).join(', ') : 'None', pvw.map(x => x.name).join(', ') || 'nothing on preview', pvw.length ? 'ok' : '') +
       stat('Companion', compLive ? 'Live' : 'Lost', rs ? (rs.one ? 'the One\'s' : rs.compHost || '') : (s.companion_running ? 'on this One' : 'not running'), compLive ? 'ok' : 'warn') +
@@ -1594,10 +1601,10 @@
         '<button class="btn" data-act="offerId" data-arg="' + esc(r.ip) + '|' + esc(ask.id) + '">Identify</button>' +
         '<button class="btn pri" data-act="offerAdopt" data-arg="' + esc(r.ip) + '|' + esc(ask.id) + '">Adopt</button></div>'; break; }
     }
-    const tiles = ls.map(x => '<button class="light ' + (x.online ? x.tally : 'gone') + '" data-act="lightOpen" data-arg="' + esc(x.id) + '">' +
+    const tiles = ls.map(x => '<button class="light ' + (x.online ? x.tally : x.demo ? '' : 'gone') + '" data-act="lightOpen" data-arg="' + esc(x.id) + '">' +
         '<span class="top"><span class="n">' + (x.n || '·') + '</span>' + pillOf(x) + '</span>' +
         '<span class="who">' + faceSvg(x) + '<span style="min-width:0"><b>' + esc(x.name) + '</b><small>' + esc(x.model) + '</small></span></span>' +
-        '<span class="foot"><span>' + (x.online ? barsOf(x.level) : 'not heard') + '</span><span>' +
+        '<span class="foot"><span>' + (x.online ? barsOf(x.level) : x.demo ? 'on CueLink with the ' + esc(x.demo) : 'not heard') + '</span><span>' +
           (x.battery !== null && x.battery !== undefined ? (x.charging ? 'charging ' : '') + x.battery + '%' : '') + '</span></span></button>').join('');
     const html = '<div class="rigtop">' + top + '</div>' + offer + '<div class="lights">' + (tiles || '<p class="note">No Cue lights found yet. A Relay or a Cue on this network shows up here by itself.</p>') + '</div>';
     if (html !== S.rigHtml) { S.rigHtml = html; $('r-body').innerHTML = html; }
