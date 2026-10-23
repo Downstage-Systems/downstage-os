@@ -4115,6 +4115,14 @@
       const v = prompt('Words on ' + name + "'s face (24 characters; empty clears them):", '');
       if (v === null) return;
       set = { text: v.slice(0, 24) };
+    } else if (what === 'brightness' && on !== false) {
+      // its own setting, the Relay page's slider (Relay 0.178.1): "brightness"
+      // was only Companion's share of it (Cue Coding, 2026-10-23)
+      const v = prompt('Brightness for ' + name + ', 5 to 100 (now ' + on + '):', String(on));
+      if (v === null) return;
+      const b = parseInt(v, 10);
+      if (isNaN(b) || b < 5 || b > 100) { showToast('A number from 5 to 100.', 'warning'); return; }
+      set = { brightSetting: b };
     } else if (what === 'brightness') {
       const v = prompt('Brightness for ' + name + ', 0 to 100:', '');
       if (v === null) return;
@@ -4257,7 +4265,8 @@
           '<button class="fleet-btn" onclick="relayAct(\'' + u.ip + '\',\'identify\',{id:\'' + c.id + '\'},\'\')" title="Blink this light">ID</button>' +
           by('number', 'The Cue number it answers to', 'No.') +
           by('text', 'Words on its face', 'Words') +
-          by('brightness', 'How bright it is', 'Bright') +
+          by('brightness', 'How bright it is' + (c.brightSetting != null ? ' (' + c.brightSetting + '%)' : ''), 'Bright',
+             c.brightSetting != null ? String(c.brightSetting) : 'false') +
           by('talent', 'Talent mode', c.talent ? 'Talent off' : 'Talent', String(!!c.talent)) +
           by('release', 'Let it go', 'Release') +
         '</span></div>';

@@ -4925,7 +4925,10 @@ def fleet_relay_light():
                      # the Slate Plus's light sheet, on the touch page too (2026-10-22):
                      # the word under its number, words for 10 / 30 s or until
                      # cleared, mirroring another light, a tap pressing its key
-                     "tallyWord", "message", "messageSecs", "messageColor", "mirror", "touchPress")}
+                     "tallyWord", "message", "messageSecs", "messageColor", "mirror", "touchPress",
+                     # its own brightness, 5-100 % of its cap (Relay 0.178.1), not
+                     # Companion's share of it that "brightness" sets
+                     "brightSetting")}
     if not body:
         return jsonify({"ok": False, "error": "nothing to set"}), 400
     if not light and b.get("n") is None:

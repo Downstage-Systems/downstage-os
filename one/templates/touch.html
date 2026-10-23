@@ -1734,10 +1734,11 @@
       const b = st.brightness !== undefined ? st.brightness : 100;
       // its own setting (Relay 0.176.2), the Relay page's slider: state.brightness
       // is only Companion's share of it, 100 unless held, so a light at 44%
-      // read "100%" here (Cue Coding, 2026-10-23). The steps move that share,
-      // so they wait for a Relay route to the setting itself.
-      if (cue.brightSetting !== undefined && cue.brightSetting !== null)
-        h += row('Brightness', '<b>' + cue.brightSetting + '%</b><small>' + (b < 100 ? 'its setting; Companion has it at ' + b + '% of that' : 'its own setting') + '</small>');
+      // read "100%" here (Cue Coding, 2026-10-23). The steps set it (0.178.1).
+      const own = brightOwn(x);
+      if (own !== null)
+        h += row('Brightness', '<span class="step"><button class="btn" data-act="lightBright" data-arg="-10">-</button><b>' + own + '%</b>' +
+          '<button class="btn" data-act="lightBright" data-arg="10">+</button></span>' + (b < 100 ? '<small>Companion has it at ' + b + '% of that</small>' : ''));
       else
         h += row('Brightness', '<span class="step"><button class="btn" data-act="lightBright" data-arg="-10">-</button><b>' + b + '%</b>' +
           '<button class="btn" data-act="lightBright" data-arg="10">+</button></span>');
@@ -1766,6 +1767,13 @@
     // the sheet keeps its scroll as it updates
     const top = el.scrollTop;
     if (el.dataset.html !== h) { el.dataset.html = h; el.innerHTML = h; el.scrollTop = top; }
+  }
+  // a light's own brightness: what was just asked while the Relay catches up,
+  // else what the Relay last read from it; null on a Relay before 0.176.2
+  function brightOwn(x) {
+    const p = L.bright, got = x.cue && x.cue.brightSetting;
+    if (p && p.id === x.id && Date.now() < p.until && got !== p.v) return p.v;
+    return got !== undefined && got !== null ? got : null;
   }
   async function lightSet(set, said) {
     const x = lightNow(); if (!x || !x.r) return;
@@ -2060,6 +2068,17 @@
     },
     lightBright(step) {
       const x = lightNow(); if (!x) return;
+      const own = brightOwn(x);
+      if (own !== null) {
+        // the Relay reads it back from the light in a few seconds: show what was
+        // asked until then, so a second tap steps from it and nothing flicks back
+        const v = Math.max(5, Math.min(100, own + +step));
+        if (v === own) return;
+        L.bright = { id: x.id, v, until: Date.now() + 10000 };
+        paintLight();
+        lightSet({ brightSetting: v }, 'Brightness ' + v + '%.');
+        return;
+      }
       const b = Math.max(10, Math.min(100, (x.st.brightness !== undefined ? x.st.brightness : 100) + +step));
       lightSet({ brightness: b }, 'Brightness ' + b + '%.');
     },
