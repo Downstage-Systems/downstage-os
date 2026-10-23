@@ -1732,8 +1732,15 @@
       h += row('Camera number', '<span class="step"><button class="btn" data-act="lightNumStep" data-arg="-1">-</button><b>' + (cue.n || '-') + '</b>' +
         '<button class="btn" data-act="lightNumStep" data-arg="1">+</button></span><small>' + (cue.n ? 'shows as Cam ' + cue.n : 'follows its camera') + '</small>');
       const b = st.brightness !== undefined ? st.brightness : 100;
-      h += row('Brightness', '<span class="step"><button class="btn" data-act="lightBright" data-arg="-10">-</button><b>' + b + '%</b>' +
-        '<button class="btn" data-act="lightBright" data-arg="10">+</button></span>');
+      // its own setting (Relay 0.176.2), the Relay page's slider: state.brightness
+      // is only Companion's share of it, 100 unless held, so a light at 44%
+      // read "100%" here (Cue Coding, 2026-10-23). The steps move that share,
+      // so they wait for a Relay route to the setting itself.
+      if (cue.brightSetting !== undefined && cue.brightSetting !== null)
+        h += row('Brightness', '<b>' + cue.brightSetting + '%</b><small>' + (b < 100 ? 'its setting; Companion has it at ' + b + '% of that' : 'its own setting') + '</small>');
+      else
+        h += row('Brightness', '<span class="step"><button class="btn" data-act="lightBright" data-arg="-10">-</button><b>' + b + '%</b>' +
+          '<button class="btn" data-act="lightBright" data-arg="10">+</button></span>');
     }
     if (L.tsrc) h += row('Timer source', '<div class="segs">' + ['auto', 'one', 'local'].map(m =>
         '<button class="btn' + (L.tsrc === m ? ' on' : '') + '" data-act="lightTsrc" data-arg="' + m + '">' + { auto: 'Auto', one: 'One', local: 'Local' }[m] + '</button>').join('') + '</div>');

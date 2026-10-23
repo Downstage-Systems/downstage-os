@@ -4050,7 +4050,10 @@ def _cue_extras():
         return ""
     left = int(t.get("current") or 0)
     dur = int(t.get("duration") or 0)
-    secs = abs(left) // 1000
+    # rounded up while time is left, as OnTime's own views do: floored, the
+    # lights and Companion turned a second ahead of the HDMI clock (Cue
+    # Coding, 2026-10-23). Over time stays whole seconds over.
+    secs = (left + 999) // 1000 if left > 0 else abs(left) // 1000
     if secs >= 3600:
         text = f"{secs // 3600}:{secs % 3600 // 60:02d}:{secs % 60:02d}"
     else:
