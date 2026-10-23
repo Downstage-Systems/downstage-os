@@ -1757,8 +1757,8 @@
       const f = cue.follow;
       h += row('Follows', '<button class="go" data-act="followOpen">' + (f && f.page ? 'Page ' + f.page + ' · row ' + (f.row + 1) + ' · button ' + (f.col + 1) : 'Not a button: its number') + '</button>');
       const m = cue.mirrors ? rigLights().find(y => y.carried && y.n === cue.mirrors) : null;
-      h += row('Linked to', '<button class="go" data-act="mirrorPick">' + (cue.mirrors ? 'Mirrors Cam ' + cue.mirrors + (m ? ' (' + esc(m.name) + ')' : '') : 'Its own key') + '</button>' +
-        (x.mirrorNo ? '<small class="mno">Refused: ' + esc(x.mirrorNo) + '</small>' : ''));
+      h += row('Linked to', '<button class="go" data-act="mirrorPick">' + (cue.mirrors ? 'Cam ' + cue.mirrors + (m ? ' (' + esc(m.name) + ')' : '') : 'Its own key') + '</button>' +
+        (x.mirrorNo ? '<small class="mno">Not linked: ' + esc(x.mirrorNo) + '</small>' : ''));
     }
     if (x.carried && x.kind === 'round' && cue.lock !== undefined) {
       const lk = cue.lock || 'off';
@@ -2113,10 +2113,10 @@
       const x = lightNow(); if (!x || !x.carried) return;
       // a light that mirrors is never mirrored, and never mirrors itself (the Relay's rule)
       const others = rigLights().filter(y => y.carried && y.r && y.r.serial === x.r.serial && y.id !== x.id && y.n && !(y.cue || {}).mirrors);
-      const k = await askPick('What ' + x.name + ' shows', 'It shows what that light shows, as its own. Its own key gives it back.',
-        [['own', 'Its own key']].concat(others.map(y => ['n' + y.n, 'Mirror Cam ' + y.n + ' (' + y.name + ')'])));
+      const k = await askPick('Link ' + x.name + ' to', 'Linked, it shows what that light shows. Its own key gives it back.',
+        [['own', 'Its own key']].concat(others.map(y => ['n' + y.n, 'Cam ' + y.n + ' (' + y.name + ')'])));
       if (!k) return;
-      lightSet({ mirror: k === 'own' ? false : +k.slice(1) }, k === 'own' ? 'Its own key.' : 'Mirroring Cam ' + k.slice(1) + '.');
+      lightSet({ mirror: k === 'own' ? false : +k.slice(1) }, k === 'own' ? 'Its own key.' : 'Linked to Cam ' + k.slice(1) + '.');
     },
     followOpen() { followOpen(); }, followClose() { followClose(); },
     followPage(d) { FG.page = Math.max(1, Math.min(99, FG.page + +d)); FG.imgs = {}; paintFollow(); followLoad(true); },
