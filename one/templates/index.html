@@ -4235,7 +4235,10 @@
     // from before (carrier null, offline). Only the first are "it carries";
     // listing both together put two "1 ·" rows on Rob's card (2026-10-17).
     const mine = cues.filter(c => c.carrier && c.carrier === u.serial);
-    const kept = cues.filter(c => !(c.carrier && c.carrier === u.serial));
+    // lent to a Slate in demo mode (Relay 0.175.1): online, carried by the
+    // Slate, so neither "it carries" nor "remembered" (R&D, 2026-10-22)
+    const demo = cues.filter(c => c.demo && !(c.carrier && c.carrier === u.serial));
+    const kept = cues.filter(c => !(c.carrier && c.carrier === u.serial) && !c.demo);
     // Two lights on one number. The buttons go by id now (Relay 0.136.22), so
     // a tap reaches only this light - but Companion drives by number, and two
     // carried lights on one number take each other's tally. Say so.
@@ -4262,6 +4265,9 @@
     return '<div class="fx-sec"><div class="fx-sec-label">Lights it carries</div>' +
         (mine.length ? '<div class="fx-carried">' + mine.map(lightRow).join('') + '</div>'
                      : '<p class="fx-note">It is carrying no lights.</p>') +
+        (demo.length ? '<div class="fx-carried">' + demo.map(c =>
+          '<div class="fx-carried-row"><span>' + fxEsc((c.n ? c.n + ' · ' : '') + nm(c)) + '</span>' +
+          fxSignal(c.level) + fxChip('In a demo on the Slate', 'link') + '</div>').join('') + '</div>' : '') +
         (kept.length ? '<p class="fx-note fx-dim">Remembered, not linked now:</p><div class="fx-carried">' + kept.map(c =>
           '<div class="fx-carried-row"><span class="fx-dim">' + fxEsc((c.n ? c.n + ' · ' : '') + nm(c)) + '</span>' +
           (twins(c).some(x => x.carrier === u.serial) ? fxChip('same number as a light it carries', 'warn') : '') +
