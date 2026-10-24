@@ -110,6 +110,12 @@
   .rail .clock .time { font-size: 92px; margin: 2px 0 8px; }
   .rail .clock .title { font-size: 19px; min-height: 24px; }
   .rail .pairs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .rail .rpre { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 10px; }
+  .rail .rpre .btn { flex-direction: column; gap: 2px; min-height: 64px; padding: 8px 6px; }
+  .rail .rpre .btn b { font-size: 17px; line-height: 1.1; }
+  .rail .rpre .btn small { color: var(--muted); font-size: 12px; font-weight: 600; }
+  .rail .rpre .btn.now { border-color: var(--green); }
+  .btn.off { opacity: .35; }
   .rail .btn { min-height: 60px; }
   .rail .airlist { display: grid; gap: 6px; }
   .rail .airlist div { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-radius: var(--rb); background: var(--raised); font-weight: 600; }
@@ -576,6 +582,7 @@
         <div class="time stopped" id="r-time">-</div>
         <button class="btn pri" id="r-start" data-act="mainStart" style="width:100%"><span class="big">START</span></button>
       </div>
+      <div class="rpre" id="r-pre"></div>
       <div class="pairs">
         <button class="btn plus" data-act="add" data-arg="60"><span class="big">+1</span>min</button>
         <button class="btn plus" data-act="add" data-arg="300"><span class="big">+5</span>min</button>
@@ -907,6 +914,7 @@
   function mainText() {
     const t = S.timer && S.timer.state, lp = loadedPreset();
     if (!t || t.no_timer) return '-';
+    if (S.clockSet && !(S.clockSet.sent && !onClock())) return fmt(S.clockSet.secs * 1000);   // until the One has it
     if (lp && lp.kind === 'clock') return clockText(serverNow());
     if (!lp && !t.total_ms && !t.left_ms) return '-';
     return fmt(mainLeft());
@@ -1152,6 +1160,17 @@
     const t = S.timer && S.timer.state, run = t && (t.playback === 'play' || t.playback === 'roll'), lp = loadedPreset();
     $('r-title').textContent = (t && t.title) || (lp ? lp.label : 'Nothing loaded');
     const sb = $('r-start'); sb.classList.toggle('pause', !!run); sb.querySelector('.big').textContent = run ? 'PAUSE' : 'START';
+    // the rundown's events, as Rob's Companion page has them (Time Of Day,
+    // 10 Min, 30 Min): a tap loads one; while a timer runs it is a short
+    // hold, so a brush cannot swap the show clock (Rob, 2026-10-23)
+    const pre = ((S.timer && S.timer.presets) || []).slice(0, 4);
+    const psig = JSON.stringify([run, pre.map(x => [x.id, x.label, x.seconds, x.loaded])]);
+    if (psig !== S.preSig) {
+      S.preSig = psig;
+      $('r-pre').innerHTML = pre.map(x => '<button class="btn' + (x.loaded ? ' now' : '') + (run ? ' hold" data-hold="600' : '') + '" data-act="load" data-arg="' + esc(x.id) + '">' +
+        '<b>' + esc(x.label || 'Untitled') + '</b><small>' + (x.kind === 'clock' ? 'Time of day' : fmt(x.seconds * 1000)) + (run ? ' · hold' : '') + '</small></button>').join('');
+    }
+    paintSteps();
     const ls = lightsOf(S.fleet).filter(u => tallyOf(u.showing) === 'program');
     const sig = JSON.stringify(ls.map(u => [u.serial, u.name]));
     if (sig !== S.airSig) {
@@ -1174,6 +1193,7 @@
     const sb = $('m-start');
     sb.classList.toggle('pause', !!run);
     sb.querySelector('.big').textContent = run ? 'PAUSE' : 'START';
+    paintSteps();
     paintRail();
     const p = (S.timer && S.timer.presets) || [];
     const sig = JSON.stringify(p.map(x => [x.id, x.label, x.seconds, x.loaded, x.next]));
@@ -1992,9 +2012,16 @@
     tview(v) { S.tview = v; store.set('ds_tview', v); $('tv-main').hidden = v !== 'main'; $('tv-aux').hidden = v !== 'aux';
                $('sw-main').classList.toggle('on', v === 'main'); $('sw-aux').classList.toggle('on', v === 'aux'); paintTimer(); paintAux(); paintFast(); },
     async main(action) { const d = await post('/api/v1/one/timer', { action }); if (d.ok) { take(d); pollTimer(); } },
-    async mainStart() { const t = S.timer && S.timer.state, run = t && (t.playback === 'play' || t.playback === 'roll');
+    async mainStart() { if (S.clockSet && !S.clockSet.sent) await clockFlush();   // START inside the second: the countdown first
+                        const t = S.timer && S.timer.state, run = t && (t.playback === 'play' || t.playback === 'roll');
                         const d = await post('/api/v1/one/timer', { action: run ? 'pause' : 'start' }); if (d.ok) { take(d); pollTimer(); } },
-    async add(secs) { const d = await post('/api/v1/one/timer', { action: 'add', seconds: +secs }); if (d.ok) { take(d); pollTimer(); } },
+    async add(secs) {
+      if (onClock() || (S.clockSet && !S.clockSet.sent)) {
+        if (+secs < 0 && !(S.clockSet && S.clockSet.secs > 0)) return;   // nothing to take from yet
+        clockStep(+secs); return;
+      }
+      const d = await post('/api/v1/one/timer', { action: 'add', seconds: +secs }); if (d.ok) { take(d); pollTimer(); }
+    },
     async load(id) { const d = await post('/api/v1/one/timer', { action: 'load', id }); if (d.ok) { toast('Loaded.'); pollTimer(); } },
     async aux(action) { const d = await post('/api/v1/one/aux', { action }); if (d.ok) takeAux(d.aux); },
     async auxStart() { const a = S.aux && (S.aux.aux || [])[0]; const d = await post('/api/v1/one/aux', { action: a && a.running ? 'pause' : 'start' }); if (d.ok) takeAux(d.aux); },
@@ -2330,6 +2357,37 @@
   }
 
   // ── polling ──
+  // On Time of Day, +/- build a countdown here, shown at once; a second after
+  // the last tap the One puts it on a countdown from the rundown, stopped,
+  // and START runs it - as the Slate does (0.127.0). Added to the clock
+  // itself, the time went where no screen shows it (Rob, 2026-10-23).
+  const onClock = () => { const t = S.timer && S.timer.state, lp = loadedPreset();
+    return !!(t && !t.no_timer && lp && lp.kind === 'clock' && !(t.playback === 'play' || t.playback === 'roll')); };
+  function paintSteps() {
+    const clock = onClock() || !!S.clockSet;
+    document.querySelectorAll('[data-act="add"]').forEach(b => {
+      const off = clock && +b.dataset.arg < 0 && !(S.clockSet && S.clockSet.secs > 0);
+      b.classList.toggle('off', off);
+    });
+  }
+  function clockStep(secs) {
+    const n = Math.max(0, ((S.clockSet && S.clockSet.secs) || 0) + secs);
+    clearTimeout(S.clockSetT);
+    if (!n) { S.clockSet = null; paintFast(); paintSteps(); return; }   // back to nothing: the clock, nothing sent
+    S.clockSet = { secs: n, sent: false };
+    paintFast(); paintSteps();
+    S.clockSetT = setTimeout(clockFlush, 1000);
+  }
+  async function clockFlush() {
+      clearTimeout(S.clockSetT);
+      const want = S.clockSet; if (!want || want.sent) return;
+      want.sent = true;
+      const d = await post('/api/v1/one/timer', { action: 'set', seconds: want.secs });
+      if (d.ok) take(d);
+      // shown until the One's own state has it, or 4 s
+      setTimeout(() => { if (S.clockSet === want) { S.clockSet = null; paintFast(); paintSteps(); } }, d.ok ? 4000 : 0);
+      await pollTimer();
+  }
   function take(d) { if (d && d.state && S.timer) { S.timer.state = d.state; S.timerAt = Date.now(); paintTimer(); paintFast(); } }
   function takeAux(a) { if (a && S.aux) { S.aux.aux = [a].concat((S.aux.aux || []).slice(1)); S.auxAt = Date.now(); paintAux(); paintFast(); } }
   async function pollStatus() {
