@@ -1568,16 +1568,14 @@
              mirrorNo: (cue && cue.mirrorNo) || '' };
   }
   // a light drawn small, lit by its tally, as the Slate draws it
-  // the Cue Mini (decision 19, Design's render; Cue Coding's hub.js 0.184.22): a portrait rounded
-  // box, an open black 8 x 8 grid of square cells in its upper part, lit in the tally colour
+  // the Cue Mini (decision 19): a portrait rounded box, an open black 8 x 8 grid of square cells in
+  // its upper part, lit in the tally colour - Cue Coding's docs/device-icons/svg/mini-*.svg (120 box)
   function miniSvg(fill) {
-    const pitch = 30 / 8, sq = pitch * 0.7;
     let cells = '';
     for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++)
-      cells += '<rect x="' + (17 + c * pitch + (pitch - sq) / 2).toFixed(2) + '" y="' + (12 + r * pitch + (pitch - sq) / 2).toFixed(2) +
-        '" width="' + sq.toFixed(2) + '" height="' + sq.toFixed(2) + '" fill="' + fill + '"/>';
-    return '<g transform="scale(.75)"><rect x="10.5" y="6" width="43" height="52" rx="7" fill="#1e1f23" stroke="#2a323b" stroke-width="1.5"/>' +
-      '<rect x="16.4" y="11.4" width="31.2" height="31.2" fill="#0b0d10"/>' + cells + '</g>';
+      cells += '<rect x="' + (33 + c * 7).toFixed(1) + '" y="' + (23.1 + r * 7).toFixed(1) + '" width="4.9" height="4.9" fill="' + fill + '"/>';
+    return '<g transform="scale(.4)"><rect x="20" y="11" width="80" height="97" rx="13" fill="#1e1f23" stroke="#313a44" stroke-width="1.4"/>' +
+      '<rect x="31" y="21" width="58" height="58" fill="#050608"/>' + cells + '</g>';
   }
   function faceSvg(x, cls) {
     const col = x.tally === 'program' ? '#E5484D' : x.tally === 'preview' ? '#2FD97B' : '#0B0D10';
@@ -1586,7 +1584,7 @@
     const g = k === 'round' ? '<circle cx="24" cy="24" r="21" fill="#12161B" stroke="' + ring + '" stroke-width="2"/><circle cx="24" cy="24" r="16" fill="' + col + '"/>'
       : k === 'lite' ? '<rect x="4" y="9" width="40" height="30" rx="6" fill="#12161B" stroke="' + ring + '" stroke-width="2"/><rect x="9" y="14" width="30" height="20" rx="3" fill="' + col + '"/>'
       : k === '360' ? '<rect x="6" y="28" width="36" height="12" rx="3" fill="#12161B" stroke="#3A434D" stroke-width="2"/><rect x="12" y="12" width="24" height="16" rx="4" fill="' + (x.tally ? col : '#EEF1F3') + '"/>'
-      : k === 'mini' && ((((x.u || {}).cue || {}).grid || {}).cols || 8) === 8 ? miniSvg(x.tally ? col : '#1d232a')
+      : k === 'mini' && ((((x.u || {}).cue || {}).grid || {}).cols || 8) === 8 ? miniSvg(x.tally ? col : '#171c22')
       : '<rect x="10" y="10" width="28" height="28" rx="5" fill="#12161B" stroke="' + ring + '" stroke-width="2"/><rect x="16" y="16" width="16" height="16" rx="2" fill="' + col + '"/>';
     return '<svg class="' + (cls || 'face') + '" viewBox="0 0 48 48" aria-hidden="true">' + g + '</svg>';
   }
