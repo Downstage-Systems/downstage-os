@@ -3672,6 +3672,19 @@
       '<path d="M36 60 V37.5 L39.5 34 H44 V60 Z" class="fx-tower-hi"/>' +
       '<rect x="16" y="59" width="88" height="31" rx="5" class="fx-base"/>' +
       '<path d="M22 64 H98" class="fx-shine"/></g></svg>';
+    // the Cue Mini (decision 19; Design's case/renders/cue-mini-front.png, as Cue Coding's hub.js
+    // 0.184.22 draws it): a portrait rounded box, an open black grid of 8 x 8 square cells in its
+    // upper part, no screws, no diffuser. A 5 x 5 board (the Atom) keeps the square tile below.
+    if (i.kind === 'mini' && (g.cols || 8) === 8) {
+      const pitch = 30 / 8, sq = pitch * 0.7;
+      let cells = '';
+      for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++)
+        cells += '<rect x="' + (17 + c * pitch + (pitch - sq) / 2).toFixed(2) + '" y="' + (12 + r * pitch + (pitch - sq) / 2).toFixed(2) +
+          '" width="' + sq.toFixed(2) + '" height="' + sq.toFixed(2) + '" class="fx-led"/>';
+      return '<svg class="fx-art" viewBox="0 0 64 64" aria-hidden="true">' +
+        '<rect x="10.5" y="6" width="43" height="52" rx="7" fill="#1e1f23" stroke="#2a323b" stroke-width="1.5"/>' +
+        '<rect x="16.4" y="11.4" width="31.2" height="31.2" fill="#0b0d10"/>' + cells + '</svg>';
+    }
     if (i.kind === 'mini') return '<svg class="fx-art" viewBox="0 0 120 120" aria-hidden="true">' +
       '<rect x="31" y="31" width="58" height="58" rx="10" class="fx-body"/>' +
       '<rect x="36" y="36" width="48" height="48" rx="6" class="fx-glass"/>' + leds(48, 5, 5) + '</svg>';
