@@ -1797,7 +1797,7 @@
     }
     if (L.camop === true || L.camop === false)
       h += row('Cam Op Mode', '<button class="toggle' + (L.camop ? ' on' : '') + '" data-act="lightCamop"><span>Tally only, no menus; held 3 s on its glass, it unlocks</span><span class="sw"></span></button>');
-    if (!x.carried && !wifi) h += '<p class="note" style="margin-top:12px">Not reachable from here: no WiFi of its own and no Relay carrying it.</p>';
+    if (!x.carried && !wifi) h += '<p class="note" style="margin-top:12px">Not reachable from here: no WiFi of its own and not linked through a Relay.</p>';
     if (x.r && !x.cue) h += '<p class="note" style="margin-top:12px">Asking ' + esc(x.r.name || 'the Relay') + '…</p>';
     // the sheet keeps its scroll as it updates
     const top = el.scrollTop;
@@ -1870,7 +1870,7 @@
   function paintTalk() {
     const ls = talkable(), all = ls.length && ls.every(x => T.to.has(x.id));
     $('tk-to').innerHTML = ls.map(x => '<button class="btn' + (T.to.has(x.id) ? ' on' : '') + '" data-act="talkTo" data-arg="' + esc(x.id) + '">' + faceSvg(x, 'face') + ' ' + (x.n ? x.n + ' ' : '') + esc(x.name) + '</button>').join('') +
-      (ls.length ? '<button class="btn' + (all ? ' on' : '') + '" data-act="talkAll">All lights</button>' : '<p class="note">No round Cue or Lite is carried right now.</p>');
+      (ls.length ? '<button class="btn' + (all ? ' on' : '') + '" data-act="talkAll">All lights</button>' : '<p class="note">No round Cue or Lite is linked right now.</p>');
     $('tk-secs').innerHTML = [[10, '10 s'], [30, '30 s'], [-1, 'Until cleared']].map(([v, t]) => '<button class="btn' + (T.secs === v ? ' on' : '') + '" data-act="talkSecs" data-arg="' + v + '">' + t + '</button>').join('');
     $('tk-words').innerHTML = (S.talkWords || []).map((w, i) => '<button class="btn c-' + esc(w[1]) + '" data-act="talkSend" data-long="talkEdit" data-arg="' + i + '">' + esc(w[0]) + '</button>').join('') +
       '<button class="btn" data-act="talkWrite">Write</button><button class="btn clear" data-act="talkClear">Clear</button>';

@@ -5100,7 +5100,7 @@ def _relay_cue_post(ip, light, body, n=None):
         if n is None:
             n = _relay_cue_n(ip, light, fresh=True)      # a light that has just arrived
     if n is None:
-        return 409, {"ok": False, "error": "that Relay is not carrying it"}, None
+        return 409, {"ok": False, "error": "that Relay does not link it"}, None
     status, ans = _relay_api(ip, f"cue/{n}", body, "POST")
     return status, ans, n
 
@@ -6252,7 +6252,7 @@ def fleet_cue_follow():
             lk = _cue_link_post(ip, {"guestfollow": guest, **form})
             g = next((x for x in lk.get("guests", []) if x.get("id") == guest), None)
             if g is None:
-                return jsonify({"ok": False, "error": "that Cue is not carrying it any more"})
+                return jsonify({"ok": False, "error": "that Cue does not link it any more"})
             if "follow" not in g:
                 return jsonify({"ok": False, "error": "it and its Cue both need firmware 0.80 or later"})
             _audit("CUE_FOLLOW", f"{ip} guest {guest} {form}")

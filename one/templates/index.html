@@ -3774,7 +3774,7 @@
     if (i.L.demo) chips.push(fxChip('In a demo on the Slate', 'link'));
     else if (i.linked) chips.push(fxChip('via ' + fxShort(i.via), 'link'));
     else if (i.L.waiting) chips.push(fxChip('waiting for ' + fxShort(i.L.via_name || i.L.chosen || 'its Cue'), 'warn'));
-    else if (i.carried) chips.push(fxChip('carrying ' + i.carried + (+i.L.max > 1 ? ' of ' + i.L.max : ''), i.L.max && i.carried >= +i.L.max ? 'warn' : 'link'));
+    else if (i.carried) chips.push(fxChip(i.carried + (+i.L.max > 1 ? ' of ' + i.L.max : '') + ' linked', i.L.max && i.carried >= +i.L.max ? 'warn' : 'link'));
     if (_fxApart[u.serial]) chips.push(fxChip('Ch ' + i.c.wifi_ch + ', the Cue system on ' + _fxApart[u.serial], 'warn'));
     if (i.c.talent) chips.push(fxChip('Talent', 'tal'));
     const m = i.radioOnly ? '' : cueShowMode(i);   // over the air we cannot tell
@@ -3819,20 +3819,20 @@
       ? '<span class="fx-batt" title="Battery"><i style="width:' + Math.max(8, Math.min(100, i.c.battery)) + '%"></i></span>' + i.c.battery + '%' : '';
     const inner =
       '<div class="fx-stage"><span class="fx-dot"></span>' + fxArt(i) +
-        (i.linked || i.carried ? '<span class="fx-link" title="' + (i.linked ? 'Linked through ' + fxEsc(fxShort(i.via)) : 'Carrying ' + i.carried + ' over CueLink') + '">' +
+        (i.linked || i.carried ? '<span class="fx-link" title="' + (i.linked ? 'Linked through ' + fxEsc(fxShort(i.via)) : i.carried + ' linked over CueLink') + '">' +
           '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="12" r="5"/><circle cx="15" cy="12" r="5"/></svg>' +
           (i.carried ? i.carried : '') + '</span>' : '') + '</div>' +
       '<div class="fx-info"><div class="fx-name">' + fxEsc(i.name) + '</div>' +
         '<div class="fx-sub">' + fxEsc(i.model) + (i.cam !== null ? ' · CAM ' + i.cam : '') + '</div>' +
         '<div class="fx-chips">' + chips.join('') + '</div>' +
-        (i.radioOnly ? '<div class="fx-note">Heard over CueLink - not on Wi-Fi. The One can see it; linking comes with the One carrying lights.</div>' : '') +
+        (i.radioOnly ? '<div class="fx-note">Heard over CueLink - not on Wi-Fi. The One can see it, but cannot link it yet.</div>' : '') +
         '<div class="fx-foot"><span class="fx-sig">' +
           (i.air ? '<span class="fx-sig-one fx-sig-air" title="Heard by this One\'s CueLink radio">' + kLinkIcon +
              fxBars(i.air.rssi, 'CueLink air') +
              (+i.air.channel > 0 ? '<span class="fx-ch" title="CueLink channel">ch ' + i.air.channel + '</span>' : '') + '</span>' : '') +
           '<span class="fx-sig-one">' + kWifiIcon + (i.noIp ? '<span class="fx-dim">none</span>' : fxBars(i.c.rssi, 'WiFi') +
             (+i.c.wifi_ch > 0 ? '<span class="fx-ch' + (_fxApart[u.serial] ? ' odd' : '') + '" title="WiFi channel">ch ' + i.c.wifi_ch + '</span>' : '')) + '</span>' +
-          (i.linked || i.carried ? '<span class="fx-sig-one fx-sig-link">' + kLinkIcon + fxBars(cueLinkSignal(u, i), i.linked ? 'CueLink to ' + fxShort(i.via) : 'CueLink, weakest carried light') + '</span>' : '') +
+          (i.linked || i.carried ? '<span class="fx-sig-one fx-sig-link">' + kLinkIcon + fxBars(cueLinkSignal(u, i), i.linked ? 'CueLink to ' + fxShort(i.via) : 'CueLink, weakest linked light') + '</span>' : '') +
           batt + '</span>' +
           '<span class="fx-mono">' + fxEsc(u.version || '') + '</span></div></div>';
     return { key, cls: [bad ? 'bad' : '', t === 'program' ? 'air' : '', i.lit ? 'lit' : '',
@@ -3862,7 +3862,7 @@
     const rows = (r.heard || []).map(h => {
       const onNet = units.some(u => u.serial === h.id && u.ip);
       const lv = h.rssi > -67 ? 'lv-g' : h.rssi > -80 ? 'lv-a' : 'lv-r';
-      const what = [h.guests ? 'carrying ' + h.guests : '', h.sharing ? 'sharing WiFi' : '',
+      const what = [h.guests ? h.guests + ' linked' : '', h.sharing ? 'sharing WiFi' : '',
                     h.touching ? 'touching ' + fxRadioName(h.touching) : '', onNet ? '' : 'not on the network']
                    .filter(Boolean).join(' · ');
       return '<div class="fx-radio-row' + (h.gone ? ' gone' : '') + '"><b>' + fxEsc(fxRadioName(h.id, h.label)) + '</b><span>' + (kinds[h.rank] || '?') +
@@ -4159,7 +4159,7 @@
     } else if (what === 'talent') {
       set = { talent: !on };
     } else if (what === 'release') {
-      if (!confirm('Let ' + name + " go? It stops being carried by this Relay, and if it has no WiFi of its own it goes dark until it finds something.")) return;
+      if (!confirm('Let ' + name + " go? It stops being linked through this Relay, and if it has no WiFi of its own it goes dark until it finds something.")) return;
       set = { release: true };
     }
     if (!set) return;
@@ -4225,7 +4225,7 @@
         '</span></div>').join('') + '</div>';
     const bits = asking +
                  list((o.adopt || []).filter(l => l.kind !== 'asks'), 'adopt', 'New lights with no home, waiting') +
-                 list(o.switch || [], 'switch', 'Lights it has carried before, on WiFi now');
+                 list(o.switch || [], 'switch', 'Lights it has linked before, on WiFi now');
     return bits || '<p class="fx-note">No light is waiting to be adopted. Room for ' + (o.room === undefined ? '?' : o.room) + ' more.</p>';
   }
 
@@ -4299,15 +4299,15 @@
           by('release', 'Let it go', 'Release') +
         '</span></div>';
     };
-    return '<div class="fx-sec"><div class="fx-sec-label">Lights it carries</div>' +
+    return '<div class="fx-sec"><div class="fx-sec-label">Lights it links</div>' +
         (mine.length ? '<div class="fx-carried">' + mine.map(lightRow).join('') + '</div>'
-                     : '<p class="fx-note">It is carrying no lights.</p>') +
+                     : '<p class="fx-note">It links no lights.</p>') +
         (demo.length ? '<div class="fx-carried">' + demo.map(c =>
           '<div class="fx-carried-row"><span>' + fxEsc((c.n ? c.n + ' · ' : '') + nm(c)) + '</span>' +
           fxSignal(c.level) + fxChip('In a demo on the Slate', 'link') + '</div>').join('') + '</div>' : '') +
         (kept.length ? '<p class="fx-note fx-dim">Remembered, not linked now:</p><div class="fx-carried">' + kept.map(c =>
           '<div class="fx-carried-row"><span class="fx-dim">' + fxEsc((c.n ? c.n + ' · ' : '') + nm(c)) + '</span>' +
-          (twins(c).some(x => x.carrier === u.serial) ? fxChip('same number as a light it carries', 'warn') : '') +
+          (twins(c).some(x => x.carrier === u.serial) ? fxChip('same number as a light it links', 'warn') : '') +
           '</div>').join('') + '</div>' : '') +
       '</div>' +
       '<div class="fx-sec"><div class="fx-sec-label">Adopt and switch</div>' + relayOffers(u, r) + '</div>' +
@@ -4377,7 +4377,7 @@
           '<button class="fx-btn warn" onclick="cueLinkCmd(\'' + (i.noIp ? L.via_ip : u.ip) + '\',' + (i.noIp ? '{release:\'' + u.serial + '\'}' : '{off:true}') +
             ',\'Unlink ' + q(nm) + '? It goes back to its own connection' + (i.noIp ? ' - it has no WiFi, so it will be dark until it has.' : '.') + '\')">Unlink</button></div>';
     } else {
-      link = (i.carried ? '<p class="fx-note">Carrying <b>' + i.carried + '</b> light' + (i.carried > 1 ? 's' : '') + ' over CueLink' +
+      link = (i.carried ? '<p class="fx-note"><b>' + i.carried + '</b> light' + (i.carried > 1 ? 's' : '') + ' linked over CueLink' +
             (+L.max > 1 ? (i.carried >= +L.max ? ' - <b>full</b>, it takes no more' : ', room for ' + (L.max - i.carried) + ' more') : '') + ':</p>' +
           '<div class="fx-carried">' + (L.guests || []).map(g => {
             const gu = ((_fxData && _fxData.units) || []).find(x => x.serial === g.id);
@@ -4395,7 +4395,7 @@
     const shareBtn = L.share === true || L.share === false
       ? '<button class="fx-btn' + (L.share ? ' on' : '') + '" onclick="cueShare(\'' + u.ip + '\',' + !L.share + ')" title="On: a light held against this Cue also gets its WiFi (sealed) and joins it. Off: holding a light here only links it.">Share WiFi: ' + (L.share ? 'on' : 'off') + '</button>' : '';
     const offBtn = !i.noIp && L.enabled === true
-      ? '<button class="fx-btn ghost" onclick="cueLinkCmd(\'' + u.ip + '\',{enabled:false},\'Turn CueLink off on ' + q(nm) + '? It stops linking and carrying; a light it carries loses its tally path.\')">CueLink off</button>' : '';
+      ? '<button class="fx-btn ghost" onclick="cueLinkCmd(\'' + u.ip + '\',{enabled:false},\'Turn CueLink off on ' + q(nm) + '? It stops linking; a light linked through it loses its tally path.\')">CueLink off</button>' : '';
     const status = bad ? u.health_why
       : i.timer ? cueTimerText()
       : i.linked && i.mirror ? (i.lit ? 'Live, mirroring ' + i.col : 'Live, mirroring, dark')
@@ -4895,7 +4895,7 @@
   }
   async function fleetForget(serial, name, live) {
     if (!confirm('Remove ' + name + ' from this list?' + (live
-        ? '\n\nIt is answering right now, so it will be found again at the next scan (or, if a Cue carries it, at the next refresh).'
+        ? '\n\nIt is answering right now, so it will be found again at the next scan (or, if it is linked through a Cue, at the next refresh).'
         : '\n\nIf it comes back on the network, a scan finds it again.'))) return;
     try {
       const d = await (await fetch('/fleet/forget', { method: 'POST', headers: { 'Content-Type': 'application/json' },
