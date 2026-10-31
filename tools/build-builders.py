@@ -54,6 +54,14 @@ def show_html(t):
             '<label class="field" style="display:none">Companion <input id="host" size="18"></label>', "Show Builder: Companion address")
     t = sub(t, r'href="http://\$\{esc\(M\.companion\)\}/buttons', 'href="http://${esc(' + ONE_HOST + ')}/buttons', "Show Builder: Open in Companion")
     t = sub(t, r'<button class="btn small" data-showfolder [^>]*>Show folder</button>', "", "Show Builder: Show folder")
+    # a show can leave the One: Open... already takes a file from this computer
+    t = sub(t, r'(<button class="btn small" data-showcmd="saveas" title="Save a copy under a new name">Save As…</button>)',
+            '<button class="btn small" data-showcmd="saveas" title="Save a copy under a new name">Save As…</button>\n'
+            '      <button class="btn small" data-showcmd="download" title="Download this show to this computer, to keep it or move it to another One">Download</button>', "Show Builder: Download button")
+    t = sub(t, r'if\(cmd==="open"\)\{ if\(showBridge\)',
+            'if(cmd==="download"){ const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([JSON.stringify(showDoc(),null,1)],{type:"application/octet-stream"})); '
+            'a.download=showFilename(); document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),60000); return; }\n'
+            '  if(cmd==="open"){ if(showBridge)', "Show Builder: download command")
     # exports land in the browser's own downloads
     t = sub(t, r'\$\("#reveal"\)\.onclick = \(\)=>api\("/api/reveal",\{path:r\.path\}\);',
             '$("#reveal").onclick = ()=>{ location.href="/api/download?file="+encodeURIComponent(r.file); }; $("#reveal").click();', "Show Builder: merge download")
@@ -116,6 +124,47 @@ def ss_html(t):
     t = sub(t, r'\$\("reveal"\)\.onclick = \(\) => api\("/api/reveal", \{ path: r\.folder \}\);',
             '$("reveal").onclick = () => { location.href = "/api/exportzip?name=" + encodeURIComponent(exportName()); };', "SS: export download")
     t = sub(t, r'<button class="btn small" id="reveal">Show in Finder</button>', '<button class="btn small primary" id="reveal">Download the export (zip)</button>', "SS: reveal label")
+    # a show can leave the One and come back: the file holds every look and its pictures
+    t = sub(t, r'<button class="btn small" id="saveTpl" title="Keep this look as a starting point in New show › My templates">Save as template</button>',
+            '<button class="btn small" id="saveTpl" title="Keep this look as a starting point in New show › My templates">Save as template</button>'
+            '<button class="btn small" id="downloadShow" title="Download this show to this computer, to keep it or move it to another One">Download show</button>'
+            '<button class="btn small" id="openShowFile" title="Open a show file from this computer">Open show file…</button>'
+            '<input type="file" id="showFileInput" accept=".json" class="hidden">', "SS: download buttons")
+    t = sub(t, r'  const saved = await api\("/api/shows/" \+ encodeURIComponent\(e\.target\.value\)\);\n'
+               r'  if \(saved\.seconds === undefined\) saved\.seconds = null;\n'
+               r'(  L = Object\.assign\(defaultLayout\(\), saved, .*?\n.*?\n)'
+               r'  e\.target\.value = "";\n'
+               r'  await refreshMeta\(L\.profile\);\n'
+               r'  try \{ await loadProfile\(L\.profile \|\| TEMPLATE\); \} catch \{ await loadProfile\(TEMPLATE\); \}\n'
+               r'  sel = \{ kind: "box", i: 0 \}; renderAll\(\);\n\};\n',
+            '  const saved = await api("/api/shows/" + encodeURIComponent(e.target.value));\n'
+            '  e.target.value = "";\n'
+            '  await useSavedShow(saved);\n'
+            '};\n'
+            'async function useSavedShow(saved) {\n'
+            '  if (saved.seconds === undefined) saved.seconds = null;\n'
+            '  L = Object.assign(defaultLayout(), saved, { bg: { ...defaultLayout().bg, ...(saved.bg || {}) },\n'
+            '                                              snap: { ...defaultLayout().snap, ...(saved.snap || {}) } });\n'
+            '  await refreshMeta(L.profile);\n'
+            '  try { await loadProfile(L.profile || TEMPLATE); } catch { await loadProfile(TEMPLATE); }\n'
+            '  sel = { kind: "box", i: 0 }; renderAll();\n'
+            '}\n'
+            '$("downloadShow").onclick = () => {\n'
+            '  const a = document.createElement("a");\n'
+            '  a.href = URL.createObjectURL(new Blob([JSON.stringify(L)], { type: "application/octet-stream" }));\n'
+            '  a.download = `${(L.name || "Untitled show").replace(/[\\\\/:]/g, "-")}.2box.json`;\n'
+            '  document.body.appendChild(a); a.click(); a.remove();\n'
+            '  setTimeout(() => URL.revokeObjectURL(a.href), 60000);\n'
+            '};\n'
+            '$("openShowFile").onclick = () => $("showFileInput").click();\n'
+            '$("showFileInput").onchange = async e => {\n'
+            '  const f = e.target.files[0]; e.target.value = ""; if (!f) return;\n'
+            '  let saved; try { saved = JSON.parse(await f.text()); } catch { saved = null; }\n'
+            '  if (!saved || !Array.isArray(saved.boxes)) return toast("That isn\'t a SuperSource Builder show file.", true);\n'
+            '  if (!await okToReplace(`Opening ${f.name}`)) return;\n'
+            '  await useSavedShow(saved);\n'
+            '  toast(`<b>Opened</b> ${f.name}. Press Save to keep it on this One.`);\n'
+            '};\n', "SS: open a show file", re.S)
     # the toast's Show in Finder has nothing to show from a browser
     t = sub(t, r'function toast\(msg, err, revealPath, action\) \{\n', 'function toast(msg, err, revealPath, action) {\n  revealPath = null;\n', "SS: toast reveal")
     return t.replace("Choose an image from the Mac", "Choose an image from this computer").replace("Show in Finder", "Download").replace("Downloads + exports/", "exports/").replace("on this Mac", "on this One")
