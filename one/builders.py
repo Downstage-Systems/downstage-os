@@ -1,8 +1,9 @@
 """Show Builder and SuperSource Builder on the One.
 
 static/builders.tgz (tools/build-builders.py) unpacks once per build and both run on
-their own ports when someone first opens one. They sit in this app's cgroup, so a
-restart of the app takes them with it and an update can't leave an old copy running.
+their own ports when someone first opens one, and each stops itself after 10 minutes
+with no page open (tools/build-builders.py). They sit in this app's cgroup, so a restart
+of the app takes them with it and an update can't leave an old copy running.
 Niced: a builder never takes time from the timer or Companion.
 """
 import hashlib, json, os, shutil, socket, subprocess, sys, tarfile, threading, time

@@ -42,6 +42,46 @@ def line(text, start, new, what):
     return sub(text, r"(?m)^[ \t]*" + re.escape(start) + r".*$", new, what)
 
 
+# On a One the builders stop when nobody has them open. Each open page says so once a minute, to both builders,
+# because each opens the other. Asleep or stopped, the page asks the One to start them again, so an open tab keeps working.
+ALIVE_JS = """<script>
+(() => {
+  const host = location.hostname;
+  const alive = () => { for (const p of [8787, 8789]) fetch(`http://${host}:${p}/api/alive`, { mode: "no-cors", cache: "no-store" })
+    .catch(() => fetch(`http://${host}:8080/builders/start`, { method: "POST", mode: "no-cors" }).catch(() => {})); };
+  alive(); setInterval(alive, 60000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) alive(); });
+})();
+</script>
+</body>"""
+# Any request counts. Nothing for 10 minutes, and the server leaves; /builders/start brings it back
+IDLE_PY = """
+BUILDER_IDLE = int(os.environ.get("DOWNSTAGE_BUILDER_IDLE") or 600)
+last_request = [time.time()]
+def idle_watch():
+    while True:
+        time.sleep(min(10, BUILDER_IDLE))
+        if time.time() - last_request[0] > BUILDER_IDLE:
+            os._exit(0)
+threading.Thread(target=idle_watch, daemon=True).start()
+
+"""
+ALIVE_GET = """    def do_GET(self):
+        last_request[0] = time.time()
+        if self.path == "/api/alive":
+            return self.send(200, {"ok": True})
+"""
+ALIVE_POST = """    def do_POST(self):
+        last_request[0] = time.time()
+"""
+
+
+def stops_when_idle(t, cls, what):
+    t = sub(t, r"(?m)^class " + cls + r"\(BaseHTTPRequestHandler\):", IDLE_PY.lstrip("\n") + "class " + cls + "(BaseHTTPRequestHandler):", what + ": idle watch")
+    t = sub(t, r"    def do_GET\(self\):\n", ALIVE_GET, what + ": GET")
+    return sub(t, r"    def do_POST\(self\):\n", ALIVE_POST, what + ": POST")
+
+
 def show_html(t):
     t = line(t, '<a class="btn small sitelink"', "", "Show Builder: website link")
     t = sub(t, r'let S = \{name:"ATEM SHOW", deck:"plusxl", cells:\{\}, backPage:1, output:"page"', 'let S = {name:"ATEM SHOW", deck:"plusxl", cells:{}, backPage:1, output:"send"', "Show Builder: send by default")
@@ -70,6 +110,7 @@ def show_html(t):
             '$("#reveal").onclick = ()=>{ location.href="/api/download?file="+encodeURIComponent(last.file); };', "Show Builder: page download")
     t = sub(t, r'>Show in Finder<', '>Download again<', "Show Builder: reveal label", count=t.count(">Show in Finder<"))
     t = sub(t, r'Saved to Downloads:', 'Downloaded:', "Show Builder: saved wording", count=t.count("Saved to Downloads:"))
+    t = sub(t, r"</body>", ALIVE_JS, "Show Builder: heartbeat")
     return t.replace("on this Mac", "on this One")
 
 
@@ -97,7 +138,7 @@ def show_py(t):
     t = sub(t, r'subprocess\.Popen\(\["open", SHOW_FOLDER\]\)', 'pass', "Show Builder: show folder route")
     t = sub(t, r'threading\.Thread\(target=watch_parent, daemon=True\)\.start\(\)', 'pass   # the One\'s service owns this process', "Show Builder: parent watcher")
     t = sub(t, r'srv = ThreadingHTTPServer\(\("127\.0\.0\.1", a\.port\), Handler\)', 'srv = ThreadingHTTPServer(("0.0.0.0", a.port), Handler)', "Show Builder: bind")
-    return t
+    return stops_when_idle(t, "Handler", "Show Builder")
 
 
 def me_pages(t):
@@ -117,7 +158,7 @@ def ss_html(t):
     t = sub(t, r'function askUnlock\(then\) \{.*?\n\}\n(?=// ---- box frames)', 'function askUnlock(then) { if (then) then(); }\n', "SS: unlock dialog", re.S)
     t = sub(t, r' Patterns with a padlock, and the complete <b>look packs</b> in Templates \(Keynote, Awards, Worship, Conference, Holiday\), unlock on this Mac when you enter your email once\.',
             ' The complete <b>look packs</b> are in Templates (Keynote, Awards, Worship, Conference, Holiday).', "SS: guide sentence")
-    t = sub(t, r'Writes files you load yourself: nothing here talks to a switcher or to Companion\. <a href="https://downstage\.systems/" target="_blank" rel="noopener">downstage\.systems</a>',
+    t = sub(t, r'Writes files you load yourself\. It only reads a switcher or sends to Companion when you press\. <a href="https://downstage\.systems/" target="_blank" rel="noopener">downstage\.systems</a>',
             "", "SS: footer")
     t = sub(t, r'const openShowBuilder = \(\) => api\("/api/open-show-builder", \{\}\);',
             'const openShowBuilder = () => window.open(`http://${location.hostname}:8787/`, "_blank", "noopener");', "SS: open Show Builder")
@@ -167,6 +208,7 @@ def ss_html(t):
             '};\n', "SS: open a show file", re.S)
     # the toast's Show in Finder has nothing to show from a browser
     t = sub(t, r'function toast\(msg, err, revealPath, action\) \{\n', 'function toast(msg, err, revealPath, action) {\n  revealPath = null;\n', "SS: toast reveal")
+    t = sub(t, r"</body>", ALIVE_JS, "SS: heartbeat")
     return t.replace("Choose an image from the Mac", "Choose an image from this computer").replace("Show in Finder", "Download").replace("Downloads + exports/", "exports/").replace("on this Mac", "on this One")
 
 
@@ -200,7 +242,8 @@ def ss_py(t):
             '                self.wfile.write(data)\n'
             '                return\n'
             '            if self.path == "/api/meta":', "SS: zip route")
-    return sub(t, r'srv = ThreadingHTTPServer\(\("127\.0\.0\.1", a\.port\), H\)', 'srv = ThreadingHTTPServer(("0.0.0.0", a.port), H)', "SS: bind")
+    t = sub(t, r'srv = ThreadingHTTPServer\(\("127\.0\.0\.1", a\.port\), H\)', 'srv = ThreadingHTTPServer(("0.0.0.0", a.port), H)', "SS: bind")
+    return stops_when_idle(t, "H", "SS")
 
 
 def ss_read(t):
