@@ -20,6 +20,7 @@ import mdns      # asking the network who is there, instead of sweeping it
 import relay     # pairing with Cue Relays, and holding the token each gives back
 import rigpin    # the rig PIN: the lock, known devices, strangers slowed
 import atem      # the ATEM's aux routes, for the touch page's Router
+import builders  # Show Builder and SuperSource Builder, started on first open
 import companion_grid   # a live picture of a Companion page, for choosing a light's button
 import cue_radio   # a USB CueLink radio (listen-only ESP32-S3), when one is plugged in
 
@@ -5295,6 +5296,14 @@ def fleet_cue_send_wifi():
         return jsonify({"ok": False, "error": str(e)})
 
 
+@app.route("/builders/start", methods=["POST"])
+def builders_start():
+    try:
+        return jsonify({"ok": True, "ports": builders.start(BASE_DIR)})
+    except Exception as e:
+        return jsonify({"ok": False, "message": str(e)})
+
+
 @app.route("/companion/grid")
 def companion_grid_page():
     """One Companion page as a live grid (companion_grid.py): the buttons that
@@ -8021,6 +8030,7 @@ systemctl --user stop ontime-server 2>/dev/null || true
 pkill -f squashfs-root/ontime || true
 # wipe user data + logs
 rm -rf /home/pi/.config/ontime-electron
+rm -rf /home/pi/downstage-builders
 rm -rf {app}/.backup
 rm -f  {app}/ontime.log {app}/kiosk.log {app}/.update-result
 # factory config - keep unit identity + update repo only

@@ -2659,6 +2659,17 @@
         </div>
       </div>
 
+      <div class="field full-only" id="builders-field">
+        <div class="section-label">Builders</div>
+        <div class="local-panel">
+          <div style="display:flex; gap:8px; flex-wrap:wrap">
+            <button class="btn-sm" onclick="openBuilder('show', 'Show Builder', this)" title="Lay out Stream Deck pages and send them to the Companion on this unit">Show Builder</button>
+            <button class="btn-sm" onclick="openBuilder('supersource', 'SuperSource Builder', this)" title="Design ATEM SuperSource looks: backgrounds, moves, macros and Companion keys">SuperSource Builder</button>
+          </div>
+          <div class="external-url-hint">Build Companion pages and ATEM SuperSource looks from any browser on the network. Your shows stay on this unit.</div>
+        </div>
+      </div>
+
       <!-- The ATEM the touch page's ATEM Router follows, chosen here too (Rob,
            2026-10-22: "add it"). One switcher for the whole unit. Hidden unless
            My rig is on (see myRigPaint). -->
@@ -6365,6 +6376,17 @@
   }
   function openCompanionButtons() {
     openPanel(`http://${compHost()}:8000/tablet`, 'Buttons');
+  }
+
+  // ── The builders: started on first open, each on its own port ──
+  async function openBuilder(kind, title, btn) {
+    if (btn) btn.disabled = true;
+    try {
+      const d = await (await fetch('/builders/start', { method: 'POST' })).json();
+      if (!d.ok) { showToast(d.message || 'That builder did not start.', 'error'); return; }
+      openPanel(`http://${window.location.hostname}:${d.ports[kind]}/`, title);
+    } catch (e) { showToast('That builder did not start.', 'error'); }
+    finally { if (btn) btn.disabled = false; }
   }
 
   // ── OnTime editor ─────────────────────────────────────────────────────────────
