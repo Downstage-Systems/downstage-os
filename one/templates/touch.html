@@ -556,7 +556,7 @@
   <button data-tab="timer">Timer</button>
   <button data-tab="msg">Messages</button>
   <button data-tab="outputs">Outputs</button>
-  <button data-tab="router">ATEM Router</button>
+  <button data-tab="router" id="tab-router" hidden>ATEM Router</button>
   <button data-tab="rig">Cue</button>
   <button data-tab="tools">Tools</button>
 </nav>
@@ -843,6 +843,7 @@
               tab: 'timer', tview: 'main', typed: '', misses: 0, pinWait: null };
   const store = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } },
                   set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+  let myRig = store.get('ds_myrig', '') === '1';
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   // ── talking to the One ──
@@ -2352,6 +2353,7 @@
 
   function setTab(t) {
     if (S.lock && t !== lockTab()) return;          // handed over: one thing only
+    if (t === 'router' && !myRig) t = 'timer';      // hidden unless My rig is on
     S.tab = t; store.set('ds_tab', t);
     for (const b of document.querySelectorAll('#tabs button')) b.classList.toggle('on', b.dataset.tab === t);
     for (const p of document.querySelectorAll('.page')) p.classList.toggle('on', p.id === 'pg-' + t);
@@ -2415,6 +2417,24 @@
   async function pollFleet() {
     try { S.fleet = await getJSON('/discover/last'); paintBarLights(); paintRail(); if (S.tab === 'rig') paintRig(); } catch (e) {}
   }
+
+  // ── My rig: the ATEM Router is Rob's own, hidden until the logo is tapped 5
+  // times quickly (again to hide it), as the Show Builder's MY RIG. Remembered
+  // on this device; the Browser view shares the flag (Rob, 2026-10-30) ──
+  function paintMyRig() { $('tab-router').hidden = !myRig; }
+  (function () {
+    let taps = [];
+    document.querySelector('.bar .unit').addEventListener('pointerdown', () => {
+      if (S.lock) return;
+      const now = Date.now(); taps = taps.filter(t => now - t < 2000); taps.push(now);
+      if (taps.length < 5) return;
+      taps = []; myRig = !myRig; store.set('ds_myrig', myRig ? '1' : '0');
+      paintMyRig();
+      if (myRig) setTab('router'); else if (S.tab === 'router') setTab('timer');
+      toast(myRig ? 'My rig on: ATEM Router.' : 'My rig off.');
+    });
+  })();
+  paintMyRig();
 
   // a link can name the tab: /touch#outputs, #aux for the aux timer, #deck-s for the deck's key size, #deck-xl for the + XL
   const TABS = ['deck', 'timer', 'msg', 'outputs', 'router', 'rig', 'tools'];

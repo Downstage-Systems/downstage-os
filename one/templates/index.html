@@ -2660,8 +2660,9 @@
       </div>
 
       <!-- The ATEM the touch page's ATEM Router follows, chosen here too (Rob,
-           2026-10-22: "add it"). One switcher for the whole unit. -->
-      <div class="field full-only">
+           2026-10-22: "add it"). One switcher for the whole unit. Hidden unless
+           My rig is on (see myRigPaint). -->
+      <div class="field full-only" id="atem-field" style="display:none">
         <div class="section-label">ATEM switcher</div>
         <div class="local-panel">
           <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap">
@@ -6107,6 +6108,24 @@
   function openCompanion() {
     openPanel(`http://${compHost()}:8000`, 'Companion');
   }
+  // ── My rig: the ATEM is Rob's own, hidden until the logo is clicked 5 times
+  // quickly (again to hide it), as the Show Builder's MY RIG. Remembered in this
+  // browser, and the touch page shares the flag (Rob, 2026-10-30) ──
+  let _myRig = false, _myRigTaps = [];
+  try { _myRig = localStorage.getItem('ds_myrig') === '1'; } catch (e) {}
+  function myRigPaint() { const f = document.getElementById('atem-field'); if (f) f.style.display = _myRig ? '' : 'none'; }
+  document.addEventListener('DOMContentLoaded', myRigPaint);
+  document.addEventListener('pointerdown', e => {
+    const t = e.target;
+    if (!t.closest || !t.closest('.top .brand') || t.closest('#tool-dock, .ui-pick')) return;
+    const now = Date.now(); _myRigTaps = _myRigTaps.filter(x => now - x < 2000); _myRigTaps.push(now);
+    if (_myRigTaps.length < 5) return;
+    _myRigTaps = []; _myRig = !_myRig;
+    try { localStorage.setItem('ds_myrig', _myRig ? '1' : '0'); } catch (err) {}
+    myRigPaint();
+    showToast(_myRig ? 'My rig on: ATEM switcher in the Companion tab, ATEM Router on Touch.' : 'My rig off.', 'info');
+  });
+
   // ── the ATEM the touch page's router follows ──
   async function atemPaint() {
     try {
