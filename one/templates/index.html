@@ -1511,7 +1511,7 @@
       .addr-right .addr-main { font-size: 13px; }
       /* five tabs share the width evenly - all visible, no hidden scrolling.
          id selectors: the desktop tab styles live later in this sheet */
-      #setup-tabs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; padding: 3px; }
+      #setup-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 3px; }
       #setup-tabs .stab { padding: 9px 0; font-size: 13px; letter-spacing: -0.01em;
               text-align: center; min-width: 0; overflow: hidden; white-space: nowrap; }
       #setup-tabs .stab-upd { top: 3px; right: 2px; width: 6px; height: 6px; }
@@ -1535,6 +1535,17 @@
       .ctx-item { padding: 12px 12px; font-size: 14px; }
     }
     /* ── Setup tabs - segmented control, same pattern as the view toggle ── */
+    .app-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:12px; }
+    .app-card { display:flex; flex-direction:column; gap:12px; padding:16px; background:var(--panel);
+                border:1px solid var(--edge); border-radius:8px; min-width:0; }
+    .app-head { display:flex; align-items:center; gap:12px; min-width:0; }
+    .app-icon { flex:none; width:48px; height:48px; border-radius:10px; object-fit:contain; background:var(--raised); }
+    .app-glyph { display:flex; align-items:center; justify-content:center; color:var(--violet); }
+    .app-glyph svg { width:26px; height:26px; fill:currentColor; }
+    .app-name { font-family:var(--font-display); font-weight:700; font-size:17px; color:var(--text); }
+    .app-desc { flex:1; margin:0; font-size:13px; line-height:1.45; color:var(--muted); }
+    .app-card .btn-sm { align-self:flex-start; }
+    .app-off { font-size:12.5px; color:var(--muted); }
     .setup-tabs { display:flex; gap:4px; background:var(--surface2);
                   border:1px solid var(--border2); border-radius:4px; padding:4px;
                   margin:18px 0 20px; }
@@ -2203,6 +2214,7 @@
         <button class="stab" id="stab-displays" onclick="showSetupTab('displays')">Displays</button>
         <button class="stab" id="stab-timer" onclick="showSetupTab('timer')">OnTime<span class="stab-upd" id="upd-timer"></span></button>
         <button class="stab" id="stab-companion" onclick="showSetupTab('companion')">Companion<span class="stab-upd" id="upd-companion"></span></button>
+        <button class="stab" id="stab-apps" onclick="showSetupTab('apps')">Apps</button>
         <button class="stab" id="stab-network" onclick="showSetupTab('network')">Network</button>
         <button class="stab" id="stab-system" onclick="showSetupTab('system')">System<span class="stab-upd" id="upd-system"></span></button>
       </div>
@@ -2659,17 +2671,6 @@
         </div>
       </div>
 
-      <div class="field full-only" id="builders-field">
-        <div class="section-label">Builders</div>
-        <div class="local-panel">
-          <div style="display:flex; gap:8px; flex-wrap:wrap">
-            <button class="btn-sm" onclick="openBuilder('show', 'Show Builder', this)" title="Lay out Stream Deck pages and send them to the Companion on this unit">Show Builder</button>
-            <button class="btn-sm" onclick="openBuilder('supersource', 'SuperSource Builder', this)" title="Design ATEM SuperSource looks: backgrounds, moves, macros and Companion keys">SuperSource Builder</button>
-          </div>
-          <div class="external-url-hint">Build Companion pages and ATEM SuperSource looks from any browser on the network. Your shows stay on this unit.</div>
-        </div>
-      </div>
-
       <!-- The ATEM the touch page's ATEM Router follows, chosen here too (Rob,
            2026-10-22: "add it"). One switcher for the whole unit. Hidden unless
            My rig is on (see myRigPaint). -->
@@ -2696,6 +2697,12 @@
       </div>
 
       </div><!-- /tpane-companion -->
+
+      <!-- Everything this unit can open, in one place. Drawn by renderApps -->
+      <div class="tpane full-only" id="tpane-apps">
+        <div class="section-label">Apps on this unit</div>
+        <div class="app-grid" id="app-grid"></div>
+      </div><!-- /tpane-apps -->
       <div class="tpane full-only" id="tpane-network">
       <!-- Network (IP) -->
       <div class="field full-only">
@@ -5549,6 +5556,7 @@
         const ef = document.getElementById('emulator-id');
         if (ef && document.activeElement !== ef) ef.value = emulatorId;
       }
+      if (document.body.dataset.page === 'apps') renderApps();
       window._emuOn = !!(compOn && emulatorId);
       const seh = document.getElementById('show-embed-hint');
       if (seh) seh.style.display = (compOn && !emulatorId) ? '' : 'none';
@@ -6378,6 +6386,75 @@
     openPanel(`http://${compHost()}:8000/tablet`, 'Buttons');
   }
 
+  // ── The Apps tab: everything this unit can open ──
+  const APP_GLYPH = {
+    buttons: 'M4 4h4v4H4V4zm6 0h4v4h-4V4zm6 0h4v4h-4V4zM4 10h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4zM4 16h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4z',
+    deck: 'M20 5H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zM7 16H5v-2h2v2zm4 0H9v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zM7 12H5v-2h2v2zm4 0H9v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2z',
+    app: 'M4 4h7v7H4V4zm9 0h7v7h-7V4zM4 13h7v7H4v-7zm9 0h7v7h-7v-7z',
+  };
+  function appList() {
+    const host = compHost(), companion = companionRunning ? '' : 'Companion isn’t running', ontime = ontimeRunning ? '' : 'OnTime isn’t running';
+    return [
+      { name: 'Show Builder', icon: '/static/apps/show-builder.png',
+        desc: 'Lay out Stream Deck pages and send them straight to Companion.',
+        open: b => openBuilder('show', 'Show Builder', b) },
+      { name: 'SuperSource Builder', icon: '/static/apps/supersource-builder.png',
+        desc: 'Design ATEM SuperSource looks: backgrounds, moves, macros and smart Companion keys.',
+        open: b => openBuilder('supersource', 'SuperSource Builder', b) },
+      { name: 'Companion', icon: `http://${host}:8000/img/icons/256x256.png`, glyph: 'app',
+        desc: 'Bitfocus Companion: connections, buttons, pages and surfaces.',
+        off: companion, fix: 'companion', open: openCompanion },
+      { name: 'Companion Buttons', glyph: 'buttons',
+        desc: 'Your Stream Deck pages, tappable from this device.',
+        off: companion, fix: 'companion', open: openCompanionButtons },
+      { name: 'Virtual Deck', icon: '/static/apps/virtual-deck.png',
+        desc: 'A Stream Deck on screen: pick any model or a custom grid, keys and dials included.',
+        off: companion, fix: 'companion',
+        open: () => openPanel(`/static/apps/virtual-deck.html?host=${encodeURIComponent(host)}`, 'Virtual Deck') },
+      { name: 'OnTime Editor', icon: `http://${_otHost}:4001/ontime-logo.png`, glyph: 'app',
+        desc: 'Build your rundown and run the show in OnTime.',
+        off: ontime, fix: 'timer', open: openEditor },
+      { name: 'Touch', icon: '/static/apple-touch-icon.png',
+        desc: 'The timer, Deck, outputs, messages and Cue lights, made for an iPad or iPhone.',
+        open: () => openExternal('/touch') },
+    ];
+  }
+  let _appsDrawn = '';
+  function renderApps() {
+    const grid = document.getElementById('app-grid');
+    if (!grid) return;
+    const apps = appList(), sig = JSON.stringify(apps.map(a => [a.icon, a.off]));
+    if (sig === _appsDrawn) return;
+    _appsDrawn = sig;
+    grid.innerHTML = '';
+    for (const a of apps) {
+      const card = document.createElement('div'); card.className = 'app-card';
+      const head = document.createElement('div'); head.className = 'app-head';
+      const glyph = () => {
+        const g = document.createElement('span'); g.className = 'app-icon app-glyph';
+        g.innerHTML = `<svg viewBox="0 0 24 24"><path d="${APP_GLYPH[a.glyph || 'app']}"/></svg>`;
+        return g;
+      };
+      if (a.icon) {
+        const i = document.createElement('img'); i.className = 'app-icon'; i.alt = ''; i.src = a.icon;
+        i.onerror = () => i.replaceWith(glyph());   // its own server is off, so its logo is too
+        head.appendChild(i);
+      } else head.appendChild(glyph());
+      const n = document.createElement('span'); n.className = 'app-name'; n.textContent = a.name; head.appendChild(n);
+      const d = document.createElement('p'); d.className = 'app-desc'; d.textContent = a.desc;
+      card.append(head, d);
+      const b = document.createElement('button'); b.className = 'btn-sm'; b.type = 'button';
+      if (a.off) {
+        const o = document.createElement('span'); o.className = 'app-off'; o.textContent = a.off; card.appendChild(o);
+        b.textContent = 'Set it up'; b.onclick = () => showSetupTab(a.fix);
+      } else {
+        b.textContent = 'Open'; b.onclick = () => a.open(b);
+      }
+      card.appendChild(b);
+      grid.appendChild(card);
+    }
+  }
+
   // ── The builders: started on first open, each on its own port ──
   async function openBuilder(kind, title, btn) {
     if (btn) btn.disabled = true;
@@ -6704,7 +6781,7 @@
 
   function showSetupTab(t) {
     document.body.dataset.page = t;   // per-page surface tint
-    for (const x of ['displays', 'timer', 'companion', 'network', 'system']) {
+    for (const x of ['displays', 'timer', 'companion', 'apps', 'network', 'system']) {
       document.getElementById('tpane-' + x)?.classList.toggle('on', x === t);
       document.getElementById('stab-' + x)?.classList.toggle('on', x === t);
     }
@@ -6715,6 +6792,7 @@
     // top-anchored page: a tab switch puts the chrome back at the top
     if (window.scrollY > 0) window.scrollTo(0, 0);
     try { localStorage.setItem('ds1-setup-tab', t); } catch (e) {}
+    if (t === 'apps') renderApps();
     if (t === 'companion') { atemPaint(); if (!window._atemFound) { window._atemFound = true; atemFind(); } }
     // returning to the previews after a visit elsewhere - re-arm virtual tiles
     if (t === 'displays' && window._lastSetupTab && window._lastSetupTab !== 'displays')
@@ -6724,7 +6802,7 @@
   // ?tab=network opens that tab (a link from help, or the header's figures on another page)
   try {
     const qt = new URLSearchParams(location.search).get('tab');
-    const ok = ['displays', 'timer', 'companion', 'network', 'system'];
+    const ok = ['displays', 'timer', 'companion', 'apps', 'network', 'system'];
     showSetupTab(ok.includes(qt) ? qt : (localStorage.getItem('ds1-setup-tab') || 'displays'));
   } catch (e) {}
   document.body.dataset.hdmi = activeHdmiTab;   // colour identity from first paint

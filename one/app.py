@@ -5401,6 +5401,7 @@ def _avahi_advertise(delay=15):
                '  <service><type>_downstage._tcp</type><port>8080</port>\n'
                f'    <txt-record>serial={config.get("serial", "")}</txt-record>\n'
                f'    <txt-record>hub={1 if config.get("cue_hub") else 0}</txt-record>\n'
+               '    <txt-record>kind=one</txt-record>\n'
                '  </service>\n</service-group>\n')
         cur = ""
         try:

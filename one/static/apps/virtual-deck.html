@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Virtual Deck</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Downstage Virtual Deck: a Stream Deck on screen, any model or any grid. It joins
+     Companion as a surface over its Satellite WebSocket (port 16623), so it needs no
+     server of its own: the same page runs in the Mac app and from the One. -->
+<style>
+  @font-face { font-family: 'Rajdhani'; font-weight: 700; src: url('../fonts/rajdhani-700.woff2') format('woff2'); }
+  @font-face { font-family: 'Inter'; font-weight: 400; src: url('../fonts/inter-400.woff2') format('woff2'); }
+  @font-face { font-family: 'Inter'; font-weight: 600; src: url('../fonts/inter-600.woff2') format('woff2'); }
+  :root { --ground: #0B0D10; --panel: #12161B; --raised: #181D23; --edge: #232A32; --text: #E8ECEF; --muted: #9AA4AD;
+          --green: #2FD97B; --amber: #F5A524; --red: #E5484D; --violet: #8E6FE6; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { display: flex; flex-direction: column; background: var(--ground); color: var(--text); font: 400 14px/1.4 'Inter', system-ui, sans-serif;
+         -webkit-user-select: none; user-select: none; overflow: hidden; }
+  header { flex: none; display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; padding: 10px 14px; background: var(--panel); border-bottom: 1px solid var(--edge); }
+  header h1 { margin: 0; font: 700 17px 'Rajdhani', system-ui, sans-serif; white-space: nowrap; }
+  header svg { width: 24px; height: 24px; flex: none; }
+  label { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; }
+  input, select, button { font: inherit; color: var(--text); background: var(--raised); border: 1px solid var(--edge); border-radius: 6px; min-height: 32px; padding: 4px 8px; }
+  input { -webkit-user-select: text; user-select: text; }
+  input.addr { width: 150px; }
+  input.num { width: 56px; }
+  button { cursor: pointer; font-weight: 600; }
+  button:hover { border-color: var(--muted); }
+  .sp { flex: 1; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--amber); flex: none; }
+  .dot.ok { background: var(--green); }
+  .dot.off { background: var(--red); }
+  #found { display: none; max-width: 190px; }
+  #found.on { display: inline-block; }
+  #custom { display: none; align-items: center; gap: 8px; }
+  #custom.on { display: inline-flex; }
+  a.btn { display: inline-flex; align-items: center; min-height: 32px; padding: 4px 8px; color: var(--text); text-decoration: none; font-weight: 600; background: var(--raised); border: 1px solid var(--edge); border-radius: 6px; }
+  #say { flex: none; padding: 6px 14px; font-size: 13px; color: var(--muted); }
+  #say:empty { display: none; }
+  /* the deck itself: an aluminum body, glass keys in their wells, knurled dials */
+  #stage { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 18px;
+           background: radial-gradient(ellipse 70% 60% at 50% 42%, #1a2027 0%, var(--ground) 72%); }
+  #chassis { position: relative; padding: var(--pad) var(--pad) calc(var(--pad) * 1.5); border-radius: calc(var(--cell) * .3 + 8px);
+             background: linear-gradient(165deg, #2b323a 0%, #1b2026 26%, #14181d 62%, #101317 100%);
+             box-shadow: inset 0 1px 0 rgba(255,255,255,.14), inset 1px 0 0 rgba(255,255,255,.04), inset 0 -2px 3px rgba(0,0,0,.6),
+                         0 2px 2px rgba(0,0,0,.7), 0 22px 44px rgba(0,0,0,.65), 0 calc(var(--cell) * .4) calc(var(--cell) * .55) calc(var(--cell) * -.3) rgba(0,0,0,.75); }
+  #deck { display: grid; gap: var(--gap); padding: calc(var(--gap) * .8); border-radius: calc(var(--cell) * .16 + 4px); background: #07090b;
+          box-shadow: inset 0 2px 5px rgba(0,0,0,.95), 0 1px 0 rgba(255,255,255,.07); }
+  .lip { position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--pad) * 1.5); display: flex; align-items: center; justify-content: center; pointer-events: none; }
+  .lip svg { height: 56%; max-height: 22px; min-height: 8px; width: auto; opacity: .5; }
+  .led { position: absolute; right: calc(var(--pad) * 1.05); bottom: calc(var(--pad) * .68); width: 6px; height: 6px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 6px var(--amber); pointer-events: none; }
+  .led.ok { background: var(--green); box-shadow: 0 0 7px var(--green); }
+  .led.off { background: var(--red); box-shadow: 0 0 6px var(--red); }
+  .key, .seg, .dial { position: relative; overflow: hidden; touch-action: none; }
+  .key { width: var(--cell); height: var(--cell); border-radius: calc(var(--cell) * .13); cursor: pointer; background: linear-gradient(160deg, #101418, #05070a);
+         box-shadow: 0 0 0 1px #000, 0 0 0 2px rgba(255,255,255,.05), 0 calc(var(--cell) * .025 + 1px) 2px rgba(0,0,0,.9); transition: transform .06s ease-out, filter .06s; }
+  .key::after, .seg::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+         background: linear-gradient(155deg, rgba(255,255,255,.13) 0%, rgba(255,255,255,.03) 24%, transparent 42%); box-shadow: inset 0 1px 0 rgba(255,255,255,.14), inset 0 0 0 1px rgba(255,255,255,.04); }
+  .key.down, .seg.down { transform: translateY(1px) scale(.965); filter: brightness(1.28); box-shadow: 0 0 0 1px #000, 0 0 calc(var(--cell) * .1) rgba(255,255,255,.2); }
+  .band { grid-column: 1 / -1; position: relative; display: grid; gap: var(--gap); grid-template-columns: repeat(var(--cols), var(--cell)); margin: calc(var(--gap) * .2) 0; }
+  .band::before { content: ""; position: absolute; inset: calc(var(--gap) * -.5); border-radius: 6px; background: #020304; box-shadow: inset 0 0 0 1px rgba(255,255,255,.07), inset 0 1px 4px #000; }
+  .seg { width: var(--cell); height: calc(var(--cell) / 2); border-radius: 4px; cursor: pointer; background: #030405; }
+  .dial { width: var(--cell); height: var(--cell); border-radius: 50%; cursor: grab; transition: filter .08s;
+          background: repeating-conic-gradient(#3b444d 0deg 3deg, #171b20 3deg 6deg);
+          box-shadow: 0 0 0 1px #000, 0 calc(var(--cell) * .05) calc(var(--cell) * .12) rgba(0,0,0,.85); }
+  .dial::before { content: ""; position: absolute; inset: 7%; border-radius: 50%;
+          background: radial-gradient(circle at 42% 30%, #39424b 0%, #1d2228 46%, #0e1114 100%), conic-gradient(rgba(255,255,255,.1), transparent 25%, rgba(255,255,255,.08) 50%, transparent 75%, rgba(255,255,255,.1));
+          box-shadow: inset 0 1px 1px rgba(255,255,255,.2), inset 0 -2px 3px rgba(0,0,0,.6); }
+  .dial:active { cursor: grabbing; }
+  .dial.down { filter: brightness(1.3); }
+  .key img, .seg img, .dial img { display: block; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+  .dial img { position: absolute; inset: 0; border-radius: 50%; transform: scale(.68); opacity: .95; }
+  .dial i { position: absolute; left: 50%; top: 9%; width: 3px; height: 13%; margin-left: -1.5px; border-radius: 2px; background: var(--text); box-shadow: 0 0 3px rgba(255,255,255,.5); transform-origin: 50% 315%; z-index: 1; }
+  .gap { visibility: hidden; width: var(--cell); }
+  .gap.s { height: calc(var(--cell) / 2); }
+  body.bare header, body.bare #say { display: none; }
+  body.bare #stage { padding: 6px; }
+  #exit-bare { display: none; position: fixed; right: 8px; top: 8px; opacity: .55; }
+  body.bare #exit-bare { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <svg viewBox="0 0 96 96" aria-hidden="true"><rect x="6" y="10" width="84" height="66" rx="10" fill="none" stroke="#e8ecef" stroke-width="7"/><rect x="20" y="54" width="40" height="9" rx="4.5" fill="#2fd97b"/><rect x="64" y="54" width="12" height="9" rx="4.5" fill="#e8ecef" opacity="0.28"/><rect x="20" y="83" width="56" height="7" rx="3.5" fill="#2fd97b"/></svg>
+  <h1>Virtual Deck</h1>
+  <label>Deck
+    <select id="model"></select>
+  </label>
+  <span id="custom">
+    <label>Columns <input class="num" id="cols" type="number" min="1" max="32"></label>
+    <label>Rows <input class="num" id="rows" type="number" min="1" max="16"></label>
+  </span>
+  <span class="sp"></span>
+  <span class="dot" id="dot"></span>
+  <select id="found" title="Downstage Ones found on this network"></select>
+  <label>Companion <input class="addr" id="host" spellcheck="false" autocapitalize="off" autocorrect="off" placeholder="192.168.1.20"></label>
+  <a class="btn" id="surfaces" target="_blank" rel="noopener" title="Choose this deck's page in Companion">Surfaces</a>
+  <button id="bare" title="Hide everything but the keys">Keys only</button>
+</header>
+<div id="say"></div>
+<div id="stage"><div id="chassis"><div id="deck"></div><div class="lip"><svg viewBox="0 0 96 96" aria-hidden="true"><rect x="6" y="10" width="84" height="66" rx="10" fill="none" stroke="#e8ecef" stroke-width="7"/><rect x="20" y="54" width="40" height="9" rx="4.5" fill="#e8ecef"/><rect x="64" y="54" width="12" height="9" rx="4.5" fill="#e8ecef" opacity="0.28"/><rect x="20" y="83" width="56" height="7" rx="3.5" fill="#e8ecef"/></svg></div><span class="led" id="led"></span></div></div>
+<button id="exit-bare">Show controls</button>
+
+<script>
+  // Stream Deck models as Companion lays them out (Companion repo NOTES.md, "Deck grid maps"):
+  // rows of keys, then for models with dials a touch strip row and a dial row.
+  const MODELS = {
+    mini:   { name: 'Stream Deck Mini', cols: 3, rows: 2 },
+    neo:    { name: 'Stream Deck Neo', cols: 4, rows: 2 },
+    mk2:    { name: 'Stream Deck 15 key', cols: 5, rows: 3 },
+    xl:     { name: 'Stream Deck XL', cols: 8, rows: 4 },
+    plus:   { name: 'Stream Deck +', cols: 4, rows: 2, dials: [0, 1, 2, 3] },
+    plusxl: { name: 'Stream Deck + XL', cols: 9, rows: 4, dials: [0, 2, 3, 5, 6, 8] },
+    custom: { name: 'Custom grid' },
+  };
+  const $ = id => document.getElementById(id);
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem('ds_vdeck_' + k); return v === null ? d : v; } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem('ds_vdeck_' + k, v); } catch (e) {} },
+  };
+  const clamp = (v, lo, hi, d) => { const n = parseInt(v, 10); return isNaN(n) ? d : Math.min(hi, Math.max(lo, n)); };
+
+  // Which Companion: ?host= first, then the unit serving this page, then a typed address, then a
+  // One the Mac app finds. A found One is followed by its id, because venues give it new addresses.
+  const params = new URLSearchParams(location.search);
+  const served = /^https?:$/.test(location.protocol) ? location.hostname : '';
+  const S = {
+    host: params.get('host') || served || store.get('host', ''),
+    oneId: params.get('host') || served ? '' : store.get('one', ''),
+    ones: [],
+    model: MODELS[params.get('deck')] ? params.get('deck') : (MODELS[store.get('model', '')] ? store.get('model') : 'mk2'),
+    cols: clamp(store.get('cols', 8), 1, 32, 8),
+    rows: clamp(store.get('rows', 4), 1, 16, 4),
+    ws: null, ok: false, retry: 0, ping: 0, imgs: {}, angle: {},
+  };
+
+  // Each deck type keeps its own surface, so Companion remembers a page for each
+  function baseId() {
+    let id = store.get('id', '');
+    if (!id) { id = Math.random().toString(16).slice(2, 8).toUpperCase(); store.set('id', id); }
+    return id;
+  }
+  const deviceId = () => 'DSVD-' + baseId() + '-' + S.model.toUpperCase();
+  function spec() {
+    const m = MODELS[S.model];
+    return S.model === 'custom' ? { name: 'Custom grid', cols: S.cols, rows: S.rows } : m;
+  }
+  const hasDials = s => !!(s.dials && s.dials.length);
+  const totalRows = s => s.rows + (hasDials(s) ? 2 : 0);
+
+  function say(text) { $('say').textContent = text; }
+  function dot(state) { $('dot').className = 'dot' + (state ? ' ' + state : ''); $('led').className = 'led' + (state ? ' ' + state : ''); $('dot').title = { ok: 'In Companion', off: 'Not connected' }[state] || 'Connecting'; }
+
+  // ── drawing ──
+  function build() {
+    const s = spec(), box = $('deck'), cell = n => '<div class="key" data-k="' + n + '"></div>';
+    let h = '';
+    for (let n = 0; n < s.cols * s.rows; n++) h += cell(n);
+    if (hasDials(s)) {
+      const strip = s.cols * s.rows, knob = strip + s.cols;
+      h += '<div class="band">';
+      for (let c = 0; c < s.cols; c++) h += s.dials.includes(c) ? '<div class="seg" data-k="' + (strip + c) + '"></div>' : '<div class="gap s"></div>';
+      h += '</div>';
+      for (let c = 0; c < s.cols; c++) h += s.dials.includes(c) ? '<div class="dial" data-k="' + (knob + c) + '"><i></i></div>' : '<div class="gap"></div>';
+    }
+    box.innerHTML = h;
+    box.style.gridTemplateColumns = 'repeat(' + s.cols + ', var(--cell))';
+    $('chassis').style.setProperty('--cols', s.cols);
+    S.angle = {};
+    fit();
+    for (const [k, src] of Object.entries(S.imgs)) paint(+k, src);
+  }
+  function fit() {
+    const s = spec(), st = $('stage'), cs = getComputedStyle(st);
+    const W = st.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    const H = st.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+    // the body's margins grow with the keys: its edges take about .34 of a key a side, the lip under them .17 more
+    const gap = Math.max(3, Math.min(11, Math.round(Math.min(W, H) / 70))), inner = gap * 1.6;
+    const across = s.cols + .68, down = s.rows + (hasDials(s) ? 1.5 : 0) + .85;
+    const size = Math.floor(Math.min((W - inner - gap * (s.cols - 1)) / across, (H - inner - gap * (totalRows(s) - 1) - gap) / down));
+    const cell = Math.max(16, size), box = $('chassis');
+    box.style.setProperty('--cell', cell + 'px');
+    box.style.setProperty('--gap', gap + 'px');
+    box.style.setProperty('--pad', Math.round(cell * .34) + 'px');
+  }
+  function paint(n, src) {
+    S.imgs[n] = src;
+    const el = $('deck').querySelector('[data-k="' + n + '"]');
+    if (!el) return;
+    const tick = el.classList.contains('dial') ? el.querySelector('i') : null;
+    el.innerHTML = src ? '<img alt="" src="' + src + '">' : '';
+    if (tick) el.appendChild(tick);
+  }
+  // PNG from Companion 4.x and 5; a raw RGB square from anything older
+  function image(b64) {
+    if (b64.startsWith('data:')) return b64;
+    if (b64.startsWith('iVBOR')) return 'data:image/png;base64,' + b64;
+    try {
+      const raw = atob(b64), px = Math.round(Math.sqrt(raw.length / 3));
+      if (!px) return '';
+      const c = document.createElement('canvas'); c.width = c.height = px;
+      const g = c.getContext('2d'), im = g.createImageData(px, px);
+      for (let i = 0, j = 0; i < raw.length; i += 3, j += 4) { im.data[j] = raw.charCodeAt(i); im.data[j + 1] = raw.charCodeAt(i + 1); im.data[j + 2] = raw.charCodeAt(i + 2); im.data[j + 3] = 255; }
+      g.putImageData(im, 0, 0);
+      return c.toDataURL();
+    } catch (e) { return ''; }
+  }
+
+  // ── Companion's Satellite API ──
+  function send(line) { try { if (S.ws && S.ws.readyState === 1) S.ws.send(line + '\n'); } catch (e) {} }
+  function addDevice() {
+    const s = spec(), keys = s.cols * totalRows(s);
+    send('ADD-DEVICE DEVICEID="' + deviceId() + '" PRODUCT_NAME="Downstage Virtual Deck ' + s.name.replace(/^Stream Deck /, '') + '" KEYS_TOTAL=' + keys +
+         ' KEYS_PER_ROW=' + s.cols + ' BITMAPS=' + (keys > 48 ? 96 : 160) + ' BITMAP_FORMAT="png" COLORS="hex" TEXT=0 BRIGHTNESS=0');
+  }
+  function connect() {
+    clearTimeout(S.retry);
+    if (!S.host) { dot('off'); say(NATIVE ? 'Looking for a Downstage One. Or type your Companion\u2019s address, like 192.168.1.20.' : 'Type your Companion\u2019s address, like 192.168.1.20.'); return; }
+    if (S.ws) { const w = S.ws; S.ws = null; w.onclose = null; try { w.close(); } catch (e) {} }
+    clearInterval(S.ping);
+    S.ok = false; dot(''); say('Joining Companion at ' + S.host + '…');
+    let ws;
+    try { ws = new WebSocket('ws://' + S.host + ':16623'); }
+    catch (e) { dot('off'); say('That Companion address doesn’t look right.'); return; }
+    S.ws = ws;
+    ws.onopen = () => {
+      addDevice();
+      S.ping = setInterval(() => send('PING ds'), 2000);     // Companion drops a quiet socket after 5 s
+    };
+    ws.onmessage = e => String(e.data).split('\n').forEach(l => l && line(l));
+    ws.onclose = () => {
+      if (S.ws !== ws) return;
+      clearInterval(S.ping); S.ws = null; S.ok = false; dot('off');
+      say('Companion isn’t answering at ' + S.host + ' (Satellite port 16623, Companion 4.0 or later). Trying again…');
+      S.retry = setTimeout(connect, 3000);
+    };
+  }
+  function parse(l) {
+    const sp = l.indexOf(' '), cmd = sp < 0 ? l : l.slice(0, sp), args = {};
+    const re = /([A-Za-z_]+)=("([^"]*)"|(\S*))/g; let m;
+    while ((m = re.exec(sp < 0 ? '' : l.slice(sp + 1)))) args[m[1].toUpperCase()] = m[3] !== undefined ? m[3] : m[4];
+    return [cmd.toUpperCase(), args, l.slice(sp + 1)];
+  }
+  function line(l) {
+    const [cmd, a, rest] = parse(l);
+    if (cmd === 'ADD-DEVICE') {
+      if (/^OK/.test(rest)) { S.ok = true; dot('ok'); say(''); }
+      else if (/^ERROR/.test(rest)) { S.ok = false; dot('off'); say('Companion refused this deck: ' + (a.MESSAGE || rest)); }
+    } else if (cmd === 'KEY-STATE') {
+      const n = +a.KEY;
+      if (isNaN(n)) return;
+      if (a.BITMAP !== undefined) paint(n, a.BITMAP ? image(a.BITMAP) : '');
+      const el = $('deck').querySelector('[data-k="' + n + '"]');
+      if (el) el.classList.toggle('down', a.PRESSED === '1' || a.PRESSED === 'true');
+    } else if (cmd === 'KEYS-CLEAR') {
+      S.imgs = {};
+      for (const el of $('deck').querySelectorAll('[data-k]')) el.innerHTML = el.classList.contains('dial') ? '<i></i>' : '';
+    } else if (cmd === 'PING') send('PONG ' + rest);
+  }
+  // A new deck is a new surface: the old one leaves Companion's live list, the new one joins
+  function changeDeck(change) {
+    const old = deviceId();
+    if (S.ok) send('REMOVE-DEVICE DEVICEID="' + old + '"');
+    change();
+    S.imgs = {}; S.ok = false;
+    build();
+    if (S.ws && S.ws.readyState === 1) { dot(''); addDevice(); } else connect();
+  }
+
+  // ── pressing: a key goes down on touch and up on lift; a dial presses when tapped
+  // and turns when dragged (a step per 22 px), or under a wheel or trackpad ──
+  let cur = null;
+  document.addEventListener('pointerdown', e => {
+    const el = e.target.closest('#deck [data-k]');
+    if (!el || !S.ok) return;
+    const n = +el.dataset.k, dial = el.classList.contains('dial');
+    cur = { el, n, dial, x: e.clientX, y: e.clientY, moved: 0, pressed: false };
+    try { el.setPointerCapture(e.pointerId); } catch (_) {}
+    if (!dial) { send('KEY-PRESS DEVICEID="' + deviceId() + '" KEY=' + n + ' PRESSED=1'); cur.pressed = true; el.classList.add('down'); }
+    e.preventDefault();
+  });
+  document.addEventListener('pointermove', e => {
+    if (!cur || !cur.dial) return;
+    const dx = e.clientX - cur.x, dy = cur.y - e.clientY, d = Math.abs(dx) >= Math.abs(dy) ? dx : dy;
+    if (Math.abs(d) < 22) return;
+    turn(cur.el, d > 0 ? 1 : 0);
+    cur.x = e.clientX; cur.y = e.clientY; cur.moved++;
+  });
+  function turn(el, dir) {
+    const n = +el.dataset.k;
+    send('KEY-ROTATE DEVICEID="' + deviceId() + '" KEY=' + n + ' DIRECTION=' + dir);
+    S.angle[n] = (S.angle[n] || 0) + (dir ? 15 : -15);
+    const t = el.querySelector('i');
+    if (t) t.style.transform = 'rotate(' + S.angle[n] + 'deg)';
+  }
+  function lift() {
+    if (!cur) return;
+    const id = deviceId(), n = cur.n;
+    if (cur.dial && !cur.moved) { send('KEY-PRESS DEVICEID="' + id + '" KEY=' + n + ' PRESSED=1'); setTimeout(() => send('KEY-PRESS DEVICEID="' + id + '" KEY=' + n + ' PRESSED=0'), 120); }
+    if (cur.pressed) { send('KEY-PRESS DEVICEID="' + id + '" KEY=' + n + ' PRESSED=0'); cur.el.classList.remove('down'); }
+    cur = null;
+  }
+  document.addEventListener('pointerup', lift);
+  document.addEventListener('pointercancel', lift);
+  document.addEventListener('wheel', e => {
+    const el = e.target.closest('#deck .dial[data-k]');
+    if (!el || !S.ok) return;
+    e.preventDefault();
+    turn(el, e.deltaY < 0 || e.deltaX > 0 ? 1 : 0);
+  }, { passive: false });
+  window.addEventListener('beforeunload', () => { if (S.ok) send('REMOVE-DEVICE DEVICEID="' + deviceId() + '"'); });
+  new ResizeObserver(fit).observe($('stage'));
+
+  // ── finding a One: the Mac app browses Bonjour and calls this with what's on the network ──
+  const NATIVE = !!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.finder);
+  function useHost(host, oneId) {
+    S.guess = false;
+    S.oneId = oneId;
+    store.set('one', oneId);
+    store.set('host', oneId ? '' : host);
+    $('host').value = host;
+    if (host === S.host && S.ws) { paintFound(); return; }
+    S.host = host; S.imgs = {}; build(); paintHeader(); connect();
+  }
+  function paintFound() {
+    const f = $('found');
+    f.classList.toggle('on', S.ones.length > 0);
+    f.innerHTML = '<option value="">' + (S.ones.length === 1 ? '1 One found' : S.ones.length + ' Ones found') + '</option>' +
+      S.ones.map(o => '<option value="' + esc(o.id) + '">' + esc(o.name) + ' (' + esc(o.host) + ')</option>').join('');
+    f.value = S.ones.some(o => o.id === S.oneId && o.host === S.host) ? S.oneId : '';
+  }
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  window.onesFound = list => {
+    S.ones = list;
+    const mine = S.ones.find(o => o.id === S.oneId);
+    if (mine) { if (mine.host !== S.host) useHost(mine.host, mine.id); }
+    paintFound();
+    // nothing chosen yet: use a lone One, after a moment for any others to answer. With two, the person picks;
+    // a Companion already working on this Mac stays
+    clearTimeout(S.pick);
+    S.pick = setTimeout(() => {
+      if ((S.host && !(S.guess && !S.ok)) || !S.ones.length) return;
+      if (S.ones.length === 1) useHost(S.ones[0].host, S.ones[0].id);
+      else say('Found ' + S.ones.length + ' Ones. Choose one above, or type a Companion address.');
+    }, 1500);
+  };
+  $('found').onchange = () => {
+    const o = S.ones.find(x => x.id === $('found').value);
+    if (o) useHost(o.host, o.id); else paintFound();
+  };
+
+  // ── the header ──
+  $('model').innerHTML = Object.entries(MODELS).map(([k, m]) => '<option value="' + k + '">' + m.name + '</option>').join('');
+  $('model').value = S.model;
+  $('host').value = S.host;
+  $('cols').value = S.cols;
+  $('rows').value = S.rows;
+  function paintHeader() {
+    $('custom').classList.toggle('on', S.model === 'custom');
+    $('surfaces').style.display = S.host ? '' : 'none';
+    $('surfaces').href = 'http://' + S.host + ':8000/#/surfaces';
+    document.title = 'Virtual Deck: ' + spec().name;
+  }
+  $('model').onchange = () => changeDeck(() => { S.model = $('model').value; store.set('model', S.model); paintHeader(); });
+  const gridChange = () => {
+    const c = clamp($('cols').value, 1, 32, S.cols), r = clamp($('rows').value, 1, 16, S.rows);
+    $('cols').value = c; $('rows').value = r;
+    if (c === S.cols && r === S.rows) return;
+    changeDeck(() => { S.cols = c; S.rows = r; store.set('cols', c); store.set('rows', r); paintHeader(); });
+  };
+  $('cols').onchange = gridChange;
+  $('rows').onchange = gridChange;
+  $('host').onchange = () => {
+    const v = $('host').value.trim().replace(/^https?:\/\//, '').replace(/[:/].*$/, '');
+    if (!v) { $('host').value = S.host; return; }
+    useHost(v, '');
+  };
+  function setBare(on) { document.body.classList.toggle('bare', on); store.set('bare', on ? '1' : '0'); }
+  $('bare').onclick = () => setBare(true);
+  $('exit-bare').onclick = () => setBare(false);
+  setBare(store.get('bare', '0') === '1');
+
+  paintHeader();
+  build();
+  connect();
+  // no One and nothing typed: a Companion on this Mac is the next best guess, and a One found later still wins
+  if (NATIVE && !S.host) setTimeout(() => {
+    if (S.host) return;
+    S.guess = true; S.host = '127.0.0.1'; $('host').value = S.host; paintHeader(); connect();
+  }, 4000);
+</script>
+</body>
+</html>
