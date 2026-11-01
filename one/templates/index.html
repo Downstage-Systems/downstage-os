@@ -1683,6 +1683,8 @@
 
     /* ── tabs: an underline, the active one white with a 2 px green rule ── */
     .setup-tabs { background: none; border: 0; border-bottom: 1px solid var(--edge); border-radius: 0; padding: 0; gap: 2px; margin: 6px 0 22px; justify-content: flex-start; }
+    /* the tabs float at the top of the window as the page scrolls: any other tab is one press away. Not on a phone on its side, where they'd fill the screen */
+    @media (min-height: 501px) { .setup-tabs { position: sticky; top: 0; z-index: 80; background: var(--ground); } }
     .stab { flex: none; border-radius: 0; padding: 12px 14px; font: 600 15px var(--font-body); color: var(--muted);
       border-bottom: 2px solid transparent; margin-bottom: -1px; background: none; }
     .stab.on { background: none; color: var(--text); border-bottom-color: var(--accent); }
