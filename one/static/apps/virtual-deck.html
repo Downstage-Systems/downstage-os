@@ -17,17 +17,25 @@
   html, body { height: 100%; margin: 0; }
   body { display: flex; flex-direction: column; background: var(--ground); color: var(--text); font: 400 14px/1.4 'Inter', system-ui, sans-serif;
          -webkit-user-select: none; user-select: none; overflow: hidden; }
+  .grp { display: flex; align-items: center; gap: 8px; }
+  .rule { flex: none; width: 1px; height: 20px; background: var(--edge); }
+  #hostBox { display: none; }
+  #hostBox.on { display: inline-flex; }
+  #found { width: auto; }
   header { flex: none; display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; padding: 10px 14px; background: var(--panel); border-bottom: 1px solid var(--edge); }
   header h1 { margin: 0; font: 700 17px 'Rajdhani', system-ui, sans-serif; white-space: nowrap; }
   header svg { width: 24px; height: 24px; flex: none; }
   label { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; }
-  input, select, button { font: inherit; color: var(--text); background: var(--raised); border: 1px solid var(--edge); border-radius: 6px; min-height: 32px; padding: 4px 8px; }
-  input { -webkit-user-select: text; user-select: text; }
-  input.addr { width: 150px; }
+  input, select, button, a.btn { box-sizing: border-box; height: 34px; min-height: 34px; padding: 0 10px; font: 400 14px/1 'Inter', system-ui, sans-serif; color: var(--text); background-color: var(--raised); border: 1px solid var(--edge); }
+  input { border-radius: 4px; -webkit-user-select: text; user-select: text; }
+  input::placeholder { color: var(--muted); }
+  input:focus, select:focus { outline: none; border-color: var(--muted); }
+  select { -webkit-appearance: none; appearance: none; border-radius: 4px; padding-right: 26px; text-overflow: ellipsis; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%239AA4AD' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 9px center; }
+  button, a.btn { border-radius: 6px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+  button:hover, a.btn:hover { border-color: var(--muted); }
+  input.addr { width: 140px; }
   input.num { width: 56px; }
-  button { cursor: pointer; font-weight: 600; }
-  button:hover { border-color: var(--muted); }
-  .sp { flex: 1; }
+  .sp { flex: 1 1 0; min-width: 0; }
   .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--amber); flex: none; }
   .dot.ok { background: var(--green); }
   .dot.off { background: var(--red); }
@@ -36,25 +44,25 @@
   #updText { flex: 1; min-width: 160px; }
   #upd button { min-height: 28px; padding: 2px 10px; }
   #updGo { border-color: var(--green); }
-  #found { display: none; max-width: 190px; }
+  #found { display: none; max-width: 200px; }
   #found.on { display: inline-block; }
   #custom { display: none; align-items: center; gap: 8px; }
   #custom.on { display: inline-flex; }
-  a.btn { display: inline-flex; align-items: center; min-height: 32px; padding: 4px 8px; color: var(--text); text-decoration: none; font-weight: 600; background: var(--raised); border: 1px solid var(--edge); border-radius: 6px; }
+  a.btn { display: inline-flex; align-items: center; text-decoration: none; }
   #say { flex: none; padding: 6px 14px; font-size: 13px; color: var(--muted); }
   #say:empty { display: none; }
   /* the deck itself: an aluminum body, glass keys in their wells, knurled dials */
-  #stage { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 18px;
+  #stage { flex: 1; min-height: 0; position: relative; overflow: hidden; padding: 18px;
            background: radial-gradient(ellipse 70% 60% at 50% 42%, #1a2027 0%, var(--ground) 72%); }
-  #chassis { position: relative; padding: var(--pad) var(--pad) calc(var(--pad) * 1.5); border-radius: calc(var(--cell) * .3 + 8px);
+  .chassis { position: absolute; padding: var(--pad) var(--pad) calc(var(--pad) * 1.5); border-radius: calc(var(--cell) * .3 + 8px);
              background: linear-gradient(165deg, #2b323a 0%, #1b2026 26%, #14181d 62%, #101317 100%);
              box-shadow: inset 0 1px 0 rgba(255,255,255,.14), inset 1px 0 0 rgba(255,255,255,.04), inset 0 -2px 3px rgba(0,0,0,.6),
                          0 2px 2px rgba(0,0,0,.7), 0 22px 44px rgba(0,0,0,.65), 0 calc(var(--cell) * .4) calc(var(--cell) * .55) calc(var(--cell) * -.3) rgba(0,0,0,.75); }
-  #deck { display: grid; gap: var(--gap); padding: calc(var(--gap) * .8); border-radius: calc(var(--cell) * .16 + 4px); background: #07090b;
+  .deckgrid { display: grid; gap: var(--gap); padding: calc(var(--gap) * .8); border-radius: calc(var(--cell) * .16 + 4px); background: #07090b;
           box-shadow: inset 0 2px 5px rgba(0,0,0,.95), 0 1px 0 rgba(255,255,255,.07); }
   .lip { position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--pad) * 1.5); display: flex; align-items: center; justify-content: center; pointer-events: none; }
   .lip svg { height: 56%; max-height: 22px; min-height: 8px; width: auto; opacity: .5; }
-  .led { position: absolute; right: calc(var(--pad) * 1.05); bottom: calc(var(--pad) * .68); width: 6px; height: 6px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 6px var(--amber); pointer-events: none; }
+  .led { position: absolute; left: calc(var(--pad) * 1.05); bottom: calc(var(--pad) * .68); width: 6px; height: 6px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 6px var(--amber); pointer-events: none; }
   .led.ok { background: var(--green); box-shadow: 0 0 7px var(--green); }
   .led.off { background: var(--red); box-shadow: 0 0 6px var(--red); }
   .key, .seg, .dial { position: relative; overflow: hidden; touch-action: none; }
@@ -79,6 +87,42 @@
   .dial i { position: absolute; left: 50%; top: 9%; width: 3px; height: 13%; margin-left: -1.5px; border-radius: 2px; background: var(--text); box-shadow: 0 0 3px rgba(255,255,255,.5); transform-origin: 50% 315%; z-index: 1; }
   .gap { visibility: hidden; width: var(--cell); }
   .gap.s { height: calc(var(--cell) / 2); }
+  .chassis.sel { outline: 1.5px solid rgba(47,217,123,.55); outline-offset: 2px; }
+  .chassis.grabbed { filter: brightness(1.15); box-shadow: 0 30px 60px rgba(0,0,0,.8); }
+  /* drag a deck's frame to move it, its corner to resize it. Both are put away in Keys only, so a show can't knock a deck */
+  .chassis { cursor: grab; touch-action: none; }
+  .chassis.grabbed { cursor: grabbing; }
+  .deckgrid { cursor: default; }
+  body.bare .chassis { cursor: default; }
+  .grip { position: absolute; right: 0; bottom: 0; width: 34px; height: 34px; cursor: nwse-resize; touch-action: none; }
+  .grip::after { content: ""; position: absolute; right: 9px; bottom: 9px; width: 11px; height: 11px; border-right: 2px solid rgba(232,236,239,.4); border-bottom: 2px solid rgba(232,236,239,.4); border-bottom-right-radius: 5px; }
+  body.bare .grip { display: none; }
+  #removeDeck, #arrange { display: none; }
+  #show { max-width: 190px; }
+  #sheet { display: none; position: fixed; inset: 0; z-index: 100001; align-items: center; justify-content: center; padding: 20px; background: rgba(0,0,0,.55); }
+  #sheet.on { display: flex; }
+  #sheetBox { width: 100%; max-width: 360px; padding: 18px; background: var(--panel); border: 1px solid var(--edge); border-radius: 6px; }
+  #sheetTitle { display: block; font: 700 18px 'Rajdhani', system-ui, sans-serif; }
+  #sheetText { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+  #sheetText:empty { display: none; }
+  #sheetName { width: 100%; margin-top: 12px; }
+  .sheetBtns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+  #sheetAlt:empty { display: none; }
+  #sheetGo { background: var(--green); border-color: var(--green); color: #0b0d10; }
+  #sheetGo.danger { background: #3a1517; border-color: var(--red); color: #ff9a9d; }
+  #ctx { display: none; position: fixed; z-index: 100000; min-width: 220px; max-height: calc(100vh - 8px); overflow: auto; padding: 5px; background: #1b2026; border: 1px solid var(--edge); border-radius: 8px; box-shadow: 0 12px 34px rgba(0,0,0,.7); }
+  #ctx.on { display: block; }
+  #ctx button { display: flex; align-items: center; gap: 9px; width: 100%; height: auto; min-height: 28px; padding: 3px 10px 3px 8px; text-align: left; font-weight: 400; background: none; border: 0; border-radius: 5px; }
+  @media (hover: hover) { #ctx button:hover { background: var(--green); color: #0b0d10; } #ctx button:hover i, #ctx button:hover .ck { color: inherit; } }
+  #ctx button:active { background: var(--green); color: #0b0d10; }
+  #ctx i { flex: none; display: flex; width: 16px; height: 16px; color: var(--muted); }
+  #ctx i svg { width: 16px; height: 16px; }
+  #ctx span { flex: 1; }
+  #ctx .ck { flex: none; margin-left: 14px; font-weight: 600; color: var(--green); }
+  #ctx button.danger { color: #ff9a9d; }
+  #ctx button.danger i { color: #ff9a9d; }
+  #ctx hr { margin: 5px 6px; border: 0; border-top: 1px solid var(--edge); }
+  .ctxh { padding: 3px 10px 4px 8px; font-size: 12px; color: var(--muted); }
   body.bare header, body.bare #say, body.bare #upd { display: none !important; }
   body.bare #stage { padding: 6px; }
   #exit-bare { display: none; position: fixed; right: 8px; top: 8px; opacity: .55; }
@@ -89,23 +133,37 @@
 <header>
   <svg viewBox="0 0 96 96" aria-hidden="true"><rect x="6" y="10" width="84" height="66" rx="10" fill="none" stroke="#e8ecef" stroke-width="7"/><rect x="20" y="54" width="40" height="9" rx="4.5" fill="#2fd97b"/><rect x="64" y="54" width="12" height="9" rx="4.5" fill="#e8ecef" opacity="0.28"/><rect x="20" y="83" width="56" height="7" rx="3.5" fill="#2fd97b"/></svg>
   <h1>Virtual Deck</h1>
-  <label>Deck
-    <select id="model"></select>
-  </label>
-  <span id="custom">
-    <label>Columns <input class="num" id="cols" type="number" min="1" max="32"></label>
-    <label>Rows <input class="num" id="rows" type="number" min="1" max="16"></label>
-  </span>
+  <span class="rule"></span>
+  <div class="grp" id="showGrp">
+    <select id="show" title="Your saved shows: each one remembers its decks and where they sit"></select>
+    <button id="saveShow" title="Save this show">Save</button>
+  </div>
+  <span class="rule"></span>
+  <div class="grp">
+    <label><span id="deckName">Deck</span> <select id="model"></select></label>
+    <span id="custom">
+      <label>Columns <input class="num" id="cols" type="number" min="1" max="32"></label>
+      <label>Rows <input class="num" id="rows" type="number" min="1" max="16"></label>
+    </span>
+    <button id="addDeck" title="Add another deck, as its own surface in Companion">+ Deck</button>
+    <button id="removeDeck" title="Remove the outlined deck">Remove</button>
+    <button id="arrange" title="Put every deck back in its place">Arrange</button>
+  </div>
   <span class="sp"></span>
-  <span class="dot" id="dot"></span>
-  <select id="found" title="Downstage Ones found on this network"></select>
-  <label>Companion <input class="addr" id="host" spellcheck="false" autocapitalize="off" autocorrect="off" placeholder="192.168.1.20"></label>
-  <a class="btn" id="surfaces" target="_blank" rel="noopener" title="Choose this deck's page in Companion">Surfaces</a>
-  <button id="bare" title="Hide everything but the keys">Keys only</button>
+  <div class="grp">
+    <span class="dot" id="dot"></span>
+    <select id="found" title="Downstage Ones on this network"></select>
+    <label id="hostBox"><input class="addr" id="host" aria-label="Companion address" title="Companion address" spellcheck="false" autocapitalize="off" autocorrect="off" placeholder="Companion address"></label>
+    <a class="btn" id="surfaces" target="_blank" rel="noopener" title="Choose this deck's page in Companion">Surfaces</a>
+    <span class="rule"></span>
+    <button id="bare" title="Hide everything but the keys">Keys only</button>
+  </div>
 </header>
 <div id="upd"><span id="updText"></span><button id="updGo">Update now</button><button id="updLater">Later</button></div>
 <div id="say"></div>
-<div id="stage"><div id="chassis"><div id="deck"></div><div class="lip"><svg viewBox="0 0 96 96" aria-hidden="true"><rect x="6" y="10" width="84" height="66" rx="10" fill="none" stroke="#e8ecef" stroke-width="7"/><rect x="20" y="54" width="40" height="9" rx="4.5" fill="#e8ecef"/><rect x="64" y="54" width="12" height="9" rx="4.5" fill="#e8ecef" opacity="0.28"/><rect x="20" y="83" width="56" height="7" rx="3.5" fill="#e8ecef"/></svg></div><span class="led" id="led"></span></div></div>
+<div id="stage"></div>
+<div id="ctx"></div>
+<div id="sheet"><form id="sheetBox"><b id="sheetTitle"></b><p id="sheetText"></p><input id="sheetName" maxlength="60" spellcheck="false" autocomplete="off"><div class="sheetBtns"><button type="button" id="sheetCancel">Cancel</button><button type="button" id="sheetAlt"></button><button type="submit" id="sheetGo"></button></div></form></div>
 <button id="exit-bare">Show controls</button>
 
 <script>
@@ -135,11 +193,17 @@
     host: params.get('host') || served || store.get('host', ''),
     oneId: params.get('host') || served ? '' : store.get('one', ''),
     ones: [],
-    model: MODELS[params.get('deck')] ? params.get('deck') : (MODELS[store.get('model', '')] ? store.get('model') : 'mk2'),
-    cols: clamp(store.get('cols', 8), 1, 32, 8),
-    rows: clamp(store.get('rows', 4), 1, 16, 4),
-    ws: null, ok: false, retry: 0, ping: 0, imgs: {}, angle: {},
+    decks: [], sel: null, top: 1, snap: store.get('snap', '1') === '1',
+    ws: null, retry: 0, ping: 0,
   };
+  const model0 = MODELS[params.get('deck')] ? params.get('deck') : (MODELS[store.get('model', '')] ? store.get('model') : 'mk2');
+  function newDeck(n, model, cols, rows, pos) { return { n, model, cols, rows, pos: pos || {}, imgs: {}, angle: {}, ok: false, el: null }; }
+  try { S.decks = JSON.parse(store.get('decks', '[]')).filter(d => MODELS[d.model]).map(d => newDeck(d.n, d.model, clamp(d.cols, 1, 32, 8), clamp(d.rows, 1, 16, 4), d.pos)); } catch (e) {}
+  if (!S.decks.length) S.decks = [newDeck(1, model0, clamp(store.get('cols', 8), 1, 32, 8), clamp(store.get('rows', 4), 1, 16, 4))];
+  else if (MODELS[params.get('deck')]) S.decks[0].model = params.get('deck');
+  S.sel = S.decks[0];
+  const layoutNow = () => S.decks.map(d => ({ n: d.n, model: d.model, cols: d.cols, rows: d.rows, pos: d.pos }));
+  function saveDecks() { store.set('decks', JSON.stringify(layoutNow())); if (typeof paintShows === 'function') paintShows(); }
 
   // Each deck type keeps its own surface, so Companion remembers a page for each
   function baseId() {
@@ -147,20 +211,31 @@
     if (!id) { id = Math.random().toString(16).slice(2, 8).toUpperCase(); store.set('id', id); }
     return id;
   }
-  const deviceId = () => 'DSVD-' + baseId() + '-' + S.model.toUpperCase();
-  function spec() {
-    const m = MODELS[S.model];
-    return S.model === 'custom' ? { name: 'Custom grid', cols: S.cols, rows: S.rows } : m;
-  }
+  // Deck 1 keeps the id it always had, so Companion still knows its page
+  const deviceId = d => 'DSVD-' + baseId() + (d.n > 1 ? '-' + d.n : '') + '-' + d.model.toUpperCase();
+  const spec = d => d.model === 'custom' ? { name: 'Custom grid', cols: d.cols, rows: d.rows } : MODELS[d.model];
   const hasDials = s => !!(s.dials && s.dials.length);
   const totalRows = s => s.rows + (hasDials(s) ? 2 : 0);
+  const deckAt = el => { const c = el.closest('.chassis'); return c && S.decks.find(d => d.el === c); };
 
   function say(text) { $('say').textContent = text; }
-  function dot(state) { $('dot').className = 'dot' + (state ? ' ' + state : ''); $('led').className = 'led' + (state ? ' ' + state : ''); $('dot').title = { ok: 'In Companion', off: 'Not connected' }[state] || 'Connecting'; }
+  function dot(state) {
+    $('dot').className = 'dot' + (state ? ' ' + state : '');
+    $('dot').title = { ok: 'In Companion', off: 'Not connected' }[state] || 'Connecting';
+    for (const d of S.decks) if (d.el) d.el.querySelector('.led').className = 'led' + ((state === 'ok' ? d.ok : state !== 'ok') && state ? ' ' + state : '');
+  }
+  const allOk = () => S.decks.every(d => d.ok);
 
   // ── drawing ──
-  function build() {
-    const s = spec(), box = $('deck'), cell = n => '<div class="key" data-k="' + n + '"></div>';
+  function build(d) {
+    const s = spec(d), cell = n => '<div class="key" data-k="' + n + '"></div>';
+    if (!d.el) {
+      d.el = document.createElement('div');
+      d.el.className = 'chassis';
+      d.el.innerHTML = '<div class="deckgrid"></div><div class="lip"><svg viewBox="0 0 96 96" aria-hidden="true"><rect x="6" y="10" width="84" height="66" rx="10" fill="none" stroke="#e8ecef" stroke-width="7"/><rect x="20" y="54" width="40" height="9" rx="4.5" fill="#e8ecef"/><rect x="64" y="54" width="12" height="9" rx="4.5" fill="#e8ecef" opacity="0.28"/><rect x="20" y="83" width="56" height="7" rx="3.5" fill="#e8ecef"/></svg></div><span class="led"></span><div class="grip" title="Drag to resize"></div>';
+      $('stage').appendChild(d.el);
+    }
+    const box = d.el.querySelector('.deckgrid');
     let h = '';
     for (let n = 0; n < s.cols * s.rows; n++) h += cell(n);
     if (hasDials(s)) {
@@ -172,27 +247,64 @@
     }
     box.innerHTML = h;
     box.style.gridTemplateColumns = 'repeat(' + s.cols + ', var(--cell))';
-    $('chassis').style.setProperty('--cols', s.cols);
-    S.angle = {};
-    fit();
-    for (const [k, src] of Object.entries(S.imgs)) paint(+k, src);
+    d.el.style.setProperty('--cols', s.cols);
+    d.angle = {};
+    layout();
+    for (const [k, src] of Object.entries(d.imgs)) paint(d, +k, src);
   }
-  function fit() {
-    const s = spec(), st = $('stage'), cs = getComputedStyle(st);
-    const W = st.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
-    const H = st.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
-    // the body's margins grow with the keys: its edges take about .34 of a key a side, the lip under them .17 more
-    const gap = Math.max(3, Math.min(11, Math.round(Math.min(W, H) / 70))), inner = gap * 1.6;
+  function stageBox() {
+    const st = $('stage'), cs = getComputedStyle(st), L = parseFloat(cs.paddingLeft), T = parseFloat(cs.paddingTop);
+    return { L, T, W: st.clientWidth - L - parseFloat(cs.paddingRight), H: st.clientHeight - T - parseFloat(cs.paddingBottom) };
+  }
+  // the body's margins grow with the keys: its edges take about .34 of a key a side, the lip under them .17 more
+  const gapFor = (W, H) => Math.max(3, Math.min(11, Math.round(Math.min(W, H) / 70)));
+  function cellFor(d, W, H) {
+    const s = spec(d), gap = gapFor(W, H), inner = gap * 1.6;
     const across = s.cols + .68, down = s.rows + (hasDials(s) ? 1.5 : 0) + .85;
-    const size = Math.floor(Math.min((W - inner - gap * (s.cols - 1)) / across, (H - inner - gap * (totalRows(s) - 1) - gap) / down));
-    const cell = Math.max(16, size), box = $('chassis');
-    box.style.setProperty('--cell', cell + 'px');
-    box.style.setProperty('--gap', gap + 'px');
-    box.style.setProperty('--pad', Math.round(cell * .34) + 'px');
+    return Math.max(16, Math.floor(Math.min((W - inner - gap * (s.cols - 1)) / across, (H - inner - gap * (totalRows(s) - 1) - gap) / down)));
   }
-  function paint(n, src) {
-    S.imgs[n] = src;
-    const el = $('deck').querySelector('[data-k="' + n + '"]');
+  function setSize(d, cell, gap) {
+    d.cell = cell; d.gapPx = gap;
+    d.el.style.setProperty('--cell', cell + 'px');
+    d.el.style.setProperty('--gap', gap + 'px');
+    d.el.style.setProperty('--pad', Math.round(cell * .34) + 'px');
+  }
+  function place(d, x, y, b) {
+    d.x = Math.max(0, Math.min(x, b.W - d.el.offsetWidth));
+    d.y = Math.max(0, Math.min(y, b.H - d.el.offsetHeight));
+    d.el.style.left = b.L + d.x + 'px';
+    d.el.style.top = b.T + d.y + 'px';
+  }
+  // A deck nobody has moved gets an even share of the stage, stacked upright or side by side. A moved one stays
+  // where it was put; each orientation remembers its own arrangement
+  const posKey = b => b.W >= b.H ? 'l' : 'p';
+  function layout() {
+    const b = stageBox(), key = posKey(b), n = S.decks.length, stacked = b.H >= b.W, slot = 10;
+    S.decks.forEach((d, i) => {
+      if (!d.el) return;
+      const p = d.pos[key];
+      if (p) {
+        const scale = Math.min(b.W, b.H) / p.s;
+        setSize(d, Math.max(16, Math.round(p.cell * scale)), gapFor(b.W, b.H));
+        place(d, p.x * b.W, p.y * b.H, b);
+        return;
+      }
+      const w = stacked ? b.W : (b.W - slot * (n - 1)) / n, h = stacked ? (b.H - slot * (n - 1)) / n : b.H;
+      setSize(d, cellFor(d, w, h), gapFor(w, h));
+      const x0 = stacked ? 0 : i * (w + slot), y0 = stacked ? i * (h + slot) : 0;
+      place(d, x0 + (w - d.el.offsetWidth) / 2, y0 + (h - d.el.offsetHeight) / 2, b);
+    });
+    $('arrange').style.display = S.decks.some(d => d.pos[key]) ? 'inline-block' : 'none';
+  }
+  function select(d) {
+    S.sel = d;
+    d.el.style.zIndex = ++S.top;
+    for (const x of S.decks) if (x.el) x.el.classList.toggle('sel', x === d && S.decks.length > 1);
+    paintHeader();
+  }
+  function paint(d, n, src) {
+    d.imgs[n] = src;
+    const el = d.el && d.el.querySelector('.deckgrid [data-k="' + n + '"]');
     if (!el) return;
     const tick = el.classList.contains('dial') ? el.querySelector('i') : null;
     el.innerHTML = src ? '<img alt="" src="' + src + '">' : '';
@@ -215,9 +327,9 @@
 
   // ── Companion's Satellite API ──
   function send(line) { try { if (S.ws && S.ws.readyState === 1) S.ws.send(line + '\n'); } catch (e) {} }
-  function addDevice() {
-    const s = spec(), keys = s.cols * totalRows(s);
-    send('ADD-DEVICE DEVICEID="' + deviceId() + '" PRODUCT_NAME="Downstage Virtual Deck ' + s.name.replace(/^Stream Deck /, '') + '" KEYS_TOTAL=' + keys +
+  function addDevice(d) {
+    const s = spec(d), keys = s.cols * totalRows(s), mark = d.n > 1 ? ' ' + d.n : '';
+    send('ADD-DEVICE DEVICEID="' + deviceId(d) + '" PRODUCT_NAME="Downstage Virtual Deck ' + s.name.replace(/^Stream Deck /, '') + mark + '" KEYS_TOTAL=' + keys +
          ' KEYS_PER_ROW=' + s.cols + ' BITMAPS=' + (keys > 48 ? 96 : 160) + ' BITMAP_FORMAT="png" COLORS="hex" TEXT=0 BRIGHTNESS=0');
   }
   function connect() {
@@ -225,19 +337,19 @@
     if (!S.host) { dot('off'); say(NATIVE ? 'Looking for a Downstage One. Or type your Companion\u2019s address, like 192.168.1.20.' : 'Type your Companion\u2019s address, like 192.168.1.20.'); return; }
     if (S.ws) { const w = S.ws; S.ws = null; w.onclose = null; try { w.close(); } catch (e) {} }
     clearInterval(S.ping);
-    S.ok = false; dot(''); say('Joining Companion at ' + S.host + '…');
+    S.decks.forEach(d => d.ok = false); dot(''); say('Joining Companion at ' + S.host + '…');
     let ws;
     try { ws = new WebSocket('ws://' + S.host + ':16623'); }
     catch (e) { dot('off'); say('That Companion address doesn’t look right.'); return; }
     S.ws = ws;
     ws.onopen = () => {
-      addDevice();
+      S.decks.forEach(addDevice);
       S.ping = setInterval(() => send('PING ds'), 2000);     // Companion drops a quiet socket after 5 s
     };
     ws.onmessage = e => String(e.data).split('\n').forEach(l => l && line(l));
     ws.onclose = () => {
       if (S.ws !== ws) return;
-      clearInterval(S.ping); S.ws = null; S.ok = false; dot('off');
+      clearInterval(S.ping); S.ws = null; S.decks.forEach(d => d.ok = false); dot('off');
       say('Companion isn’t answering at ' + S.host + ' (Satellite port 16623, Companion 4.0 or later). Trying again…');
       S.retry = setTimeout(connect, 3000);
     };
@@ -249,92 +361,376 @@
     return [cmd.toUpperCase(), args, l.slice(sp + 1)];
   }
   function line(l) {
-    const [cmd, a, rest] = parse(l);
+    const [cmd, a, rest] = parse(l), d = S.decks.find(x => deviceId(x) === a.DEVICEID) || S.decks[0];
     if (cmd === 'ADD-DEVICE') {
-      if (/^OK/.test(rest)) { S.ok = true; dot('ok'); say(''); }
-      else if (/^ERROR/.test(rest)) { S.ok = false; dot('off'); say('Companion refused this deck: ' + (a.MESSAGE || rest)); }
+      if (/^OK/.test(rest)) { d.ok = true; dot(allOk() ? 'ok' : ''); if (allOk()) say(''); }
+      else if (/^ERROR/.test(rest)) { d.ok = false; dot('off'); say('Companion refused this deck: ' + (a.MESSAGE || rest)); }
     } else if (cmd === 'KEY-STATE') {
       const n = +a.KEY;
       if (isNaN(n)) return;
-      if (a.BITMAP !== undefined) paint(n, a.BITMAP ? image(a.BITMAP) : '');
-      const el = $('deck').querySelector('[data-k="' + n + '"]');
+      if (a.BITMAP !== undefined) paint(d, n, a.BITMAP ? image(a.BITMAP) : '');
+      const el = d.el && d.el.querySelector('.deckgrid [data-k="' + n + '"]');
       if (el) el.classList.toggle('down', a.PRESSED === '1' || a.PRESSED === 'true');
     } else if (cmd === 'KEYS-CLEAR') {
-      S.imgs = {};
-      for (const el of $('deck').querySelectorAll('[data-k]')) el.innerHTML = el.classList.contains('dial') ? '<i></i>' : '';
+      d.imgs = {};
+      if (d.el) for (const el of d.el.querySelectorAll('.deckgrid [data-k]')) el.innerHTML = el.classList.contains('dial') ? '<i></i>' : '';
     } else if (cmd === 'PING') send('PONG ' + rest);
   }
   // A new deck is a new surface: the old one leaves Companion's live list, the new one joins
-  function changeDeck(change) {
-    const old = deviceId();
-    if (S.ok) send('REMOVE-DEVICE DEVICEID="' + old + '"');
+  function changeDeck(d, change) {
+    if (d.ok) send('REMOVE-DEVICE DEVICEID="' + deviceId(d) + '"');
     change();
-    S.imgs = {}; S.ok = false;
-    build();
-    if (S.ws && S.ws.readyState === 1) { dot(''); addDevice(); } else connect();
+    saveDecks();
+    d.imgs = {}; d.ok = false;
+    build(d);
+    if (S.ws && S.ws.readyState === 1) { dot(''); addDevice(d); } else connect();
+  }
+  function addDeck() {
+    const used = S.decks.map(d => d.n);
+    let n = 1; while (used.includes(n)) n++;
+    const d = newDeck(n, S.sel.model, S.sel.cols, S.sel.rows);
+    S.decks.push(d);
+    saveDecks();
+    build(d);
+    select(d);
+    if (S.ws && S.ws.readyState === 1) { dot(''); addDevice(d); } else connect();
+  }
+  function removeDeck(d) {
+    if (S.decks.length < 2) return;
+    if (d.ok) send('REMOVE-DEVICE DEVICEID="' + deviceId(d) + '"');
+    d.el.remove();
+    S.decks = S.decks.filter(x => x !== d);
+    saveDecks();
+    select(S.decks[0]);
+    layout();
+    dot(allOk() ? 'ok' : '');
   }
 
   // ── pressing: a key goes down on touch and up on lift; a dial presses when tapped
   // and turns when dragged (a step per 22 px), or under a wheel or trackpad ──
   let cur = null;
+  // A touchscreen has no right click: holding the screen or a deck's frame opens the menu. Never a key, because holding
+  // one is a real press in Companion, and never the logo
+  function endHold() { if (S.hold) { clearTimeout(S.hold.timer); S.hold = null; } }
+  function startHold(e, d) {
+    endHold();
+    if (!e.target.closest('#stage') || e.target.closest('.deckgrid, .grip')) return;
+    if (d) {
+      const r = d.el.querySelector('.lip svg').getBoundingClientRect();
+      if (e.clientX > r.left - 10 && e.clientX < r.right + 10 && e.clientY > r.top - 10 && e.clientY < r.bottom + 10) return;
+    }
+    const x = e.clientX, y = e.clientY;
+    S.hold = { x, y, timer: setTimeout(() => {
+      S.hold = null;
+      if (cur && cur.kind === 'move') { cur.d.el.classList.remove('grabbed'); cur = null; }
+      try { window.webkit.messageHandlers.press.postMessage(1); } catch (_) {}
+      if (d) select(d);
+      openMenu(x, y, d);
+    }, 500) };
+  }
   document.addEventListener('pointerdown', e => {
-    const el = e.target.closest('#deck [data-k]');
-    if (!el || !S.ok) return;
+    if (!e.target.closest || e.target.closest('#ctx')) return;
+    closeMenu();
+    if (e.button || e.ctrlKey) return;      // a right click opens the menu, it never presses a key
+    const d0 = deckAt(e.target);
+    if (e.pointerType === 'touch') startHold(e, d0);
+    if (d0 && d0 !== S.sel) select(d0);
+    // the deck's frame moves it, straight away. The keys and the gaps between them never do
+    if (d0 && !document.body.classList.contains('bare') && !e.target.closest('.deckgrid') && !e.target.closest('.grip')) {
+      e.preventDefault();
+      cur = { kind: 'move', d: d0, x: e.clientX, y: e.clientY, ox: d0.x, oy: d0.y, armed: true, moved: false };
+      select(d0);
+      try { d0.el.setPointerCapture(e.pointerId); } catch (_) {}
+      return;
+    }
+    if (d0 && e.target.closest('.grip')) {
+      e.preventDefault();
+      cur = { kind: 'size', d: d0, x: e.clientX, y: e.clientY, cell: d0.cell, ox: d0.x, oy: d0.y, armed: true };
+      select(d0);
+      try { e.target.setPointerCapture(e.pointerId); } catch (_) {}
+      return;
+    }
+    const el = e.target.closest('.deckgrid [data-k]');
+    if (!el || !d0 || !d0.ok) return;
     const n = +el.dataset.k, dial = el.classList.contains('dial');
-    cur = { el, n, dial, x: e.clientX, y: e.clientY, moved: 0, pressed: false };
+    cur = { kind: 'key', d: d0, el, n, dial, x: e.clientX, y: e.clientY, moved: 0, pressed: false };
     try { el.setPointerCapture(e.pointerId); } catch (_) {}
-    if (!dial) { send('KEY-PRESS DEVICEID="' + deviceId() + '" KEY=' + n + ' PRESSED=1'); cur.pressed = true; el.classList.add('down'); }
+    if (!dial) { send('KEY-PRESS DEVICEID="' + deviceId(d0) + '" KEY=' + n + ' PRESSED=1'); cur.pressed = true; el.classList.add('down'); }
     e.preventDefault();
   });
   document.addEventListener('pointermove', e => {
-    if (!cur || !cur.dial) return;
+    if (S.hold && Math.hypot(e.clientX - S.hold.x, e.clientY - S.hold.y) > 8) endHold();
+    if (!cur) return;
+    if (cur.kind === 'move') {
+      const dx = e.clientX - cur.x, dy = e.clientY - cur.y;
+      if (!cur.moved && Math.hypot(dx, dy) < 3) return;
+      cur.moved = true;
+      cur.d.el.classList.add('grabbed');
+      const b = stageBox(), at = snapMove(cur.d, cur.ox + dx, cur.oy + dy, b, e.altKey);
+      place(cur.d, at.x, at.y, b);
+      return;
+    }
+    if (cur.kind === 'size') {
+      // dragging the corner out grows the deck, and its top left stays put
+      const s = spec(cur.d), b = stageBox();
+      const across = (e.clientX - cur.x) / (s.cols + .68), down = (e.clientY - cur.y) / (s.rows + (hasDials(s) ? 1.5 : 0) + .85);
+      let cell = Math.max(16, Math.round(cur.cell + Math.max(across, down)));
+      // keys snap to the same size as another deck's, so a pair matches
+      if (S.snap && !e.altKey) { const same = S.decks.find(o => o !== cur.d && Math.abs(o.cell - cell) <= 3); if (same) cell = same.cell; }
+      setSize(cur.d, cell, gapFor(b.W, b.H));
+      while (cell > 16 && (cur.ox + cur.d.el.offsetWidth > b.W || cur.oy + cur.d.el.offsetHeight > b.H)) { cell--; setSize(cur.d, cell, gapFor(b.W, b.H)); }
+      place(cur.d, cur.ox, cur.oy, b);
+      return;
+    }
+    if (!cur.dial) return;
     const dx = e.clientX - cur.x, dy = cur.y - e.clientY, d = Math.abs(dx) >= Math.abs(dy) ? dx : dy;
     if (Math.abs(d) < 22) return;
-    turn(cur.el, d > 0 ? 1 : 0);
+    turn(cur.d, cur.el, d > 0 ? 1 : 0);
     cur.x = e.clientX; cur.y = e.clientY; cur.moved++;
   });
-  function turn(el, dir) {
+  function turn(d, el, dir) {
     const n = +el.dataset.k;
-    send('KEY-ROTATE DEVICEID="' + deviceId() + '" KEY=' + n + ' DIRECTION=' + dir);
-    S.angle[n] = (S.angle[n] || 0) + (dir ? 15 : -15);
+    send('KEY-ROTATE DEVICEID="' + deviceId(d) + '" KEY=' + n + ' DIRECTION=' + dir);
+    d.angle[n] = (d.angle[n] || 0) + (dir ? 15 : -15);
     const t = el.querySelector('i');
-    if (t) t.style.transform = 'rotate(' + S.angle[n] + 'deg)';
+    if (t) t.style.transform = 'rotate(' + d.angle[n] + 'deg)';
+  }
+  // Moving snaps a deck's edges and middle to the stage and to the other decks. The right click menu turns it off, and Option does for one drag
+  const SNAP = 8;
+  function nearest(want, spots) {
+    let best = null;
+    for (const [at, line] of spots) if (Math.abs(at - want) <= SNAP && (!best || Math.abs(at - want) < Math.abs(best[0] - want))) best = [at, line];
+    return best;
+  }
+  function snapMove(d, x, y, b, off) {
+    if (off || !S.snap) return { x, y };
+    const w = d.el.offsetWidth, h = d.el.offsetHeight;
+    const xs = [[0, 0], [b.W - w, b.W], [(b.W - w) / 2, b.W / 2]], ys = [[0, 0], [b.H - h, b.H], [(b.H - h) / 2, b.H / 2]];
+    for (const o of S.decks) {
+      if (o === d || !o.el) continue;
+      const ow = o.el.offsetWidth, oh = o.el.offsetHeight;
+      xs.push([o.x, o.x], [o.x + ow - w, o.x + ow], [o.x + (ow - w) / 2, o.x + ow / 2], [o.x + ow, o.x + ow], [o.x - w, o.x]);
+      ys.push([o.y, o.y], [o.y + oh - h, o.y + oh], [o.y + (oh - h) / 2, o.y + oh / 2], [o.y + oh, o.y + oh], [o.y - h, o.y]);
+    }
+    const sx = nearest(x, xs), sy = nearest(y, ys);
+    return { x: sx ? sx[0] : x, y: sy ? sy[0] : y };
+  }
+  function savePos(d) {
+    const b = stageBox();
+    d.pos[posKey(b)] = { x: b.W ? d.x / b.W : 0, y: b.H ? d.y / b.H : 0, cell: d.cell, s: Math.min(b.W, b.H) };
+    saveDecks();
+    layout();
   }
   function lift() {
+    endHold();
     if (!cur) return;
-    const id = deviceId(), n = cur.n;
-    if (cur.dial && !cur.moved) { send('KEY-PRESS DEVICEID="' + id + '" KEY=' + n + ' PRESSED=1'); setTimeout(() => send('KEY-PRESS DEVICEID="' + id + '" KEY=' + n + ' PRESSED=0'), 120); }
-    if (cur.pressed) { send('KEY-PRESS DEVICEID="' + id + '" KEY=' + n + ' PRESSED=0'); cur.el.classList.remove('down'); }
-    cur = null;
+    const c = cur; cur = null;
+    if (c.kind === 'move' || c.kind === 'size') {
+      c.d.el.classList.remove('grabbed');
+      if (c.kind === 'size' || c.moved) savePos(c.d);
+      return;
+    }
+    const id = deviceId(c.d), n = c.n;
+    if (c.dial && !c.moved) { send('KEY-PRESS DEVICEID="' + id + '" KEY=' + n + ' PRESSED=1'); setTimeout(() => send('KEY-PRESS DEVICEID="' + id + '" KEY=' + n + ' PRESSED=0'), 120); }
+    if (c.pressed) { send('KEY-PRESS DEVICEID="' + id + '" KEY=' + n + ' PRESSED=0'); c.el.classList.remove('down'); }
   }
   document.addEventListener('pointerup', lift);
   document.addEventListener('pointercancel', lift);
   document.addEventListener('wheel', e => {
-    const el = e.target.closest('#deck .dial[data-k]');
-    if (!el || !S.ok) return;
+    const el = e.target.closest('.deckgrid .dial[data-k]'), d = el && deckAt(el);
+    if (!d || !d.ok) return;
     e.preventDefault();
-    turn(el, e.deltaY < 0 || e.deltaX > 0 ? 1 : 0);
+    turn(d, el, e.deltaY < 0 || e.deltaX > 0 ? 1 : 0);
   }, { passive: false });
-  window.addEventListener('beforeunload', () => { if (S.ok) send('REMOVE-DEVICE DEVICEID="' + deviceId() + '"'); });
-  new ResizeObserver(fit).observe($('stage'));
+  window.addEventListener('beforeunload', () => { for (const d of S.decks) if (d.ok) send('REMOVE-DEVICE DEVICEID="' + deviceId(d) + '"'); });
+  new ResizeObserver(layout).observe($('stage'));
+
+  // ── shows: named sets of decks and where they sit. The connection isn't kept, because every venue's network differs ──
+  const shows = { list: {}, now: store.get('show', '') };
+  try { shows.list = JSON.parse(store.get('shows', '{}')) || {}; } catch (e) {}
+  if (!shows.list[shows.now]) shows.now = '';
+  const showNames = () => Object.keys(shows.list).sort((a, b) => a.localeCompare(b));
+  const showChanged = () => !shows.now || JSON.stringify(shows.list[shows.now]) !== JSON.stringify(layoutNow());
+  function writeShows() { store.set('shows', JSON.stringify(shows.list)); store.set('show', shows.now); paintShows(); }
+  function paintShows() {
+    const f = $('show'), names = showNames(), changed = showChanged();
+    f.innerHTML = (shows.now ? '' : '<option value="">Untitled show</option>') +
+      names.map(n => '<option value="s:' + esc(n) + '">' + esc(n) + (n === shows.now && changed ? ' (changed)' : '') + '</option>').join('') +
+      '<option disabled>\u2500\u2500\u2500</option><option value="new">New show</option><option value="saveas">Save as\u2026</option>' +
+      (shows.now ? '<option value="rename">Rename\u2026</option><option value="delete">Delete\u2026</option>' : '');
+    f.value = shows.now ? 's:' + shows.now : '';
+    $('saveShow').disabled = !!shows.now && !changed;
+  }
+  function askSheet(o) {
+    $('sheetTitle').textContent = o.title;
+    $('sheetText').textContent = o.text || '';
+    $('sheetName').style.display = o.name === undefined ? 'none' : '';
+    $('sheetName').value = o.name || '';
+    $('sheetName').placeholder = 'Show name';
+    $('sheetGo').textContent = o.go;
+    $('sheetGo').classList.toggle('danger', !!o.danger);
+    $('sheetAlt').textContent = o.alt || '';
+    S.sheet = o;
+    $('sheet').classList.add('on');
+    if (o.name !== undefined) { $('sheetName').focus(); $('sheetName').select(); }
+  }
+  const closeSheet = () => { $('sheet').classList.remove('on'); S.sheet = null; paintShows(); };
+  $('sheetBox').onsubmit = e => {
+    e.preventDefault();
+    const o = S.sheet, v = $('sheetName').value.trim();
+    if (o.name !== undefined && !v) { $('sheetName').focus(); return; }
+    closeSheet(); o.done(v);
+  };
+  $('sheetAlt').onclick = () => { const o = S.sheet; closeSheet(); o.other(); };
+  $('sheetCancel').onclick = closeSheet;
+  $('sheet').addEventListener('pointerdown', e => { if (e.target === $('sheet')) closeSheet(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && S.sheet) closeSheet(); });
+  function keepShow(name) { shows.list[name] = JSON.parse(JSON.stringify(layoutNow())); shows.now = name; writeShows(); }
+  function saveAs() {
+    askSheet({ title: 'Save show', name: shows.now || '', go: 'Save', done: name => {
+      if (shows.list[name] && name !== shows.now) askSheet({ title: 'Replace "' + name + '"?', text: 'A show already has that name.', go: 'Replace', danger: true, done: () => keepShow(name) });
+      else keepShow(name);
+    } });
+  }
+  const saveShow = () => shows.now ? keepShow(shows.now) : saveAs();
+  // Every surface leaves Companion and the show's decks join; a deck's id comes from its number, so Companion still knows its page
+  function applyLayout(list) {
+    for (const d of S.decks) { if (d.ok) send('REMOVE-DEVICE DEVICEID="' + deviceId(d) + '"'); if (d.el) d.el.remove(); }
+    S.decks = list.map(d => newDeck(d.n, d.model, d.cols, d.rows, JSON.parse(JSON.stringify(d.pos || {}))));
+    store.set('decks', JSON.stringify(layoutNow()));
+    S.decks.forEach(build);
+    select(S.decks[0]);
+    if (S.ws && S.ws.readyState === 1) { dot(''); S.decks.forEach(addDevice); } else connect();
+  }
+  // Leaving a changed show asks first, and Cancel leaves everything as it was
+  function leaving(then) {
+    if (!showChanged() || (!shows.now && S.decks.length === 1 && !Object.keys(S.decks[0].pos).length)) return then();
+    askSheet({ title: 'Save "' + (shows.now || 'Untitled show') + '" first?', go: 'Save', alt: 'Don\u2019t save', other: then, done: () => {
+      if (shows.now) { keepShow(shows.now); then(); }
+      else askSheet({ title: 'Save show', name: '', go: 'Save', done: name => { keepShow(name); then(); } });
+    } });
+  }
+  function openShow(name) { leaving(() => { shows.now = name; applyLayout(shows.list[name]); writeShows(); }); }
+  function newShow() { leaving(() => { shows.now = ''; applyLayout([{ n: 1, model: S.decks[0].model, cols: S.decks[0].cols, rows: S.decks[0].rows, pos: {} }]); writeShows(); }); }
+  $('show').onchange = () => {
+    const v = $('show').value;
+    paintShows();
+    if (v.startsWith('s:')) { if (v.slice(2) !== shows.now) openShow(v.slice(2)); }
+    else if (v === 'new') newShow();
+    else if (v === 'saveas') saveAs();
+    else if (v === 'rename') askSheet({ title: 'Rename show', name: shows.now, go: 'Rename', done: name => {
+      if (name === shows.now) return;
+      if (shows.list[name]) { askSheet({ title: 'That name is taken', text: 'Another show is already called "' + name + '".', go: 'OK', done: () => {} }); return; }
+      shows.list[name] = shows.list[shows.now]; delete shows.list[shows.now]; shows.now = name; writeShows();
+    } });
+    else if (v === 'delete') askSheet({ title: 'Delete "' + shows.now + '"?', text: 'The decks on screen stay as they are.', go: 'Delete', danger: true, done: () => { delete shows.list[shows.now]; shows.now = ''; writeShows(); } });
+  };
+  $('saveShow').onclick = saveShow;
+  document.addEventListener('keydown', e => { if ((e.metaKey || e.ctrlKey) && e.key === 's') { e.preventDefault(); saveShow(); } });
+
+  // ── the right click menu: this deck's type, then the things for all of them ──
+  function closeMenu() { $('ctx').classList.remove('on'); }
+  const glyph = d => '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>';
+  const ICON = {
+    show: glyph('<rect x="2" y="6" width="12" height="8" rx="1"/><path d="M2 6l11-3 .7 2.4M5.2 5.1l1 2.4M8.8 4.1l1 2.4"/>'),
+    save: glyph('<path d="M3 2.5h8l2.5 2.5v8.5H3z"/><path d="M5.5 2.5v3.5h4.5V2.5M5 13.5V9h6v4.5"/>'),
+    saveAs: glyph('<path d="M7 13.5H3v-11h8l2.5 2.5V7"/><path d="M5.5 2.5v3.5h4.5V2.5"/><path d="M9 14l.5-2 3.5-3.5 1.5 1.5-3.5 3.5z"/>'),
+    add: glyph('<rect x="2" y="2" width="12" height="12" rx="2"/><path d="M8 5v6M5 8h6"/>'),
+    remove: glyph('<path d="M2.5 4.5h11M6 4.5V2.5h4v2M4 4.5l.7 9h6.6l.7-9M6.7 7v4M9.3 7v4"/>'),
+    arrange: glyph('<rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/>'),
+    snap: glyph('<path d="M3 2.5v6a5 5 0 0 0 10 0v-6h-3v6a2 2 0 0 1-4 0v-6zM3 5.5h3M10 5.5h3"/>'),
+    surfaces: glyph('<path d="M9 2.5h4.5V7M13.5 2.5L7.5 8.5"/><path d="M11.5 9.5v4h-9v-9h4"/>'),
+    keys: glyph('<rect x="2" y="3" width="12" height="10" rx="1.5"/><path d="M5 6h.01M8 6h.01M11 6h.01M5 10h.01M8 10h.01M11 10h.01" stroke-width="2"/>'),
+    controls: glyph('<path d="M2 4.5h7M12 4.5h2M2 11.5h2M7 11.5h7"/><circle cx="10.5" cy="4.5" r="1.5"/><circle cx="5.5" cy="11.5" r="1.5"/>'),
+  };
+  // a deck's icon is its own shape: its keys in their rows, with dials under them on the ones that have them
+  function deckIcon(k) {
+    const m = MODELS[k];
+    if (k === 'custom') return glyph('<rect x="2" y="2" width="12" height="12" rx="1.5" stroke-dasharray="2 2"/><path d="M8 5.5v5M5.5 8h5"/>');
+    const rows = m.rows + (m.dials ? 1 : 0), cell = Math.min(13 / m.cols, 11 / rows), w = cell * m.cols, h = cell * rows, x0 = (16 - w) / 2, y0 = (16 - h) / 2;
+    let out = '';
+    for (let r = 0; r < m.rows; r++) for (let c = 0; c < m.cols; c++) out += '<rect x="' + (x0 + c * cell + .3).toFixed(2) + '" y="' + (y0 + r * cell + .3).toFixed(2) + '" width="' + (cell - .6).toFixed(2) + '" height="' + (cell - .6).toFixed(2) + '" rx=".5" fill="currentColor" stroke="none"/>';
+    if (m.dials) for (const c of m.dials) out += '<circle cx="' + (x0 + (c + .5) * cell).toFixed(2) + '" cy="' + (y0 + (m.rows + .5) * cell).toFixed(2) + '" r="' + (cell * .38).toFixed(2) + '" fill="currentColor" stroke="none"/>';
+    return glyph(out);
+  }
+  const item = (a, icon, text, o) => '<button data-a="' + a + '"' + (o && o.v !== undefined ? ' data-v="' + esc(o.v) + '"' : '') + (o && o.danger ? ' class="danger"' : '') + '><i>' + icon + '</i><span>' + esc(text) + '</span>' + (o && o.on ? '<b class="ck">✓</b>' : '') + '</button>';
+  function openMenu(x, y, d) {
+    const rows = [], bare = document.body.classList.contains('bare');
+    if (d) {
+      rows.push('<div class="ctxh">Deck ' + (S.decks.indexOf(d) + 1) + '</div>');
+      for (const [k, m] of Object.entries(MODELS)) rows.push(item('model', deckIcon(k), m.name, { v: k, on: d.model === k }));
+      rows.push('<hr>');
+    }
+    const names = showNames();
+    if (names.length) {
+      rows.push('<div class="ctxh">Shows</div>');
+      for (const n of names) rows.push(item('show', ICON.show, n, { v: n, on: n === shows.now }));
+    }
+    rows.push(item('saveShow', ICON.save, 'Save Show'), item('saveAs', ICON.saveAs, 'Save Show As…'), '<hr>');
+    rows.push(item('add', ICON.add, 'Add Deck'));
+    if (d && S.decks.length > 1) rows.push(item('remove', ICON.remove, 'Remove This Deck', { danger: true }));
+    if (S.decks.some(x => Object.keys(x.pos).length)) rows.push(item('arrange', ICON.arrange, 'Arrange Decks'));
+    rows.push(item('snap', ICON.snap, 'Snapping', { on: S.snap }));
+    rows.push('<hr>');
+    if (S.host) rows.push(item('surfaces', ICON.surfaces, 'Open Surfaces in Companion'));
+    rows.push(item('bare', bare ? ICON.controls : ICON.keys, bare ? 'Show Controls' : 'Keys Only'));
+    const m = $('ctx');
+    m.innerHTML = rows.join('');
+    m.ctxDeck = d;
+    m.classList.add('on');
+    m.style.left = Math.max(4, Math.min(x, innerWidth - m.offsetWidth - 4)) + 'px';
+    m.style.top = Math.max(4, Math.min(y, innerHeight - m.offsetHeight - 4)) + 'px';
+  }
+  document.addEventListener('contextmenu', e => {
+    if (e.target.closest && e.target.closest('input')) return;
+    e.preventDefault();
+    const d = e.target.closest ? deckAt(e.target) : null;
+    if (d) select(d);
+    openMenu(e.clientX, e.clientY, d);
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
+  window.addEventListener('blur', closeMenu);
+  $('ctx').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    const d = $('ctx').ctxDeck, a = b.dataset.a;
+    closeMenu();
+    if (a === 'model' && d.model !== b.dataset.v) changeDeck(d, () => { d.model = b.dataset.v; paintHeader(); });
+    else if (a === 'show') { if (b.dataset.v !== shows.now) openShow(b.dataset.v); }
+    else if (a === 'saveShow') saveShow();
+    else if (a === 'saveAs') saveAs();
+    else if (a === 'add') addDeck();
+    else if (a === 'remove') removeDeck(d);
+    else if (a === 'arrange') $('arrange').click();
+    else if (a === 'snap') { S.snap = !S.snap; store.set('snap', S.snap ? '1' : '0'); }
+    else if (a === 'surfaces') $('surfaces').click();
+    else if (a === 'bare') setBare(!document.body.classList.contains('bare'));
+  });
 
   // ── finding a One: the Mac app browses Bonjour and calls this with what's on the network ──
   const NATIVE = !!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.finder);
   function useHost(host, oneId) {
     S.guess = false;
+    S.typing = false;
     S.oneId = oneId;
     store.set('one', oneId);
     store.set('host', oneId ? '' : host);
     $('host').value = host;
     if (host === S.host && S.ws) { paintFound(); return; }
-    S.host = host; S.imgs = {}; build(); paintHeader(); connect();
+    S.host = host; for (const d of S.decks) { d.imgs = {}; build(d); } paintHeader(); paintFound(); connect();
   }
+  // One control for where this deck connects: the Ones on the network, or an address. The box only shows when one is needed
   function paintFound() {
-    const f = $('found');
-    f.classList.toggle('on', S.ones.length > 0);
-    f.innerHTML = '<option value="">' + (S.ones.length === 1 ? '1 One found' : S.ones.length + ' Ones found') + '</option>' +
-      S.ones.map(o => '<option value="' + esc(o.id) + '">' + esc(o.name) + ' (' + esc(o.host) + ')</option>').join('');
-    f.value = S.ones.some(o => o.id === S.oneId && o.host === S.host) ? S.oneId : '';
+    const f = $('found'), n = S.ones.length, on = S.ones.find(o => o.id === S.oneId && o.host === S.host);
+    const label = o => S.ones.filter(x => x.name === o.name).length > 1 ? o.name + ' (' + o.host + ')' : o.name;
+    const typed = !on && (S.typing || (!!S.host && !S.guess));
+    f.classList.toggle('on', n > 0);
+    f.innerHTML = (on || typed ? '' : '<option value="">' + (n === 1 ? 'Downstage One Found' : n + ' Downstage Ones Found') + '</option>') +
+      S.ones.map(o => '<option value="' + esc(o.id) + '">' + esc(label(o)) + '</option>').join('') +
+      '<option value="other">Other address\u2026</option>';
+    f.value = on ? S.oneId : typed ? 'other' : '';
+    f.title = on ? on.host : 'Downstage Ones on this network';
+    $('hostBox').classList.toggle('on', !n || typed);
   }
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   window.onesFound = list => {
@@ -346,14 +742,16 @@
     // a Companion already working on this Mac stays
     clearTimeout(S.pick);
     S.pick = setTimeout(() => {
-      if ((S.host && !(S.guess && !S.ok)) || !S.ones.length) return;
+      if ((S.host && !(S.guess && !allOk())) || !S.ones.length) return;
       if (S.ones.length === 1) useHost(S.ones[0].host, S.ones[0].id);
-      else say('Found ' + S.ones.length + ' Ones. Choose one above, or type a Companion address.');
+      else say('More than one Downstage One is here. Choose one above, or type a Companion address.');
     }, 1500);
   };
   $('found').onchange = () => {
-    const o = S.ones.find(x => x.id === $('found').value);
+    const v = $('found').value, o = S.ones.find(x => x.id === v);
+    S.typing = v === 'other';
     if (o) useHost(o.host, o.id); else paintFound();
+    if (S.typing) { $('host').focus(); $('host').select(); }
   };
 
   // ── updates: only inside the Mac app (macapp/updater.swift). A check at launch stays quiet unless there's
@@ -381,25 +779,32 @@
 
   // ── the header ──
   $('model').innerHTML = Object.entries(MODELS).map(([k, m]) => '<option value="' + k + '">' + m.name + '</option>').join('');
-  $('model').value = S.model;
   $('host').value = S.host;
-  $('cols').value = S.cols;
-  $('rows').value = S.rows;
   function paintHeader() {
-    $('custom').classList.toggle('on', S.model === 'custom');
+    const d = S.sel;
+    $('model').value = d.model;
+    $('deckName').textContent = S.decks.length > 1 ? 'Deck ' + (S.decks.indexOf(d) + 1) : 'Deck';
+    $('cols').value = d.cols;
+    $('rows').value = d.rows;
+    $('custom').classList.toggle('on', d.model === 'custom');
     $('surfaces').style.display = S.host ? '' : 'none';
     $('surfaces').href = 'http://' + S.host + ':8000/#/surfaces';
-    document.title = 'Virtual Deck: ' + spec().name;
+    $('removeDeck').style.display = S.decks.length > 1 ? 'inline-block' : 'none';
+    $('addDeck').style.display = S.decks.length < 8 ? '' : 'none';
+    document.title = 'Virtual Deck: ' + spec(d).name;
   }
-  $('model').onchange = () => changeDeck(() => { S.model = $('model').value; store.set('model', S.model); paintHeader(); });
+  $('model').onchange = () => { const d = S.sel; changeDeck(d, () => { d.model = $('model').value; paintHeader(); }); };
   const gridChange = () => {
-    const c = clamp($('cols').value, 1, 32, S.cols), r = clamp($('rows').value, 1, 16, S.rows);
+    const d = S.sel, c = clamp($('cols').value, 1, 32, d.cols), r = clamp($('rows').value, 1, 16, d.rows);
     $('cols').value = c; $('rows').value = r;
-    if (c === S.cols && r === S.rows) return;
-    changeDeck(() => { S.cols = c; S.rows = r; store.set('cols', c); store.set('rows', r); paintHeader(); });
+    if (c === d.cols && r === d.rows) return;
+    changeDeck(d, () => { d.cols = c; d.rows = r; paintHeader(); });
   };
   $('cols').onchange = gridChange;
   $('rows').onchange = gridChange;
+  $('addDeck').onclick = addDeck;
+  $('removeDeck').onclick = () => removeDeck(S.sel);
+  $('arrange').onclick = () => { for (const d of S.decks) d.pos = {}; saveDecks(); layout(); };
   $('host').onchange = () => {
     const v = $('host').value.trim().replace(/^https?:\/\//, '').replace(/[:/].*$/, '');
     if (!v) { $('host').value = S.host; return; }
@@ -410,11 +815,14 @@
   $('exit-bare').onclick = () => setBare(false);
   setBare(store.get('bare', '0') === '1');
 
-  paintHeader();
-  build();
+  S.decks.forEach(build);
+  select(S.decks[0]);
+  paintFound();
+  paintShows();
   connect();
-  // no One and nothing typed: a Companion on this Mac is the next best guess, and a One found later still wins
-  if (NATIVE && !S.host) setTimeout(() => {
+  // no One and nothing typed: a Companion on this Mac is the next best guess, and a One found later still wins.
+  // Not on an iPhone or iPad, which can't run Companion
+  if (NATIVE && !S.host && !window.downstageMobile) setTimeout(() => {
     if (S.host) return;
     S.guess = true; S.host = '127.0.0.1'; $('host').value = S.host; paintHeader(); connect();
   }, 4000);
