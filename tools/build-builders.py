@@ -90,8 +90,8 @@ def show_html(t):
     t = sub(t, r'<section class="card suggest".*?</section>', "", "Show Builder: suggest card", re.S)
     t = sub(t, r'function openOnePop\(\)\{.*?(?=\(async \(\)=>\{\n  load\(\);)', "", "Show Builder: One popup and flyer", re.S)
     t = sub(t, r'<button class="btn small" id="quit">', '<button class="btn small" id="quit" style="display:none">', "Show Builder: Quit")
-    t = sub(t, r'<label class="field">Companion <input id="host" size="18"></label>',
-            '<label class="field" style="display:none">Companion <input id="host" size="18"></label>', "Show Builder: Companion address")
+    t = sub(t, r'<label class="field">Companion (<input id="host"[^>]*>)</label>',
+            '<label class="field" style="display:none">Companion <input id="host" size="16" spellcheck="false"></label>', "Show Builder: Companion address")
     t = sub(t, r'href="http://\$\{esc\(M\.companion\)\}/buttons', 'href="http://${esc(' + ONE_HOST + ')}/buttons', "Show Builder: Open in Companion")
     t = sub(t, r'<button class="btn small" data-showfolder [^>]*>Show folder</button>', "", "Show Builder: Show folder")
     # a show can leave the One: Open... already takes a file from this computer
@@ -118,6 +118,8 @@ def show_py(t):
     t = sub(t, r'SS_BUILDER = os\.path\.join\(os\.path\.dirname\(PROJECT\), "ATEM SS Builder"\)\nif DATA:.*?\n_SSLOOKS = \{\}',
             'SS_BUILDER = os.environ["DOWNSTAGE_SS_DATA"]   # the One: SuperSource Builder\'s data folder here\n_SSLOOKS = {}',
             "Show Builder: SS_BUILDER", re.S)
+    # the Mac app's fallback to Documents: the One's folder is always this one, even before it exists
+    t = sub(t, r'def ss_builder_folder\(\):\n.*?\n\n\n', 'def ss_builder_folder():\n    pass\n\n\n', "Show Builder: SS folder fallback", re.S)
     t = sub(t, r'SHOW_FOLDER = os\.path\.expanduser\("~/Documents/Downstage Shows"\)', 'SHOW_FOLDER = os.path.join(DATA, "Downstage Shows")', "Show Builder: show folder")
     t = sub(t, r'DOWNLOADS = os\.path\.expanduser\("~/Downloads"\)',
             'DOWNLOADS = os.path.join(DATA, "downloads")\nos.makedirs(DOWNLOADS, exist_ok=True)', "Show Builder: downloads")

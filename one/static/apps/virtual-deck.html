@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>Virtual Deck</title>
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <!-- Downstage Virtual Deck: a Stream Deck on screen, any model or any grid. It joins
      Companion as a surface over its Satellite WebSocket (port 16623), so it needs no
      server of its own: the same page runs in the Mac app and from the One. -->
@@ -52,7 +52,7 @@
   #say { flex: none; padding: 6px 14px; font-size: 13px; color: var(--muted); }
   #say:empty { display: none; }
   /* the deck itself: an aluminum body, glass keys in their wells, knurled dials */
-  #stage { flex: 1; min-height: 0; position: relative; overflow: hidden; padding: 18px;
+  #stage { flex: 1; min-height: 0; position: relative; overflow: hidden; padding: 18px; touch-action: none;
            background: radial-gradient(ellipse 70% 60% at 50% 42%, #1a2027 0%, var(--ground) 72%); }
   .chassis { position: absolute; padding: var(--pad) var(--pad) calc(var(--pad) * 1.5); border-radius: calc(var(--cell) * .3 + 8px);
              background: linear-gradient(165deg, #2b323a 0%, #1b2026 26%, #14181d 62%, #101317 100%);
@@ -62,7 +62,17 @@
           box-shadow: inset 0 2px 5px rgba(0,0,0,.95), 0 1px 0 rgba(255,255,255,.07); }
   .lip { position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--pad) * 1.5); display: flex; align-items: center; justify-content: center; pointer-events: none; }
   .lip svg { height: 56%; max-height: 22px; min-height: 8px; width: auto; opacity: .5; }
-  .led { position: absolute; left: calc(var(--pad) * 1.05); bottom: calc(var(--pad) * .68); width: 6px; height: 6px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 6px var(--amber); pointer-events: none; }
+  /* the dot and page box sit on the logo's center line, starting at the first key's left edge, and scale with the deck */
+  .led { position: absolute; left: calc(var(--pad) * 1.38); bottom: calc(var(--pad) * .75); transform: translateY(50%); width: clamp(4px, calc(var(--pad) * .32), 9px); height: clamp(4px, calc(var(--pad) * .32), 9px); border-radius: 50%; background: var(--amber); box-shadow: 0 0 6px var(--amber); pointer-events: none; }
+  .pg { position: absolute; left: calc(var(--pad) * 1.38 + clamp(4px, calc(var(--pad) * .32), 9px) + clamp(4px, calc(var(--pad) * .35), 10px)); bottom: calc(var(--pad) * .75); transform: translateY(50%); display: inline-flex; align-items: center; gap: .5em; padding: .2em .55em; border-radius: .35em; border: 1px solid rgba(232,236,239,.16); background: rgba(0,0,0,.4); font-size: clamp(7px, calc(var(--pad) * .5), 14px); font-weight: 700; line-height: 1; white-space: nowrap; color: #e8ecef; font-variant-numeric: tabular-nums; pointer-events: none; }
+  .pg:empty { display: none; }
+  .pg.tight i { display: none; }
+  /* the arrows are small to look at but easy to hit: their touch area runs well past them, except up into the keys */
+  .pa { position: relative; display: inline-flex; align-items: center; color: rgba(232,236,239,.75); cursor: pointer; pointer-events: auto; touch-action: none; }
+  .pa::after { content: ""; position: absolute; inset: -2px -9px -10px; }
+  .pa svg { width: .6em; height: .9em; }
+  .pa:active { color: var(--green); }
+  .pg i { font-style: normal; font-weight: 500; font-size: .85em; letter-spacing: .04em; text-transform: uppercase; color: rgba(232,236,239,.55); }
   .led.ok { background: var(--green); box-shadow: 0 0 7px var(--green); }
   .led.off { background: var(--red); box-shadow: 0 0 6px var(--red); }
   .key, .seg, .dial { position: relative; overflow: hidden; touch-action: none; }
@@ -89,14 +99,15 @@
   .gap.s { height: calc(var(--cell) / 2); }
   .chassis.sel { outline: 1.5px solid rgba(47,217,123,.55); outline-offset: 2px; }
   .chassis.grabbed { filter: brightness(1.15); box-shadow: 0 30px 60px rgba(0,0,0,.8); }
-  /* drag a deck's frame to move it, its corner to resize it. Both are put away in Keys only, so a show can't knock a deck */
+  /* drag a deck's frame to move it, its corner to resize it. Both are put away when the layout is locked, so a show can't knock a deck */
   .chassis { cursor: grab; touch-action: none; }
   .chassis.grabbed { cursor: grabbing; }
   .deckgrid { cursor: default; }
-  body.bare .chassis { cursor: default; }
+  body.locked .chassis { cursor: default; }
+  body.locked #arrange { display: none !important; }
   .grip { position: absolute; right: 0; bottom: 0; width: 34px; height: 34px; cursor: nwse-resize; touch-action: none; }
-  .grip::after { content: ""; position: absolute; right: 9px; bottom: 9px; width: 11px; height: 11px; border-right: 2px solid rgba(232,236,239,.4); border-bottom: 2px solid rgba(232,236,239,.4); border-bottom-right-radius: 5px; }
-  body.bare .grip { display: none; }
+  .grip::after { content: ""; position: absolute; right: min(calc(var(--pad) * .7), 16px); bottom: calc(var(--pad) * .75 - clamp(5px, calc(var(--pad) * .45), 11px) / 2); width: clamp(5px, calc(var(--pad) * .45), 11px); height: clamp(5px, calc(var(--pad) * .45), 11px); border-right: 2px solid rgba(232,236,239,.4); border-bottom: 2px solid rgba(232,236,239,.4); border-bottom-right-radius: 40%; }
+  body.locked .grip { display: none; }
   #removeDeck, #arrange { display: none; }
   #show { max-width: 190px; }
   #sheet { display: none; position: fixed; inset: 0; z-index: 100001; align-items: center; justify-content: center; padding: 20px; background: rgba(0,0,0,.55); }
@@ -123,10 +134,48 @@
   #ctx button.danger i { color: #ff9a9d; }
   #ctx hr { margin: 5px 6px; border: 0; border-top: 1px solid var(--edge); }
   .ctxh { padding: 3px 10px 4px 8px; font-size: 12px; color: var(--muted); }
-  body.bare header, body.bare #say, body.bare #upd { display: none !important; }
-  body.bare #stage { padding: 6px; }
-  #exit-bare { display: none; position: fixed; right: 8px; top: 8px; opacity: .55; }
-  body.bare #exit-bare { display: block; }
+  .lockbtn { width: 34px; padding: 0; display: inline-flex; align-items: center; justify-content: center; color: var(--dim); }
+  .lockbtn svg { width: 16px; height: 16px; }
+  .lockbtn.on { color: var(--green); }
+  #tray { display: none; }
+  /* a narrow window: the controls sit on a tray over the decks, so opening it never moves them. Swiped up to close and down to open. Closed, it keeps the logo, status dot and lock */
+  @media (max-width: 560px), (max-height: 500px) {
+    :root { --bar-h: 54px; }
+    body::before { content: ""; flex: none; height: var(--bar-h); }
+    header { position: absolute; top: 0; left: 0; right: 0; z-index: 50000; box-shadow: 0 10px 28px rgba(0,0,0,.45); touch-action: none; }
+    html body header { padding-bottom: 24px !important; }
+    #tray { display: block; position: absolute; left: 50%; bottom: 0; width: 140px; height: 24px !important; min-height: 0 !important; margin-left: -70px; padding: 0; border: 0; background: none; }
+    #tray::after { content: ""; position: absolute; left: 50%; top: 50%; width: 40px; height: 4px; margin: -2px 0 0 -20px; border-radius: 2px; background: rgba(232,236,239,.32); }
+    #say { position: absolute; top: var(--bar-h); left: 0; right: 0; z-index: 49999; background: var(--panel); }
+    body.trayshut header { display: flex !important; flex-wrap: nowrap !important; align-items: center; gap: 10px !important; }
+    body.trayshut #lock { margin-left: auto; }
+    html body.trayshut header { padding-bottom: 10px !important; }
+    body.trayshut header > :not(svg):not(#lock):not(#connGrp):not(#tray) { display: none !important; }
+    body.trayshut #connGrp { display: flex !important; }
+    body.trayshut #connGrp > :not(#dot) { display: none !important; }
+    body.trayshut #tray { top: var(--sa-t, 0px); bottom: 0; height: auto !important; }
+  }
+  @media (max-width: 560px) {
+    header { display: grid; grid-template-columns: auto 2fr 1fr auto auto; grid-template-areas: "logo show show save lock" "conn conn model model model"; gap: 8px; }
+    header:has(#hostBox.on) { grid-template-areas: "logo show show save lock" "conn conn conn conn conn" "model model model model model"; }
+    header h1, header .rule, header .sp, #deckName { display: none !important; }
+    #showGrp, #deckGrp { display: contents !important; }
+    #connGrp { grid-area: conn; display: flex !important; min-width: 0; }
+    header > svg { grid-area: logo; align-self: center; }
+    #show { grid-area: show; width: 100%; min-width: 0; max-width: none !important; }
+    #saveShow { grid-area: save; }
+    #lock { grid-area: lock; }
+    label:has(#model) { grid-area: model; display: flex; min-width: 0; }
+    #model { flex: 1; width: 100%; min-width: 0; }
+    #found, #hostBox { flex: 1 1 0; min-width: 0; max-width: none !important; }
+    #hostBox input { width: 100%; }
+    #custom.on { grid-column: 1 / -1; display: flex; gap: 12px; }
+    #custom.on label { flex: 1; display: flex; align-items: center; gap: 8px; }
+    #custom.on input { flex: 1; width: 100%; min-width: 0; }
+    #tools { grid-column: 1 / -1; display: flex; gap: 8px; }
+    #tools > * { flex: 1 1 0; min-width: 0; padding-left: 2px !important; padding-right: 2px !important; font-size: 13px !important; white-space: nowrap; text-align: center; }
+    #tools > a.btn { display: inline-flex; align-items: center; justify-content: center; }
+  }
 </style>
 </head>
 <body>
@@ -139,7 +188,7 @@
     <button id="saveShow" title="Save this show">Save</button>
   </div>
   <span class="rule"></span>
-  <div class="grp">
+  <div class="grp" id="deckGrp">
     <label><span id="deckName">Deck</span> <select id="model"></select></label>
     <span id="custom">
       <label>Columns <input class="num" id="cols" type="number" min="1" max="32"></label>
@@ -150,21 +199,22 @@
     <button id="arrange" title="Put every deck back in its place">Arrange</button>
   </div>
   <span class="sp"></span>
-  <div class="grp">
+  <div class="grp" id="connGrp">
     <span class="dot" id="dot"></span>
     <select id="found" title="Downstage Ones on this network"></select>
     <label id="hostBox"><input class="addr" id="host" aria-label="Companion address" title="Companion address" spellcheck="false" autocapitalize="off" autocorrect="off" placeholder="Companion address"></label>
     <a class="btn" id="surfaces" target="_blank" rel="noopener" title="Choose this deck's page in Companion">Surfaces</a>
     <span class="rule"></span>
-    <button id="bare" title="Hide everything but the keys">Keys only</button>
   </div>
+  <div id="tools" hidden></div>
+  <button class="lockbtn" id="lock"></button>
+  <button id="tray" title="Swipe up to close, down to open" aria-label="Show or hide the controls"></button>
 </header>
 <div id="upd"><span id="updText"></span><button id="updGo">Update now</button><button id="updLater">Later</button></div>
 <div id="say"></div>
 <div id="stage"></div>
 <div id="ctx"></div>
 <div id="sheet"><form id="sheetBox"><b id="sheetTitle"></b><p id="sheetText"></p><input id="sheetName" maxlength="60" spellcheck="false" autocomplete="off"><div class="sheetBtns"><button type="button" id="sheetCancel">Cancel</button><button type="button" id="sheetAlt"></button><button type="submit" id="sheetGo"></button></div></form></div>
-<button id="exit-bare">Show controls</button>
 
 <script>
   // Stream Deck models as Companion lays them out (Companion repo NOTES.md, "Deck grid maps"):
@@ -212,7 +262,7 @@
     return id;
   }
   // Deck 1 keeps the id it always had, so Companion still knows its page
-  const deviceId = d => 'DSVD-' + baseId() + (d.n > 1 ? '-' + d.n : '') + '-' + d.model.toUpperCase();
+  const deviceId = d => 'DSVD-' + baseId() + (d.n > 1 ? '-' + d.n : '');
   const spec = d => d.model === 'custom' ? { name: 'Custom grid', cols: d.cols, rows: d.rows } : MODELS[d.model];
   const hasDials = s => !!(s.dials && s.dials.length);
   const totalRows = s => s.rows + (hasDials(s) ? 2 : 0);
@@ -233,6 +283,10 @@
       d.el = document.createElement('div');
       d.el.className = 'chassis';
       d.el.innerHTML = '<div class="deckgrid"></div><div class="lip"><svg viewBox="0 0 96 96" aria-hidden="true"><rect x="6" y="10" width="84" height="66" rx="10" fill="none" stroke="#e8ecef" stroke-width="7"/><rect x="20" y="54" width="40" height="9" rx="4.5" fill="#e8ecef"/><rect x="64" y="54" width="12" height="9" rx="4.5" fill="#e8ecef" opacity="0.28"/><rect x="20" y="83" width="56" height="7" rx="3.5" fill="#e8ecef"/></svg></div><span class="led"></span><div class="grip" title="Drag to resize"></div>';
+      const pg = document.createElement('span');
+      pg.className = 'pg';
+      pg.addEventListener('click', e => { const a = e.target.closest('.pa'); if (a) changePage(d, a.dataset.up === '1'); });
+      d.el.appendChild(pg);
       $('stage').appendChild(d.el);
     }
     const box = d.el.querySelector('.deckgrid');
@@ -278,6 +332,11 @@
   // A deck nobody has moved gets an even share of the stage, stacked upright or side by side. A moved one stays
   // where it was put; each orientation remembers its own arrangement
   const posKey = b => b.W >= b.H ? 'l' : 'p';
+  // a deck never ends up bigger than its space, so its resize corner stays in reach
+  function shrinkToFit(d, W, H) {
+    let cell = d.cell;
+    while (cell > 16 && (d.el.offsetWidth > W || d.el.offsetHeight > H)) setSize(d, --cell, d.gapPx);
+  }
   function layout() {
     const b = stageBox(), key = posKey(b), n = S.decks.length, stacked = b.H >= b.W, slot = 10;
     S.decks.forEach((d, i) => {
@@ -286,11 +345,13 @@
       if (p) {
         const scale = Math.min(b.W, b.H) / p.s;
         setSize(d, Math.max(16, Math.round(p.cell * scale)), gapFor(b.W, b.H));
+        shrinkToFit(d, b.W, b.H);
         place(d, p.x * b.W, p.y * b.H, b);
         return;
       }
       const w = stacked ? b.W : (b.W - slot * (n - 1)) / n, h = stacked ? (b.H - slot * (n - 1)) / n : b.H;
       setSize(d, cellFor(d, w, h), gapFor(w, h));
+      shrinkToFit(d, w, h);
       const x0 = stacked ? 0 : i * (w + slot), y0 = stacked ? i * (h + slot) : 0;
       place(d, x0 + (w - d.el.offsetWidth) / 2, y0 + (h - d.el.offsetHeight) / 2, b);
     });
@@ -302,13 +363,73 @@
     for (const x of S.decks) if (x.el) x.el.classList.toggle('sel', x === d && S.decks.length > 1);
     paintHeader();
   }
+  // Satellite never says which page a surface is on, but Companion's web port does. No answer just means no label
+  function showPages() {
+    if (document.hidden) return;
+    for (const d of S.decks) {
+      if (!d.el || d.pageAsk) continue;
+      const label = d.el.querySelector('.pg');
+      if (!d.ok) { label.textContent = ''; d.page = ''; continue; }
+      d.pageAsk = true;
+      readPage(d).then(page => {
+          d.pageAsk = false;
+          d.page = d.ok && /^\d+$/.test(page) ? page : '';
+          if (!d.page) { label.textContent = ''; return; }
+          if (!label.firstChild) label.innerHTML = PAGE_BOX;
+          label.querySelector('b').textContent = d.page;
+          // a small deck drops the word first, and only a tiny one has no room for the box beside its logo
+          const logo = d.el.querySelector('.lip svg').getBoundingClientRect(), keys = d.el.querySelector('.deckgrid').getBoundingClientRect();
+          const fits = () => { const at = label.getBoundingClientRect(); return at.right + 4 < logo.left && at.top + 2 >= keys.bottom; };
+          label.classList.remove('tight');
+          if (!fits()) label.classList.add('tight');
+          label.style.visibility = fits() ? '' : 'hidden';
+        });
+    }
+  }
+  setInterval(showPages, 1000);
+  const PAGE_BOX = '<span class="pa" data-up="0" role="button" aria-label="Previous page"><svg viewBox="0 0 8 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 1.5 1.5 6 6 10.5"/></svg></span><i>Page</i><b></b><span class="pa" data-up="1" role="button" aria-label="Next page"><svg viewBox="0 0 8 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 1.5 6.5 6 2 10.5"/></svg></span>';
+  // Companion ignores this until the surface's own checkbox is on, and still says OK, so a page that didn't move is the only sign.
+  // The apps can then tick that box and try again, and so can a One serving this page. Anywhere else it says where the box is
+  const readPage = d => fetch('http://' + S.host + ':8000/api/variable/internal/' + encodeURIComponent('surface_' + deviceId(d) + '_page') + '/value').then(r => r.ok ? r.text() : '').catch(() => '');
+  const pause = ms => new Promise(done => setTimeout(done, ms));
+  async function changePage(d, up) {
+    const was = await readPage(d), line = 'CHANGE-PAGE DEVICEID="' + deviceId(d) + '" DIRECTION=' + (up ? 1 : 0);
+    send(line);
+    await pause(400);
+    showPages();
+    if (d.fixingPage || await readPage(d) !== was) return;
+    d.fixingPage = true;
+    const arrows = (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.pagearrows)
+      || (served ? { postMessage: m => fetch('/companion/page-arrows', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(m) }).catch(() => {}) } : null);
+    if (arrows) {
+      arrows.postMessage({ host: S.host, surface: deviceId(d) });
+      await pause(800);
+      send(line);
+      await pause(400);
+      showPages();
+    }
+    const moved = arrows && await readPage(d) !== was;
+    d.fixingPage = false;
+    if (moved) return;
+    const hint = 'Companion didn’t change the page. In its Surfaces page, turn on “Allow page arrows” for this deck.';
+    say(hint);
+    setTimeout(() => { if ($('say').textContent === hint) say(''); }, 8000);
+  }
+  // the old image stays up until the new one is decoded: swapping it sooner blanks the key for a frame on every update
   function paint(d, n, src) {
     d.imgs[n] = src;
     const el = d.el && d.el.querySelector('.deckgrid [data-k="' + n + '"]');
     if (!el) return;
-    const tick = el.classList.contains('dial') ? el.querySelector('i') : null;
-    el.innerHTML = src ? '<img alt="" src="' + src + '">' : '';
-    if (tick) el.appendChild(tick);
+    if (!src) { const old = el.querySelector('img'); if (old) old.remove(); return; }
+    const img = new Image();
+    img.alt = '';
+    img.src = src;
+    const show = () => {
+      if (d.imgs[n] !== src || !el.isConnected) return;     // a newer image came in, or the deck was rebuilt
+      const old = el.querySelector('img');
+      if (old) old.replaceWith(img); else el.prepend(img);
+    };
+    img.decode().then(show, show);
   }
   // PNG from Companion 4.x and 5; a raw RGB square from anything older
   function image(b64) {
@@ -329,7 +450,7 @@
   function send(line) { try { if (S.ws && S.ws.readyState === 1) S.ws.send(line + '\n'); } catch (e) {} }
   function addDevice(d) {
     const s = spec(d), keys = s.cols * totalRows(s), mark = d.n > 1 ? ' ' + d.n : '';
-    send('ADD-DEVICE DEVICEID="' + deviceId(d) + '" PRODUCT_NAME="Downstage Virtual Deck ' + s.name.replace(/^Stream Deck /, '') + mark + '" KEYS_TOTAL=' + keys +
+    send('ADD-DEVICE DEVICEID="' + deviceId(d) + '" PRODUCT_NAME="Downstage Virtual Deck ' + s.name.replace(/^Stream Deck /, '') + mark + '" CAN_CHANGE_PAGE="Allow page arrows" KEYS_TOTAL=' + keys +
          ' KEYS_PER_ROW=' + s.cols + ' BITMAPS=' + (keys > 48 ? 96 : 160) + ' BITMAP_FORMAT="png" COLORS="hex" TEXT=0 BRIGHTNESS=0');
   }
   function connect() {
@@ -414,7 +535,7 @@
   function endHold() { if (S.hold) { clearTimeout(S.hold.timer); S.hold = null; } }
   function startHold(e, d) {
     endHold();
-    if (!e.target.closest('#stage') || e.target.closest('.deckgrid, .grip')) return;
+    if (!e.target.closest('#stage') || e.target.closest('.deckgrid, .grip, .pa')) return;
     if (d) {
       const r = d.el.querySelector('.lip svg').getBoundingClientRect();
       if (e.clientX > r.left - 10 && e.clientX < r.right + 10 && e.clientY > r.top - 10 && e.clientY < r.bottom + 10) return;
@@ -436,7 +557,7 @@
     if (e.pointerType === 'touch') startHold(e, d0);
     if (d0 && d0 !== S.sel) select(d0);
     // the deck's frame moves it, straight away. The keys and the gaps between them never do
-    if (d0 && !document.body.classList.contains('bare') && !e.target.closest('.deckgrid') && !e.target.closest('.grip')) {
+    if (d0 && !S.locked && !e.target.closest('.deckgrid, .grip, .pa')) {
       e.preventDefault();
       cur = { kind: 'move', d: d0, x: e.clientX, y: e.clientY, ox: d0.x, oy: d0.y, armed: true, moved: false };
       select(d0);
@@ -496,16 +617,19 @@
     if (t) t.style.transform = 'rotate(' + d.angle[n] + 'deg)';
   }
   // Moving snaps a deck's edges and middle to the stage and to the other decks. The right click menu turns it off, and Option does for one drag
-  const SNAP = 8;
+  // the stage's centers pull harder: with no guide lines, a weak one is easy to drag straight past
+  const SNAP = 8, CENTER_SNAP = 16;
   function nearest(want, spots) {
     let best = null;
-    for (const [at, line] of spots) if (Math.abs(at - want) <= SNAP && (!best || Math.abs(at - want) < Math.abs(best[0] - want))) best = [at, line];
+    for (const [at, line, pull] of spots) if (Math.abs(at - want) <= (pull || SNAP) && (!best || Math.abs(at - want) < Math.abs(best[0] - want))) best = [at, line];
     return best;
   }
   function snapMove(d, x, y, b, off) {
     if (off || !S.snap) return { x, y };
     const w = d.el.offsetWidth, h = d.el.offsetHeight;
-    const xs = [[0, 0], [b.W - w, b.W], [(b.W - w) / 2, b.W / 2]], ys = [[0, 0], [b.H - h, b.H], [(b.H - h) / 2, b.H / 2]];
+    // a deck's middle or either edge can sit on the stage's center lines
+    const center = (size, length) => [[(size - length) / 2, size / 2, CENTER_SNAP], [size / 2, size / 2, CENTER_SNAP], [size / 2 - length, size / 2, CENTER_SNAP]];
+    const xs = [[0, 0], [b.W - w, b.W], ...center(b.W, w)], ys = [[0, 0], [b.H - h, b.H], ...center(b.H, h)];
     for (const o of S.decks) {
       if (o === d || !o.el) continue;
       const ow = o.el.offsetWidth, oh = o.el.offsetHeight;
@@ -639,9 +763,11 @@
     remove: glyph('<path d="M2.5 4.5h11M6 4.5V2.5h4v2M4 4.5l.7 9h6.6l.7-9M6.7 7v4M9.3 7v4"/>'),
     arrange: glyph('<rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/>'),
     snap: glyph('<path d="M3 2.5v6a5 5 0 0 0 10 0v-6h-3v6a2 2 0 0 1-4 0v-6zM3 5.5h3M10 5.5h3"/>'),
+    next: glyph('<path d="M6 3l5 5-5 5"/>'),
+    prev: glyph('<path d="M10 3L5 8l5 5"/>'),
+    locked: glyph('<rect x="3.5" y="7" width="9" height="6.5" rx="1.2"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/>'),
+    unlocked: glyph('<rect x="3.5" y="7" width="9" height="6.5" rx="1.2"/><path d="M5.5 7V5a2.5 2.5 0 0 1 4.8-1"/>'),
     surfaces: glyph('<path d="M9 2.5h4.5V7M13.5 2.5L7.5 8.5"/><path d="M11.5 9.5v4h-9v-9h4"/>'),
-    keys: glyph('<rect x="2" y="3" width="12" height="10" rx="1.5"/><path d="M5 6h.01M8 6h.01M11 6h.01M5 10h.01M8 10h.01M11 10h.01" stroke-width="2"/>'),
-    controls: glyph('<path d="M2 4.5h7M12 4.5h2M2 11.5h2M7 11.5h7"/><circle cx="10.5" cy="4.5" r="1.5"/><circle cx="5.5" cy="11.5" r="1.5"/>'),
   };
   // a deck's icon is its own shape: its keys in their rows, with dials under them on the ones that have them
   function deckIcon(k) {
@@ -655,11 +781,12 @@
   }
   const item = (a, icon, text, o) => '<button data-a="' + a + '"' + (o && o.v !== undefined ? ' data-v="' + esc(o.v) + '"' : '') + (o && o.danger ? ' class="danger"' : '') + '><i>' + icon + '</i><span>' + esc(text) + '</span>' + (o && o.on ? '<b class="ck">✓</b>' : '') + '</button>';
   function openMenu(x, y, d) {
-    const rows = [], bare = document.body.classList.contains('bare');
+    const rows = [];
     if (d) {
       rows.push('<div class="ctxh">Deck ' + (S.decks.indexOf(d) + 1) + '</div>');
       for (const [k, m] of Object.entries(MODELS)) rows.push(item('model', deckIcon(k), m.name, { v: k, on: d.model === k }));
       rows.push('<hr>');
+      if (d.page) rows.push('<div class="ctxh">Page ' + d.page + '</div>', item('pageNext', ICON.next, 'Next Page'), item('pagePrev', ICON.prev, 'Previous Page'), '<hr>');
     }
     const names = showNames();
     if (names.length) {
@@ -669,11 +796,11 @@
     rows.push(item('saveShow', ICON.save, 'Save Show'), item('saveAs', ICON.saveAs, 'Save Show As…'), '<hr>');
     rows.push(item('add', ICON.add, 'Add Deck'));
     if (d && S.decks.length > 1) rows.push(item('remove', ICON.remove, 'Remove This Deck', { danger: true }));
-    if (S.decks.some(x => Object.keys(x.pos).length)) rows.push(item('arrange', ICON.arrange, 'Arrange Decks'));
+    if (!S.locked && S.decks.some(x => Object.keys(x.pos).length)) rows.push(item('arrange', ICON.arrange, 'Arrange Decks'));
     rows.push(item('snap', ICON.snap, 'Snapping', { on: S.snap }));
+    rows.push(item('lock', S.locked ? ICON.locked : ICON.unlocked, 'Lock Layout', { on: S.locked }));
     rows.push('<hr>');
     if (S.host) rows.push(item('surfaces', ICON.surfaces, 'Open Surfaces in Companion'));
-    rows.push(item('bare', bare ? ICON.controls : ICON.keys, bare ? 'Show Controls' : 'Keys Only'));
     const m = $('ctx');
     m.innerHTML = rows.join('');
     m.ctxDeck = d;
@@ -703,8 +830,9 @@
     else if (a === 'remove') removeDeck(d);
     else if (a === 'arrange') $('arrange').click();
     else if (a === 'snap') { S.snap = !S.snap; store.set('snap', S.snap ? '1' : '0'); }
+    else if (a === 'lock') toggleLock();
+    else if (a === 'pageNext' || a === 'pagePrev') changePage(d, a === 'pageNext');
     else if (a === 'surfaces') $('surfaces').click();
-    else if (a === 'bare') setBare(!document.body.classList.contains('bare'));
   });
 
   // ── finding a One: the Mac app browses Bonjour and calls this with what's on the network ──
@@ -788,7 +916,7 @@
     $('rows').value = d.rows;
     $('custom').classList.toggle('on', d.model === 'custom');
     $('surfaces').style.display = S.host ? '' : 'none';
-    $('surfaces').href = 'http://' + S.host + ':8000/#/surfaces';
+    $('surfaces').href = 'http://' + S.host + ':8000/surfaces';
     $('removeDeck').style.display = S.decks.length > 1 ? 'inline-block' : 'none';
     $('addDeck').style.display = S.decks.length < 8 ? '' : 'none';
     document.title = 'Virtual Deck: ' + spec(d).name;
@@ -810,10 +938,78 @@
     if (!v) { $('host').value = S.host; return; }
     useHost(v, '');
   };
-  function setBare(on) { document.body.classList.toggle('bare', on); store.set('bare', on ? '1' : '0'); }
-  $('bare').onclick = () => setBare(true);
-  $('exit-bare').onclick = () => setBare(false);
-  setBare(store.get('bare', '0') === '1');
+  // Locked, decks can't be moved or resized
+  function applyLock(on) {
+    S.locked = on;
+    document.body.classList.toggle('locked', on);
+    const b = $('lock');
+    b.innerHTML = on ? ICON.locked : ICON.unlocked;
+    b.classList.toggle('on', on);
+    b.title = on ? 'Layout locked: click to unlock' : 'Layout unlocked: click to lock';
+    b.setAttribute('aria-label', b.title);
+  }
+  function toggleLock() {
+    applyLock(!S.locked);
+    store.set('lock', S.locked ? '1' : '0');
+  }
+  $('lock').onclick = toggleLock;
+  applyLock(store.get('lock', '0') === '1');
+  // On a narrow window the buttons from each group line up in one row of their own, and go home when it widens
+  const narrow = matchMedia('(max-width: 560px)'), trayed = matchMedia('(max-width: 560px), (max-height: 500px)');
+  function placeTools() {
+    const tools = $('tools'), rule = document.querySelector('#connGrp .rule');
+    tools.hidden = !narrow.matches;
+    if (narrow.matches) tools.append($('addDeck'), $('removeDeck'), $('arrange'), $('surfaces'));
+    else { document.querySelector('#deckGrp').append($('addDeck'), $('removeDeck'), $('arrange')); rule.before($('surfaces')); }
+  }
+  narrow.addEventListener('change', placeTools);
+  placeTools();
+  function setTray(open) {
+    const h = document.querySelector('header'), body = document.body;
+    if (open === !body.classList.contains('trayshut')) return;
+    store.set('tray', open ? '1' : '0');
+    const from = h.offsetHeight;
+    body.classList.toggle('trayshut', !open);
+    const to = h.offsetHeight;
+    h.style.height = from + 'px'; h.style.overflow = 'hidden';
+    h.offsetHeight;
+    h.style.transition = 'height .2s ease';
+    h.style.height = to + 'px';
+    setTimeout(() => { h.style.height = h.style.overflow = h.style.transition = ''; }, 220);
+    armTray();
+  }
+  // an open tray covers keys, so it closes 10 s after its last touch, or as soon as the decks are touched.
+  // It waits while something on it is being typed in or chosen from, or a menu or question is up
+  let trayTimer = 0;
+  function armTray() {
+    clearTimeout(trayTimer);
+    if (!trayed.matches || document.body.classList.contains('trayshut')) return;
+    trayTimer = setTimeout(() => {
+      const a = document.activeElement, busy = a && a.closest('header') && a.matches('input, select');
+      if (busy || $('sheet').classList.contains('on') || $('ctx').classList.contains('on')) armTray();
+      else setTray(false);
+    }, 10000);
+  }
+  trayed.addEventListener('change', armTray);
+  document.addEventListener('pointerdown', e => {
+    if (!e.target.closest) return;
+    if (e.target.closest('header, #ctx, #sheet')) armTray();
+    else if (trayed.matches) setTray(false);
+  });
+  document.querySelector('header').addEventListener('change', e => { if (e.target.matches('select')) e.target.blur(); armTray(); });
+  document.querySelector('header').addEventListener('input', armTray);
+  $('tray').onclick = () => setTray(document.body.classList.contains('trayshut'));
+  let swipe = null;
+  const bar = document.querySelector('header');
+  bar.addEventListener('pointerdown', e => { swipe = trayed.matches ? { x: e.clientX, y: e.clientY } : null; });
+  bar.addEventListener('pointermove', e => {
+    if (!swipe) return;
+    const dy = e.clientY - swipe.y;
+    if (Math.abs(dy) > 24 && Math.abs(dy) > Math.abs(e.clientX - swipe.x) * 1.5) { setTray(dy > 0); swipe = null; }
+  });
+  document.addEventListener('pointerup', () => { swipe = null; });
+  document.body.classList.toggle('trayshut', store.get('tray', '1') === '0');
+  armTray();
 
   S.decks.forEach(build);
   select(S.decks[0]);

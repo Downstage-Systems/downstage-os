@@ -1638,6 +1638,89 @@ def _hide_ontime_windows():
     print("[ontime] no editor window appeared to hide")
 
 
+# ── Nothing but the kiosk on the outputs (Rob, 2026-11-02: a Pi system popup
+# sat behind the kiosk and showed when the HDMIs blacked out - "need to make
+# sure that never happens"). Blackout unmaps the kiosk to show the black
+# desktop, so any other window would be on screen. The desktop's own popups
+# are switched off where they start (_quiet_desktop), and anything that still
+# maps a window is hidden (_window_guard): unmapped, never closed, so whatever
+# owns it keeps running, as with OnTime's editor above.
+_QUIET_AUTOSTART = (
+    "pprompt",                              # "SSH is enabled and the default password..."
+    "lxpolkit", "polkit-mate-authentication-agent-1",   # "Authentication required"
+    "gnome-keyring-pkcs11", "gnome-keyring-secrets", "gnome-keyring-ssh",   # "Unlock your keyring"
+    "nm-applet",                            # Wi-Fi password and connection bubbles
+    "piwiz", "squeekboard",                 # first-run wizard, on-screen keyboard
+)
+
+
+def _quiet_desktop():
+    """Per-user overrides only: the system's files stay as shipped. Takes
+    effect at the next login; until then _window_guard hides them."""
+    home = Path("/home/pi")
+    auto = home / ".config" / "autostart"
+    try:
+        auto.mkdir(parents=True, exist_ok=True)
+        for name in _QUIET_AUTOSTART:
+            f = auto / f"{name}.desktop"
+            want = f"[Desktop Entry]\nType=Application\nName={name}\nHidden=true\n"
+            if not f.exists() or f.read_text() != want:
+                f.write_text(want)
+        # a USB stick still mounts, without "Removable medium is inserted"
+        conf = home / ".config" / "pcmanfm" / "default" / "pcmanfm.conf"
+        text = conf.read_text() if conf.exists() else ""
+        if not text:
+            try:
+                text = Path("/etc/xdg/pcmanfm/default/pcmanfm.conf").read_text()
+            except OSError:
+                text = "[volume]\nmount_on_startup=1\nmount_removable=1\nautorun=1\n"
+        if "[volume]" not in text:
+            text = "[volume]\nautorun=0\n" + text
+        if re.search(r"(?m)^autorun=", text):
+            new = re.sub(r"(?m)^autorun=.*$", "autorun=0", text)
+        else:
+            new = text.replace("[volume]\n", "[volume]\nautorun=0\n", 1)
+        if not conf.exists() or conf.read_text() != new:
+            conf.parent.mkdir(parents=True, exist_ok=True)
+            conf.write_text(new)
+    except Exception as e:
+        print(f"[desktop] quiet: {e}")
+
+
+def _window_guard():
+    """Every second: a window that isn't the kiosk (chromium) or the desktop
+    behind it (pcmanfm's, on every workspace) is unmapped, and the tamper log
+    says what it was. "window_guard": false in the config turns it off for
+    bench work over VNC."""
+    env = {**os.environ, "DISPLAY": ":0"}
+    env.setdefault("XAUTHORITY", "/home/pi/.Xauthority")
+    told = set()
+    while True:
+        time.sleep(1)
+        try:
+            if not load_config().get("window_guard", True):
+                continue
+            out = subprocess.run(["wmctrl", "-lx"], env=env, capture_output=True, text=True, timeout=5).stdout
+        except Exception:
+            continue
+        for ln in out.splitlines():
+            parts = ln.split(None, 2)          # id, workspace, then class, host and title
+            if len(parts) < 3:
+                continue
+            wid, desk, rest = parts
+            if rest.lower().startswith("chromium") or (desk == "-1" and rest.startswith("pcmanfm.")):
+                continue
+            try:
+                subprocess.run(["xdotool", "windowunmap", wid], env=env, timeout=3,
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except Exception:
+                continue
+            if wid not in told:
+                told.add(wid)
+                print(f"[desktop] hid a window: {rest}")
+                _audit("WINDOW", f"hid {rest[:160]}")
+
+
 def start_local_ontime():
     global _ontime_desired
     _ontime_desired = True
@@ -5321,6 +5404,73 @@ def companion_grid_page():
     except ValueError:
         return jsonify({"ok": False, "error": "Bad numbers"}), 400
     return jsonify(companion_grid.grid(host, port, page, rows, cols, since, wait=2.5 if since == 0 else 0))
+
+
+def _companion_trpc(path, data, timeout=3):
+    """One mutation over the private socket Companion's own web page uses
+    (/trpc). It refuses another web page's origin, so a browser page asks the
+    One to send it. The same message the Virtual Deck apps send
+    (virtual-deck shared/OneFinder.swift allowPageArrows)."""
+    import base64
+    s = socket.create_connection(("127.0.0.1", 8000), timeout=timeout)
+    try:
+        s.sendall(("GET /trpc HTTP/1.1\r\nHost: 127.0.0.1:8000\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n"
+                   f"Sec-WebSocket-Key: {base64.b64encode(os.urandom(16)).decode()}\r\nSec-WebSocket-Version: 13\r\n\r\n").encode())
+        head = b""
+        while b"\r\n\r\n" not in head and len(head) < 4096:
+            got = s.recv(512)
+            if not got:
+                break
+            head += got
+        if b" 101 " not in head.split(b"\r\n", 1)[0]:
+            raise RuntimeError("Companion refused its socket")
+        p = json.dumps({"id": 1, "jsonrpc": "2.0", "method": "mutation", "params": {"path": path, "input": data}}).encode()
+        m = os.urandom(4)
+        n = len(p)
+        hdr = bytes([0x81]) + (bytes([0x80 | n]) if n < 126 else bytes([0x80 | 126]) + n.to_bytes(2, "big"))
+        s.sendall(hdr + m + bytes(c ^ m[i % 4] for i, c in enumerate(p)))
+        # the answer: the first text frame Companion sends back
+        buf = head.split(b"\r\n\r\n", 1)[1]
+        end = time.time() + timeout
+        while time.time() < end:
+            if len(buf) >= 2:
+                ln, at = buf[1] & 0x7F, 2
+                if ln == 126 and len(buf) >= 4:
+                    ln, at = int.from_bytes(buf[2:4], "big"), 4
+                if ln < 127 and len(buf) >= at + ln:
+                    return json.loads(buf[at:at + ln] or b"{}")
+            got = s.recv(4096)
+            if not got:
+                break
+            buf += got
+        return {}
+    finally:
+        try:
+            s.close()
+        except OSError:
+            pass
+
+
+@app.route("/companion/page-arrows", methods=["POST"])
+def companion_page_arrows():
+    """Ticks "Allow page arrows" on a Virtual Deck surface (Rob, 2026-11-02:
+    "yes add the helper"). Its page asks when a page arrow didn't move the
+    page. Only this unit's own Companion, and only a Virtual Deck's surface
+    (DSVD-...): the setting does nothing but let that deck change its page."""
+    b = request.get_json(silent=True) or {}
+    surface = str(b.get("surface") or "")
+    host = str(b.get("host") or "").split(":")[0]
+    if not re.fullmatch(r"DSVD-[A-Za-z0-9_-]{1,40}", surface):
+        return jsonify({"ok": False, "error": "Not a Virtual Deck surface"}), 400
+    if host and host not in ("127.0.0.1", "localhost", request.host.split(":")[0]):
+        return jsonify({"ok": False, "error": "Only this unit's Companion"})
+    try:
+        r = _companion_trpc("surfaces.surfaceSetConfigKey", {"surfaceId": surface, "key": "canChangePage", "value": True})
+        # Companion answers a refusal as text, like "device not found"
+        said = (r.get("result") or {}).get("data")
+        return jsonify({"ok": bool(r) and "error" not in r and not isinstance(said, str), "answer": r})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
 
 
 _page_names = {}   # host -> (fetched at, [{page, name}])
@@ -9753,6 +9903,8 @@ if __name__ == "__main__":
     threading.Thread(target=_hdmi_monitor,    daemon=True).start()
     threading.Thread(target=_ontime_watchdog, daemon=True).start()
     threading.Thread(target=_cpu_sampler,     daemon=True).start()
+    _quiet_desktop()
+    threading.Thread(target=_window_guard,    daemon=True).start()
     threading.Thread(target=_hotspot_fallback, daemon=True).start()
     threading.Thread(target=_power_button_monitor, daemon=True).start()
     threading.Thread(target=_satellite_group_guard, daemon=True).start()
