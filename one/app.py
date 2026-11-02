@@ -24,7 +24,7 @@ import builders  # Show Builder and SuperSource Builder, started on first open
 import companion_grid   # a live picture of a Companion page, for choosing a light's button
 import cue_radio   # a USB CueLink radio (listen-only ESP32-S3), when one is plugged in
 
-OS_VERSION = "1.8.0"   # Downstage OS release - bump on tagged releases
+OS_VERSION = "1.8.1"   # Downstage OS release - bump on tagged releases
 OS_PRODUCT = "Downstage One"
 
 app = Flask(__name__)
