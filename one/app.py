@@ -1666,6 +1666,31 @@ def _quiet_desktop():
             want = f"[Desktop Entry]\nType=Application\nName={name}\nHidden=true\n"
             if not f.exists() or f.read_text() != want:
                 f.write_text(want)
+        # lxsession starts its own polkit agent from desktop.conf, not from autostart (seen on 0001 after a reboot)
+        for sysconf in Path("/etc/xdg/lxsession").glob("*/desktop.conf"):
+            mine = home / ".config" / "lxsession" / sysconf.parent.name / "desktop.conf"
+            base = mine.read_text() if mine.exists() else sysconf.read_text()
+            new = re.sub(r"(?m)^polkit/command=.*$", "polkit/command=", base)
+            if not mine.exists() or mine.read_text() != new:
+                mine.parent.mkdir(parents=True, exist_ok=True)
+                mine.write_text(new)
+        # Openbox opens every other window minimized, so it is never drawn, not even for the second the guard
+        # takes (a blackout showed a popup for ~0.5 s on 0001). Rules apply in order, so the later ones win
+        rc = home / ".config" / "openbox" / "rpd-rc.xml"
+        if rc.exists():
+            xml = rc.read_text()
+            rules = ("<!-- downstage: only the kiosk is ever drawn (app.py _quiet_desktop) -->\n"
+                     '  <application class="*"><iconic>yes</iconic><focus>no</focus></application>\n'
+                     '  <application class="Chromium"><iconic>no</iconic><focus>yes</focus></application>\n'
+                     '  <application type="desktop"><iconic>no</iconic></application>\n'
+                     "  <!-- /downstage -->\n  ")
+            new = re.sub(r"<!-- downstage: only the kiosk.*?<!-- /downstage -->\n  ", "", xml, flags=re.S)
+            new = new.replace("</applications>", rules + "</applications>", 1)
+            if new != xml and "</applications>" in xml:
+                rc.write_text(new)
+                subprocess.run(["openbox", "--reconfigure"], env={**os.environ, "DISPLAY": ":0",
+                               "XAUTHORITY": os.environ.get("XAUTHORITY", "/home/pi/.Xauthority")},
+                               timeout=5, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         # a USB stick still mounts, without "Removable medium is inserted"
         conf = home / ".config" / "pcmanfm" / "default" / "pcmanfm.conf"
         text = conf.read_text() if conf.exists() else ""
