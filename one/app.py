@@ -1654,6 +1654,40 @@ _QUIET_AUTOSTART = (
 )
 
 
+# Packages a blessed patch run must never touch (downstage-factory
+# 50-downstage-pins). An image older than 2026-11-02 pins only rpi-eeprom, so
+# the app brings the file up to date before a patch can run: on a One,
+# /boot/firmware is the failsafe SD's boot partition, so a kernel update
+# would leave the NVMe on its old kernel and give the failsafe SD a kernel
+# its root has no modules for.
+_APT_PINS = """# Downstage: packages routine patches must never touch.
+# rpi-eeprom — its boot-time auto-update service could rewrite the EEPROM;
+# BOOT_ORDER=0xf416 (NVMe first, SD failsafe dormant) is per-unit sacred state.
+Package: rpi-eeprom
+Pin: release *
+Pin-Priority: -1
+
+# The kernel and boot firmware stay as imaged. An update writes them to /boot/firmware, which on a One is
+# the failsafe SD's boot partition (same PARTUUID as the NVMe's): the NVMe keeps booting the old kernel and
+# the failsafe SD would get a kernel its own root has no modules for. A kernel change is an image rebase.
+Package: linux-image-rpi-2712 linux-image-rpi-v8 linux-headers-rpi-2712 linux-headers-rpi-v8 raspi-firmware
+Pin: release *
+Pin-Priority: -1
+"""
+
+
+def _ensure_apt_pins():
+    f = Path("/etc/apt/preferences.d/50-downstage-pins")
+    try:
+        if f.exists() and f.read_text() == _APT_PINS:
+            return
+        subprocess.run(["sudo", "tee", str(f)], input=_APT_PINS, text=True, timeout=10,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+        _audit("OS_PATCH", "apt pins brought up to date (kernel and boot firmware held)")
+    except Exception as e:
+        print(f"[patch] pins: {e}")
+
+
 def _quiet_desktop():
     """Per-user overrides only: the system's files stay as shipped. Takes
     effect at the next login; until then _window_guard hides them."""
@@ -1713,21 +1747,40 @@ def _quiet_desktop():
 
 
 def _window_guard():
-    """Every second: a window that isn't the kiosk (chromium) or the desktop
-    behind it (pcmanfm's, on every workspace) is unmapped, and the tamper log
-    says what it was. "window_guard": false in the config turns it off for
-    bench work over VNC."""
+    """The moment the window list changes, and every second besides: a window
+    that isn't the kiosk (chromium) or the desktop behind it (pcmanfm's, on
+    every workspace) is unmapped, and the tamper log says what it was.
+    "window_guard": false in the config turns it off for bench work over VNC.
+    Openbox won't open a modal dialog minimized (the SSH warning is one), so
+    reacting at once is what keeps it off a blacked-out output."""
     env = {**os.environ, "DISPLAY": ":0"}
     env.setdefault("XAUTHORITY", "/home/pi/.Xauthority")
     told = set()
+    changed = threading.Event()
+
+    def spy():
+        # xprop prints a line each time Openbox adds or drops a window
+        while True:
+            try:
+                p = subprocess.Popen(["xprop", "-root", "-spy", "_NET_CLIENT_LIST"], env=env,
+                                     stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+                for _ in p.stdout:
+                    changed.set()
+            except Exception:
+                pass
+            time.sleep(2)
+    threading.Thread(target=spy, daemon=True).start()
     while True:
-        time.sleep(1)
+        changed.wait(1)
+        changed.clear()
         try:
             if not load_config().get("window_guard", True):
                 continue
             out = subprocess.run(["wmctrl", "-lx"], env=env, capture_output=True, text=True, timeout=5).stdout
         except Exception:
             continue
+        listed = {ln.split(None, 1)[0] for ln in out.splitlines() if ln.strip()}
+        told &= listed                         # X reuses window IDs: a new popup in an old ID is logged again
         for ln in out.splitlines():
             parts = ln.split(None, 2)          # id, workspace, then class, host and title
             if len(parts) < 3:
@@ -3396,6 +3449,7 @@ def _patch_worker(tested):
     """apt update + upgrade with conservative dpkg conf handling, logged to
     patch.log. Config files we changed are kept (--force-confold)."""
     env = {**os.environ, "DEBIAN_FRONTEND": "noninteractive"}
+    _ensure_apt_pins()
     try:
         with open(PATCH_LOG, "ab") as log:
             log.write(f"\n===== patch run {time.strftime('%F %T')} (through {tested}) =====\n".encode())
@@ -9929,6 +9983,7 @@ if __name__ == "__main__":
     threading.Thread(target=_ontime_watchdog, daemon=True).start()
     threading.Thread(target=_cpu_sampler,     daemon=True).start()
     _quiet_desktop()
+    _ensure_apt_pins()
     threading.Thread(target=_window_guard,    daemon=True).start()
     threading.Thread(target=_hotspot_fallback, daemon=True).start()
     threading.Thread(target=_power_button_monitor, daemon=True).start()
