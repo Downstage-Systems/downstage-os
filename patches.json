@@ -1,4 +1,4 @@
 {
-  "tested_through": "2026-07-13",
-  "notes": "Debian 13 point updates incl. Chromium 149 — bench-validated on DS1-A-2607-0001"
+  "tested_through": "2026-11-02",
+  "notes": "Debian 13 point updates incl. Chromium 156; kernel and boot firmware held by app 1.8.2 pins. Bench-validated on DS1-A-2607-0001"
 }
